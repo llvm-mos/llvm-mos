@@ -716,9 +716,8 @@ static void getImpliedDisabledFeatures(FeatureBitset &Bits, unsigned Value) {
   } while (Prev != Bits);
 }
 
-void llvm::X86::updateImpliedFeatures(
-    StringRef Feature, bool Enabled,
-    StringMap<bool> &Features) {
+void llvm::X86::updateImpliedFeatures(StringRef Feature, bool Enabled,
+                                      StringMap<bool> &Features) {
   auto I = llvm::find_if(FeatureInfos, [&](const FeatureInfo &FI) {
     return FI.getName() == Feature;
   });
@@ -745,7 +744,8 @@ char llvm::X86::getCPUDispatchMangling(StringRef CPU) {
   auto I = llvm::find_if(Processors,
                          [&](const ProcInfo &P) { return P.Name == CPU; });
   assert(I != std::end(Processors) && "Processor not found!");
-  assert(I->Mangling != '\0' && "Processor dooesn't support function multiversion!");
+  assert(I->Mangling != '\0' &&
+         "Processor dooesn't support function multiversion!");
   return I->Mangling;
 }
 

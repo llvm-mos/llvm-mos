@@ -601,8 +601,7 @@ static bool IsMovepDestinationRegPair(unsigned R0, unsigned R1) {
       (R0 == Mips::A0 && R1 == Mips::A2) ||
       (R0 == Mips::A0 && R1 == Mips::A3) ||
       (R0 == Mips::A1 && R1 == Mips::A2) ||
-      (R0 == Mips::A1 && R1 == Mips::A3) ||
-      (R0 == Mips::A2 && R1 == Mips::A3))
+      (R0 == Mips::A1 && R1 == Mips::A3) || (R0 == Mips::A2 && R1 == Mips::A3))
     return true;
 
   return false;

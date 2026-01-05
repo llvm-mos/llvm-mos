@@ -92,7 +92,7 @@ public:
   uint32_t getNumPatchBytes() const {
     const Value *NumPatchBytesVal = getArgOperand(NumPatchBytesPos);
     uint64_t NumPatchBytes =
-      cast<ConstantInt>(NumPatchBytesVal)->getZExtValue();
+        cast<ConstantInt>(NumPatchBytesVal)->getZExtValue();
     assert(isInt<32>(NumPatchBytes) && "should fit in 32 bits!");
     return NumPatchBytes;
   }
@@ -123,7 +123,6 @@ public:
     auto *FT = cast<FunctionType>(getParamElementType(CalledFunctionPos));
     return FT->getReturnType();
   }
-
 
   /// Return the number of arguments to the underlying call.
   size_t actual_arg_size() const { return getNumCallArgs(); }
@@ -194,7 +193,6 @@ public:
   iterator_range<const_op_iterator> gc_live() const {
     return make_range(gc_live_begin(), gc_live_end());
   }
-
 
   /// Get list of all gc reloactes linked to this statepoint
   /// May contain several relocations for the same base/derived pair.

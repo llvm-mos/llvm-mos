@@ -162,8 +162,7 @@ static cl::opt<bool>
                                "transformations are made."));
 
 static cl::opt<bool>
-    MergeFunctionsAliases("mergefunc-use-aliases", cl::Hidden,
-                          cl::init(false),
+    MergeFunctionsAliases("mergefunc-use-aliases", cl::Hidden, cl::init(false),
                           cl::desc("Allow mergefunc to create aliases"));
 
 namespace {
@@ -181,9 +180,7 @@ public:
 
   /// Replace the reference to the function F by the function G, assuming their
   /// implementations are equal.
-  void replaceBy(Function *G) const {
-    F = G;
-  }
+  void replaceBy(Function *G) const { F = G; }
 };
 
 /// MergeFunctions finds functions which will generate identical machine code,
@@ -192,8 +189,7 @@ public:
 /// bitcast of the other.
 class MergeFunctions {
 public:
-  MergeFunctions() : FnTree(FunctionNodeCmp(&GlobalNumbers)) {
-  }
+  MergeFunctions() : FnTree(FunctionNodeCmp(&GlobalNumbers)) {}
 
   template <typename FuncContainer> bool run(FuncContainer &Functions);
   DenseMap<Function *, Function *> runOnFunctions(ArrayRef<Function *> F);
@@ -204,10 +200,10 @@ private:
   // The function comparison operator is provided here so that FunctionNodes do
   // not need to become larger with another pointer.
   class FunctionNodeCmp {
-    GlobalNumberState* GlobalNumbers;
+    GlobalNumberState *GlobalNumbers;
 
   public:
-    FunctionNodeCmp(GlobalNumberState* GN) : GlobalNumbers(GN) {}
+    FunctionNodeCmp(GlobalNumberState *GN) : GlobalNumbers(GN) {}
 
     bool operator()(const FunctionNode &LHS, const FunctionNode &RHS) const {
       // Order first by hashes, then full function comparison.
@@ -815,8 +811,8 @@ static bool canCreateAliasFor(Function *F) {
     return false;
 
   // We should only see linkages supported by aliases here
-  assert(F->hasLocalLinkage() || F->hasExternalLinkage()
-      || F->hasWeakLinkage() || F->hasLinkOnceLinkage());
+  assert(F->hasLocalLinkage() || F->hasExternalLinkage() ||
+         F->hasWeakLinkage() || F->hasLinkOnceLinkage());
   return true;
 }
 

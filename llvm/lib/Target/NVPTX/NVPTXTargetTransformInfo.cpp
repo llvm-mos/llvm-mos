@@ -31,11 +31,12 @@ using namespace llvm;
 // Whether the given intrinsic reads threadIdx.x/y/z.
 static bool readsThreadIndex(const IntrinsicInst *II) {
   switch (II->getIntrinsicID()) {
-    default: return false;
-    case Intrinsic::nvvm_read_ptx_sreg_tid_x:
-    case Intrinsic::nvvm_read_ptx_sreg_tid_y:
-    case Intrinsic::nvvm_read_ptx_sreg_tid_z:
-      return true;
+  default:
+    return false;
+  case Intrinsic::nvvm_read_ptx_sreg_tid_x:
+  case Intrinsic::nvvm_read_ptx_sreg_tid_y:
+  case Intrinsic::nvvm_read_ptx_sreg_tid_z:
+    return true;
   }
 }
 

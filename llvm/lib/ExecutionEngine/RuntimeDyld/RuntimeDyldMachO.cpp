@@ -38,7 +38,7 @@ public:
   }
 };
 
-}
+} // namespace
 
 namespace llvm {
 
@@ -49,16 +49,12 @@ int64_t RuntimeDyldMachO::memcpyAddend(const RelocationEntry &RE) const {
   return static_cast<int64_t>(readBytesUnaligned(Src, NumBytes));
 }
 
-Expected<relocation_iterator>
-RuntimeDyldMachO::processScatteredVANILLA(
-                          unsigned SectionID, relocation_iterator RelI,
-                          const ObjectFile &BaseObjT,
-                          RuntimeDyldMachO::ObjSectionToIDMap &ObjSectionToID,
-                          bool TargetIsLocalThumbFunc) {
-  const MachOObjectFile &Obj =
-    static_cast<const MachOObjectFile&>(BaseObjT);
-  MachO::any_relocation_info RE =
-    Obj.getRelocation(RelI->getRawDataRefImpl());
+Expected<relocation_iterator> RuntimeDyldMachO::processScatteredVANILLA(
+    unsigned SectionID, relocation_iterator RelI, const ObjectFile &BaseObjT,
+    RuntimeDyldMachO::ObjSectionToIDMap &ObjSectionToID,
+    bool TargetIsLocalThumbFunc) {
+  const MachOObjectFile &Obj = static_cast<const MachOObjectFile &>(BaseObjT);
+  MachO::any_relocation_info RE = Obj.getRelocation(RelI->getRawDataRefImpl());
 
   SectionEntry &Section = Sections[SectionID];
   uint32_t RelocType = Obj.getAnyRelocationType(RE);
@@ -77,7 +73,7 @@ RuntimeDyldMachO::processScatteredVANILLA(
   bool IsCode = TargetSection.isText();
   uint32_t TargetSectionID = ~0U;
   if (auto TargetSectionIDOrErr =
-        findOrEmitSection(Obj, TargetSection, IsCode, ObjSectionToID))
+          findOrEmitSection(Obj, TargetSection, IsCode, ObjSectionToID))
     TargetSectionID = *TargetSectionIDOrErr;
   else
     return TargetSectionIDOrErr.takeError();
@@ -91,14 +87,11 @@ RuntimeDyldMachO::processScatteredVANILLA(
   return ++RelI;
 }
 
-
-Expected<RelocationValueRef>
-RuntimeDyldMachO::getRelocationValueRef(
+Expected<RelocationValueRef> RuntimeDyldMachO::getRelocationValueRef(
     const ObjectFile &BaseTObj, const relocation_iterator &RI,
     const RelocationEntry &RE, ObjSectionToIDMap &ObjSectionToID) {
 
-  const MachOObjectFile &Obj =
-      static_cast<const MachOObjectFile &>(BaseTObj);
+  const MachOObjectFile &Obj = static_cast<const MachOObjectFile &>(BaseTObj);
   MachO::any_relocation_info RelInfo =
       Obj.getRelocation(RI->getRawDataRefImpl());
   RelocationValueRef Value;
@@ -112,7 +105,7 @@ RuntimeDyldMachO::getRelocationValueRef(
     else
       return TargetNameOrErr.takeError();
     RTDyldSymbolTable::const_iterator SI =
-      GlobalSymbolTable.find(TargetName.data());
+        GlobalSymbolTable.find(TargetName.data());
     if (SI != GlobalSymbolTable.end()) {
       const auto &SymInfo = SI->second;
       Value.SectionID = SymInfo.getSectionID();
@@ -124,8 +117,8 @@ RuntimeDyldMachO::getRelocationValueRef(
   } else {
     SectionRef Sec = Obj.getAnyRelocationSection(RelInfo);
     bool IsCode = Sec.isText();
-    if (auto SectionIDOrErr = findOrEmitSection(Obj, Sec, IsCode,
-                                                ObjSectionToID))
+    if (auto SectionIDOrErr =
+            findOrEmitSection(Obj, Sec, IsCode, ObjSectionToID))
       Value.SectionID = *SectionIDOrErr;
     else
       return SectionIDOrErr.takeError();
@@ -153,9 +146,9 @@ void RuntimeDyldMachO::dumpRelocationToResolve(const RelocationEntry &RE,
   dbgs() << "resolveRelocation Section: " << RE.SectionID
          << " LocalAddress: " << format("%p", LocalAddress)
          << " FinalAddress: " << format("0x%016" PRIx64, FinalAddress)
-         << " Value: " << format("0x%016" PRIx64, Value) << " Addend: " << RE.Addend
-         << " isPCRel: " << RE.IsPCRel << " MachoType: " << RE.RelType
-         << " Size: " << (1 << RE.Size) << "\n";
+         << " Value: " << format("0x%016" PRIx64, Value)
+         << " Addend: " << RE.Addend << " isPCRel: " << RE.IsPCRel
+         << " MachoType: " << RE.RelType << " Size: " << (1 << RE.Size) << "\n";
 }
 
 section_iterator
@@ -174,12 +167,10 @@ RuntimeDyldMachO::getSectionByAddress(const MachOObjectFile &Obj,
   return SE;
 }
 
-
 // Populate __pointers section.
 Error RuntimeDyldMachO::populateIndirectSymbolPointersSection(
-                                                    const MachOObjectFile &Obj,
-                                                    const SectionRef &PTSection,
-                                                    unsigned PTSectionID) {
+    const MachOObjectFile &Obj, const SectionRef &PTSection,
+    unsigned PTSectionID) {
   assert(!Obj.is64Bit() &&
          "Pointer table section not supported in 64-bit MachO.");
 
@@ -201,7 +192,7 @@ Error RuntimeDyldMachO::populateIndirectSymbolPointersSection(
 
   for (unsigned i = 0; i < NumPTEntries; ++i) {
     unsigned SymbolIndex =
-      Obj.getIndirectSymbolTableEntry(DySymTabCmd, FirstIndirectSymbol + i);
+        Obj.getIndirectSymbolTableEntry(DySymTabCmd, FirstIndirectSymbol + i);
     symbol_iterator SI = Obj.getSymbolByIndex(SymbolIndex);
     StringRef IndirectSymbolName;
     if (auto IndirectSymbolNameOrErr = SI->getName())
@@ -210,8 +201,8 @@ Error RuntimeDyldMachO::populateIndirectSymbolPointersSection(
       return IndirectSymbolNameOrErr.takeError();
     LLVM_DEBUG(dbgs() << "  " << IndirectSymbolName << ": index " << SymbolIndex
                       << ", PT offset: " << PTEntryOffset << "\n");
-    RelocationEntry RE(PTSectionID, PTEntryOffset,
-                       MachO::GENERIC_RELOC_VANILLA, 0, false, 2);
+    RelocationEntry RE(PTSectionID, PTEntryOffset, MachO::GENERIC_RELOC_VANILLA,
+                       0, false, 2);
     addRelocationForSymbol(RE, IndirectSymbolName);
     PTEntryOffset += PTEntrySize;
   }
@@ -223,9 +214,8 @@ bool RuntimeDyldMachO::isCompatibleFile(const object::ObjectFile &Obj) const {
 }
 
 template <typename Impl>
-Error
-RuntimeDyldMachOCRTPBase<Impl>::finalizeLoad(const ObjectFile &Obj,
-                                             ObjSectionToIDMap &SectionMap) {
+Error RuntimeDyldMachOCRTPBase<Impl>::finalizeLoad(
+    const ObjectFile &Obj, ObjSectionToIDMap &SectionMap) {
   unsigned EHFrameSID = RTDYLD_INVALID_SECTION_ID;
   unsigned TextSID = RTDYLD_INVALID_SECTION_ID;
   unsigned ExceptTabSID = RTDYLD_INVALID_SECTION_ID;
@@ -246,14 +236,14 @@ RuntimeDyldMachOCRTPBase<Impl>::finalizeLoad(const ObjectFile &Obj,
       else
         return TextSIDOrErr.takeError();
     } else if (Name == "__eh_frame") {
-      if (auto EHFrameSIDOrErr = findOrEmitSection(Obj, Section, false,
-                                                   SectionMap))
+      if (auto EHFrameSIDOrErr =
+              findOrEmitSection(Obj, Section, false, SectionMap))
         EHFrameSID = *EHFrameSIDOrErr;
       else
         return EHFrameSIDOrErr.takeError();
     } else if (Name == "__gcc_except_tab") {
-      if (auto ExceptTabSIDOrErr = findOrEmitSection(Obj, Section, true,
-                                                     SectionMap))
+      if (auto ExceptTabSIDOrErr =
+              findOrEmitSection(Obj, Section, true, SectionMap))
         ExceptTabSID = *ExceptTabSIDOrErr;
       else
         return ExceptTabSIDOrErr.takeError();
@@ -265,7 +255,7 @@ RuntimeDyldMachOCRTPBase<Impl>::finalizeLoad(const ObjectFile &Obj,
     }
   }
   UnregisteredEHFrameSections.push_back(
-    EHFrameRelatedSections(EHFrameSID, TextSID, ExceptTabSID));
+      EHFrameRelatedSections(EHFrameSID, TextSID, ExceptTabSID));
 
   return Error::success();
 }
@@ -368,8 +358,7 @@ RuntimeDyldMachO::create(Triple::ArchType Arch,
 std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
 RuntimeDyldMachO::loadObject(const object::ObjectFile &O) {
   if (auto ObjSectionToIDOrErr = loadObjectImpl(O))
-    return std::make_unique<LoadedMachOObjectInfo>(*this,
-                                                    *ObjSectionToIDOrErr);
+    return std::make_unique<LoadedMachOObjectInfo>(*this, *ObjSectionToIDOrErr);
   else {
     HasError = true;
     raw_string_ostream ErrStream(ErrorStr);

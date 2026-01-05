@@ -58,8 +58,8 @@ public:
   using Allocator = LiveSegments::Allocator;
 
 private:
-  unsigned Tag = 0;       // unique tag for current contents.
-  LiveSegments Segments;  // union of virtual reg segments
+  unsigned Tag = 0;      // unique tag for current contents.
+  LiveSegments Segments; // union of virtual reg segments
 
 public:
   explicit LiveIntervalUnion(Allocator &a) : Segments(a) {}
@@ -94,14 +94,17 @@ public:
   void extract(const LiveInterval &VirtReg, const LiveRange &Range);
 
   // Remove all inserted virtual registers.
-  void clear() { Segments.clear(); ++Tag; }
+  void clear() {
+    Segments.clear();
+    ++Tag;
+  }
 
   // Print union, using TRI to translate register names
   void print(raw_ostream &OS, const TargetRegisterInfo *TRI) const;
 
 #ifndef NDEBUG
   // Verify the live intervals in this union and add them to the visited set.
-  void verify(LiveVirtRegBitSet& VisitedVRegs);
+  void verify(LiveVirtRegBitSet &VisitedVRegs);
 #endif
 
   // Get any virtual register that is assign to this physical unit
@@ -112,8 +115,8 @@ public:
   class Query {
     const LiveIntervalUnion *LiveUnion = nullptr;
     const LiveRange *LR = nullptr;
-    LiveRange::const_iterator LRI;  ///< current position in LR
-    ConstSegmentIter LiveUnionI;    ///< current position in LiveUnion
+    LiveRange::const_iterator LRI; ///< current position in LR
+    ConstSegmentIter LiveUnionI;   ///< current position in LiveUnion
     SmallVector<const LiveInterval *, 4> InterferingVRegs;
     bool CheckedFirstInterference = false;
     bool SeenAllInterferences = false;
@@ -185,7 +188,7 @@ public:
 
     // Initialize the array to have Size entries.
     // Reuse an existing allocation if the size matches.
-    void init(LiveIntervalUnion::Allocator&, unsigned Size);
+    void init(LiveIntervalUnion::Allocator &, unsigned Size);
 
     unsigned size() const { return Size; }
 

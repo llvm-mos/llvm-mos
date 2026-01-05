@@ -44,6 +44,6 @@ public:
 
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
 };
-}
+} // namespace llvm
 
 #endif

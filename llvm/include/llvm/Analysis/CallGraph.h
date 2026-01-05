@@ -42,7 +42,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_ANALYSIS_CALLGRAPH_H
 #define LLVM_ANALYSIS_CALLGRAPH_H
 
@@ -492,8 +491,8 @@ struct GraphTraits<CallGraph *> : public GraphTraits<CallGraphNode *> {
 };
 
 template <>
-struct GraphTraits<const CallGraph *> : public GraphTraits<
-                                            const CallGraphNode *> {
+struct GraphTraits<const CallGraph *>
+    : public GraphTraits<const CallGraphNode *> {
   using PairTy =
       std::pair<const Function *const, std::unique_ptr<CallGraphNode>>;
 

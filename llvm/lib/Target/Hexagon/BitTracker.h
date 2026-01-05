@@ -71,15 +71,9 @@ private:
   struct UseQueueType {
     UseQueueType() : Uses(Dist) {}
 
-    unsigned size() const {
-      return Uses.size();
-    }
-    bool empty() const {
-      return size() == 0;
-    }
-    MachineInstr *front() const {
-      return Uses.top();
-    }
+    unsigned size() const { return Uses.size(); }
+    bool empty() const { return size() == 0; }
+    MachineInstr *front() const { return Uses.top(); }
     void push(MachineInstr *MI) {
       if (Set.insert(MI).second)
         Uses.push(MI);
@@ -88,17 +82,17 @@ private:
       Set.erase(front());
       Uses.pop();
     }
-    void reset() {
-      Dist.clear();
-    }
+    void reset() { Dist.clear(); }
+
   private:
     struct Cmp {
-      Cmp(DenseMap<const MachineInstr*,unsigned> &Map) : Dist(Map) {}
+      Cmp(DenseMap<const MachineInstr *, unsigned> &Map) : Dist(Map) {}
       bool operator()(const MachineInstr *MI, const MachineInstr *MJ) const;
-      DenseMap<const MachineInstr*,unsigned> &Dist;
+      DenseMap<const MachineInstr *, unsigned> &Dist;
     };
-    DenseSet<const MachineInstr*> Set; // Set to avoid adding duplicate entries.
-    DenseMap<const MachineInstr*,unsigned> Dist;
+    DenseSet<const MachineInstr *>
+        Set; // Set to avoid adding duplicate entries.
+    DenseMap<const MachineInstr *, unsigned> Dist;
     std::priority_queue<MachineInstr *, std::vector<MachineInstr *>, Cmp> Uses;
   };
 
@@ -123,7 +117,7 @@ private:
 struct BitTracker::BitRef {
   BitRef(unsigned R = 0, uint16_t P = 0) : Reg(R), Pos(P) {}
 
-  bool operator== (const BitRef &BR) const {
+  bool operator==(const BitRef &BR) const {
     // If Reg is 0, disregard Pos.
     return Reg == BR.Reg && (Reg == 0 || Pos == BR.Pos);
   }
@@ -151,10 +145,10 @@ struct BitTracker::RegisterRef {
 // RefInfo.
 struct BitTracker::BitValue {
   enum ValueType {
-    Top,    // Bit not yet defined.
-    Zero,   // Bit = 0.
-    One,    // Bit = 1.
-    Ref     // Bit value same as the one described in RefI.
+    Top,  // Bit not yet defined.
+    Zero, // Bit = 0.
+    One,  // Bit = 1.
+    Ref   // Bit value same as the one described in RefI.
     // Conceptually, there is no explicit "bottom" value: the lattice's
     // bottom will be expressed as a "ref to itself", which, in the context
     // of registers, could be read as "this value of this bit is defined by
@@ -192,21 +186,18 @@ struct BitTracker::BitValue {
   BitValue(bool B) : Type(B ? One : Zero) {}
   BitValue(unsigned Reg, uint16_t Pos) : Type(Ref), RefI(Reg, Pos) {}
 
-  bool operator== (const BitValue &V) const {
+  bool operator==(const BitValue &V) const {
     if (Type != V.Type)
       return false;
     if (Type == Ref && !(RefI == V.RefI))
       return false;
     return true;
   }
-  bool operator!= (const BitValue &V) const {
-    return !operator==(V);
-  }
+  bool operator!=(const BitValue &V) const { return !operator==(V); }
 
   bool is(unsigned T) const {
     assert(T == 0 || T == 1);
-    return T == 0 ? Type == Zero
-                  : (T == 1 ? Type == One : false);
+    return T == 0 ? Type == Zero : (T == 1 ? Type == One : false);
   }
 
   // The "meet" operation is the "." operation in a semilattice (L, ., T, B):
@@ -225,11 +216,11 @@ struct BitTracker::BitValue {
   // defines a partial order (i.e. that "meet" is same as "infimum").
   bool meet(const BitValue &V, const BitRef &Self) {
     // First, check the cases where there is nothing to be done.
-    if (Type == Ref && RefI == Self)    // Bottom.meet(V) = Bottom (i.e. This)
+    if (Type == Ref && RefI == Self) // Bottom.meet(V) = Bottom (i.e. This)
       return false;
-    if (V.Type == Top)                  // This.meet(Top) = This
+    if (V.Type == Top) // This.meet(Top) = This
       return false;
-    if (*this == V)                     // This.meet(This) = This
+    if (*this == V) // This.meet(This) = This
       return false;
 
     // At this point, we know that the value of "this" will change.
@@ -237,7 +228,7 @@ struct BitTracker::BitValue {
     // become "bottom" (i.e. Self).
     if (Type == Top) {
       Type = V.Type;
-      RefI = V.RefI;  // This may be irrelevant, but copy anyway.
+      RefI = V.RefI; // This may be irrelevant, but copy anyway.
       return true;
     }
     // Become "bottom".
@@ -251,9 +242,7 @@ struct BitTracker::BitValue {
   // Create a "self".
   static BitValue self(const BitRef &Self = BitRef());
 
-  bool num() const {
-    return Type == Zero || Type == One;
-  }
+  bool num() const { return Type == Zero || Type == One; }
 
   operator bool() const {
     assert(Type == Zero || Type == One);
@@ -264,8 +253,7 @@ struct BitTracker::BitValue {
 };
 
 // This operation must be idempotent, i.e. ref(ref(V)) == ref(V).
-inline BitTracker::BitValue
-BitTracker::BitValue::ref(const BitValue &V) {
+inline BitTracker::BitValue BitTracker::BitValue::ref(const BitValue &V) {
   if (V.Type != Ref)
     return BitValue(V.Type);
   if (V.RefI.Reg != 0)
@@ -273,8 +261,7 @@ BitTracker::BitValue::ref(const BitValue &V) {
   return self();
 }
 
-inline BitTracker::BitValue
-BitTracker::BitValue::self(const BitRef &Self) {
+inline BitTracker::BitValue BitTracker::BitValue::self(const BitRef &Self) {
   return BitValue(Self.Reg, Self.Pos);
 }
 
@@ -297,9 +284,7 @@ private:
 struct BitTracker::RegisterCell {
   RegisterCell(uint16_t Width = DefaultBitN) : Bits(Width) {}
 
-  uint16_t width() const {
-    return Bits.size();
-  }
+  uint16_t width() const { return Bits.size(); }
 
   const BitValue &operator[](uint16_t BitN) const {
     assert(BitN < Bits.size());
@@ -312,17 +297,15 @@ struct BitTracker::RegisterCell {
 
   bool meet(const RegisterCell &RC, Register SelfR);
   RegisterCell &insert(const RegisterCell &RC, const BitMask &M);
-  RegisterCell extract(const BitMask &M) const;  // Returns a new cell.
-  RegisterCell &rol(uint16_t Sh);    // Rotate left.
+  RegisterCell extract(const BitMask &M) const; // Returns a new cell.
+  RegisterCell &rol(uint16_t Sh);               // Rotate left.
   RegisterCell &fill(uint16_t B, uint16_t E, const BitValue &V);
-  RegisterCell &cat(const RegisterCell &RC);  // Concatenate.
+  RegisterCell &cat(const RegisterCell &RC); // Concatenate.
   uint16_t cl(bool B) const;
   uint16_t ct(bool B) const;
 
-  bool operator== (const RegisterCell &RC) const;
-  bool operator!= (const RegisterCell &RC) const {
-    return !operator==(RC);
-  }
+  bool operator==(const RegisterCell &RC) const;
+  bool operator!=(const RegisterCell &RC) const { return !operator==(RC); }
 
   // Replace the ref-to-reg-0 bit values with the given register.
   RegisterCell &regify(unsigned R);
@@ -350,23 +333,21 @@ inline bool BitTracker::has(unsigned Reg) const {
   return Map.find(Reg) != Map.end();
 }
 
-inline const BitTracker::RegisterCell&
-BitTracker::lookup(unsigned Reg) const {
+inline const BitTracker::RegisterCell &BitTracker::lookup(unsigned Reg) const {
   CellMapType::const_iterator F = Map.find(Reg);
   assert(F != Map.end());
   return F->second;
 }
 
-inline BitTracker::RegisterCell
-BitTracker::RegisterCell::self(unsigned Reg, uint16_t Width) {
+inline BitTracker::RegisterCell BitTracker::RegisterCell::self(unsigned Reg,
+                                                               uint16_t Width) {
   RegisterCell RC(Width);
   for (uint16_t i = 0; i < Width; ++i)
     RC.Bits[i] = BitValue::self(BitRef(Reg, i));
   return RC;
 }
 
-inline BitTracker::RegisterCell
-BitTracker::RegisterCell::top(uint16_t Width) {
+inline BitTracker::RegisterCell BitTracker::RegisterCell::top(uint16_t Width) {
   RegisterCell RC(Width);
   for (uint16_t i = 0; i < Width; ++i)
     RC.Bits[i] = BitValue(BitValue::Top);
@@ -475,7 +456,7 @@ struct BitTracker::MachineEvaluator {
                         BranchTargetList &Targets, bool &FallsThru) const = 0;
   // Given a register class RC, return a register class that should be assumed
   // when a register from class RC is used with a subregister of index Idx.
-  virtual const TargetRegisterClass&
+  virtual const TargetRegisterClass &
   composeWithSubRegIndex(const TargetRegisterClass &RC, unsigned Idx) const {
     if (Idx == 0)
       return RC;

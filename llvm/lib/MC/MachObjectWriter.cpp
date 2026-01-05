@@ -79,8 +79,8 @@ bool MachObjectWriter::doesSymbolRequireExternRelocation(const MCSymbol &S) {
   return false;
 }
 
-bool MachObjectWriter::
-MachSymbolData::operator<(const MachSymbolData &RHS) const {
+bool MachObjectWriter::MachSymbolData::operator<(
+    const MachSymbolData &RHS) const {
   return Symbol->getName() < RHS.Symbol->getName();
 }
 
@@ -95,7 +95,7 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S) const {
   // If this is a variable, then recursively evaluate now.
   if (S.isVariable()) {
     if (const MCConstantExpr *C =
-          dyn_cast<const MCConstantExpr>(S.getVariableValue()))
+            dyn_cast<const MCConstantExpr>(S.getVariableValue()))
       return C->getValue();
 
     MCValue Target;
@@ -180,7 +180,7 @@ void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
   // struct mach_header_64 (32 bytes)
 
   uint64_t Start = W.OS.tell();
-  (void) Start;
+  (void)Start;
 
   W.write<uint32_t>(is64Bit() ? MachO::MH_MAGIC_64 : MachO::MH_MAGIC);
 
@@ -227,27 +227,27 @@ void MachObjectWriter::writeSegmentLoadCommand(
   // struct segment_command_64 (72 bytes)
 
   uint64_t Start = W.OS.tell();
-  (void) Start;
+  (void)Start;
 
-  unsigned SegmentLoadCommandSize =
-    is64Bit() ? sizeof(MachO::segment_command_64):
-    sizeof(MachO::segment_command);
+  unsigned SegmentLoadCommandSize = is64Bit()
+                                        ? sizeof(MachO::segment_command_64)
+                                        : sizeof(MachO::segment_command);
   W.write<uint32_t>(is64Bit() ? MachO::LC_SEGMENT_64 : MachO::LC_SEGMENT);
   W.write<uint32_t>(SegmentLoadCommandSize +
-          NumSections * (is64Bit() ? sizeof(MachO::section_64) :
-                         sizeof(MachO::section)));
+                    NumSections * (is64Bit() ? sizeof(MachO::section_64)
+                                             : sizeof(MachO::section)));
 
   writeWithPadding(Name, 16);
   if (is64Bit()) {
     W.write<uint64_t>(VMAddr);                 // vmaddr
-    W.write<uint64_t>(VMSize); // vmsize
+    W.write<uint64_t>(VMSize);                 // vmsize
     W.write<uint64_t>(SectionDataStartOffset); // file offset
-    W.write<uint64_t>(SectionDataSize); // file size
+    W.write<uint64_t>(SectionDataSize);        // file size
   } else {
     W.write<uint32_t>(VMAddr);                 // vmaddr
-    W.write<uint32_t>(VMSize); // vmsize
+    W.write<uint32_t>(VMSize);                 // vmsize
     W.write<uint32_t>(SectionDataStartOffset); // file offset
-    W.write<uint32_t>(SectionDataSize); // file size
+    W.write<uint32_t>(SectionDataSize);        // file size
   }
   // maxprot
   W.write<uint32_t>(MaxProt);
@@ -275,7 +275,7 @@ void MachObjectWriter::writeSection(const MCAssembler &Asm,
 
   uint64_t SectionSize = Asm.getSectionAddressSize(Sec);
   uint64_t Start = W.OS.tell();
-  (void) Start;
+  (void)Start;
   writeWithPadding(Sec.getName(), 16);
   writeWithPadding(Sec.getSegmentName(), 16);
   if (is64Bit()) {
@@ -310,7 +310,7 @@ void MachObjectWriter::writeSymtabLoadCommand(uint32_t SymbolOffset,
   // struct symtab_command (24 bytes)
 
   uint64_t Start = W.OS.tell();
-  (void) Start;
+  (void)Start;
 
   W.write<uint32_t>(MachO::LC_SYMTAB);
   W.write<uint32_t>(sizeof(MachO::symtab_command));
@@ -322,18 +322,15 @@ void MachObjectWriter::writeSymtabLoadCommand(uint32_t SymbolOffset,
   assert(W.OS.tell() - Start == sizeof(MachO::symtab_command));
 }
 
-void MachObjectWriter::writeDysymtabLoadCommand(uint32_t FirstLocalSymbol,
-                                                uint32_t NumLocalSymbols,
-                                                uint32_t FirstExternalSymbol,
-                                                uint32_t NumExternalSymbols,
-                                                uint32_t FirstUndefinedSymbol,
-                                                uint32_t NumUndefinedSymbols,
-                                                uint32_t IndirectSymbolOffset,
-                                                uint32_t NumIndirectSymbols) {
+void MachObjectWriter::writeDysymtabLoadCommand(
+    uint32_t FirstLocalSymbol, uint32_t NumLocalSymbols,
+    uint32_t FirstExternalSymbol, uint32_t NumExternalSymbols,
+    uint32_t FirstUndefinedSymbol, uint32_t NumUndefinedSymbols,
+    uint32_t IndirectSymbolOffset, uint32_t NumIndirectSymbols) {
   // struct dysymtab_command (80 bytes)
 
   uint64_t Start = W.OS.tell();
-  (void) Start;
+  (void)Start;
 
   W.write<uint32_t>(MachO::LC_DYSYMTAB);
   W.write<uint32_t>(sizeof(MachO::dysymtab_command));
@@ -454,7 +451,7 @@ void MachObjectWriter::writeLinkeditLoadCommand(uint32_t Type,
                                                 uint32_t DataOffset,
                                                 uint32_t DataSize) {
   uint64_t Start = W.OS.tell();
-  (void) Start;
+  (void)Start;
 
   W.write<uint32_t>(Type);
   W.write<uint32_t>(sizeof(MachO::linkedit_data_command));
@@ -464,9 +461,9 @@ void MachObjectWriter::writeLinkeditLoadCommand(uint32_t Type,
   assert(W.OS.tell() - Start == sizeof(MachO::linkedit_data_command));
 }
 
-static unsigned ComputeLinkerOptionsLoadCommandSize(
-  const std::vector<std::string> &Options, bool is64Bit)
-{
+static unsigned
+ComputeLinkerOptionsLoadCommandSize(const std::vector<std::string> &Options,
+                                    bool is64Bit) {
   unsigned Size = sizeof(MachO::linker_option_command);
   for (const std::string &Option : Options)
     Size += Option.size() + 1;
@@ -474,11 +471,10 @@ static unsigned ComputeLinkerOptionsLoadCommandSize(
 }
 
 void MachObjectWriter::writeLinkerOptionsLoadCommand(
-  const std::vector<std::string> &Options)
-{
+    const std::vector<std::string> &Options) {
   unsigned Size = ComputeLinkerOptionsLoadCommandSize(Options, is64Bit());
   uint64_t Start = W.OS.tell();
-  (void) Start;
+  (void)Start;
 
   W.write<uint32_t>(MachO::LC_LINKER_OPTION);
   W.write<uint32_t>(Size);
@@ -546,7 +542,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
     const auto &Section = static_cast<MCSectionMachO &>(*ISD.Section);
 
     if (Section.getType() != MachO::S_NON_LAZY_SYMBOL_POINTERS &&
-        Section.getType() !=  MachO::S_THREAD_LOCAL_VARIABLE_POINTERS)
+        Section.getType() != MachO::S_THREAD_LOCAL_VARIABLE_POINTERS)
       continue;
 
     // Initialize the section indirect symbol base, if necessary.
@@ -580,7 +576,7 @@ void MachObjectWriter::computeSymbolTable(
     std::vector<MachSymbolData> &ExternalSymbolData,
     std::vector<MachSymbolData> &UndefinedSymbolData) {
   // Build section lookup table.
-  DenseMap<const MCSection*, uint8_t> SectionIndexMap;
+  DenseMap<const MCSection *, uint8_t> SectionIndexMap;
   unsigned Index = 1;
   for (MCSection &Sec : Asm)
     SectionIndexMap[&Sec] = Index++;
@@ -770,10 +766,14 @@ bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
 
 static MachO::LoadCommandType getLCFromMCVM(MCVersionMinType Type) {
   switch (Type) {
-  case MCVM_OSXVersionMin:     return MachO::LC_VERSION_MIN_MACOSX;
-  case MCVM_IOSVersionMin:     return MachO::LC_VERSION_MIN_IPHONEOS;
-  case MCVM_TvOSVersionMin:    return MachO::LC_VERSION_MIN_TVOS;
-  case MCVM_WatchOSVersionMin: return MachO::LC_VERSION_MIN_WATCHOS;
+  case MCVM_OSXVersionMin:
+    return MachO::LC_VERSION_MIN_MACOSX;
+  case MCVM_IOSVersionMin:
+    return MachO::LC_VERSION_MIN_IPHONEOS;
+  case MCVM_TvOSVersionMin:
+    return MachO::LC_VERSION_MIN_TVOS;
+  case MCVM_WatchOSVersionMin:
+    return MachO::LC_VERSION_MIN_WATCHOS;
   }
   llvm_unreachable("Invalid mc version min type");
 }
@@ -823,9 +823,11 @@ uint64_t MachObjectWriter::writeObject() {
   // The section data starts after the header, the segment load command (and
   // section headers) and the symbol table.
   unsigned NumLoadCommands = 1;
-  uint64_t LoadCommandsSize = is64Bit() ?
-    sizeof(MachO::segment_command_64) + NumSections * sizeof(MachO::section_64):
-    sizeof(MachO::segment_command) + NumSections * sizeof(MachO::section);
+  uint64_t LoadCommandsSize = is64Bit()
+                                  ? sizeof(MachO::segment_command_64) +
+                                        NumSections * sizeof(MachO::section_64)
+                                  : sizeof(MachO::segment_command) +
+                                        NumSections * sizeof(MachO::section);
 
   // Add the deployment target version info load command size, if used.
   if (VersionInfo.Major != 0) {
@@ -861,11 +863,11 @@ uint64_t MachObjectWriter::writeObject() {
 
   // Add the symbol table load command sizes, if used.
   unsigned NumSymbols = LocalSymbolData.size() + ExternalSymbolData.size() +
-    UndefinedSymbolData.size();
+                        UndefinedSymbolData.size();
   if (NumSymbols) {
     NumLoadCommands += 2;
-    LoadCommandsSize += (sizeof(MachO::symtab_command) +
-                         sizeof(MachO::dysymtab_command));
+    LoadCommandsSize +=
+        (sizeof(MachO::symtab_command) + sizeof(MachO::dysymtab_command));
   }
 
   // Add the linker option load commands sizes.
@@ -876,8 +878,9 @@ uint64_t MachObjectWriter::writeObject() {
 
   // Compute the total size of the section data, as well as its file size and vm
   // size.
-  uint64_t SectionDataStart = (is64Bit() ? sizeof(MachO::mach_header_64) :
-                               sizeof(MachO::mach_header)) + LoadCommandsSize;
+  uint64_t SectionDataStart =
+      (is64Bit() ? sizeof(MachO::mach_header_64) : sizeof(MachO::mach_header)) +
+      LoadCommandsSize;
   uint64_t SectionDataSize = 0;
   uint64_t SectionDataFileSize = 0;
   uint64_t VMSize = 0;
@@ -939,39 +942,38 @@ uint64_t MachObjectWriter::writeObject() {
   }
 
   // Write out the deployment target information, if it's available.
-  auto EmitDeploymentTargetVersion =
-      [&](const VersionInfoType &VersionInfo) {
-        auto EncodeVersion = [](VersionTuple V) -> uint32_t {
-          assert(!V.empty() && "empty version");
-          unsigned Update = V.getSubminor().value_or(0);
-          unsigned Minor = V.getMinor().value_or(0);
-          assert(Update < 256 && "unencodable update target version");
-          assert(Minor < 256 && "unencodable minor target version");
-          assert(V.getMajor() < 65536 && "unencodable major target version");
-          return Update | (Minor << 8) | (V.getMajor() << 16);
-        };
-        uint32_t EncodedVersion = EncodeVersion(VersionTuple(
-            VersionInfo.Major, VersionInfo.Minor, VersionInfo.Update));
-        uint32_t SDKVersion = !VersionInfo.SDKVersion.empty()
-                                  ? EncodeVersion(VersionInfo.SDKVersion)
-                                  : 0;
-        if (VersionInfo.EmitBuildVersion) {
-          // FIXME: Currently empty tools. Add clang version in the future.
-          W.write<uint32_t>(MachO::LC_BUILD_VERSION);
-          W.write<uint32_t>(sizeof(MachO::build_version_command));
-          W.write<uint32_t>(VersionInfo.TypeOrPlatform.Platform);
-          W.write<uint32_t>(EncodedVersion);
-          W.write<uint32_t>(SDKVersion);
-          W.write<uint32_t>(0); // Empty tools list.
-        } else {
-          MachO::LoadCommandType LCType =
-              getLCFromMCVM(VersionInfo.TypeOrPlatform.Type);
-          W.write<uint32_t>(LCType);
-          W.write<uint32_t>(sizeof(MachO::version_min_command));
-          W.write<uint32_t>(EncodedVersion);
-          W.write<uint32_t>(SDKVersion);
-        }
-      };
+  auto EmitDeploymentTargetVersion = [&](const VersionInfoType &VersionInfo) {
+    auto EncodeVersion = [](VersionTuple V) -> uint32_t {
+      assert(!V.empty() && "empty version");
+      unsigned Update = V.getSubminor().value_or(0);
+      unsigned Minor = V.getMinor().value_or(0);
+      assert(Update < 256 && "unencodable update target version");
+      assert(Minor < 256 && "unencodable minor target version");
+      assert(V.getMajor() < 65536 && "unencodable major target version");
+      return Update | (Minor << 8) | (V.getMajor() << 16);
+    };
+    uint32_t EncodedVersion = EncodeVersion(
+        VersionTuple(VersionInfo.Major, VersionInfo.Minor, VersionInfo.Update));
+    uint32_t SDKVersion = !VersionInfo.SDKVersion.empty()
+                              ? EncodeVersion(VersionInfo.SDKVersion)
+                              : 0;
+    if (VersionInfo.EmitBuildVersion) {
+      // FIXME: Currently empty tools. Add clang version in the future.
+      W.write<uint32_t>(MachO::LC_BUILD_VERSION);
+      W.write<uint32_t>(sizeof(MachO::build_version_command));
+      W.write<uint32_t>(VersionInfo.TypeOrPlatform.Platform);
+      W.write<uint32_t>(EncodedVersion);
+      W.write<uint32_t>(SDKVersion);
+      W.write<uint32_t>(0); // Empty tools list.
+    } else {
+      MachO::LoadCommandType LCType =
+          getLCFromMCVM(VersionInfo.TypeOrPlatform.Type);
+      W.write<uint32_t>(LCType);
+      W.write<uint32_t>(sizeof(MachO::version_min_command));
+      W.write<uint32_t>(EncodedVersion);
+      W.write<uint32_t>(SDKVersion);
+    }
+  };
   if (VersionInfo.Major != 0)
     EmitDeploymentTargetVersion(VersionInfo);
   if (TargetVariantVersionInfo.Major != 0)
@@ -1002,7 +1004,7 @@ uint64_t MachObjectWriter::writeObject() {
     unsigned NumUndefinedSymbols = UndefinedSymbolData.size();
     unsigned NumIndirectSymbols = IndirectSymbols.size();
     unsigned NumSymTabSymbols =
-      NumLocalSymbols + NumExternalSymbols + NumUndefinedSymbols;
+        NumLocalSymbols + NumExternalSymbols + NumUndefinedSymbols;
     uint64_t IndirectSymbolSize = NumIndirectSymbols * 4;
     uint64_t IndirectSymbolOffset = 0;
 
@@ -1015,9 +1017,9 @@ uint64_t MachObjectWriter::writeObject() {
 
     // The string table is written after symbol table.
     uint64_t StringTableOffset =
-      SymbolTableOffset + NumSymTabSymbols * (is64Bit() ?
-                                              sizeof(MachO::nlist_64) :
-                                              sizeof(MachO::nlist));
+        SymbolTableOffset +
+        NumSymTabSymbols *
+            (is64Bit() ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist));
     writeSymtabLoadCommand(SymbolTableOffset, NumSymTabSymbols,
                            StringTableOffset, StringTable.getSize());
 

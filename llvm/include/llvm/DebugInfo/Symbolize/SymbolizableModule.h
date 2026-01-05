@@ -50,4 +50,4 @@ public:
 } // end namespace symbolize
 } // end namespace llvm
 
-#endif  // LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEMODULE_H
+#endif // LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEMODULE_H

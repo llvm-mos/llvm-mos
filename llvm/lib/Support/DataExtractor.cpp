@@ -138,8 +138,8 @@ uint64_t DataExtractor::getUnsigned(uint64_t *offset_ptr, uint32_t byte_size,
   llvm_unreachable("getUnsigned unhandled case!");
 }
 
-int64_t
-DataExtractor::getSigned(uint64_t *offset_ptr, uint32_t byte_size) const {
+int64_t DataExtractor::getSigned(uint64_t *offset_ptr,
+                                 uint32_t byte_size) const {
   switch (byte_size) {
   case 1:
     return getS8(offset_ptr);

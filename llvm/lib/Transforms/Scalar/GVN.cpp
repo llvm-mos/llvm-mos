@@ -110,8 +110,8 @@ static cl::opt<bool> GVNEnableLoadPRE("enable-load-pre", cl::init(true));
 static cl::opt<bool> GVNEnableLoadInLoopPRE("enable-load-in-loop-pre",
                                             cl::init(true));
 static cl::opt<bool>
-GVNEnableSplitBackedgeInLoadPRE("enable-split-backedge-in-load-pre",
-                                cl::init(false));
+    GVNEnableSplitBackedgeInLoadPRE("enable-split-backedge-in-load-pre",
+                                    cl::init(false));
 static cl::opt<bool> GVNEnableMemDep("enable-gvn-memdep", cl::init(true));
 static cl::opt<bool> GVNEnableMemorySSA("enable-gvn-memoryssa",
                                         cl::init(false));
@@ -662,67 +662,67 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
 
   Expression Exp;
   switch (I->getOpcode()) {
-    case Instruction::Call:
-      return lookupOrAddCall(cast<CallInst>(I));
-    case Instruction::FNeg:
-    case Instruction::Add:
-    case Instruction::FAdd:
-    case Instruction::Sub:
-    case Instruction::FSub:
-    case Instruction::Mul:
-    case Instruction::FMul:
-    case Instruction::UDiv:
-    case Instruction::SDiv:
-    case Instruction::FDiv:
-    case Instruction::URem:
-    case Instruction::SRem:
-    case Instruction::FRem:
-    case Instruction::Shl:
-    case Instruction::LShr:
-    case Instruction::AShr:
-    case Instruction::And:
-    case Instruction::Or:
-    case Instruction::Xor:
-    case Instruction::ICmp:
-    case Instruction::FCmp:
-    case Instruction::Trunc:
-    case Instruction::ZExt:
-    case Instruction::SExt:
-    case Instruction::FPToUI:
-    case Instruction::FPToSI:
-    case Instruction::UIToFP:
-    case Instruction::SIToFP:
-    case Instruction::FPTrunc:
-    case Instruction::FPExt:
-    case Instruction::PtrToInt:
-    case Instruction::PtrToAddr:
-    case Instruction::IntToPtr:
-    case Instruction::AddrSpaceCast:
-    case Instruction::BitCast:
-    case Instruction::Select:
-    case Instruction::Freeze:
-    case Instruction::ExtractElement:
-    case Instruction::InsertElement:
-    case Instruction::ShuffleVector:
-    case Instruction::InsertValue:
-      Exp = createExpr(I);
-      break;
-    case Instruction::GetElementPtr:
-      Exp = createGEPExpr(cast<GetElementPtrInst>(I));
-      break;
-    case Instruction::ExtractValue:
-      Exp = createExtractvalueExpr(cast<ExtractValueInst>(I));
-      break;
-    case Instruction::PHI:
-      ValueNumbering[V] = NextValueNumber;
-      NumberingPhi[NextValueNumber] = cast<PHINode>(V);
-      return NextValueNumber++;
-    case Instruction::Load:
-    case Instruction::Store:
-      return computeLoadStoreVN(I);
-    default:
-      ValueNumbering[V] = NextValueNumber;
-      return NextValueNumber++;
+  case Instruction::Call:
+    return lookupOrAddCall(cast<CallInst>(I));
+  case Instruction::FNeg:
+  case Instruction::Add:
+  case Instruction::FAdd:
+  case Instruction::Sub:
+  case Instruction::FSub:
+  case Instruction::Mul:
+  case Instruction::FMul:
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::FDiv:
+  case Instruction::URem:
+  case Instruction::SRem:
+  case Instruction::FRem:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+  case Instruction::Trunc:
+  case Instruction::ZExt:
+  case Instruction::SExt:
+  case Instruction::FPToUI:
+  case Instruction::FPToSI:
+  case Instruction::UIToFP:
+  case Instruction::SIToFP:
+  case Instruction::FPTrunc:
+  case Instruction::FPExt:
+  case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
+  case Instruction::IntToPtr:
+  case Instruction::AddrSpaceCast:
+  case Instruction::BitCast:
+  case Instruction::Select:
+  case Instruction::Freeze:
+  case Instruction::ExtractElement:
+  case Instruction::InsertElement:
+  case Instruction::ShuffleVector:
+  case Instruction::InsertValue:
+    Exp = createExpr(I);
+    break;
+  case Instruction::GetElementPtr:
+    Exp = createGEPExpr(cast<GetElementPtrInst>(I));
+    break;
+  case Instruction::ExtractValue:
+    Exp = createExtractvalueExpr(cast<ExtractValueInst>(I));
+    break;
+  case Instruction::PHI:
+    ValueNumbering[V] = NextValueNumber;
+    NumberingPhi[NextValueNumber] = cast<PHINode>(V);
+    return NextValueNumber++;
+  case Instruction::Load:
+  case Instruction::Store:
+    return computeLoadStoreVN(I);
+  default:
+    ValueNumbering[V] = NextValueNumber;
+    return NextValueNumber++;
   }
 
   uint32_t E = assignExpNewValueNum(Exp).first;
@@ -1113,7 +1113,7 @@ ConstructSSAForLoadSet(LoadInst *Load,
   }
 
   // Otherwise, we have to construct SSA form.
-  SmallVector<PHINode*, 8> NewPHIs;
+  SmallVector<PHINode *, 8> NewPHIs;
   SSAUpdater SSAUpdate(&NewPHIs);
   SSAUpdate.Initialize(Load->getType(), Load->getName());
 
@@ -1185,8 +1185,8 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
                         << "\n\n\n");
     }
   } else if (isMemIntrinValue()) {
-    Res = getMemInstValueForLoad(getMemIntrinValue(), Offset, LoadTy,
-                                 InsertPt, DL);
+    Res = getMemInstValueForLoad(getMemIntrinValue(), Offset, LoadTy, InsertPt,
+                                 DL);
     LLVM_DEBUG(dbgs() << "GVN COERCED NONLOCAL MEM INTRIN:\nOffset: " << Offset
                       << "  " << *getMemIntrinValue() << '\n'
                       << *Res << '\n'
@@ -1208,7 +1208,7 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
 }
 
 static bool isLifetimeStart(const Instruction *Inst) {
-  if (const IntrinsicInst* II = dyn_cast<IntrinsicInst>(Inst))
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst))
     return II->getIntrinsicID() == Intrinsic::lifetime_start;
   return false;
 }
@@ -1770,8 +1770,8 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
 
   // Decide whether PRE is profitable for this load.
   unsigned NumInsertPreds = PredLoads.size() + CriticalEdgePredSplit.size();
-  unsigned NumUnavailablePreds = NumInsertPreds +
-      CriticalEdgePredAndLoad.size();
+  unsigned NumUnavailablePreds =
+      NumInsertPreds + CriticalEdgePredAndLoad.size();
   assert(NumUnavailablePreds != 0 &&
          "Fully available value should already be eliminated!");
   (void)NumUnavailablePreds;
@@ -1781,7 +1781,7 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
   // all the preds that don't have an available Load and insert a new load into
   // that one block.
   if (NumInsertPreds > 1)
-      return false;
+    return false;
 
   // Now we know where we will insert load. We must ensure that it is safe
   // to speculatively execute the load at that points.
@@ -1815,7 +1815,7 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
   // Check if the load can safely be moved to all the unavailable predecessors.
   bool CanDoPRE = true;
   const DataLayout &DL = Load->getDataLayout();
-  SmallVector<Instruction*, 8> NewInsts;
+  SmallVector<Instruction *, 8> NewInsts;
   for (auto &PredLoad : PredLoads) {
     BasicBlock *UnavailablePred = PredLoad.first;
 
@@ -1875,9 +1875,9 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
   // and using PHI construction to get the value in the other predecessors, do
   // it.
   LLVM_DEBUG(dbgs() << "GVN REMOVING PRE LOAD: " << *Load << '\n');
-  LLVM_DEBUG(if (!NewInsts.empty()) dbgs() << "INSERTED " << NewInsts.size()
-                                           << " INSTS: " << *NewInsts.back()
-                                           << '\n');
+  LLVM_DEBUG(if (!NewInsts.empty()) dbgs()
+             << "INSERTED " << NewInsts.size() << " INSTS: " << *NewInsts.back()
+             << '\n');
 
   // Assign value numbers to the new instructions.
   for (Instruction *I : NewInsts) {
@@ -2011,8 +2011,8 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
 
   // If we had a phi translation failure, we'll have a single entry which is a
   // clobber in the current block.  Reject this early.
-  if (NumDeps == 1 &&
-      !Deps[0].getResult().isDef() && !Deps[0].getResult().isClobber()) {
+  if (NumDeps == 1 && !Deps[0].getResult().isDef() &&
+      !Deps[0].getResult().isClobber()) {
     LLVM_DEBUG(dbgs() << "GVN: non-local load "; Load->printAsOperand(dbgs());
                dbgs() << " has unknown dependencies\n";);
     return false;
@@ -2113,12 +2113,12 @@ bool GVNPass::processAssumeIntrinsic(AssumeInst *IntrinsicI) {
         }
 
         auto *NewDef =
-            FirstNonDom ? MSSAU->createMemoryAccessBefore(
-                              NewS, nullptr,
-                              const_cast<MemoryUseOrDef *>(FirstNonDom))
-                        : MSSAU->createMemoryAccessInBB(
-                              NewS, nullptr,
-                              NewS->getParent(), MemorySSA::BeforeTerminator);
+            FirstNonDom
+                ? MSSAU->createMemoryAccessBefore(
+                      NewS, nullptr, const_cast<MemoryUseOrDef *>(FirstNonDom))
+                : MSSAU->createMemoryAccessInBB(NewS, nullptr,
+                                                NewS->getParent(),
+                                                MemorySSA::BeforeTerminator);
 
         MSSAU->insertDef(cast<MemoryDef>(NewDef), /*RenameUses=*/false);
       }
@@ -2448,7 +2448,7 @@ void GVNPass::assignBlockRPONumber(Function &F) {
 bool GVNPass::propagateEquality(
     Value *LHS, Value *RHS,
     const std::variant<BasicBlockEdge, Instruction *> &Root) {
-  SmallVector<std::pair<Value*, Value*>, 4> Worklist;
+  SmallVector<std::pair<Value *, Value *>, 4> Worklist;
   Worklist.push_back(std::make_pair(LHS, RHS));
   bool Changed = false;
   SmallVector<const BasicBlock *> DominatedBlocks;
@@ -2464,8 +2464,9 @@ bool GVNPass::propagateEquality(
   }
 
   while (!Worklist.empty()) {
-    std::pair<Value*, Value*> Item = Worklist.pop_back_val();
-    LHS = Item.first; RHS = Item.second;
+    std::pair<Value *, Value *> Item = Worklist.pop_back_val();
+    LHS = Item.first;
+    RHS = Item.second;
 
     if (LHS == RHS)
       continue;
@@ -2478,11 +2479,11 @@ bool GVNPass::propagateEquality(
     // Prefer a constant on the right-hand side, or an Argument if no constants.
     if (isa<Constant>(LHS) || (isa<Argument>(LHS) && !isa<Constant>(RHS)))
       std::swap(LHS, RHS);
-    assert((isa<Argument>(LHS) || isa<Instruction>(LHS)) && "Unexpected value!");
+    assert((isa<Argument>(LHS) || isa<Instruction>(LHS)) &&
+           "Unexpected value!");
     const DataLayout &DL =
-        isa<Argument>(LHS)
-            ? cast<Argument>(LHS)->getParent()->getDataLayout()
-            : cast<Instruction>(LHS)->getDataLayout();
+        isa<Argument>(LHS) ? cast<Argument>(LHS)->getParent()->getDataLayout()
+                           : cast<Instruction>(LHS)->getDataLayout();
 
     // If there is no obvious reason to prefer the left-hand side over the
     // right-hand side, ensure the longest lived term is on the right-hand side,
@@ -2829,7 +2830,7 @@ bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   unsigned Iteration = 0;
   while (ShouldContinue) {
     LLVM_DEBUG(dbgs() << "GVN iteration: " << Iteration << "\n");
-    (void) Iteration;
+    (void)Iteration;
     ShouldContinue = iterateOnFunction(F);
     Changed |= ShouldContinue;
     ++Iteration;
@@ -2902,8 +2903,7 @@ bool GVNPass::performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
       Success = false;
       break;
     }
-    uint32_t TValNo =
-        VN.phiTranslate(Pred, Curr, VN.lookup(Op), *this);
+    uint32_t TValNo = VN.phiTranslate(Pred, Curr, VN.lookup(Op), *this);
     if (Value *V = findLeader(Pred, TValNo)) {
       Instr->setOperand(I, V);
     } else {
@@ -3184,7 +3184,8 @@ void GVNPass::cleanupGlobalSets() {
 
 void GVNPass::removeInstruction(Instruction *I) {
   VN.erase(I);
-  if (MD) MD->removeInstruction(I);
+  if (MD)
+    MD->removeInstruction(I);
   if (MSSAU)
     MSSAU->removeMemoryAccess(I);
 #ifndef NDEBUG
@@ -3387,7 +3388,8 @@ private:
 
 char GVNLegacyPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(GVNLegacyPass, "gvn", "Global Value Numbering", false, false)
+INITIALIZE_PASS_BEGIN(GVNLegacyPass, "gvn", "Global Value Numbering", false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
@@ -3396,7 +3398,8 @@ INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
-INITIALIZE_PASS_END(GVNLegacyPass, "gvn", "Global Value Numbering", false, false)
+INITIALIZE_PASS_END(GVNLegacyPass, "gvn", "Global Value Numbering", false,
+                    false)
 
 // The public interface to this file...
 FunctionPass *llvm::createGVNPass() { return new GVNLegacyPass(); }

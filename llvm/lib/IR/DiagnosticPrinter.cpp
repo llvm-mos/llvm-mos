@@ -44,8 +44,8 @@ DiagnosticPrinter &DiagnosticPrinterRawOStream::operator<<(const char *Str) {
   return *this;
 }
 
-DiagnosticPrinter &DiagnosticPrinterRawOStream::operator<<(
-    const std::string &Str) {
+DiagnosticPrinter &
+DiagnosticPrinterRawOStream::operator<<(const std::string &Str) {
   Stream << Str;
   return *this;
 }
@@ -59,8 +59,8 @@ DiagnosticPrinter &DiagnosticPrinterRawOStream::operator<<(long N) {
   return *this;
 }
 
-DiagnosticPrinter &DiagnosticPrinterRawOStream::operator<<(
-    unsigned long long N) {
+DiagnosticPrinter &
+DiagnosticPrinterRawOStream::operator<<(unsigned long long N) {
   Stream << N;
   return *this;
 }
@@ -112,8 +112,8 @@ DiagnosticPrinter &DiagnosticPrinterRawOStream::operator<<(const Module &M) {
 }
 
 // Other types.
-DiagnosticPrinter &DiagnosticPrinterRawOStream::
-operator<<(const SMDiagnostic &Diag) {
+DiagnosticPrinter &
+DiagnosticPrinterRawOStream::operator<<(const SMDiagnostic &Diag) {
   // We don't have to print the SMDiagnostic kind, as the diagnostic severity
   // is printed by the diagnostic handler.
   Diag.print("", Stream, /*ShowColors=*/true, /*ShowKindLabel=*/false);

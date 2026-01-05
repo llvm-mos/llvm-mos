@@ -29,7 +29,8 @@ using namespace llvm;
 #define DEBUG_TYPE "hexagontti"
 
 static cl::opt<bool> HexagonAutoHVX("hexagon-autohvx", cl::init(false),
-    cl::Hidden, cl::desc("Enable loop vectorizer for HVX"));
+                                    cl::Hidden,
+                                    cl::desc("Enable loop vectorizer for HVX"));
 
 cl::opt<bool> HexagonAllowScatterGatherHVX(
     "hexagon-allow-scatter-gather-hvx", cl::init(false), cl::Hidden,
@@ -39,21 +40,20 @@ static cl::opt<bool> EnableV68FloatAutoHVX(
     "force-hvx-float", cl::Hidden,
     cl::desc("Enable auto-vectorization of floatint point types on v68."));
 
-static cl::opt<bool> EmitLookupTables("hexagon-emit-lookup-tables",
-    cl::init(true), cl::Hidden,
+static cl::opt<bool> EmitLookupTables(
+    "hexagon-emit-lookup-tables", cl::init(true), cl::Hidden,
     cl::desc("Control lookup table emission on Hexagon target"));
 
-static cl::opt<bool> HexagonMaskedVMem("hexagon-masked-vmem", cl::init(true),
-    cl::Hidden, cl::desc("Enable masked loads/stores for HVX"));
+static cl::opt<bool>
+    HexagonMaskedVMem("hexagon-masked-vmem", cl::init(true), cl::Hidden,
+                      cl::desc("Enable masked loads/stores for HVX"));
 
 // Constant "cost factor" to make floating point operations more expensive
 // in terms of vectorization cost. This isn't the best way, but it should
 // do. Ultimately, the cost should use cycles.
 static const unsigned FloatFactor = 4;
 
-bool HexagonTTIImpl::useHVX() const {
-  return ST.useHVXOps() && HexagonAutoHVX;
-}
+bool HexagonTTIImpl::useHVX() const { return ST.useHVXOps() && HexagonAutoHVX; }
 
 bool HexagonTTIImpl::isHVXVectorType(Type *Ty) const {
   auto *VecTy = dyn_cast<VectorType>(Ty);
@@ -134,7 +134,7 @@ HexagonTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
 }
 
 unsigned HexagonTTIImpl::getMinVectorRegisterBitWidth() const {
-  return useHVX() ? ST.getVectorLength()*8 : 32;
+  return useHVX() ? ST.getVectorLength() * 8 : 32;
 }
 
 ElementCount HexagonTTIImpl::getMinimumVF(unsigned ElemWidth,
@@ -253,8 +253,7 @@ InstructionCost HexagonTTIImpl::getInterleavedMemoryOpCost(
     bool UseMaskForCond, bool UseMaskForGaps) const {
   if (Indices.size() != Factor || UseMaskForCond || UseMaskForGaps)
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace,
-                                             CostKind,
+                                             Alignment, AddressSpace, CostKind,
                                              UseMaskForCond, UseMaskForGaps);
   return getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
 }
@@ -280,8 +279,8 @@ InstructionCost HexagonTTIImpl::getArithmeticInstrCost(
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CxtI);
 
   if (Ty->isVectorTy()) {
     if (!isHVXVectorType(Ty) && Ty->isFPOrFPVectorTy())
@@ -299,7 +298,7 @@ InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
                                                  TTI::CastContextHint CCH,
                                                  TTI::TargetCostKind CostKind,
                                                  const Instruction *I) const {
-  auto isNonHVXFP = [this] (Type *Ty) {
+  auto isNonHVXFP = [this](Type *Ty) {
     return Ty->isVectorTy() && !isHVXVectorType(Ty) && Ty->isFPOrFPVectorTy();
   };
   if (isNonHVXFP(SrcTy) || isNonHVXFP(DstTy))
@@ -326,8 +325,8 @@ InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    unsigned Index,
                                                    const Value *Op0,
                                                    const Value *Op1) const {
-  Type *ElemTy = Val->isVectorTy() ? cast<VectorType>(Val)->getElementType()
-                                   : Val;
+  Type *ElemTy =
+      Val->isVectorTy() ? cast<VectorType>(Val)->getElementType() : Val;
   if (Opcode == Instruction::InsertElement) {
     // Need two rotations for non-zero index.
     unsigned Cost = (Index != 0) ? 2 : 0;

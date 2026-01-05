@@ -19,21 +19,21 @@
 using namespace llvm;
 
 namespace {
-  struct XCoreFTAOElim : public MachineFunctionPass {
-    static char ID;
-    XCoreFTAOElim() : MachineFunctionPass(ID) {}
+struct XCoreFTAOElim : public MachineFunctionPass {
+  static char ID;
+  XCoreFTAOElim() : MachineFunctionPass(ID) {}
 
-    bool runOnMachineFunction(MachineFunction &Fn) override;
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
-    }
+  bool runOnMachineFunction(MachineFunction &Fn) override;
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
 
-    StringRef getPassName() const override {
-      return "XCore FRAME_TO_ARGS_OFFSET Elimination";
-    }
-  };
-  char XCoreFTAOElim::ID = 0;
-}
+  StringRef getPassName() const override {
+    return "XCore FRAME_TO_ARGS_OFFSET Elimination";
+  }
+};
+char XCoreFTAOElim::ID = 0;
+} // namespace
 
 /// createXCoreFrameToArgsOffsetEliminationPass - returns an instance of the
 /// Frame to args offset elimination pass

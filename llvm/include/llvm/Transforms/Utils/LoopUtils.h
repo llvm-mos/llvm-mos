@@ -250,9 +250,10 @@ getOptionalElementCountLoopAttribute(const Loop *TheLoop);
 /// @param OrigLoopID The loop ID of the loop before the transformation.
 /// @param FollowupAttrs List of attribute names that contain attributes to be
 ///                      added to the new loop ID.
-/// @param InheritOptionsAttrsPrefix Selects which attributes should be inherited
-///                                  from the original loop. The following values
-///                                  are considered:
+/// @param InheritOptionsAttrsPrefix Selects which attributes should be
+/// inherited
+///                                  from the original loop. The following
+///                                  values are considered:
 ///        nullptr   : Inherit all attributes from @p OrigLoopID.
 ///        ""        : Do not inherit any attribute from @p OrigLoopID; only use
 ///                    those specified by a followup attribute.
@@ -277,7 +278,8 @@ makeFollowupLoopID(MDNode *OrigLoopID, ArrayRef<StringRef> FollowupAttrs,
 /// Look for the loop attribute that disables all transformation heuristic.
 LLVM_ABI bool hasDisableAllTransformsHint(const Loop *L);
 
-/// Look for the loop attribute that disables the LICM transformation heuristics.
+/// Look for the loop attribute that disables the LICM transformation
+/// heuristics.
 LLVM_ABI bool hasDisableLICMTransformsHint(const Loop *L);
 
 /// The mode sets how eager a transformation should be applied.

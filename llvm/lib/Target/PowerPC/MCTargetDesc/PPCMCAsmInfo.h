@@ -125,7 +125,7 @@ enum Specifier {
 };
 
 bool evaluateAsConstant(const MCSpecifierExpr &Expr, int64_t &Res);
-}
+} // namespace PPC
 
 namespace PPCMCExpr {
 using Specifier = uint16_t;

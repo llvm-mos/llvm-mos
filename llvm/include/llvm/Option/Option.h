@@ -31,10 +31,10 @@ using ArgStringList = SmallVector<const char *, 16>;
 
 /// Base flags for all options. Custom flags may be added after.
 enum DriverFlag {
-  HelpHidden       = (1 << 0),
-  RenderAsInput    = (1 << 1),
-  RenderJoined     = (1 << 2),
-  RenderSeparate   = (1 << 3)
+  HelpHidden = (1 << 0),
+  RenderAsInput = (1 << 1),
+  RenderJoined = (1 << 2),
+  RenderSeparate = (1 << 3)
 };
 
 enum DriverVisibility {
@@ -84,9 +84,7 @@ protected:
 public:
   LLVM_ABI Option(const OptTable::Info *Info, const OptTable *Owner);
 
-  bool isValid() const {
-    return Info != nullptr;
-  }
+  bool isValid() const { return Info != nullptr; }
 
   unsigned getID() const {
     assert(Info && "Must have a valid info!");
@@ -155,7 +153,7 @@ public:
 
   unsigned getNumArgs() const { return Info->Param; }
 
-  bool hasNoOptAsInput() const { return Info->Flags & RenderAsInput;}
+  bool hasNoOptAsInput() const { return Info->Flags & RenderAsInput; }
 
   RenderStyleKind getRenderStyle() const {
     if (Info->Flags & RenderJoined)
@@ -185,28 +183,23 @@ public:
   }
 
   /// Test if this option has the flag \a Val.
-  bool hasFlag(unsigned Val) const {
-    return Info->Flags & Val;
-  }
+  bool hasFlag(unsigned Val) const { return Info->Flags & Val; }
 
   /// Test if this option has the visibility flag \a Val.
-  bool hasVisibilityFlag(unsigned Val) const {
-    return Info->Visibility & Val;
-  }
+  bool hasVisibilityFlag(unsigned Val) const { return Info->Visibility & Val; }
 
   /// getUnaliasedOption - Return the final option this option
   /// aliases (itself, if the option has no alias).
   const Option getUnaliasedOption() const {
     const Option Alias = getAlias();
-    if (Alias.isValid()) return Alias.getUnaliasedOption();
+    if (Alias.isValid())
+      return Alias.getUnaliasedOption();
     return *this;
   }
 
   /// getRenderName - Return the name to use when rendering this
   /// option.
-  StringRef getRenderName() const {
-    return getUnaliasedOption().getName();
-  }
+  StringRef getRenderName() const { return getUnaliasedOption().getName(); }
 
   /// matches - Predicate for whether this option is part of the
   /// given option (which may be a group).

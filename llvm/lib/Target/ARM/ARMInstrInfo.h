@@ -17,10 +17,11 @@
 #include "ARMRegisterInfo.h"
 
 namespace llvm {
-  class ARMSubtarget;
+class ARMSubtarget;
 
 class ARMInstrInfo : public ARMBaseInstrInfo {
   ARMRegisterInfo RI;
+
 public:
   explicit ARMInstrInfo(const ARMSubtarget &STI);
 
@@ -41,6 +42,6 @@ private:
   void expandLoadStackGuard(MachineBasicBlock::iterator MI) const override;
 };
 
-}
+} // namespace llvm
 
 #endif

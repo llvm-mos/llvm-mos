@@ -156,8 +156,8 @@ bool RISCVPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
 
 char RISCVPreLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(RISCVPreLegalizerCombiner, DEBUG_TYPE,
-                      "Combine RISC-V machine instrs before legalization", false,
-                      false)
+                      "Combine RISC-V machine instrs before legalization",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)

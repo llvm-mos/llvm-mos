@@ -13,10 +13,10 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64INSTPRINTER_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64INSTPRINTER_H
 
+#include "../Utils/AArch64BaseInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstPrinter.h"
-#include "../Utils/AArch64BaseInfo.h"
 
 namespace llvm {
 
@@ -202,13 +202,12 @@ protected:
   template <int EltSize>
   void printPredicateAsCounter(const MCInst *MI, unsigned OpNum,
                                const MCSubtargetInfo &STI, raw_ostream &O);
-  template<int64_t Angle, int64_t Remainder>
+  template <int64_t Angle, int64_t Remainder>
   void printComplexRotationOp(const MCInst *MI, unsigned OpNo,
-                            const MCSubtargetInfo &STI, raw_ostream &O);
-  template<unsigned size>
+                              const MCSubtargetInfo &STI, raw_ostream &O);
+  template <unsigned size>
   void printGPRSeqPairsClassOperand(const MCInst *MI, unsigned OpNum,
-                                    const MCSubtargetInfo &STI,
-                                    raw_ostream &O);
+                                    const MCSubtargetInfo &STI, raw_ostream &O);
   template <typename T>
   void printImm8OptLsl(const MCInst *MI, unsigned OpNum,
                        const MCSubtargetInfo &STI, raw_ostream &O);
@@ -232,7 +231,7 @@ protected:
                    raw_ostream &O);
   template <char = 0>
   void printSVERegOp(const MCInst *MI, unsigned OpNum,
-                    const MCSubtargetInfo &STI, raw_ostream &O);
+                     const MCSubtargetInfo &STI, raw_ostream &O);
   void printGPR64as32(const MCInst *MI, unsigned OpNum,
                       const MCSubtargetInfo &STI, raw_ostream &O);
   void printGPR64x8(const MCInst *MI, unsigned OpNum,

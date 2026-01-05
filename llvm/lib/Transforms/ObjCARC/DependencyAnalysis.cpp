@@ -42,7 +42,8 @@ bool llvm::objcarc::CanAlterRefCount(const Instruction *Inst, const Value *Ptr,
   case ARCInstKind::User:
     // These operations never directly modify a reference count.
     return false;
-  default: break;
+  default:
+    break;
   }
 
   const auto *Call = cast<CallBase>(Inst);
@@ -118,9 +119,8 @@ bool llvm::objcarc::CanUse(const Instruction *Inst, const Value *Ptr,
 
 /// Test if there can be dependencies on Inst through Arg. This function only
 /// tests dependencies relevant for removing pairs of calls.
-bool
-llvm::objcarc::Depends(DependenceKind Flavor, Instruction *Inst,
-                       const Value *Arg, ProvenanceAnalysis &PA) {
+bool llvm::objcarc::Depends(DependenceKind Flavor, Instruction *Inst,
+                            const Value *Arg, ProvenanceAnalysis &PA) {
   // If we've reached the definition of Arg, stop.
   if (Inst == Arg)
     return true;
@@ -214,7 +214,7 @@ static bool findDependencies(DependenceKind Flavor, const Value *Arg,
   Worklist.push_back(std::make_pair(StartBB, StartPos));
   do {
     std::pair<BasicBlock *, BasicBlock::iterator> Pair =
-      Worklist.pop_back_val();
+        Worklist.pop_back_val();
     BasicBlock *LocalStartBB = Pair.first;
     BasicBlock::iterator LocalStartPos = Pair.second;
     BasicBlock::iterator StartBBBegin = LocalStartBB->begin();

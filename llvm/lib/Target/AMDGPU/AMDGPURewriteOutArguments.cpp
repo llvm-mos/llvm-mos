@@ -58,23 +58,23 @@
 
 using namespace llvm;
 
-static cl::opt<bool> AnyAddressSpace(
-  "amdgpu-any-address-space-out-arguments",
-  cl::desc("Replace pointer out arguments with "
-           "struct returns for non-private address space"),
-  cl::Hidden,
-  cl::init(false));
+static cl::opt<bool>
+    AnyAddressSpace("amdgpu-any-address-space-out-arguments",
+                    cl::desc("Replace pointer out arguments with "
+                             "struct returns for non-private address space"),
+                    cl::Hidden, cl::init(false));
 
-static cl::opt<unsigned> MaxNumRetRegs(
-  "amdgpu-max-return-arg-num-regs",
-  cl::desc("Approximately limit number of return registers for replacing out arguments"),
-  cl::Hidden,
-  cl::init(16));
+static cl::opt<unsigned>
+    MaxNumRetRegs("amdgpu-max-return-arg-num-regs",
+                  cl::desc("Approximately limit number of return registers for "
+                           "replacing out arguments"),
+                  cl::Hidden, cl::init(16));
 
 STATISTIC(NumOutArgumentsReplaced,
           "Number out arguments moved to struct return values");
-STATISTIC(NumOutArgumentFunctionsReplaced,
-          "Number of functions with out arguments moved to struct return values");
+STATISTIC(
+    NumOutArgumentFunctionsReplaced,
+    "Number of functions with out arguments moved to struct return values");
 
 namespace {
 
@@ -152,8 +152,9 @@ Type *AMDGPURewriteOutArguments::getOutArgumentType(Argument &Arg) const {
   PointerType *ArgTy = dyn_cast<PointerType>(Arg.getType());
 
   // TODO: It might be useful for any out arguments, not just privates.
-  if (!ArgTy || (ArgTy->getAddressSpace() != DL->getAllocaAddrSpace() &&
-                 !AnyAddressSpace) ||
+  if (!ArgTy ||
+      (ArgTy->getAddressSpace() != DL->getAllocaAddrSpace() &&
+       !AnyAddressSpace) ||
       Arg.hasByValAttr() || Arg.hasStructRetAttr()) {
     return nullptr;
   }
@@ -302,9 +303,8 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   LLVMContext &Ctx = F.getContext();
   StructType *NewRetTy = StructType::create(Ctx, ReturnTypes, F.getName());
 
-  FunctionType *NewFuncTy = FunctionType::get(NewRetTy,
-                                              F.getFunctionType()->params(),
-                                              F.isVarArg());
+  FunctionType *NewFuncTy =
+      FunctionType::get(NewRetTy, F.getFunctionType()->params(), F.isVarArg());
 
   LLVM_DEBUG(dbgs() << "Computed new return type: " << *NewRetTy << '\n');
 

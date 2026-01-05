@@ -39,7 +39,7 @@ class Archive;
 
 class AbstractArchiveMemberHeader {
 protected:
-  AbstractArchiveMemberHeader(const Archive *Parent) : Parent(Parent){};
+  AbstractArchiveMemberHeader(const Archive *Parent) : Parent(Parent) {};
 
 public:
   friend class Archive;
@@ -79,7 +79,7 @@ template <typename T>
 class LLVM_ABI CommonArchiveMemberHeader : public AbstractArchiveMemberHeader {
 public:
   CommonArchiveMemberHeader(const Archive *Parent, const T *RawHeaderPtr)
-      : AbstractArchiveMemberHeader(Parent), ArMemHdr(RawHeaderPtr){};
+      : AbstractArchiveMemberHeader(Parent), ArMemHdr(RawHeaderPtr) {};
   StringRef getRawAccessMode() const override;
   StringRef getRawLastModified() const override;
   StringRef getRawUID() const override;

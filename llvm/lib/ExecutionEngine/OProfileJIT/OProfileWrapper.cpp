@@ -38,17 +38,9 @@ llvm::sys::Mutex OProfileInitializationMutex;
 namespace llvm {
 
 OProfileWrapper::OProfileWrapper()
-: Agent(0),
-  OpenAgentFunc(0),
-  CloseAgentFunc(0),
-  WriteNativeCodeFunc(0),
-  WriteDebugLineInfoFunc(0),
-  UnloadNativeCodeFunc(0),
-  MajorVersionFunc(0),
-  MinorVersionFunc(0),
-  IsOProfileRunningFunc(0),
-  Initialized(false) {
-}
+    : Agent(0), OpenAgentFunc(0), CloseAgentFunc(0), WriteNativeCodeFunc(0),
+      WriteDebugLineInfoFunc(0), UnloadNativeCodeFunc(0), MajorVersionFunc(0),
+      MinorVersionFunc(0), IsOProfileRunningFunc(0), Initialized(false) {}
 
 bool OProfileWrapper::initialize() {
   using namespace llvm;
@@ -68,7 +60,7 @@ bool OProfileWrapper::initialize() {
   }
 
   std::string error;
-  if(!DynamicLibrary::LoadLibraryPermanently("libopagent.so", &error)) {
+  if (!DynamicLibrary::LoadLibraryPermanently("libopagent.so", &error)) {
     LLVM_DEBUG(
         dbgs()
         << "OProfile connector library libopagent.so could not be loaded: "
@@ -76,27 +68,26 @@ bool OProfileWrapper::initialize() {
   }
 
   // Get the addresses of the opagent functions
-  OpenAgentFunc = (op_open_agent_ptr_t)(intptr_t)
-          DynamicLibrary::SearchForAddressOfSymbol("op_open_agent");
-  CloseAgentFunc = (op_close_agent_ptr_t)(intptr_t)
-          DynamicLibrary::SearchForAddressOfSymbol("op_close_agent");
+  OpenAgentFunc =
+      (op_open_agent_ptr_t)(intptr_t)DynamicLibrary::SearchForAddressOfSymbol(
+          "op_open_agent");
+  CloseAgentFunc =
+      (op_close_agent_ptr_t)(intptr_t)DynamicLibrary::SearchForAddressOfSymbol(
+          "op_close_agent");
   WriteNativeCodeFunc = (op_write_native_code_ptr_t)(intptr_t)
-          DynamicLibrary::SearchForAddressOfSymbol("op_write_native_code");
+      DynamicLibrary::SearchForAddressOfSymbol("op_write_native_code");
   WriteDebugLineInfoFunc = (op_write_debug_line_info_ptr_t)(intptr_t)
-          DynamicLibrary::SearchForAddressOfSymbol("op_write_debug_line_info");
+      DynamicLibrary::SearchForAddressOfSymbol("op_write_debug_line_info");
   UnloadNativeCodeFunc = (op_unload_native_code_ptr_t)(intptr_t)
-          DynamicLibrary::SearchForAddressOfSymbol("op_unload_native_code");
+      DynamicLibrary::SearchForAddressOfSymbol("op_unload_native_code");
   MajorVersionFunc = (op_major_version_ptr_t)(intptr_t)
-          DynamicLibrary::SearchForAddressOfSymbol("op_major_version");
+      DynamicLibrary::SearchForAddressOfSymbol("op_major_version");
   MinorVersionFunc = (op_major_version_ptr_t)(intptr_t)
-          DynamicLibrary::SearchForAddressOfSymbol("op_minor_version");
+      DynamicLibrary::SearchForAddressOfSymbol("op_minor_version");
 
   // With missing functions, we can do nothing
-  if (!OpenAgentFunc
-      || !CloseAgentFunc
-      || !WriteNativeCodeFunc
-      || !WriteDebugLineInfoFunc
-      || !UnloadNativeCodeFunc) {
+  if (!OpenAgentFunc || !CloseAgentFunc || !WriteNativeCodeFunc ||
+      !WriteDebugLineInfoFunc || !UnloadNativeCodeFunc) {
     OpenAgentFunc = 0;
     CloseAgentFunc = 0;
     WriteNativeCodeFunc = 0;
@@ -115,29 +106,29 @@ bool OProfileWrapper::isOProfileRunning() {
 }
 
 bool OProfileWrapper::checkForOProfileProcEntry() {
-  DIR* ProcDir;
+  DIR *ProcDir;
 
   ProcDir = opendir("/proc");
   if (!ProcDir)
     return false;
 
   // Walk the /proc tree looking for the oprofile daemon
-  struct dirent* Entry;
+  struct dirent *Entry;
   while (0 != (Entry = readdir(ProcDir))) {
     if (Entry->d_type == DT_DIR) {
       // Build a path from the current entry name
       SmallString<256> CmdLineFName;
-      raw_svector_ostream(CmdLineFName) << "/proc/" << Entry->d_name
-                                        << "/cmdline";
+      raw_svector_ostream(CmdLineFName)
+          << "/proc/" << Entry->d_name << "/cmdline";
 
       // Open the cmdline file
       int CmdLineFD = open(CmdLineFName.c_str(), S_IRUSR);
       if (CmdLineFD != -1) {
-        char    ExeName[PATH_MAX+1];
-        char*   BaseName = 0;
+        char ExeName[PATH_MAX + 1];
+        char *BaseName = 0;
 
         // Read the cmdline file
-        ssize_t NumRead = read(CmdLineFD, ExeName, PATH_MAX+1);
+        ssize_t NumRead = read(CmdLineFD, ExeName, PATH_MAX + 1);
         close(CmdLineFD);
         ssize_t Idx = 0;
 
@@ -146,7 +137,7 @@ bool OProfileWrapper::checkForOProfileProcEntry() {
         }
 
         // Find the terminator for the first string
-        while (Idx < NumRead-1 && ExeName[Idx] != 0) {
+        while (Idx < NumRead - 1 && ExeName[Idx] != 0) {
           Idx++;
         }
 
@@ -163,8 +154,8 @@ bool OProfileWrapper::checkForOProfileProcEntry() {
         }
 
         // Test this to see if it is the oprofile daemon
-        if (BaseName != 0 && (!strcmp("oprofiled", BaseName) ||
-                              !strcmp("operf", BaseName))) {
+        if (BaseName != 0 &&
+            (!strcmp("oprofiled", BaseName) || !strcmp("operf", BaseName))) {
           // If it is, we're done
           closedir(ProcDir);
           return true;
@@ -204,13 +195,10 @@ int OProfileWrapper::op_close_agent() {
   return ret;
 }
 
-bool OProfileWrapper::isAgentAvailable() {
-  return Agent != 0;
-}
+bool OProfileWrapper::isAgentAvailable() { return Agent != 0; }
 
-int OProfileWrapper::op_write_native_code(const char* Name,
-                                          uint64_t Addr,
-                                          void const* Code,
+int OProfileWrapper::op_write_native_code(const char *Name, uint64_t Addr,
+                                          void const *Code,
                                           const unsigned int Size) {
   if (!Initialized)
     initialize();
@@ -222,9 +210,7 @@ int OProfileWrapper::op_write_native_code(const char* Name,
 }
 
 int OProfileWrapper::op_write_debug_line_info(
-  void const* Code,
-  size_t NumEntries,
-  struct debug_line_info const* Info) {
+    void const *Code, size_t NumEntries, struct debug_line_info const *Info) {
   if (!Initialized)
     initialize();
 
@@ -254,7 +240,7 @@ int OProfileWrapper::op_minor_version() {
   return -1;
 }
 
-int  OProfileWrapper::op_unload_native_code(uint64_t Addr) {
+int OProfileWrapper::op_unload_native_code(uint64_t Addr) {
   if (!Initialized)
     initialize();
 

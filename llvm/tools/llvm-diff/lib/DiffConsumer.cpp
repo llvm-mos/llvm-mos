@@ -43,7 +43,7 @@ static void ComputeNumbering(const Function *F,
   assert(!Numbering.empty() && "asked for numbering but numbering was no-op");
 }
 
-void Consumer::anchor() { }
+void Consumer::anchor() {}
 
 void DiffConsumer::printValue(const Value *V, bool isL) {
   if (V->hasName()) {
@@ -74,7 +74,8 @@ void DiffConsumer::printValue(const Value *V, bool isL) {
   while (N > 0) {
     --N;
     DiffContext &ctxt = contexts[N];
-    if (!ctxt.IsFunction) continue;
+    if (!ctxt.IsFunction)
+      continue;
     if (isL) {
       if (ctxt.LNumbering.empty())
         ComputeNumbering(cast<Function>(ctxt.L), ctxt.LNumbering);
@@ -92,19 +93,22 @@ void DiffConsumer::printValue(const Value *V, bool isL) {
 }
 
 void DiffConsumer::header() {
-  if (contexts.empty()) return;
-  for (SmallVectorImpl<DiffContext>::iterator
-         I = contexts.begin(), E = contexts.end(); I != E; ++I) {
-    if (I->Differences) continue;
+  if (contexts.empty())
+    return;
+  for (SmallVectorImpl<DiffContext>::iterator I = contexts.begin(),
+                                              E = contexts.end();
+       I != E; ++I) {
+    if (I->Differences)
+      continue;
     if (isa<Function>(I->L)) {
       // Extra newline between functions.
-      if (Differences) out << "\n";
+      if (Differences)
+        out << "\n";
 
       const Function *L = cast<Function>(I->L);
       const Function *R = cast<Function>(I->R);
       if (L->getName() != R->getName())
-        out << "in function " << L->getName()
-            << " / " << R->getName() << ":\n";
+        out << "in function " << L->getName() << " / " << R->getName() << ":\n";
       else
         out << "in function " << L->getName() << ":\n";
     } else if (isa<BasicBlock>(I->L)) {
@@ -133,7 +137,8 @@ void DiffConsumer::header() {
 
 void DiffConsumer::indent() {
   unsigned N = Indent;
-  while (N--) out << ' ';
+  while (N--)
+    out << ' ';
 }
 
 void DiffConsumer::reset() {
@@ -142,9 +147,7 @@ void DiffConsumer::reset() {
   Indent = 0;
 }
 
-bool DiffConsumer::hadDifferences() const {
-  return Differences;
-}
+bool DiffConsumer::hadDifferences() const { return Differences; }
 
 void DiffConsumer::enterContext(const Value *L, const Value *R) {
   contexts.push_back(DiffContext(L, R));
@@ -178,16 +181,24 @@ void DiffConsumer::logf(const LogBuilder &Log) {
     }
     assert(format[percent] == '%');
 
-    if (percent > 0) out << format.substr(0, percent);
+    if (percent > 0)
+      out << format.substr(0, percent);
 
-    switch (format[percent+1]) {
-    case '%': out << '%'; break;
-    case 'l': printValue(Log.getArgument(arg++), true); break;
-    case 'r': printValue(Log.getArgument(arg++), false); break;
-    default: llvm_unreachable("unknown format character");
+    switch (format[percent + 1]) {
+    case '%':
+      out << '%';
+      break;
+    case 'l':
+      printValue(Log.getArgument(arg++), true);
+      break;
+    case 'r':
+      printValue(Log.getArgument(arg++), false);
+      break;
+    default:
+      llvm_unreachable("unknown format character");
     }
 
-    format = format.substr(percent+2);
+    format = format.substr(percent + 2);
   }
 
   out << '\n';

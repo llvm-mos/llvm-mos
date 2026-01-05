@@ -91,7 +91,7 @@ private:
   sys::DynamicLibrary Library;
   PassPluginLibraryInfo Info;
 };
-}
+} // namespace llvm
 
 /// The public entry point for a pass plugin.
 ///

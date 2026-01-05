@@ -26,6 +26,7 @@ class NVPTXSubtarget;
 class NVPTXInstrInfo : public NVPTXGenInstrInfo {
   const NVPTXRegisterInfo RegInfo;
   virtual void anchor();
+
 public:
   explicit NVPTXInstrInfo(const NVPTXSubtarget &STI);
 

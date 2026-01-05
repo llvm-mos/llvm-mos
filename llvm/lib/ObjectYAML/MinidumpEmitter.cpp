@@ -64,7 +64,7 @@ public:
   }
 
   template <typename T, typename... Types>
-  std::pair<size_t, T *> allocateNewObject(Types &&... Args) {
+  std::pair<size_t, T *> allocateNewObject(Types &&...Args) {
     T *Object = new (Temporaries.Allocate<T>()) T(std::forward<Types>(Args)...);
     return {allocateObject(*Object), Object};
   }

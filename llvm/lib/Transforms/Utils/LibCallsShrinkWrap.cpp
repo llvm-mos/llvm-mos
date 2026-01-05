@@ -53,7 +53,7 @@ namespace {
 class LibCallsShrinkWrap : public InstVisitor<LibCallsShrinkWrap> {
 public:
   LibCallsShrinkWrap(const TargetLibraryInfo &TLI, DomTreeUpdater &DTU)
-      : TLI(TLI), DTU(DTU){};
+      : TLI(TLI), DTU(DTU) {};
   void visitCallInst(CallInst &CI) { checkCandidate(CI); }
   bool perform() {
     bool Changed = false;
@@ -102,7 +102,8 @@ private:
     Constant *V = ConstantFP::get(BBBuilder.getContext(), APFloat(Val));
     if (!Arg->getType()->isFloatTy())
       V = ConstantFoldCastInstruction(Instruction::FPExt, V, Arg->getType());
-    if (BBBuilder.GetInsertBlock()->getParent()->hasFnAttribute(Attribute::StrictFP))
+    if (BBBuilder.GetInsertBlock()->getParent()->hasFnAttribute(
+            Attribute::StrictFP))
       BBBuilder.setIsFPConstrained(true);
     return BBBuilder.CreateFCmp(Cmp, Arg, V);
   }
@@ -217,14 +218,13 @@ bool LibCallsShrinkWrap::performCallRangeErrorOnly(CallInst *CI,
 }
 
 // Perform the transformation to calls with errno set by combination of errors.
-bool LibCallsShrinkWrap::performCallErrors(CallInst *CI,
-                                           const LibFunc &Func) {
+bool LibCallsShrinkWrap::performCallErrors(CallInst *CI, const LibFunc &Func) {
   Value *Cond = nullptr;
 
   switch (Func) {
   case LibFunc_atanh:  // DomainError: (x < -1 || x > 1)
-                        // PoleError:   (x == -1 || x == 1)
-                        // Overall Cond: (x <= -1 || x >= 1)
+                       // PoleError:   (x == -1 || x == 1)
+                       // Overall Cond: (x <= -1 || x >= 1)
   case LibFunc_atanhf: // Same as atanh
   case LibFunc_atanhl: // Same as atanh
   {
@@ -233,8 +233,8 @@ bool LibCallsShrinkWrap::performCallErrors(CallInst *CI,
     break;
   }
   case LibFunc_log:    // DomainError: (x < 0)
-                        // PoleError:   (x == 0)
-                        // Overall Cond: (x <= 0)
+                       // PoleError:   (x == 0)
+                       // Overall Cond: (x <= 0)
   case LibFunc_logf:   // Same as log
   case LibFunc_logl:   // Same as log
   case LibFunc_log10:  // Same as log
@@ -252,8 +252,8 @@ bool LibCallsShrinkWrap::performCallErrors(CallInst *CI,
     break;
   }
   case LibFunc_log1p:  // DomainError: (x < -1)
-                        // PoleError:   (x == -1)
-                        // Overall Cond: (x <= -1)
+                       // PoleError:   (x == -1)
+                       // Overall Cond: (x <= -1)
   case LibFunc_log1pf: // Same as log1p
   case LibFunc_log1pl: // Same as log1p
   {
@@ -262,8 +262,8 @@ bool LibCallsShrinkWrap::performCallErrors(CallInst *CI,
     break;
   }
   case LibFunc_pow: // DomainError: x < 0 and y is noninteger
-                     // PoleError:   x == 0 and y < 0
-                     // RangeError:  overflow or underflow
+                    // PoleError:   x == 0 and y < 0
+                    // RangeError:  overflow or underflow
   case LibFunc_powf:
   case LibFunc_powl: {
     Cond = generateCondForPow(CI, Func);
@@ -491,7 +491,8 @@ bool LibCallsShrinkWrap::perform(CallInst *CI) {
   TLI.getLibFunc(*Callee, Func);
   assert(Func && "perform() is not expecting an empty function");
 
-  if (performCallDomainErrorOnly(CI, Func) || performCallRangeErrorOnly(CI, Func))
+  if (performCallDomainErrorOnly(CI, Func) ||
+      performCallRangeErrorOnly(CI, Func))
     return true;
   return performCallErrors(CI, Func);
 }

@@ -46,7 +46,7 @@ using namespace llvm;
 
 namespace {
 struct NVPTXPeephole : public MachineFunctionPass {
- public:
+public:
   static char ID;
   NVPTXPeephole() : MachineFunctionPass(ID) {}
 
@@ -60,7 +60,7 @@ struct NVPTXPeephole : public MachineFunctionPass {
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
-}
+} // namespace
 
 char NVPTXPeephole::ID = 0;
 
@@ -141,8 +141,8 @@ bool NVPTXPeephole::runOnMachineFunction(MachineFunction &MF) {
         CombineCVTAToLocal(MI);
         Changed = true;
       }
-    }  // Instruction
-  }    // Basic Block
+    } // Instruction
+  } // Basic Block
 
   const NVPTXRegisterInfo *NRI =
       MF.getSubtarget<NVPTXSubtarget>().getRegisterInfo();

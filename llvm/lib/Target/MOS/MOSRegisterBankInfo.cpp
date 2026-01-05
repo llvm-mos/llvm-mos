@@ -20,10 +20,10 @@
 
 #include "MOSRegisterBankInfo.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
-#include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterBank.h"
 
 #define GET_TARGET_REGBANK_IMPL
 #include "MOSGenRegisterBank.inc"

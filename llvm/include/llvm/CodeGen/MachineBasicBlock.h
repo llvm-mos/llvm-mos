@@ -254,9 +254,7 @@ public:
 
   /// Remove the reference to the underlying IR BasicBlock. This is for
   /// reduction tools and should generally not be used.
-  void clearBasicBlock() {
-    BB = nullptr;
-  }
+  void clearBasicBlock() { BB = nullptr; }
 
   /// Check if there is a name of corresponding LLVM basic block.
   LLVM_ABI bool hasName() const;
@@ -348,24 +346,24 @@ public:
   LLVM_ABI bool sizeWithoutDebugLargerThan(unsigned Limit) const;
   bool empty() const { return Insts.empty(); }
 
-  MachineInstr       &instr_front()       { return Insts.front(); }
-  MachineInstr       &instr_back()        { return Insts.back();  }
+  MachineInstr &instr_front() { return Insts.front(); }
+  MachineInstr &instr_back() { return Insts.back(); }
   const MachineInstr &instr_front() const { return Insts.front(); }
-  const MachineInstr &instr_back()  const { return Insts.back();  }
+  const MachineInstr &instr_back() const { return Insts.back(); }
 
-  MachineInstr       &front()             { return Insts.front(); }
-  MachineInstr       &back()              { return *--end();      }
-  const MachineInstr &front()       const { return Insts.front(); }
-  const MachineInstr &back()        const { return *--end();      }
+  MachineInstr &front() { return Insts.front(); }
+  MachineInstr &back() { return *--end(); }
+  const MachineInstr &front() const { return Insts.front(); }
+  const MachineInstr &back() const { return *--end(); }
 
-  instr_iterator                instr_begin()       { return Insts.begin();  }
-  const_instr_iterator          instr_begin() const { return Insts.begin();  }
-  instr_iterator                  instr_end()       { return Insts.end();    }
-  const_instr_iterator            instr_end() const { return Insts.end();    }
-  reverse_instr_iterator       instr_rbegin()       { return Insts.rbegin(); }
+  instr_iterator instr_begin() { return Insts.begin(); }
+  const_instr_iterator instr_begin() const { return Insts.begin(); }
+  instr_iterator instr_end() { return Insts.end(); }
+  const_instr_iterator instr_end() const { return Insts.end(); }
+  reverse_instr_iterator instr_rbegin() { return Insts.rbegin(); }
   const_reverse_instr_iterator instr_rbegin() const { return Insts.rbegin(); }
-  reverse_instr_iterator       instr_rend  ()       { return Insts.rend();   }
-  const_reverse_instr_iterator instr_rend  () const { return Insts.rend();   }
+  reverse_instr_iterator instr_rend() { return Insts.rend(); }
+  const_reverse_instr_iterator instr_rend() const { return Insts.rend(); }
 
   using instr_range = iterator_range<instr_iterator>;
   using const_instr_range = iterator_range<const_instr_iterator>;
@@ -374,10 +372,10 @@ public:
     return const_instr_range(instr_begin(), instr_end());
   }
 
-  iterator                begin()       { return instr_begin();  }
-  const_iterator          begin() const { return instr_begin();  }
-  iterator                end  ()       { return instr_end();    }
-  const_iterator          end  () const { return instr_end();    }
+  iterator begin() { return instr_begin(); }
+  const_iterator begin() const { return instr_begin(); }
+  iterator end() { return instr_end(); }
+  const_iterator end() const { return instr_end(); }
   reverse_iterator rbegin() {
     return reverse_iterator::getAtBundleBegin(instr_rbegin());
   }
@@ -424,38 +422,30 @@ public:
       SmallVectorImpl<MachineBasicBlock *>::reverse_iterator;
   using const_succ_reverse_iterator =
       SmallVectorImpl<MachineBasicBlock *>::const_reverse_iterator;
-  pred_iterator        pred_begin()       { return Predecessors.begin(); }
-  const_pred_iterator  pred_begin() const { return Predecessors.begin(); }
-  pred_iterator        pred_end()         { return Predecessors.end();   }
-  const_pred_iterator  pred_end()   const { return Predecessors.end();   }
-  pred_reverse_iterator        pred_rbegin()
-                                          { return Predecessors.rbegin();}
-  const_pred_reverse_iterator  pred_rbegin() const
-                                          { return Predecessors.rbegin();}
-  pred_reverse_iterator        pred_rend()
-                                          { return Predecessors.rend();  }
-  const_pred_reverse_iterator  pred_rend()   const
-                                          { return Predecessors.rend();  }
-  unsigned             pred_size()  const {
-    return (unsigned)Predecessors.size();
+  pred_iterator pred_begin() { return Predecessors.begin(); }
+  const_pred_iterator pred_begin() const { return Predecessors.begin(); }
+  pred_iterator pred_end() { return Predecessors.end(); }
+  const_pred_iterator pred_end() const { return Predecessors.end(); }
+  pred_reverse_iterator pred_rbegin() { return Predecessors.rbegin(); }
+  const_pred_reverse_iterator pred_rbegin() const {
+    return Predecessors.rbegin();
   }
-  bool                 pred_empty() const { return Predecessors.empty(); }
-  succ_iterator        succ_begin()       { return Successors.begin();   }
-  const_succ_iterator  succ_begin() const { return Successors.begin();   }
-  succ_iterator        succ_end()         { return Successors.end();     }
-  const_succ_iterator  succ_end()   const { return Successors.end();     }
-  succ_reverse_iterator        succ_rbegin()
-                                          { return Successors.rbegin();  }
-  const_succ_reverse_iterator  succ_rbegin() const
-                                          { return Successors.rbegin();  }
-  succ_reverse_iterator        succ_rend()
-                                          { return Successors.rend();    }
-  const_succ_reverse_iterator  succ_rend()   const
-                                          { return Successors.rend();    }
-  unsigned             succ_size()  const {
-    return (unsigned)Successors.size();
+  pred_reverse_iterator pred_rend() { return Predecessors.rend(); }
+  const_pred_reverse_iterator pred_rend() const { return Predecessors.rend(); }
+  unsigned pred_size() const { return (unsigned)Predecessors.size(); }
+  bool pred_empty() const { return Predecessors.empty(); }
+  succ_iterator succ_begin() { return Successors.begin(); }
+  const_succ_iterator succ_begin() const { return Successors.begin(); }
+  succ_iterator succ_end() { return Successors.end(); }
+  const_succ_iterator succ_end() const { return Successors.end(); }
+  succ_reverse_iterator succ_rbegin() { return Successors.rbegin(); }
+  const_succ_reverse_iterator succ_rbegin() const {
+    return Successors.rbegin();
   }
-  bool                 succ_empty() const { return Successors.empty();   }
+  succ_reverse_iterator succ_rend() { return Successors.rend(); }
+  const_succ_reverse_iterator succ_rend() const { return Successors.rend(); }
+  unsigned succ_size() const { return (unsigned)Successors.size(); }
+  bool succ_empty() const { return Successors.empty(); }
 
   inline iterator_range<pred_iterator> predecessors() {
     return make_range(pred_begin(), pred_end());
@@ -528,8 +518,8 @@ public:
   }
 
   LLVM_ABI livein_iterator livein_begin() const;
-  livein_iterator livein_end()   const { return LiveIns.end(); }
-  bool            livein_empty() const { return LiveIns.empty(); }
+  livein_iterator livein_end() const { return LiveIns.end(); }
+  bool livein_empty() const { return LiveIns.empty(); }
   iterator_range<livein_iterator> liveins() const {
     return make_range(livein_begin(), livein_end());
   }
@@ -581,13 +571,9 @@ public:
       return Tmp;
     }
 
-    reference operator*() const {
-      return *LiveRegI;
-    }
+    reference operator*() const { return *LiveRegI; }
 
-    pointer operator->() const {
-      return &*LiveRegI;
-    }
+    pointer operator->() const { return &*LiveRegI; }
 
     bool operator==(const liveout_iterator &RHS) const {
       if (BlockI != BlockEnd)
@@ -598,6 +584,7 @@ public:
     bool operator!=(const liveout_iterator &RHS) const {
       return !(*this == RHS);
     }
+
   private:
     bool advanceToValidPosition() {
       if (LiveRegI != (*BlockI)->livein_end())
@@ -978,9 +965,7 @@ public:
 
   /// Convenience function that returns true if the block ends in a return
   /// instruction.
-  bool isReturnBlock() const {
-    return !empty() && back().isReturn();
-  }
+  bool isReturnBlock() const { return !empty() && back().isReturn(); }
 
   /// Convenience function that returns true if the bock ends in a EH scope
   /// return instruction.
@@ -1057,8 +1042,7 @@ public:
   LLVM_ABI instr_iterator insert(instr_iterator I, MachineInstr *M);
 
   /// Insert a range of instructions into the instruction list before I.
-  template<typename IT>
-  void insert(iterator I, IT S, IT E) {
+  template <typename IT> void insert(iterator I, IT S, IT E) {
     assert((I == end() || I->getParent() == this) &&
            "iterator points outside of basic block");
     Insts.insert(I.getInstrIterator(), S, E);
@@ -1116,17 +1100,13 @@ public:
   /// Remove an instruction or bundle from the instruction list and delete it.
   ///
   /// If I points to a bundle of instructions, they are all erased.
-  iterator erase(iterator I) {
-    return erase(I, std::next(I));
-  }
+  iterator erase(iterator I) { return erase(I, std::next(I)); }
 
   /// Remove an instruction from the instruction list and delete it.
   ///
   /// If I is the head of a bundle of instructions, the whole bundle will be
   /// erased.
-  iterator erase(MachineInstr *I) {
-    return erase(iterator(I));
-  }
+  iterator erase(MachineInstr *I) { return erase(iterator(I)); }
 
   /// Remove the unbundled instruction from the instruction list without
   /// deleting it.
@@ -1145,9 +1125,7 @@ public:
   /// bundle will still be bundled after removing the single instruction.
   LLVM_ABI MachineInstr *remove_instr(MachineInstr *I);
 
-  void clear() {
-    Insts.clear();
-  }
+  void clear() { Insts.clear(); }
 
   /// Take an instruction from MBB 'Other' at the position From, and insert it
   /// into this MBB right before 'Where'.
@@ -1164,8 +1142,8 @@ public:
   ///
   /// The instruction at 'Where' must not be included in the range of
   /// instructions to move.
-  void splice(iterator Where, MachineBasicBlock *Other,
-              iterator From, iterator To) {
+  void splice(iterator Where, MachineBasicBlock *Other, iterator From,
+              iterator To) {
     Insts.splice(Where.getInstrIterator(), Other->Insts,
                  From.getInstrIterator(), To.getInstrIterator());
   }
@@ -1251,7 +1229,7 @@ public:
                       bool IsStandalone = true) const;
 
   enum PrintNameFlag {
-    PrintNameIr = (1 << 0), ///< Add IR name where available
+    PrintNameIr = (1 << 0),         ///< Add IR name where available
     PrintNameAttributes = (1 << 1), ///< Print attributes
   };
 
@@ -1282,9 +1260,7 @@ public:
     return IrrLoopHeaderWeight;
   }
 
-  void setIrrLoopHeaderWeight(uint64_t Weight) {
-    IrrLoopHeaderWeight = Weight;
-  }
+  void setIrrLoopHeaderWeight(uint64_t Weight) { IrrLoopHeaderWeight = Weight; }
 
   /// Return probability of the edge from this block to MBB. This method should
   /// NOT be called directly, but by using getEdgeProbability method from
@@ -1393,7 +1369,7 @@ static_assert(GraphHasNodeNumbers<const MachineBasicBlock *>,
 // to be when traversing the predecessor edges of a MBB
 // instead of the successor edges.
 //
-template <> struct GraphTraits<Inverse<MachineBasicBlock*>> {
+template <> struct GraphTraits<Inverse<MachineBasicBlock *>> {
   using NodeRef = MachineBasicBlock *;
   using ChildIteratorType = MachineBasicBlock::pred_iterator;
 
@@ -1413,7 +1389,7 @@ template <> struct GraphTraits<Inverse<MachineBasicBlock*>> {
 static_assert(GraphHasNodeNumbers<Inverse<MachineBasicBlock *>>,
               "GraphTraits getNumber() not detected");
 
-template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
+template <> struct GraphTraits<Inverse<const MachineBasicBlock *>> {
   using NodeRef = const MachineBasicBlock *;
   using ChildIteratorType = MachineBasicBlock::const_pred_iterator;
 

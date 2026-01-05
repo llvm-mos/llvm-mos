@@ -41,8 +41,7 @@ LazyRandomTypeCollection::LazyRandomTypeCollection(
 
 LazyRandomTypeCollection::LazyRandomTypeCollection(ArrayRef<uint8_t> Data,
                                                    uint32_t RecordCountHint)
-    : LazyRandomTypeCollection(RecordCountHint) {
-}
+    : LazyRandomTypeCollection(RecordCountHint) {}
 
 LazyRandomTypeCollection::LazyRandomTypeCollection(StringRef Data,
                                                    uint32_t RecordCountHint)

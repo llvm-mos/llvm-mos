@@ -49,10 +49,12 @@ static bool isAlwaysLive(Instruction *I) {
   return I->isTerminator() || I->isEHPad() || I->mayHaveSideEffects();
 }
 
-void DemandedBits::determineLiveOperandBits(
-    const Instruction *UserI, const Value *Val, unsigned OperandNo,
-    const APInt &AOut, APInt &AB, KnownBits &Known, KnownBits &Known2,
-    bool &KnownBitsComputed) {
+void DemandedBits::determineLiveOperandBits(const Instruction *UserI,
+                                            const Value *Val,
+                                            unsigned OperandNo,
+                                            const APInt &AOut, APInt &AB,
+                                            KnownBits &Known, KnownBits &Known2,
+                                            bool &KnownBitsComputed) {
   unsigned BitWidth = AB.getBitWidth();
 
   // We're called once per operand, but for some instructions, we need to
@@ -61,21 +63,21 @@ void DemandedBits::determineLiveOperandBits(
   // however, want to do this twice, so we cache the result in APInts that live
   // in the caller. For the two-relevant-operands case, both operand values are
   // provided here.
-  auto ComputeKnownBits =
-      [&](unsigned BitWidth, const Value *V1, const Value *V2) {
-        if (KnownBitsComputed)
-          return;
-        KnownBitsComputed = true;
+  auto ComputeKnownBits = [&](unsigned BitWidth, const Value *V1,
+                              const Value *V2) {
+    if (KnownBitsComputed)
+      return;
+    KnownBitsComputed = true;
 
-        const DataLayout &DL = UserI->getDataLayout();
-        Known = KnownBits(BitWidth);
-        computeKnownBits(V1, Known, DL, &AC, UserI, &DT);
+    const DataLayout &DL = UserI->getDataLayout();
+    Known = KnownBits(BitWidth);
+    computeKnownBits(V1, Known, DL, &AC, UserI, &DT);
 
-        if (V2) {
-          Known2 = KnownBits(BitWidth);
-          computeKnownBits(V2, Known2, DL, &AC, UserI, &DT);
-        }
-      };
+    if (V2) {
+      Known2 = KnownBits(BitWidth);
+      computeKnownBits(V2, Known2, DL, &AC, UserI, &DT);
+    }
+  };
   auto GetShiftedRange = [&](uint64_t Min, uint64_t Max, bool ShiftLeft) {
     auto ShiftF = [ShiftLeft](const APInt &Mask, unsigned ShiftAmnt) {
       return ShiftLeft ? Mask.shl(ShiftAmnt) : Mask.lshr(ShiftAmnt);
@@ -98,12 +100,14 @@ void DemandedBits::determineLiveOperandBits(
   };
 
   switch (UserI->getOpcode()) {
-  default: break;
+  default:
+    break;
   case Instruction::Call:
   case Instruction::Invoke:
     if (const auto *II = dyn_cast<IntrinsicInst>(UserI)) {
       switch (II->getIntrinsicID()) {
-      default: break;
+      default:
+        break;
       case Intrinsic::bswap:
         // The alive bits of the input are the swapped alive bits of
         // the output.
@@ -120,8 +124,8 @@ void DemandedBits::determineLiveOperandBits(
           // input to the left of, and including, the leftmost bit
           // known to be one.
           ComputeKnownBits(BitWidth, Val, nullptr);
-          AB = APInt::getHighBitsSet(BitWidth,
-                 std::min(BitWidth, Known.countMaxLeadingZeros()+1));
+          AB = APInt::getHighBitsSet(
+              BitWidth, std::min(BitWidth, Known.countMaxLeadingZeros() + 1));
         }
         break;
       case Intrinsic::cttz:
@@ -130,8 +134,8 @@ void DemandedBits::determineLiveOperandBits(
           // input to the right of, and including, the rightmost bit
           // known to be one.
           ComputeKnownBits(BitWidth, Val, nullptr);
-          AB = APInt::getLowBitsSet(BitWidth,
-                 std::min(BitWidth, Known.countMaxTrailingZeros()+1));
+          AB = APInt::getLowBitsSet(
+              BitWidth, std::min(BitWidth, Known.countMaxTrailingZeros() + 1));
         }
         break;
       case Intrinsic::fshl:
@@ -200,7 +204,7 @@ void DemandedBits::determineLiveOperandBits(
         // (because we've promised that they *must* be zero).
         const auto *S = cast<ShlOperator>(UserI);
         if (S->hasNoSignedWrap())
-          AB |= APInt::getHighBitsSet(BitWidth, ShiftAmt+1);
+          AB |= APInt::getHighBitsSet(BitWidth, ShiftAmt + 1);
         else if (S->hasNoUnsignedWrap())
           AB |= APInt::getHighBitsSet(BitWidth, ShiftAmt);
       } else {
@@ -258,8 +262,7 @@ void DemandedBits::determineLiveOperandBits(
         // Because the high input bit is replicated into the
         // high-order bits of the result, if we need any of those
         // bits, then we must keep the highest input bit.
-        if ((AOut & APInt::getHighBitsSet(BitWidth, ShiftAmt))
-            .getBoolValue())
+        if ((AOut & APInt::getHighBitsSet(BitWidth, ShiftAmt)).getBoolValue())
           AB.setSignBit();
 
         // If the shift is exact, then the low bits are not dead
@@ -332,7 +335,7 @@ void DemandedBits::determineLiveOperandBits(
     // bits, then we must keep the highest input bit.
     if ((AOut & APInt::getHighBitsSet(AOut.getBitWidth(),
                                       AOut.getBitWidth() - BitWidth))
-        .getBoolValue())
+            .getBoolValue())
       AB.setSignBit();
     break;
   case Instruction::Select:
@@ -361,7 +364,7 @@ void DemandedBits::performAnalysis() {
   AliveBits.clear();
   DeadUses.clear();
 
-  SmallSetVector<Instruction*, 16> Worklist;
+  SmallSetVector<Instruction *, 16> Worklist;
 
   // Collect the set of "root" instructions that are known live.
   for (Instruction &I : instructions(F)) {
@@ -544,7 +547,8 @@ void DemandedBits::print(raw_ostream &OS) {
     OS << *I << '\n';
   };
 
-  OS << "Printing analysis 'Demanded Bits Analysis' for function '" << F.getName() << "':\n";
+  OS << "Printing analysis 'Demanded Bits Analysis' for function '"
+     << F.getName() << "':\n";
   performAnalysis();
   for (auto &KV : AliveBits) {
     Instruction *I = KV.first;
@@ -639,7 +643,7 @@ APInt DemandedBits::determineLiveOperandBitsSub(unsigned OperandNo,
 AnalysisKey DemandedBitsAnalysis::Key;
 
 DemandedBits DemandedBitsAnalysis::run(Function &F,
-                                             FunctionAnalysisManager &AM) {
+                                       FunctionAnalysisManager &AM) {
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   return DemandedBits(F, AC, DT);

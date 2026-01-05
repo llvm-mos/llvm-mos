@@ -12,9 +12,9 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
@@ -155,7 +155,8 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
       BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   } else {
-    // When not optimizing, explicitly clear analysis pointers to avoid stale values
+    // When not optimizing, explicitly clear analysis pointers to avoid stale
+    // values
     AA = nullptr;
     PSI = nullptr;
     BFI = nullptr;

@@ -32,7 +32,7 @@ public:
   void lower(const MachineInstr *MI, MCInst &OutMI) const;
 
   // Return an MCOperand for MO.
-  MCOperand lowerOperand(const MachineOperand& MO) const;
+  MCOperand lowerOperand(const MachineOperand &MO) const;
 
   // Return an MCExpr for symbolic operand MO with variant kind Kind.
   const MCExpr *getExpr(const MachineOperand &MO, SystemZ::Specifier) const;

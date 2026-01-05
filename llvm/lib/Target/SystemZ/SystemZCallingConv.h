@@ -16,17 +16,17 @@
 
 namespace llvm {
 namespace SystemZ {
-  const unsigned ELFNumArgGPRs = 5;
-  extern const MCPhysReg ELFArgGPRs[ELFNumArgGPRs];
+const unsigned ELFNumArgGPRs = 5;
+extern const MCPhysReg ELFArgGPRs[ELFNumArgGPRs];
 
-  const unsigned ELFNumArgFPRs = 4;
-  extern const MCPhysReg ELFArgFPRs[ELFNumArgFPRs];
+const unsigned ELFNumArgFPRs = 4;
+extern const MCPhysReg ELFArgFPRs[ELFNumArgFPRs];
 
-  const unsigned XPLINK64NumArgGPRs = 3;
-  extern const MCPhysReg XPLINK64ArgGPRs[XPLINK64NumArgGPRs];
+const unsigned XPLINK64NumArgGPRs = 3;
+extern const MCPhysReg XPLINK64ArgGPRs[XPLINK64NumArgGPRs];
 
-  const unsigned XPLINK64NumArgFPRs = 4;
-  extern const MCPhysReg XPLINK64ArgFPRs[XPLINK64NumArgFPRs];
+const unsigned XPLINK64NumArgFPRs = 4;
+extern const MCPhysReg XPLINK64ArgFPRs[XPLINK64NumArgFPRs];
 } // end namespace SystemZ
 
 // Handle i128 argument types.  These need to be passed by implicit
@@ -34,11 +34,9 @@ namespace SystemZ {
 //    CCIfType<[i128], CCPassIndirect<i64>>,
 // except that i128 is not a legal type, and therefore gets split by
 // common code into a pair of i64 arguments.
-inline bool CC_SystemZ_I128Indirect(unsigned &ValNo, MVT &ValVT,
-                                    MVT &LocVT,
+inline bool CC_SystemZ_I128Indirect(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                     CCValAssign::LocInfo &LocInfo,
-                                    ISD::ArgFlagsTy &ArgFlags,
-                                    CCState &State) {
+                                    ISD::ArgFlagsTy &ArgFlags, CCState &State) {
   SmallVectorImpl<CCValAssign> &PendingMembers = State.getPendingLocs();
 
   // ArgFlags.isSplit() is true on the first part of a i128 argument;
@@ -49,8 +47,8 @@ inline bool CC_SystemZ_I128Indirect(unsigned &ValNo, MVT &ValVT,
   // Push a pending Indirect value location for each part.
   LocVT = MVT::i64;
   LocInfo = CCValAssign::Indirect;
-  PendingMembers.push_back(CCValAssign::getPending(ValNo, ValVT,
-                                                   LocVT, LocInfo));
+  PendingMembers.push_back(
+      CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
   if (!ArgFlags.isSplitEnd())
     return true;
 

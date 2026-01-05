@@ -24,15 +24,13 @@ public:
       : MipsDAGToDAGISel(TM, OL) {}
 
 private:
-
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  void addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
-                             MachineFunction &MF);
+  void addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI, MachineFunction &MF);
 
   MCRegister getMSACtrlReg(const SDValue RegIdx) const;
 
-  bool replaceUsesWithZeroReg(MachineRegisterInfo *MRI, const MachineInstr&);
+  bool replaceUsesWithZeroReg(MachineRegisterInfo *MRI, const MachineInstr &);
 
   std::pair<SDNode *, SDNode *> selectMULT(SDNode *N, unsigned Opc,
                                            const SDLoc &dl, EVT Ty, bool HasLo,
@@ -54,17 +52,13 @@ private:
   bool selectIntAddr(SDValue Addr, SDValue &Base,
                      SDValue &Offset) const override;
 
-  bool selectAddrRegImm9(SDValue Addr, SDValue &Base,
-                         SDValue &Offset) const;
+  bool selectAddrRegImm9(SDValue Addr, SDValue &Base, SDValue &Offset) const;
 
-  bool selectAddrRegImm11(SDValue Addr, SDValue &Base,
-                          SDValue &Offset) const;
+  bool selectAddrRegImm11(SDValue Addr, SDValue &Base, SDValue &Offset) const;
 
-  bool selectAddrRegImm12(SDValue Addr, SDValue &Base,
-                          SDValue &Offset) const;
+  bool selectAddrRegImm12(SDValue Addr, SDValue &Base, SDValue &Offset) const;
 
-  bool selectAddrRegImm16(SDValue Addr, SDValue &Base,
-                          SDValue &Offset) const;
+  bool selectAddrRegImm16(SDValue Addr, SDValue &Base, SDValue &Offset) const;
 
   bool selectIntAddr11MM(SDValue Addr, SDValue &Base,
                          SDValue &Offset) const override;
@@ -132,6 +126,6 @@ public:
 
 FunctionPass *createMipsSEISelDag(MipsTargetMachine &TM,
                                   CodeGenOptLevel OptLevel);
-}
+} // namespace llvm
 
 #endif

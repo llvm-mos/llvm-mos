@@ -133,7 +133,6 @@ private:
 /// We do not use SDValue here to avoid including its header.
 class SDDbgValue {
 public:
-
 private:
   // SDDbgValues are allocated by a BumpPtrAllocator, which means the destructor
   // may not be called; therefore all member arrays must also be allocated by
@@ -259,6 +258,6 @@ public:
   unsigned getOrder() const { return Order; }
 };
 
-} // end llvm namespace
+} // namespace llvm
 
 #endif

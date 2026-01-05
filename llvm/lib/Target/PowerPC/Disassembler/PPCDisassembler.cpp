@@ -363,8 +363,8 @@ DecodeStatus PPCDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address,
                                              raw_ostream &CS) const {
-  auto *ReadFunc = IsLittleEndian ? support::endian::read32le
-                                  : support::endian::read32be;
+  auto *ReadFunc =
+      IsLittleEndian ? support::endian::read32le : support::endian::read32be;
 
   // If this is an 8-byte prefixed instruction, handle it here.
   // Note: prefixed instructions aren't technically 8-byte entities - the prefix
@@ -378,8 +378,8 @@ DecodeStatus PPCDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     uint32_t Prefix = ReadFunc(Bytes.data());
     uint32_t BaseInst = ReadFunc(Bytes.data() + 4);
     uint64_t Inst = BaseInst | (uint64_t)Prefix << 32;
-    DecodeStatus result = decodeInstruction(DecoderTable64, MI, Inst, Address,
-                                            this, STI);
+    DecodeStatus result =
+        decodeInstruction(DecoderTable64, MI, Inst, Address, this, STI);
     if (result != MCDisassembler::Fail) {
       Size = 8;
       return result;

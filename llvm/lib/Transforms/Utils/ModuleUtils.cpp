@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -71,11 +71,13 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
                            GlobalValue::AppendingLinkage, NewInit, ArrayName);
 }
 
-void llvm::appendToGlobalCtors(Module &M, Function *F, int Priority, Constant *Data) {
+void llvm::appendToGlobalCtors(Module &M, Function *F, int Priority,
+                               Constant *Data) {
   appendToGlobalArray("llvm.global_ctors", M, F, Priority, Data);
 }
 
-void llvm::appendToGlobalDtors(Module &M, Function *F, int Priority, Constant *Data) {
+void llvm::appendToGlobalDtors(Module &M, Function *F, int Priority,
+                               Constant *Data) {
   appendToGlobalArray("llvm.global_dtors", M, F, Priority, Data);
 }
 
@@ -133,7 +135,8 @@ static void collectUsedGlobals(GlobalVariable *GV,
     Init.insert(cast<Constant>(Op));
 }
 
-static void appendToUsedList(Module &M, StringRef Name, ArrayRef<GlobalValue *> Values) {
+static void appendToUsedList(Module &M, StringRef Name,
+                             ArrayRef<GlobalValue *> Values) {
   GlobalVariable *GV = M.getGlobalVariable(Name);
 
   SmallSetVector<Constant *, 16> Init;

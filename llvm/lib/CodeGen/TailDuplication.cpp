@@ -36,6 +36,7 @@ class TailDuplicateBaseLegacy : public MachineFunctionPass {
   TailDuplicator Duplicator;
   std::unique_ptr<MBFIWrapper> MBFIW;
   bool PreRegAlloc;
+
 public:
   TailDuplicateBaseLegacy(char &PassID, bool PreRegAlloc)
       : MachineFunctionPass(PassID), PreRegAlloc(PreRegAlloc) {}
@@ -89,9 +90,9 @@ bool TailDuplicateBaseLegacy::runOnMachineFunction(MachineFunction &MF) {
 
   auto MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  auto *MBFI = (PSI && PSI->hasProfileSummary()) ?
-               &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
-               nullptr;
+  auto *MBFI = (PSI && PSI->hasProfileSummary())
+                   ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
+                   : nullptr;
   if (MBFI)
     MBFIW = std::make_unique<MBFIWrapper>(*MBFI);
   Duplicator.initMF(MF, PreRegAlloc, MBPI, MBFI ? MBFIW.get() : nullptr, PSI,

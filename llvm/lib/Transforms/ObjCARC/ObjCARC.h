@@ -71,7 +71,7 @@ static inline const Instruction *getreturnRVOperand(const Instruction &Inst,
 }
 
 /// Return the list of PHI nodes that are equivalent to PN.
-template<class PHINodeTy, class VectorTy>
+template <class PHINodeTy, class VectorTy>
 void getEquivalentPHIs(PHINodeTy &PN, VectorTy &PHIList) {
   auto *BB = PN.getParent();
   for (auto &P : BB->phis()) {

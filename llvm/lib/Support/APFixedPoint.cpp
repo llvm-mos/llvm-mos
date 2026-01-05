@@ -280,10 +280,8 @@ APFixedPoint APFixedPoint::mul(const APFixedPoint &Other,
 
   // If our result lies outside of the representative range of the common
   // semantic, we either have overflow or saturation.
-  APSInt Max = APFixedPoint::getMax(CommonFXSema).getValue()
-                                                 .extOrTrunc(Wide);
-  APSInt Min = APFixedPoint::getMin(CommonFXSema).getValue()
-                                                 .extOrTrunc(Wide);
+  APSInt Max = APFixedPoint::getMax(CommonFXSema).getValue().extOrTrunc(Wide);
+  APSInt Min = APFixedPoint::getMin(CommonFXSema).getValue().extOrTrunc(Wide);
   if (CommonFXSema.isSaturated()) {
     if (Result < Min)
       Result = Min;
@@ -343,10 +341,8 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
 
   // If our result lies outside of the representative range of the common
   // semantic, we either have overflow or saturation.
-  APSInt Max = APFixedPoint::getMax(CommonFXSema).getValue()
-                                                 .extOrTrunc(Wide);
-  APSInt Min = APFixedPoint::getMin(CommonFXSema).getValue()
-                                                 .extOrTrunc(Wide);
+  APSInt Max = APFixedPoint::getMax(CommonFXSema).getValue().extOrTrunc(Wide);
+  APSInt Min = APFixedPoint::getMin(CommonFXSema).getValue().extOrTrunc(Wide);
   if (CommonFXSema.isSaturated()) {
     if (Result < Min)
       Result = Min;

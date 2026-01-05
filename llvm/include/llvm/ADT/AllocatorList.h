@@ -39,7 +39,7 @@ template <class T, class AllocatorT> class AllocatorList : AllocatorT {
 
     Node(T &&V) : V(std::move(V)) {}
     Node(const T &V) : V(V) {}
-    template <class... Ts> Node(Ts &&... Vs) : V(std::forward<Ts>(Vs)...) {}
+    template <class... Ts> Node(Ts &&...Vs) : V(std::forward<Ts>(Vs)...) {}
     T V;
   };
 
@@ -50,7 +50,7 @@ template <class T, class AllocatorT> class AllocatorList : AllocatorT {
   AllocatorT &getAlloc() { return *this; }
   const AllocatorT &getAlloc() const { return *this; }
 
-  template <class... ArgTs> Node *create(ArgTs &&... Args) {
+  template <class... ArgTs> Node *create(ArgTs &&...Args) {
     return new (getAlloc()) Node(std::forward<ArgTs>(Args)...);
   }
 
@@ -176,7 +176,7 @@ public:
   const T &back() const { return List.back().V; }
   const T &front() const { return List.front().V; }
 
-  template <class... Ts> iterator emplace(iterator I, Ts &&... Vs) {
+  template <class... Ts> iterator emplace(iterator I, Ts &&...Vs) {
     return iterator(List.insert(I.wrapped(), *create(std::forward<Ts>(Vs)...)));
   }
 
@@ -209,10 +209,10 @@ public:
   void push_front(T &&V) { insert(begin(), std::move(V)); }
   void push_back(const T &V) { insert(end(), V); }
   void push_front(const T &V) { insert(begin(), V); }
-  template <class... Ts> void emplace_back(Ts &&... Vs) {
+  template <class... Ts> void emplace_back(Ts &&...Vs) {
     emplace(end(), std::forward<Ts>(Vs)...);
   }
-  template <class... Ts> void emplace_front(Ts &&... Vs) {
+  template <class... Ts> void emplace_front(Ts &&...Vs) {
     emplace(begin(), std::forward<Ts>(Vs)...);
   }
 

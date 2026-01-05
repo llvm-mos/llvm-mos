@@ -1204,9 +1204,9 @@ class SegmentBuilder {
     // emit closing segments in sorted order.
     auto CompletedRegionsIt = ActiveRegions.begin() + FirstCompletedRegion;
     std::stable_sort(CompletedRegionsIt, ActiveRegions.end(),
-                      [](const CountedRegion *L, const CountedRegion *R) {
-                        return L->endLoc() < R->endLoc();
-                      });
+                     [](const CountedRegion *L, const CountedRegion *R) {
+                       return L->endLoc() < R->endLoc();
+                     });
 
     // Emit segments for all completed regions.
     for (unsigned I = FirstCompletedRegion + 1, E = ActiveRegions.size(); I < E;

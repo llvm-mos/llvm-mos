@@ -43,13 +43,13 @@ using namespace llvm;
 static MCInst lowerRILow(const MachineInstr *MI, unsigned Opcode) {
   if (MI->isCompare())
     return MCInstBuilder(Opcode)
-      .addReg(SystemZMC::getRegAsGR32(MI->getOperand(0).getReg()))
-      .addImm(MI->getOperand(1).getImm());
+        .addReg(SystemZMC::getRegAsGR32(MI->getOperand(0).getReg()))
+        .addImm(MI->getOperand(1).getImm());
   else
     return MCInstBuilder(Opcode)
-      .addReg(SystemZMC::getRegAsGR32(MI->getOperand(0).getReg()))
-      .addReg(SystemZMC::getRegAsGR32(MI->getOperand(1).getReg()))
-      .addImm(MI->getOperand(2).getImm());
+        .addReg(SystemZMC::getRegAsGR32(MI->getOperand(0).getReg()))
+        .addReg(SystemZMC::getRegAsGR32(MI->getOperand(1).getReg()))
+        .addImm(MI->getOperand(2).getImm());
 }
 
 // Return an RI instruction like MI with opcode Opcode, but with the
@@ -57,25 +57,25 @@ static MCInst lowerRILow(const MachineInstr *MI, unsigned Opcode) {
 static MCInst lowerRIHigh(const MachineInstr *MI, unsigned Opcode) {
   if (MI->isCompare())
     return MCInstBuilder(Opcode)
-      .addReg(SystemZMC::getRegAsGRH32(MI->getOperand(0).getReg()))
-      .addImm(MI->getOperand(1).getImm());
+        .addReg(SystemZMC::getRegAsGRH32(MI->getOperand(0).getReg()))
+        .addImm(MI->getOperand(1).getImm());
   else
     return MCInstBuilder(Opcode)
-      .addReg(SystemZMC::getRegAsGRH32(MI->getOperand(0).getReg()))
-      .addReg(SystemZMC::getRegAsGRH32(MI->getOperand(1).getReg()))
-      .addImm(MI->getOperand(2).getImm());
+        .addReg(SystemZMC::getRegAsGRH32(MI->getOperand(0).getReg()))
+        .addReg(SystemZMC::getRegAsGRH32(MI->getOperand(1).getReg()))
+        .addImm(MI->getOperand(2).getImm());
 }
 
 // Return an RI instruction like MI with opcode Opcode, but with the
 // R2 register turned into a GR64.
 static MCInst lowerRIEfLow(const MachineInstr *MI, unsigned Opcode) {
   return MCInstBuilder(Opcode)
-    .addReg(MI->getOperand(0).getReg())
-    .addReg(MI->getOperand(1).getReg())
-    .addReg(SystemZMC::getRegAsGR64(MI->getOperand(2).getReg()))
-    .addImm(MI->getOperand(3).getImm())
-    .addImm(MI->getOperand(4).getImm())
-    .addImm(MI->getOperand(5).getImm());
+      .addReg(MI->getOperand(0).getReg())
+      .addReg(MI->getOperand(1).getReg())
+      .addReg(SystemZMC::getRegAsGR64(MI->getOperand(2).getReg()))
+      .addImm(MI->getOperand(3).getImm())
+      .addImm(MI->getOperand(4).getImm())
+      .addImm(MI->getOperand(5).getImm());
 }
 
 static const MCSymbolRefExpr *getTLSGetOffset(MCContext &Context) {
@@ -86,8 +86,7 @@ static const MCSymbolRefExpr *getTLSGetOffset(MCContext &Context) {
 
 static const MCSymbolRefExpr *getGlobalOffsetTable(MCContext &Context) {
   StringRef Name = "_GLOBAL_OFFSET_TABLE_";
-  return MCSymbolRefExpr::create(Context.getOrCreateSymbol(Name),
-                                 Context);
+  return MCSymbolRefExpr::create(Context.getOrCreateSymbol(Name), Context);
 }
 
 // MI is an instruction that accepts an optional alignment hint,
@@ -101,7 +100,8 @@ static void lowerAlignmentHint(const MachineInstr *MI, MCInst &LoweredMI,
 
   Align Alignment = Align(16);
   for (MachineInstr::mmo_iterator MMOI = MI->memoperands_begin(),
-         EE = MI->memoperands_end(); MMOI != EE; ++MMOI)
+                                  EE = MI->memoperands_end();
+       MMOI != EE; ++MMOI)
     if ((*MMOI)->getAlign() < Alignment)
       Alignment = (*MMOI)->getAlign();
 
@@ -121,21 +121,21 @@ static void lowerAlignmentHint(const MachineInstr *MI, MCInst &LoweredMI,
 // that uses replicating vector load Opcode to do the same thing.
 static MCInst lowerSubvectorLoad(const MachineInstr *MI, unsigned Opcode) {
   return MCInstBuilder(Opcode)
-    .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
-    .addReg(MI->getOperand(1).getReg())
-    .addImm(MI->getOperand(2).getImm())
-    .addReg(MI->getOperand(3).getReg());
+      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
+      .addReg(MI->getOperand(1).getReg())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(MI->getOperand(3).getReg());
 }
 
 // MI stores the high part of a vector to memory.  Return an instruction
 // that uses elemental vector store Opcode to do the same thing.
 static MCInst lowerSubvectorStore(const MachineInstr *MI, unsigned Opcode) {
   return MCInstBuilder(Opcode)
-    .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
-    .addReg(MI->getOperand(1).getReg())
-    .addImm(MI->getOperand(2).getImm())
-    .addReg(MI->getOperand(3).getReg())
-    .addImm(0);
+      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
+      .addReg(MI->getOperand(1).getReg())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(MI->getOperand(3).getReg())
+      .addImm(0);
 }
 
 // MI extracts the first element of the source vector.
@@ -221,103 +221,100 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst LoweredMI;
   switch (MI->getOpcode()) {
   case SystemZ::Return:
-    LoweredMI = MCInstBuilder(SystemZ::BR)
-      .addReg(SystemZ::R14D);
+    LoweredMI = MCInstBuilder(SystemZ::BR).addReg(SystemZ::R14D);
     break;
 
   case SystemZ::Return_XPLINK:
-    LoweredMI = MCInstBuilder(SystemZ::B)
-      .addReg(SystemZ::R7D)
-      .addImm(2)
-      .addReg(0);
+    LoweredMI =
+        MCInstBuilder(SystemZ::B).addReg(SystemZ::R7D).addImm(2).addReg(0);
     break;
 
   case SystemZ::CondReturn:
     LoweredMI = MCInstBuilder(SystemZ::BCR)
-      .addImm(MI->getOperand(0).getImm())
-      .addImm(MI->getOperand(1).getImm())
-      .addReg(SystemZ::R14D);
+                    .addImm(MI->getOperand(0).getImm())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addReg(SystemZ::R14D);
     break;
 
   case SystemZ::CondReturn_XPLINK:
     LoweredMI = MCInstBuilder(SystemZ::BC)
-      .addImm(MI->getOperand(0).getImm())
-      .addImm(MI->getOperand(1).getImm())
-      .addReg(SystemZ::R7D)
-      .addImm(2)
-      .addReg(0);
+                    .addImm(MI->getOperand(0).getImm())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addReg(SystemZ::R7D)
+                    .addImm(2)
+                    .addReg(0);
     break;
 
   case SystemZ::CRBReturn:
     LoweredMI = MCInstBuilder(SystemZ::CRB)
-      .addReg(MI->getOperand(0).getReg())
-      .addReg(MI->getOperand(1).getReg())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R14D)
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addReg(MI->getOperand(1).getReg())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(SystemZ::R14D)
+                    .addImm(0);
     break;
 
   case SystemZ::CGRBReturn:
     LoweredMI = MCInstBuilder(SystemZ::CGRB)
-      .addReg(MI->getOperand(0).getReg())
-      .addReg(MI->getOperand(1).getReg())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R14D)
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addReg(MI->getOperand(1).getReg())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(SystemZ::R14D)
+                    .addImm(0);
     break;
 
   case SystemZ::CIBReturn:
     LoweredMI = MCInstBuilder(SystemZ::CIB)
-      .addReg(MI->getOperand(0).getReg())
-      .addImm(MI->getOperand(1).getImm())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R14D)
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(SystemZ::R14D)
+                    .addImm(0);
     break;
 
   case SystemZ::CGIBReturn:
     LoweredMI = MCInstBuilder(SystemZ::CGIB)
-      .addReg(MI->getOperand(0).getReg())
-      .addImm(MI->getOperand(1).getImm())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R14D)
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(SystemZ::R14D)
+                    .addImm(0);
     break;
 
   case SystemZ::CLRBReturn:
     LoweredMI = MCInstBuilder(SystemZ::CLRB)
-      .addReg(MI->getOperand(0).getReg())
-      .addReg(MI->getOperand(1).getReg())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R14D)
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addReg(MI->getOperand(1).getReg())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(SystemZ::R14D)
+                    .addImm(0);
     break;
 
   case SystemZ::CLGRBReturn:
     LoweredMI = MCInstBuilder(SystemZ::CLGRB)
-      .addReg(MI->getOperand(0).getReg())
-      .addReg(MI->getOperand(1).getReg())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R14D)
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addReg(MI->getOperand(1).getReg())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(SystemZ::R14D)
+                    .addImm(0);
     break;
 
   case SystemZ::CLIBReturn:
     LoweredMI = MCInstBuilder(SystemZ::CLIB)
-      .addReg(MI->getOperand(0).getReg())
-      .addImm(MI->getOperand(1).getImm())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R14D)
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(SystemZ::R14D)
+                    .addImm(0);
     break;
 
   case SystemZ::CLGIBReturn:
     LoweredMI = MCInstBuilder(SystemZ::CLGIB)
-      .addReg(MI->getOperand(0).getReg())
-      .addImm(MI->getOperand(1).getImm())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R14D)
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(SystemZ::R14D)
+                    .addImm(0);
     break;
 
   case SystemZ::CallBRASL_XPLINK64:
@@ -372,11 +369,10 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       Disp = 0;
       Op = Op0;
     }
-    EmitToStreamer(*OutStreamer, MCInstBuilder(Op)
-                                     .addReg(TargetReg)
-                                     .addReg(ADAReg)
-                                     .addImm(Disp)
-                                     .addReg(IndexReg));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(Op).addReg(TargetReg).addReg(ADAReg).addImm(Disp).addReg(
+            IndexReg));
 
     return;
   }
@@ -388,8 +384,8 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case SystemZ::CallBASR:
     LoweredMI = MCInstBuilder(SystemZ::BASR)
-      .addReg(SystemZ::R14D)
-      .addReg(MI->getOperand(0).getReg());
+                    .addReg(SystemZ::R14D)
+                    .addReg(MI->getOperand(0).getReg());
     break;
 
   case SystemZ::CallJG:
@@ -405,87 +401,86 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
 
   case SystemZ::CallBR:
-    LoweredMI = MCInstBuilder(SystemZ::BR)
-      .addReg(MI->getOperand(0).getReg());
+    LoweredMI = MCInstBuilder(SystemZ::BR).addReg(MI->getOperand(0).getReg());
     break;
 
   case SystemZ::CallBCR:
     LoweredMI = MCInstBuilder(SystemZ::BCR)
-      .addImm(MI->getOperand(0).getImm())
-      .addImm(MI->getOperand(1).getImm())
-      .addReg(MI->getOperand(2).getReg());
+                    .addImm(MI->getOperand(0).getImm())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addReg(MI->getOperand(2).getReg());
     break;
 
   case SystemZ::CRBCall:
     LoweredMI = MCInstBuilder(SystemZ::CRB)
-      .addReg(MI->getOperand(0).getReg())
-      .addReg(MI->getOperand(1).getReg())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(MI->getOperand(3).getReg())
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addReg(MI->getOperand(1).getReg())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(MI->getOperand(3).getReg())
+                    .addImm(0);
     break;
 
   case SystemZ::CGRBCall:
     LoweredMI = MCInstBuilder(SystemZ::CGRB)
-      .addReg(MI->getOperand(0).getReg())
-      .addReg(MI->getOperand(1).getReg())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(MI->getOperand(3).getReg())
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addReg(MI->getOperand(1).getReg())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(MI->getOperand(3).getReg())
+                    .addImm(0);
     break;
 
   case SystemZ::CIBCall:
     LoweredMI = MCInstBuilder(SystemZ::CIB)
-      .addReg(MI->getOperand(0).getReg())
-      .addImm(MI->getOperand(1).getImm())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(MI->getOperand(3).getReg())
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(MI->getOperand(3).getReg())
+                    .addImm(0);
     break;
 
   case SystemZ::CGIBCall:
     LoweredMI = MCInstBuilder(SystemZ::CGIB)
-      .addReg(MI->getOperand(0).getReg())
-      .addImm(MI->getOperand(1).getImm())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(MI->getOperand(3).getReg())
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(MI->getOperand(3).getReg())
+                    .addImm(0);
     break;
 
   case SystemZ::CLRBCall:
     LoweredMI = MCInstBuilder(SystemZ::CLRB)
-      .addReg(MI->getOperand(0).getReg())
-      .addReg(MI->getOperand(1).getReg())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(MI->getOperand(3).getReg())
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addReg(MI->getOperand(1).getReg())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(MI->getOperand(3).getReg())
+                    .addImm(0);
     break;
 
   case SystemZ::CLGRBCall:
     LoweredMI = MCInstBuilder(SystemZ::CLGRB)
-      .addReg(MI->getOperand(0).getReg())
-      .addReg(MI->getOperand(1).getReg())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(MI->getOperand(3).getReg())
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addReg(MI->getOperand(1).getReg())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(MI->getOperand(3).getReg())
+                    .addImm(0);
     break;
 
   case SystemZ::CLIBCall:
     LoweredMI = MCInstBuilder(SystemZ::CLIB)
-      .addReg(MI->getOperand(0).getReg())
-      .addImm(MI->getOperand(1).getImm())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(MI->getOperand(3).getReg())
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(MI->getOperand(3).getReg())
+                    .addImm(0);
     break;
 
   case SystemZ::CLGIBCall:
     LoweredMI = MCInstBuilder(SystemZ::CLGIB)
-      .addReg(MI->getOperand(0).getReg())
-      .addImm(MI->getOperand(1).getImm())
-      .addImm(MI->getOperand(2).getImm())
-      .addReg(MI->getOperand(3).getReg())
-      .addImm(0);
+                    .addReg(MI->getOperand(0).getReg())
+                    .addImm(MI->getOperand(1).getImm())
+                    .addImm(MI->getOperand(2).getImm())
+                    .addReg(MI->getOperand(3).getReg())
+                    .addImm(0);
     break;
 
   case SystemZ::TLS_GDCALL:
@@ -506,20 +501,21 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case SystemZ::GOT:
     LoweredMI = MCInstBuilder(SystemZ::LARL)
-      .addReg(MI->getOperand(0).getReg())
-      .addExpr(getGlobalOffsetTable(MF->getContext()));
+                    .addReg(MI->getOperand(0).getReg())
+                    .addExpr(getGlobalOffsetTable(MF->getContext()));
     break;
 
   case SystemZ::IILF64:
     LoweredMI = MCInstBuilder(SystemZ::IILF)
-      .addReg(SystemZMC::getRegAsGR32(MI->getOperand(0).getReg()))
-      .addImm(MI->getOperand(2).getImm());
+                    .addReg(SystemZMC::getRegAsGR32(MI->getOperand(0).getReg()))
+                    .addImm(MI->getOperand(2).getImm());
     break;
 
   case SystemZ::IIHF64:
-    LoweredMI = MCInstBuilder(SystemZ::IIHF)
-      .addReg(SystemZMC::getRegAsGRH32(MI->getOperand(0).getReg()))
-      .addImm(MI->getOperand(2).getImm());
+    LoweredMI =
+        MCInstBuilder(SystemZ::IIHF)
+            .addReg(SystemZMC::getRegAsGRH32(MI->getOperand(0).getReg()))
+            .addImm(MI->getOperand(2).getImm());
     break;
 
   case SystemZ::RISBHH:
@@ -533,17 +529,19 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
 
   case SystemZ::VLVGP32:
-    LoweredMI = MCInstBuilder(SystemZ::VLVGP)
-      .addReg(MI->getOperand(0).getReg())
-      .addReg(SystemZMC::getRegAsGR64(MI->getOperand(1).getReg()))
-      .addReg(SystemZMC::getRegAsGR64(MI->getOperand(2).getReg()));
+    LoweredMI =
+        MCInstBuilder(SystemZ::VLVGP)
+            .addReg(MI->getOperand(0).getReg())
+            .addReg(SystemZMC::getRegAsGR64(MI->getOperand(1).getReg()))
+            .addReg(SystemZMC::getRegAsGR64(MI->getOperand(2).getReg()));
     break;
 
   case SystemZ::VLR32:
   case SystemZ::VLR64:
-    LoweredMI = MCInstBuilder(SystemZ::VLR)
-      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
-      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(1).getReg()));
+    LoweredMI =
+        MCInstBuilder(SystemZ::VLR)
+            .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
+            .addReg(SystemZMC::getRegAsVR128(MI->getOperand(1).getReg()));
     break;
 
   case SystemZ::VL:
@@ -606,47 +604,51 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     LoweredMI = lowerVecEltInsertion(MI, SystemZ::VLVGH);
     break;
 
-#define LOWER_LOW(NAME)                                                 \
-  case SystemZ::NAME##64: LoweredMI = lowerRILow(MI, SystemZ::NAME); break
+#define LOWER_LOW(NAME)                                                        \
+  case SystemZ::NAME##64:                                                      \
+    LoweredMI = lowerRILow(MI, SystemZ::NAME);                                 \
+    break
 
-  LOWER_LOW(IILL);
-  LOWER_LOW(IILH);
-  LOWER_LOW(TMLL);
-  LOWER_LOW(TMLH);
-  LOWER_LOW(NILL);
-  LOWER_LOW(NILH);
-  LOWER_LOW(NILF);
-  LOWER_LOW(OILL);
-  LOWER_LOW(OILH);
-  LOWER_LOW(OILF);
-  LOWER_LOW(XILF);
+    LOWER_LOW(IILL);
+    LOWER_LOW(IILH);
+    LOWER_LOW(TMLL);
+    LOWER_LOW(TMLH);
+    LOWER_LOW(NILL);
+    LOWER_LOW(NILH);
+    LOWER_LOW(NILF);
+    LOWER_LOW(OILL);
+    LOWER_LOW(OILH);
+    LOWER_LOW(OILF);
+    LOWER_LOW(XILF);
 
 #undef LOWER_LOW
 
-#define LOWER_HIGH(NAME) \
-  case SystemZ::NAME##64: LoweredMI = lowerRIHigh(MI, SystemZ::NAME); break
+#define LOWER_HIGH(NAME)                                                       \
+  case SystemZ::NAME##64:                                                      \
+    LoweredMI = lowerRIHigh(MI, SystemZ::NAME);                                \
+    break
 
-  LOWER_HIGH(IIHL);
-  LOWER_HIGH(IIHH);
-  LOWER_HIGH(TMHL);
-  LOWER_HIGH(TMHH);
-  LOWER_HIGH(NIHL);
-  LOWER_HIGH(NIHH);
-  LOWER_HIGH(NIHF);
-  LOWER_HIGH(OIHL);
-  LOWER_HIGH(OIHH);
-  LOWER_HIGH(OIHF);
-  LOWER_HIGH(XIHF);
+    LOWER_HIGH(IIHL);
+    LOWER_HIGH(IIHH);
+    LOWER_HIGH(TMHL);
+    LOWER_HIGH(TMHH);
+    LOWER_HIGH(NIHL);
+    LOWER_HIGH(NIHH);
+    LOWER_HIGH(NIHF);
+    LOWER_HIGH(OIHL);
+    LOWER_HIGH(OIHH);
+    LOWER_HIGH(OIHF);
+    LOWER_HIGH(XIHF);
 
 #undef LOWER_HIGH
 
   case SystemZ::Serialize:
     if (MF->getSubtarget<SystemZSubtarget>().hasFastSerialization())
-      LoweredMI = MCInstBuilder(SystemZ::BCRAsm)
-        .addImm(14).addReg(SystemZ::R0D);
+      LoweredMI =
+          MCInstBuilder(SystemZ::BCRAsm).addImm(14).addReg(SystemZ::R0D);
     else
-      LoweredMI = MCInstBuilder(SystemZ::BCRAsm)
-        .addImm(15).addReg(SystemZ::R0D);
+      LoweredMI =
+          MCInstBuilder(SystemZ::BCRAsm).addImm(15).addReg(SystemZ::R0D);
     break;
 
   // We want to emit "j .+2" for traps, jumping to the relative immediate field
@@ -659,10 +661,10 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(DotSym, OutContext);
     const MCConstantExpr *ConstExpr = MCConstantExpr::create(2, OutContext);
-    LoweredMI = MCInstBuilder(SystemZ::J)
-      .addExpr(MCBinaryExpr::createAdd(Expr, ConstExpr, OutContext));
-    }
-    break;
+    LoweredMI =
+        MCInstBuilder(SystemZ::J)
+            .addExpr(MCBinaryExpr::createAdd(Expr, ConstExpr, OutContext));
+  } break;
 
   // Conditional traps will create a branch on condition instruction that jumps
   // to the relative immediate field of the jump instruction. (eg. "jo .+2")
@@ -672,12 +674,12 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(DotSym, OutContext);
     const MCConstantExpr *ConstExpr = MCConstantExpr::create(2, OutContext);
-    LoweredMI = MCInstBuilder(SystemZ::BRC)
-      .addImm(MI->getOperand(0).getImm())
-      .addImm(MI->getOperand(1).getImm())
-      .addExpr(MCBinaryExpr::createAdd(Expr, ConstExpr, OutContext));
-    }
-    break;
+    LoweredMI =
+        MCInstBuilder(SystemZ::BRC)
+            .addImm(MI->getOperand(0).getImm())
+            .addImm(MI->getOperand(1).getImm())
+            .addExpr(MCBinaryExpr::createAdd(Expr, ConstExpr, OutContext));
+  } break;
 
   case TargetOpcode::FENTRY_CALL:
     LowerFENTRY_CALL(*MI, Lower);
@@ -754,19 +756,16 @@ static unsigned EmitNop(MCContext &OutContext, MCStreamer &OutStreamer,
   if (NumBytes < 2) {
     llvm_unreachable("Zero nops?");
     return 0;
-  }
-  else if (NumBytes < 4) {
+  } else if (NumBytes < 4) {
     OutStreamer.emitInstruction(
         MCInstBuilder(SystemZ::BCRAsm).addImm(0).addReg(SystemZ::R0D), STI);
     return 2;
-  }
-  else if (NumBytes < 6) {
+  } else if (NumBytes < 6) {
     OutStreamer.emitInstruction(
         MCInstBuilder(SystemZ::BCAsm).addImm(0).addReg(0).addImm(0).addReg(0),
         STI);
     return 4;
-  }
-  else {
+  } else {
     MCSymbol *DotSym = OutContext.createTempSymbol();
     const MCSymbolRefExpr *Dot = MCSymbolRefExpr::create(DotSym, OutContext);
     OutStreamer.emitLabel(DotSym);
@@ -810,7 +809,7 @@ void SystemZAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
   OutStreamer->emitLabel(MILabel);
-  
+
   SM.recordStackMap(*MILabel, MI);
   assert(NumNOPBytes % 2 == 0 && "Invalid number of NOP bytes requested!");
 
@@ -820,8 +819,7 @@ void SystemZAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
   MachineBasicBlock::const_iterator MII(MI);
   ++MII;
   while (ShadowBytes < NumNOPBytes) {
-    if (MII == MBB.end() ||
-        MII->getOpcode() == TargetOpcode::PATCHPOINT ||
+    if (MII == MBB.end() || MII->getOpcode() == TargetOpcode::PATCHPOINT ||
         MII->getOpcode() == TargetOpcode::STACKMAP)
       break;
     ShadowBytes += TII->getInstSizeInBytes(*MII);
@@ -862,26 +860,26 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 
       // Materialize the call target address
       EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::LLILF)
-                                      .addReg(ScratchReg)
-                                      .addImm(CallTarget & 0xFFFFFFFF));
+                                       .addReg(ScratchReg)
+                                       .addImm(CallTarget & 0xFFFFFFFF));
       EncodedBytes += 6;
       if (CallTarget >> 32) {
         EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::IIHF)
-                                        .addReg(ScratchReg)
-                                        .addImm(CallTarget >> 32));
+                                         .addReg(ScratchReg)
+                                         .addImm(CallTarget >> 32));
         EncodedBytes += 6;
       }
 
       EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BASR)
-                                     .addReg(SystemZ::R14D)
-                                     .addReg(ScratchReg));
+                                       .addReg(SystemZ::R14D)
+                                       .addReg(ScratchReg));
       EncodedBytes += 2;
     }
   } else if (CalleeMO.isGlobal()) {
     const MCExpr *Expr = Lower.getExpr(CalleeMO, SystemZ::S_PLT);
-    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
-                                   .addReg(SystemZ::R14D)
-                                   .addExpr(Expr));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::BRASL).addReg(SystemZ::R14D).addExpr(Expr));
     EncodedBytes += 6;
   }
 
@@ -978,7 +976,7 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
 void SystemZAsmPrinter::emitAttributes(Module &M) {
   if (M.getModuleFlag("s390x-visible-vector-ABI")) {
     bool HasVectorFeature =
-      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector);
+        TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector);
     OutStreamer->emitGNUAttribute(8, HasVectorFeature ? 2 : 1);
   }
 }
@@ -1001,7 +999,7 @@ static uint8_t getSpecifierFromModifier(SystemZCP::SystemZCPModifier Modifier) {
 
 void SystemZAsmPrinter::emitMachineConstantPoolValue(
     MachineConstantPoolValue *MCPV) {
-  auto *ZCPV = static_cast<SystemZConstantPoolValue*>(MCPV);
+  auto *ZCPV = static_cast<SystemZConstantPoolValue *>(MCPV);
 
   const MCExpr *Expr = MCSymbolRefExpr::create(
       getSymbol(ZCPV->getGlobalValue()),

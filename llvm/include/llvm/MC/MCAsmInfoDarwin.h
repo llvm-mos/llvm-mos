@@ -26,8 +26,8 @@ public:
   bool useCodeAlign(const MCSection &Sec) const final;
 
   /// True if the section is atomized using the symbols in it.
-  /// This is false if the section is atomized based on its contents (MachO' __TEXT,__cstring for
-  /// example).
+  /// This is false if the section is atomized based on its contents (MachO'
+  /// __TEXT,__cstring for example).
   static bool isSectionAtomizableBySymbols(const MCSection &Section);
 };
 

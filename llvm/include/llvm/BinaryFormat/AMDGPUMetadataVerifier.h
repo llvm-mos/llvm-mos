@@ -27,9 +27,9 @@
 namespace llvm {
 
 namespace msgpack {
-  class DocNode;
-  class MapDocNode;
-}
+class DocNode;
+class MapDocNode;
+} // namespace msgpack
 
 namespace AMDGPU {
 namespace HSAMD {

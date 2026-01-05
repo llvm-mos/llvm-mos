@@ -171,7 +171,7 @@ class LoadEliminationForLoop {
 public:
   LoadEliminationForLoop(Loop *L, LoopInfo *LI, const LoopAccessInfo &LAI,
                          DominatorTree *DT, BlockFrequencyInfo *BFI,
-                         ProfileSummaryInfo* PSI)
+                         ProfileSummaryInfo *PSI)
       : L(L), LI(LI), LAI(LAI), DT(DT), BFI(BFI), PSI(PSI), PSE(LAI.getPSE()) {}
 
   /// Look through the loop-carried and loop-independent dependences in
@@ -223,9 +223,9 @@ public:
         continue;
 
       // Only propagate if the stored values are bit/pointer castable.
-      if (!CastInst::isBitOrNoopPointerCastable(
-              getLoadStoreType(Store), getLoadStoreType(Load),
-              Store->getDataLayout()))
+      if (!CastInst::isBitOrNoopPointerCastable(getLoadStoreType(Store),
+                                                getLoadStoreType(Load),
+                                                Store->getDataLayout()))
         continue;
 
       Candidates.emplace_front(Load, Store);
@@ -603,13 +603,13 @@ public:
 
       // After versioning, some of the candidates' pointers could stop being
       // SCEVAddRecs. We need to filter them out.
-      auto NoLongerGoodCandidate = [this](
-          const StoreToLoadForwardingCandidate &Cand) {
-        return !isa<SCEVAddRecExpr>(
-                    PSE.getSCEV(Cand.Load->getPointerOperand())) ||
-               !isa<SCEVAddRecExpr>(
-                    PSE.getSCEV(Cand.Store->getPointerOperand()));
-      };
+      auto NoLongerGoodCandidate =
+          [this](const StoreToLoadForwardingCandidate &Cand) {
+            return !isa<SCEVAddRecExpr>(
+                       PSE.getSCEV(Cand.Load->getPointerOperand())) ||
+                   !isa<SCEVAddRecExpr>(
+                       PSE.getSCEV(Cand.Store->getPointerOperand()));
+          };
       llvm::erase_if(Candidates, NoLongerGoodCandidate);
     }
 
@@ -691,8 +691,9 @@ PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   auto *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  auto *BFI = (PSI && PSI->hasProfileSummary()) ?
-      &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
+  auto *BFI = (PSI && PSI->hasProfileSummary())
+                  ? &AM.getResult<BlockFrequencyAnalysis>(F)
+                  : nullptr;
   LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
 
   bool Changed = eliminateLoadsAcrossLoops(F, LI, DT, BFI, PSI, &SE, &AC, LAIs);

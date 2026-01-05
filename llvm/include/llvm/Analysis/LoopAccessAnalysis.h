@@ -320,7 +320,7 @@ private:
   const DenseMap<Value *, const SCEV *> &SymbolicStrides;
 
   /// Maps access locations (ptr, read/write) to program order.
-  DenseMap<MemAccessInfo, std::vector<unsigned> > Accesses;
+  DenseMap<MemAccessInfo, std::vector<unsigned>> Accesses;
 
   /// Memory access instructions in program order.
   SmallVector<Instruction *, 16> InstMap;
@@ -732,7 +732,7 @@ public:
   LLVM_ABI bool isInvariant(Value *V) const;
 
   unsigned getNumStores() const { return NumStores; }
-  unsigned getNumLoads() const { return NumLoads;}
+  unsigned getNumLoads() const { return NumLoads; }
 
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
@@ -985,8 +985,7 @@ public:
 /// querying the loop access info via AM.getResult<LoopAccessAnalysis>.
 /// getResult return a LoopAccessInfo object.  See this class for the
 /// specifics of what information is provided.
-class LoopAccessAnalysis
-    : public AnalysisInfoMixin<LoopAccessAnalysis> {
+class LoopAccessAnalysis : public AnalysisInfoMixin<LoopAccessAnalysis> {
   friend AnalysisInfoMixin<LoopAccessAnalysis>;
   LLVM_ABI static AnalysisKey Key;
 
@@ -1006,6 +1005,6 @@ inline Instruction *MemoryDepChecker::Dependence::getDestination(
   return DepChecker.getMemoryInstructions()[Destination];
 }
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

@@ -67,6 +67,6 @@ public:
 /// Create a legacy pass manager instance of the Scalarizer pass
 LLVM_ABI FunctionPass *createScalarizerPass(
     const ScalarizerPassOptions &Options = ScalarizerPassOptions());
-}
+} // namespace llvm
 
 #endif /* LLVM_TRANSFORMS_SCALAR_SCALARIZER_H */

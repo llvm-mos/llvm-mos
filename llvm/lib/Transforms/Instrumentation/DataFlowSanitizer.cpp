@@ -794,9 +794,7 @@ public:
 
   DFSanVisitor(DFSanFunction &DFSF) : DFSF(DFSF) {}
 
-  const DataLayout &getDataLayout() const {
-    return DFSF.F->getDataLayout();
-  }
+  const DataLayout &getDataLayout() const { return DFSF.F->getDataLayout(); }
 
   // Combines shadow values and origins for all of I's operands.
   void visitInstOperands(Instruction &I);
@@ -1097,10 +1095,10 @@ void DFSanFunction::addReachesFunctionCallbacksIfEnabled(IRBuilder<> &IRB,
 
   if (DFS.shouldTrackOrigins()) {
     Value *DataOrigin = getOrigin(Data);
-    args = { DataShadow, DataOrigin, FilePathPtr, CILine, FunctionNamePtr };
+    args = {DataShadow, DataOrigin, FilePathPtr, CILine, FunctionNamePtr};
     CB = IRB.CreateCall(DFS.DFSanReachesFunctionCallbackOriginFn, args);
   } else {
-    args = { DataShadow, FilePathPtr, CILine, FunctionNamePtr };
+    args = {DataShadow, FilePathPtr, CILine, FunctionNamePtr};
     CB = IRB.CreateCall(DFS.DFSanReachesFunctionCallbackFn, args);
   }
   CB->addParamAttr(0, Attribute::ZExt);

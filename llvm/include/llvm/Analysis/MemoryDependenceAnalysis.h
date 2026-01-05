@@ -311,7 +311,7 @@ private:
   /// local dependencies.
   DenseMap<AssertingVH<const Value>, NonLocalDepResult> NonLocalDefsCache;
   using ReverseNonLocalDefsCacheTy =
-    DenseMap<Instruction *, SmallPtrSet<const Value*, 4>>;
+      DenseMap<Instruction *, SmallPtrSet<const Value *, 4>>;
   ReverseNonLocalDefsCacheTy ReverseNonLocalDefsCache;
 
   /// This map stores the cached results of doing a pointer lookup at the
@@ -453,8 +453,7 @@ public:
 
   MemDepResult getPointerDependencyFrom(const MemoryLocation &Loc, bool isLoad,
                                         BasicBlock::iterator ScanIt,
-                                        BasicBlock *BB,
-                                        Instruction *QueryInst,
+                                        BasicBlock *BB, Instruction *QueryInst,
                                         unsigned *Limit,
                                         BatchAAResults &BatchAA);
 
@@ -487,14 +486,12 @@ private:
   MemDepResult getCallDependencyFrom(CallBase *Call, bool isReadOnlyCall,
                                      BasicBlock::iterator ScanIt,
                                      BasicBlock *BB);
-  bool getNonLocalPointerDepFromBB(Instruction *QueryInst,
-                                   const PHITransAddr &Pointer,
-                                   const MemoryLocation &Loc, bool isLoad,
-                                   BasicBlock *BB,
-                                   SmallVectorImpl<NonLocalDepResult> &Result,
-                                   SmallDenseMap<BasicBlock *, Value *, 16> &Visited,
-                                   bool SkipFirstBlock = false,
-                                   bool IsIncomplete = false);
+  bool getNonLocalPointerDepFromBB(
+      Instruction *QueryInst, const PHITransAddr &Pointer,
+      const MemoryLocation &Loc, bool isLoad, BasicBlock *BB,
+      SmallVectorImpl<NonLocalDepResult> &Result,
+      SmallDenseMap<BasicBlock *, Value *, 16> &Visited,
+      bool SkipFirstBlock = false, bool IsIncomplete = false);
   MemDepResult getNonLocalInfoForBlock(Instruction *QueryInst,
                                        const MemoryLocation &Loc, bool isLoad,
                                        BasicBlock *BB, NonLocalDepInfo *Cache,
@@ -522,7 +519,8 @@ public:
   using Result = MemoryDependenceResults;
 
   MemoryDependenceAnalysis();
-  MemoryDependenceAnalysis(unsigned DefaultBlockScanLimit) : DefaultBlockScanLimit(DefaultBlockScanLimit) { }
+  MemoryDependenceAnalysis(unsigned DefaultBlockScanLimit)
+      : DefaultBlockScanLimit(DefaultBlockScanLimit) {}
 
   MemoryDependenceResults run(Function &F, FunctionAnalysisManager &AM);
 };

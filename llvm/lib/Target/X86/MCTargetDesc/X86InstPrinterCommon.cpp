@@ -84,39 +84,104 @@ void X86InstPrinterCommon::printSSEAVXCC(const MCInst *MI, unsigned Op,
                                          raw_ostream &O) {
   int64_t Imm = MI->getOperand(Op).getImm();
   switch (Imm) {
-  default: llvm_unreachable("Invalid ssecc/avxcc argument!");
-  case    0: O << "eq"; break;
-  case    1: O << "lt"; break;
-  case    2: O << "le"; break;
-  case    3: O << "unord"; break;
-  case    4: O << "neq"; break;
-  case    5: O << "nlt"; break;
-  case    6: O << "nle"; break;
-  case    7: O << "ord"; break;
-  case    8: O << "eq_uq"; break;
-  case    9: O << "nge"; break;
-  case  0xa: O << "ngt"; break;
-  case  0xb: O << "false"; break;
-  case  0xc: O << "neq_oq"; break;
-  case  0xd: O << "ge"; break;
-  case  0xe: O << "gt"; break;
-  case  0xf: O << "true"; break;
-  case 0x10: O << "eq_os"; break;
-  case 0x11: O << "lt_oq"; break;
-  case 0x12: O << "le_oq"; break;
-  case 0x13: O << "unord_s"; break;
-  case 0x14: O << "neq_us"; break;
-  case 0x15: O << "nlt_uq"; break;
-  case 0x16: O << "nle_uq"; break;
-  case 0x17: O << "ord_s"; break;
-  case 0x18: O << "eq_us"; break;
-  case 0x19: O << "nge_uq"; break;
-  case 0x1a: O << "ngt_uq"; break;
-  case 0x1b: O << "false_os"; break;
-  case 0x1c: O << "neq_os"; break;
-  case 0x1d: O << "ge_oq"; break;
-  case 0x1e: O << "gt_oq"; break;
-  case 0x1f: O << "true_us"; break;
+  default:
+    llvm_unreachable("Invalid ssecc/avxcc argument!");
+  case 0:
+    O << "eq";
+    break;
+  case 1:
+    O << "lt";
+    break;
+  case 2:
+    O << "le";
+    break;
+  case 3:
+    O << "unord";
+    break;
+  case 4:
+    O << "neq";
+    break;
+  case 5:
+    O << "nlt";
+    break;
+  case 6:
+    O << "nle";
+    break;
+  case 7:
+    O << "ord";
+    break;
+  case 8:
+    O << "eq_uq";
+    break;
+  case 9:
+    O << "nge";
+    break;
+  case 0xa:
+    O << "ngt";
+    break;
+  case 0xb:
+    O << "false";
+    break;
+  case 0xc:
+    O << "neq_oq";
+    break;
+  case 0xd:
+    O << "ge";
+    break;
+  case 0xe:
+    O << "gt";
+    break;
+  case 0xf:
+    O << "true";
+    break;
+  case 0x10:
+    O << "eq_os";
+    break;
+  case 0x11:
+    O << "lt_oq";
+    break;
+  case 0x12:
+    O << "le_oq";
+    break;
+  case 0x13:
+    O << "unord_s";
+    break;
+  case 0x14:
+    O << "neq_us";
+    break;
+  case 0x15:
+    O << "nlt_uq";
+    break;
+  case 0x16:
+    O << "nle_uq";
+    break;
+  case 0x17:
+    O << "ord_s";
+    break;
+  case 0x18:
+    O << "eq_us";
+    break;
+  case 0x19:
+    O << "nge_uq";
+    break;
+  case 0x1a:
+    O << "ngt_uq";
+    break;
+  case 0x1b:
+    O << "false_os";
+    break;
+  case 0x1c:
+    O << "neq_os";
+    break;
+  case 0x1d:
+    O << "ge_oq";
+    break;
+  case 0x1e:
+    O << "gt_oq";
+    break;
+  case 0x1f:
+    O << "true_us";
+    break;
   }
 }
 
@@ -126,27 +191,69 @@ void X86InstPrinterCommon::printVPCOMMnemonic(const MCInst *MI,
 
   int64_t Imm = MI->getOperand(MI->getNumOperands() - 1).getImm();
   switch (Imm) {
-  default: llvm_unreachable("Invalid vpcom argument!");
-  case 0: OS << "lt"; break;
-  case 1: OS << "le"; break;
-  case 2: OS << "gt"; break;
-  case 3: OS << "ge"; break;
-  case 4: OS << "eq"; break;
-  case 5: OS << "neq"; break;
-  case 6: OS << "false"; break;
-  case 7: OS << "true"; break;
+  default:
+    llvm_unreachable("Invalid vpcom argument!");
+  case 0:
+    OS << "lt";
+    break;
+  case 1:
+    OS << "le";
+    break;
+  case 2:
+    OS << "gt";
+    break;
+  case 3:
+    OS << "ge";
+    break;
+  case 4:
+    OS << "eq";
+    break;
+  case 5:
+    OS << "neq";
+    break;
+  case 6:
+    OS << "false";
+    break;
+  case 7:
+    OS << "true";
+    break;
   }
 
   switch (MI->getOpcode()) {
-  default: llvm_unreachable("Unexpected opcode!");
-  case X86::VPCOMBmi:  case X86::VPCOMBri:  OS << "b\t";  break;
-  case X86::VPCOMDmi:  case X86::VPCOMDri:  OS << "d\t";  break;
-  case X86::VPCOMQmi:  case X86::VPCOMQri:  OS << "q\t";  break;
-  case X86::VPCOMUBmi: case X86::VPCOMUBri: OS << "ub\t"; break;
-  case X86::VPCOMUDmi: case X86::VPCOMUDri: OS << "ud\t"; break;
-  case X86::VPCOMUQmi: case X86::VPCOMUQri: OS << "uq\t"; break;
-  case X86::VPCOMUWmi: case X86::VPCOMUWri: OS << "uw\t"; break;
-  case X86::VPCOMWmi:  case X86::VPCOMWri:  OS << "w\t";  break;
+  default:
+    llvm_unreachable("Unexpected opcode!");
+  case X86::VPCOMBmi:
+  case X86::VPCOMBri:
+    OS << "b\t";
+    break;
+  case X86::VPCOMDmi:
+  case X86::VPCOMDri:
+    OS << "d\t";
+    break;
+  case X86::VPCOMQmi:
+  case X86::VPCOMQri:
+    OS << "q\t";
+    break;
+  case X86::VPCOMUBmi:
+  case X86::VPCOMUBri:
+    OS << "ub\t";
+    break;
+  case X86::VPCOMUDmi:
+  case X86::VPCOMUDri:
+    OS << "ud\t";
+    break;
+  case X86::VPCOMUQmi:
+  case X86::VPCOMUQri:
+    OS << "uq\t";
+    break;
+  case X86::VPCOMUWmi:
+  case X86::VPCOMUWri:
+    OS << "uw\t";
+    break;
+  case X86::VPCOMWmi:
+  case X86::VPCOMWri:
+    OS << "w\t";
+    break;
   }
 }
 
@@ -157,81 +264,142 @@ void X86InstPrinterCommon::printVPCMPMnemonic(const MCInst *MI,
   printSSEAVXCC(MI, MI->getNumOperands() - 1, OS);
 
   switch (MI->getOpcode()) {
-  default: llvm_unreachable("Unexpected opcode!");
-  case X86::VPCMPBZ128rmi:  case X86::VPCMPBZ128rri:
-  case X86::VPCMPBZ256rmi:  case X86::VPCMPBZ256rri:
-  case X86::VPCMPBZrmi:     case X86::VPCMPBZrri:
-  case X86::VPCMPBZ128rmik: case X86::VPCMPBZ128rrik:
-  case X86::VPCMPBZ256rmik: case X86::VPCMPBZ256rrik:
-  case X86::VPCMPBZrmik:    case X86::VPCMPBZrrik:
+  default:
+    llvm_unreachable("Unexpected opcode!");
+  case X86::VPCMPBZ128rmi:
+  case X86::VPCMPBZ128rri:
+  case X86::VPCMPBZ256rmi:
+  case X86::VPCMPBZ256rri:
+  case X86::VPCMPBZrmi:
+  case X86::VPCMPBZrri:
+  case X86::VPCMPBZ128rmik:
+  case X86::VPCMPBZ128rrik:
+  case X86::VPCMPBZ256rmik:
+  case X86::VPCMPBZ256rrik:
+  case X86::VPCMPBZrmik:
+  case X86::VPCMPBZrrik:
     OS << "b\t";
     break;
-  case X86::VPCMPDZ128rmi:  case X86::VPCMPDZ128rri:
-  case X86::VPCMPDZ256rmi:  case X86::VPCMPDZ256rri:
-  case X86::VPCMPDZrmi:     case X86::VPCMPDZrri:
-  case X86::VPCMPDZ128rmik: case X86::VPCMPDZ128rrik:
-  case X86::VPCMPDZ256rmik: case X86::VPCMPDZ256rrik:
-  case X86::VPCMPDZrmik:    case X86::VPCMPDZrrik:
-  case X86::VPCMPDZ128rmbi: case X86::VPCMPDZ128rmbik:
-  case X86::VPCMPDZ256rmbi: case X86::VPCMPDZ256rmbik:
-  case X86::VPCMPDZrmbi:    case X86::VPCMPDZrmbik:
+  case X86::VPCMPDZ128rmi:
+  case X86::VPCMPDZ128rri:
+  case X86::VPCMPDZ256rmi:
+  case X86::VPCMPDZ256rri:
+  case X86::VPCMPDZrmi:
+  case X86::VPCMPDZrri:
+  case X86::VPCMPDZ128rmik:
+  case X86::VPCMPDZ128rrik:
+  case X86::VPCMPDZ256rmik:
+  case X86::VPCMPDZ256rrik:
+  case X86::VPCMPDZrmik:
+  case X86::VPCMPDZrrik:
+  case X86::VPCMPDZ128rmbi:
+  case X86::VPCMPDZ128rmbik:
+  case X86::VPCMPDZ256rmbi:
+  case X86::VPCMPDZ256rmbik:
+  case X86::VPCMPDZrmbi:
+  case X86::VPCMPDZrmbik:
     OS << "d\t";
     break;
-  case X86::VPCMPQZ128rmi:  case X86::VPCMPQZ128rri:
-  case X86::VPCMPQZ256rmi:  case X86::VPCMPQZ256rri:
-  case X86::VPCMPQZrmi:     case X86::VPCMPQZrri:
-  case X86::VPCMPQZ128rmik: case X86::VPCMPQZ128rrik:
-  case X86::VPCMPQZ256rmik: case X86::VPCMPQZ256rrik:
-  case X86::VPCMPQZrmik:    case X86::VPCMPQZrrik:
-  case X86::VPCMPQZ128rmbi: case X86::VPCMPQZ128rmbik:
-  case X86::VPCMPQZ256rmbi: case X86::VPCMPQZ256rmbik:
-  case X86::VPCMPQZrmbi:    case X86::VPCMPQZrmbik:
+  case X86::VPCMPQZ128rmi:
+  case X86::VPCMPQZ128rri:
+  case X86::VPCMPQZ256rmi:
+  case X86::VPCMPQZ256rri:
+  case X86::VPCMPQZrmi:
+  case X86::VPCMPQZrri:
+  case X86::VPCMPQZ128rmik:
+  case X86::VPCMPQZ128rrik:
+  case X86::VPCMPQZ256rmik:
+  case X86::VPCMPQZ256rrik:
+  case X86::VPCMPQZrmik:
+  case X86::VPCMPQZrrik:
+  case X86::VPCMPQZ128rmbi:
+  case X86::VPCMPQZ128rmbik:
+  case X86::VPCMPQZ256rmbi:
+  case X86::VPCMPQZ256rmbik:
+  case X86::VPCMPQZrmbi:
+  case X86::VPCMPQZrmbik:
     OS << "q\t";
     break;
-  case X86::VPCMPUBZ128rmi:  case X86::VPCMPUBZ128rri:
-  case X86::VPCMPUBZ256rmi:  case X86::VPCMPUBZ256rri:
-  case X86::VPCMPUBZrmi:     case X86::VPCMPUBZrri:
-  case X86::VPCMPUBZ128rmik: case X86::VPCMPUBZ128rrik:
-  case X86::VPCMPUBZ256rmik: case X86::VPCMPUBZ256rrik:
-  case X86::VPCMPUBZrmik:    case X86::VPCMPUBZrrik:
+  case X86::VPCMPUBZ128rmi:
+  case X86::VPCMPUBZ128rri:
+  case X86::VPCMPUBZ256rmi:
+  case X86::VPCMPUBZ256rri:
+  case X86::VPCMPUBZrmi:
+  case X86::VPCMPUBZrri:
+  case X86::VPCMPUBZ128rmik:
+  case X86::VPCMPUBZ128rrik:
+  case X86::VPCMPUBZ256rmik:
+  case X86::VPCMPUBZ256rrik:
+  case X86::VPCMPUBZrmik:
+  case X86::VPCMPUBZrrik:
     OS << "ub\t";
     break;
-  case X86::VPCMPUDZ128rmi:  case X86::VPCMPUDZ128rri:
-  case X86::VPCMPUDZ256rmi:  case X86::VPCMPUDZ256rri:
-  case X86::VPCMPUDZrmi:     case X86::VPCMPUDZrri:
-  case X86::VPCMPUDZ128rmik: case X86::VPCMPUDZ128rrik:
-  case X86::VPCMPUDZ256rmik: case X86::VPCMPUDZ256rrik:
-  case X86::VPCMPUDZrmik:    case X86::VPCMPUDZrrik:
-  case X86::VPCMPUDZ128rmbi: case X86::VPCMPUDZ128rmbik:
-  case X86::VPCMPUDZ256rmbi: case X86::VPCMPUDZ256rmbik:
-  case X86::VPCMPUDZrmbi:    case X86::VPCMPUDZrmbik:
+  case X86::VPCMPUDZ128rmi:
+  case X86::VPCMPUDZ128rri:
+  case X86::VPCMPUDZ256rmi:
+  case X86::VPCMPUDZ256rri:
+  case X86::VPCMPUDZrmi:
+  case X86::VPCMPUDZrri:
+  case X86::VPCMPUDZ128rmik:
+  case X86::VPCMPUDZ128rrik:
+  case X86::VPCMPUDZ256rmik:
+  case X86::VPCMPUDZ256rrik:
+  case X86::VPCMPUDZrmik:
+  case X86::VPCMPUDZrrik:
+  case X86::VPCMPUDZ128rmbi:
+  case X86::VPCMPUDZ128rmbik:
+  case X86::VPCMPUDZ256rmbi:
+  case X86::VPCMPUDZ256rmbik:
+  case X86::VPCMPUDZrmbi:
+  case X86::VPCMPUDZrmbik:
     OS << "ud\t";
     break;
-  case X86::VPCMPUQZ128rmi:  case X86::VPCMPUQZ128rri:
-  case X86::VPCMPUQZ256rmi:  case X86::VPCMPUQZ256rri:
-  case X86::VPCMPUQZrmi:     case X86::VPCMPUQZrri:
-  case X86::VPCMPUQZ128rmik: case X86::VPCMPUQZ128rrik:
-  case X86::VPCMPUQZ256rmik: case X86::VPCMPUQZ256rrik:
-  case X86::VPCMPUQZrmik:    case X86::VPCMPUQZrrik:
-  case X86::VPCMPUQZ128rmbi: case X86::VPCMPUQZ128rmbik:
-  case X86::VPCMPUQZ256rmbi: case X86::VPCMPUQZ256rmbik:
-  case X86::VPCMPUQZrmbi:    case X86::VPCMPUQZrmbik:
+  case X86::VPCMPUQZ128rmi:
+  case X86::VPCMPUQZ128rri:
+  case X86::VPCMPUQZ256rmi:
+  case X86::VPCMPUQZ256rri:
+  case X86::VPCMPUQZrmi:
+  case X86::VPCMPUQZrri:
+  case X86::VPCMPUQZ128rmik:
+  case X86::VPCMPUQZ128rrik:
+  case X86::VPCMPUQZ256rmik:
+  case X86::VPCMPUQZ256rrik:
+  case X86::VPCMPUQZrmik:
+  case X86::VPCMPUQZrrik:
+  case X86::VPCMPUQZ128rmbi:
+  case X86::VPCMPUQZ128rmbik:
+  case X86::VPCMPUQZ256rmbi:
+  case X86::VPCMPUQZ256rmbik:
+  case X86::VPCMPUQZrmbi:
+  case X86::VPCMPUQZrmbik:
     OS << "uq\t";
     break;
-  case X86::VPCMPUWZ128rmi:  case X86::VPCMPUWZ128rri:
-  case X86::VPCMPUWZ256rri:  case X86::VPCMPUWZ256rmi:
-  case X86::VPCMPUWZrmi:     case X86::VPCMPUWZrri:
-  case X86::VPCMPUWZ128rmik: case X86::VPCMPUWZ128rrik:
-  case X86::VPCMPUWZ256rrik: case X86::VPCMPUWZ256rmik:
-  case X86::VPCMPUWZrmik:    case X86::VPCMPUWZrrik:
+  case X86::VPCMPUWZ128rmi:
+  case X86::VPCMPUWZ128rri:
+  case X86::VPCMPUWZ256rri:
+  case X86::VPCMPUWZ256rmi:
+  case X86::VPCMPUWZrmi:
+  case X86::VPCMPUWZrri:
+  case X86::VPCMPUWZ128rmik:
+  case X86::VPCMPUWZ128rrik:
+  case X86::VPCMPUWZ256rrik:
+  case X86::VPCMPUWZ256rmik:
+  case X86::VPCMPUWZrmik:
+  case X86::VPCMPUWZrrik:
     OS << "uw\t";
     break;
-  case X86::VPCMPWZ128rmi:  case X86::VPCMPWZ128rri:
-  case X86::VPCMPWZ256rmi:  case X86::VPCMPWZ256rri:
-  case X86::VPCMPWZrmi:     case X86::VPCMPWZrri:
-  case X86::VPCMPWZ128rmik: case X86::VPCMPWZ128rrik:
-  case X86::VPCMPWZ256rmik: case X86::VPCMPWZ256rrik:
-  case X86::VPCMPWZrmik:    case X86::VPCMPWZrrik:
+  case X86::VPCMPWZ128rmi:
+  case X86::VPCMPWZ128rri:
+  case X86::VPCMPWZ256rmi:
+  case X86::VPCMPWZ256rri:
+  case X86::VPCMPWZrmi:
+  case X86::VPCMPWZrri:
+  case X86::VPCMPWZ128rmik:
+  case X86::VPCMPWZ128rrik:
+  case X86::VPCMPWZ256rmik:
+  case X86::VPCMPWZ256rrik:
+  case X86::VPCMPWZrmik:
+  case X86::VPCMPWZrrik:
     OS << "w\t";
     break;
   }
@@ -244,84 +412,150 @@ void X86InstPrinterCommon::printCMPMnemonic(const MCInst *MI, bool IsVCmp,
   printSSEAVXCC(MI, MI->getNumOperands() - 1, OS);
 
   switch (MI->getOpcode()) {
-  default: llvm_unreachable("Unexpected opcode!");
-  case X86::CMPPDrmi:       case X86::CMPPDrri:
-  case X86::VCMPPDrmi:      case X86::VCMPPDrri:
-  case X86::VCMPPDYrmi:     case X86::VCMPPDYrri:
-  case X86::VCMPPDZ128rmi:  case X86::VCMPPDZ128rri:
-  case X86::VCMPPDZ256rmi:  case X86::VCMPPDZ256rri:
-  case X86::VCMPPDZrmi:     case X86::VCMPPDZrri:
-  case X86::VCMPPDZ128rmik: case X86::VCMPPDZ128rrik:
-  case X86::VCMPPDZ256rmik: case X86::VCMPPDZ256rrik:
-  case X86::VCMPPDZrmik:    case X86::VCMPPDZrrik:
-  case X86::VCMPPDZ128rmbi: case X86::VCMPPDZ128rmbik:
-  case X86::VCMPPDZ256rmbi: case X86::VCMPPDZ256rmbik:
-  case X86::VCMPPDZrmbi:    case X86::VCMPPDZrmbik:
-  case X86::VCMPPDZrrib:    case X86::VCMPPDZrribk:
+  default:
+    llvm_unreachable("Unexpected opcode!");
+  case X86::CMPPDrmi:
+  case X86::CMPPDrri:
+  case X86::VCMPPDrmi:
+  case X86::VCMPPDrri:
+  case X86::VCMPPDYrmi:
+  case X86::VCMPPDYrri:
+  case X86::VCMPPDZ128rmi:
+  case X86::VCMPPDZ128rri:
+  case X86::VCMPPDZ256rmi:
+  case X86::VCMPPDZ256rri:
+  case X86::VCMPPDZrmi:
+  case X86::VCMPPDZrri:
+  case X86::VCMPPDZ128rmik:
+  case X86::VCMPPDZ128rrik:
+  case X86::VCMPPDZ256rmik:
+  case X86::VCMPPDZ256rrik:
+  case X86::VCMPPDZrmik:
+  case X86::VCMPPDZrrik:
+  case X86::VCMPPDZ128rmbi:
+  case X86::VCMPPDZ128rmbik:
+  case X86::VCMPPDZ256rmbi:
+  case X86::VCMPPDZ256rmbik:
+  case X86::VCMPPDZrmbi:
+  case X86::VCMPPDZrmbik:
+  case X86::VCMPPDZrrib:
+  case X86::VCMPPDZrribk:
     OS << "pd\t";
     break;
-  case X86::CMPPSrmi:       case X86::CMPPSrri:
-  case X86::VCMPPSrmi:      case X86::VCMPPSrri:
-  case X86::VCMPPSYrmi:     case X86::VCMPPSYrri:
-  case X86::VCMPPSZ128rmi:  case X86::VCMPPSZ128rri:
-  case X86::VCMPPSZ256rmi:  case X86::VCMPPSZ256rri:
-  case X86::VCMPPSZrmi:     case X86::VCMPPSZrri:
-  case X86::VCMPPSZ128rmik: case X86::VCMPPSZ128rrik:
-  case X86::VCMPPSZ256rmik: case X86::VCMPPSZ256rrik:
-  case X86::VCMPPSZrmik:    case X86::VCMPPSZrrik:
-  case X86::VCMPPSZ128rmbi: case X86::VCMPPSZ128rmbik:
-  case X86::VCMPPSZ256rmbi: case X86::VCMPPSZ256rmbik:
-  case X86::VCMPPSZrmbi:    case X86::VCMPPSZrmbik:
-  case X86::VCMPPSZrrib:    case X86::VCMPPSZrribk:
+  case X86::CMPPSrmi:
+  case X86::CMPPSrri:
+  case X86::VCMPPSrmi:
+  case X86::VCMPPSrri:
+  case X86::VCMPPSYrmi:
+  case X86::VCMPPSYrri:
+  case X86::VCMPPSZ128rmi:
+  case X86::VCMPPSZ128rri:
+  case X86::VCMPPSZ256rmi:
+  case X86::VCMPPSZ256rri:
+  case X86::VCMPPSZrmi:
+  case X86::VCMPPSZrri:
+  case X86::VCMPPSZ128rmik:
+  case X86::VCMPPSZ128rrik:
+  case X86::VCMPPSZ256rmik:
+  case X86::VCMPPSZ256rrik:
+  case X86::VCMPPSZrmik:
+  case X86::VCMPPSZrrik:
+  case X86::VCMPPSZ128rmbi:
+  case X86::VCMPPSZ128rmbik:
+  case X86::VCMPPSZ256rmbi:
+  case X86::VCMPPSZ256rmbik:
+  case X86::VCMPPSZrmbi:
+  case X86::VCMPPSZrmbik:
+  case X86::VCMPPSZrrib:
+  case X86::VCMPPSZrribk:
     OS << "ps\t";
     break;
-  case X86::CMPSDrmi:        case X86::CMPSDrri:
-  case X86::CMPSDrmi_Int:    case X86::CMPSDrri_Int:
-  case X86::VCMPSDrmi:       case X86::VCMPSDrri:
-  case X86::VCMPSDrmi_Int:   case X86::VCMPSDrri_Int:
-  case X86::VCMPSDZrmi:      case X86::VCMPSDZrri:
-  case X86::VCMPSDZrmi_Int:  case X86::VCMPSDZrri_Int:
-  case X86::VCMPSDZrmik_Int: case X86::VCMPSDZrrik_Int:
-  case X86::VCMPSDZrrib_Int: case X86::VCMPSDZrribk_Int:
+  case X86::CMPSDrmi:
+  case X86::CMPSDrri:
+  case X86::CMPSDrmi_Int:
+  case X86::CMPSDrri_Int:
+  case X86::VCMPSDrmi:
+  case X86::VCMPSDrri:
+  case X86::VCMPSDrmi_Int:
+  case X86::VCMPSDrri_Int:
+  case X86::VCMPSDZrmi:
+  case X86::VCMPSDZrri:
+  case X86::VCMPSDZrmi_Int:
+  case X86::VCMPSDZrri_Int:
+  case X86::VCMPSDZrmik_Int:
+  case X86::VCMPSDZrrik_Int:
+  case X86::VCMPSDZrrib_Int:
+  case X86::VCMPSDZrribk_Int:
     OS << "sd\t";
     break;
-  case X86::CMPSSrmi:        case X86::CMPSSrri:
-  case X86::CMPSSrmi_Int:    case X86::CMPSSrri_Int:
-  case X86::VCMPSSrmi:       case X86::VCMPSSrri:
-  case X86::VCMPSSrmi_Int:   case X86::VCMPSSrri_Int:
-  case X86::VCMPSSZrmi:      case X86::VCMPSSZrri:
-  case X86::VCMPSSZrmi_Int:  case X86::VCMPSSZrri_Int:
-  case X86::VCMPSSZrmik_Int: case X86::VCMPSSZrrik_Int:
-  case X86::VCMPSSZrrib_Int: case X86::VCMPSSZrribk_Int:
+  case X86::CMPSSrmi:
+  case X86::CMPSSrri:
+  case X86::CMPSSrmi_Int:
+  case X86::CMPSSrri_Int:
+  case X86::VCMPSSrmi:
+  case X86::VCMPSSrri:
+  case X86::VCMPSSrmi_Int:
+  case X86::VCMPSSrri_Int:
+  case X86::VCMPSSZrmi:
+  case X86::VCMPSSZrri:
+  case X86::VCMPSSZrmi_Int:
+  case X86::VCMPSSZrri_Int:
+  case X86::VCMPSSZrmik_Int:
+  case X86::VCMPSSZrrik_Int:
+  case X86::VCMPSSZrrib_Int:
+  case X86::VCMPSSZrribk_Int:
     OS << "ss\t";
     break;
-  case X86::VCMPPHZ128rmi:  case X86::VCMPPHZ128rri:
-  case X86::VCMPPHZ256rmi:  case X86::VCMPPHZ256rri:
-  case X86::VCMPPHZrmi:     case X86::VCMPPHZrri:
-  case X86::VCMPPHZ128rmik: case X86::VCMPPHZ128rrik:
-  case X86::VCMPPHZ256rmik: case X86::VCMPPHZ256rrik:
-  case X86::VCMPPHZrmik:    case X86::VCMPPHZrrik:
-  case X86::VCMPPHZ128rmbi: case X86::VCMPPHZ128rmbik:
-  case X86::VCMPPHZ256rmbi: case X86::VCMPPHZ256rmbik:
-  case X86::VCMPPHZrmbi:    case X86::VCMPPHZrmbik:
-  case X86::VCMPPHZrrib:    case X86::VCMPPHZrribk:
+  case X86::VCMPPHZ128rmi:
+  case X86::VCMPPHZ128rri:
+  case X86::VCMPPHZ256rmi:
+  case X86::VCMPPHZ256rri:
+  case X86::VCMPPHZrmi:
+  case X86::VCMPPHZrri:
+  case X86::VCMPPHZ128rmik:
+  case X86::VCMPPHZ128rrik:
+  case X86::VCMPPHZ256rmik:
+  case X86::VCMPPHZ256rrik:
+  case X86::VCMPPHZrmik:
+  case X86::VCMPPHZrrik:
+  case X86::VCMPPHZ128rmbi:
+  case X86::VCMPPHZ128rmbik:
+  case X86::VCMPPHZ256rmbi:
+  case X86::VCMPPHZ256rmbik:
+  case X86::VCMPPHZrmbi:
+  case X86::VCMPPHZrmbik:
+  case X86::VCMPPHZrrib:
+  case X86::VCMPPHZrribk:
     OS << "ph\t";
     break;
-  case X86::VCMPSHZrmi:      case X86::VCMPSHZrri:
-  case X86::VCMPSHZrmi_Int:  case X86::VCMPSHZrri_Int:
-  case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrribk_Int:
-  case X86::VCMPSHZrmik_Int: case X86::VCMPSHZrrik_Int:
+  case X86::VCMPSHZrmi:
+  case X86::VCMPSHZrri:
+  case X86::VCMPSHZrmi_Int:
+  case X86::VCMPSHZrri_Int:
+  case X86::VCMPSHZrrib_Int:
+  case X86::VCMPSHZrribk_Int:
+  case X86::VCMPSHZrmik_Int:
+  case X86::VCMPSHZrrik_Int:
     OS << "sh\t";
     break;
-  case X86::VCMPBF16Z128rmi:  case X86::VCMPBF16Z128rri:
-  case X86::VCMPBF16Z256rmi:  case X86::VCMPBF16Z256rri:
-  case X86::VCMPBF16Zrmi:     case X86::VCMPBF16Zrri:
-  case X86::VCMPBF16Z128rmik: case X86::VCMPBF16Z128rrik:
-  case X86::VCMPBF16Z256rmik: case X86::VCMPBF16Z256rrik:
-  case X86::VCMPBF16Zrmik:    case X86::VCMPBF16Zrrik:
-  case X86::VCMPBF16Z128rmbi: case X86::VCMPBF16Z128rmbik:
-  case X86::VCMPBF16Z256rmbi: case X86::VCMPBF16Z256rmbik:
-  case X86::VCMPBF16Zrmbi:    case X86::VCMPBF16Zrmbik:
+  case X86::VCMPBF16Z128rmi:
+  case X86::VCMPBF16Z128rri:
+  case X86::VCMPBF16Z256rmi:
+  case X86::VCMPBF16Z256rri:
+  case X86::VCMPBF16Zrmi:
+  case X86::VCMPBF16Zrri:
+  case X86::VCMPBF16Z128rmik:
+  case X86::VCMPBF16Z128rrik:
+  case X86::VCMPBF16Z256rmik:
+  case X86::VCMPBF16Z256rrik:
+  case X86::VCMPBF16Zrmik:
+  case X86::VCMPBF16Zrrik:
+  case X86::VCMPBF16Z128rmbi:
+  case X86::VCMPBF16Z128rmbik:
+  case X86::VCMPBF16Z256rmbi:
+  case X86::VCMPBF16Z256rmbik:
+  case X86::VCMPBF16Zrmbi:
+  case X86::VCMPBF16Zrmbik:
     OS << "bf16\t";
     break;
   }

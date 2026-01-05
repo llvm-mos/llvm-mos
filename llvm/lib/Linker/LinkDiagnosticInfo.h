@@ -20,6 +20,6 @@ public:
                      const Twine &Msg LLVM_LIFETIME_BOUND);
   void print(DiagnosticPrinter &DP) const override;
 };
-}
+} // namespace llvm
 
 #endif

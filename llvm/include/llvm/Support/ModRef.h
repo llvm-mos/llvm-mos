@@ -185,9 +185,7 @@ public:
 
   /// Convert MemoryEffectsBase into an encoded integer value (used by memory
   /// attribute).
-  uint32_t toIntValue() const {
-    return Data;
-  }
+  uint32_t toIntValue() const { return Data; }
 
   /// Get ModRefInfo for the given Location.
   ModRefInfo getModRef(Location Loc) const {

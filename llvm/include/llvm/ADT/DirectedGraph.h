@@ -162,6 +162,7 @@ template <class NodeType, class EdgeType> class DirectedGraph {
 protected:
   using NodeListTy = SmallVector<NodeType *, 10>;
   using EdgeListTy = SmallVector<EdgeType *, 10>;
+
 public:
   using iterator = typename NodeListTy::iterator;
   using const_iterator = typename NodeListTy::const_iterator;
@@ -201,7 +202,8 @@ public:
 
   /// Collect in \p EL all edges that are coming into node \p N. Return true
   /// if at least one edge was found, and false otherwise.
-  bool findIncomingEdgesToNode(const NodeType &N, SmallVectorImpl<EdgeType*> &EL) const {
+  bool findIncomingEdgesToNode(const NodeType &N,
+                               SmallVectorImpl<EdgeType *> &EL) const {
     assert(EL.empty() && "Expected the list of edges to be empty.");
     EdgeListTy TempList;
     for (auto *Node : Nodes) {

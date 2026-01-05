@@ -24,7 +24,8 @@
 using namespace llvm;
 
 #define RISCV_EXPAND_PSEUDO_NAME "RISC-V pseudo instruction expansion pass"
-#define RISCV_PRERA_EXPAND_PSEUDO_NAME "RISC-V Pre-RA pseudo instruction expansion pass"
+#define RISCV_PRERA_EXPAND_PSEUDO_NAME                                         \
+  "RISC-V Pre-RA pseudo instruction expansion pass"
 
 namespace {
 
@@ -782,6 +783,8 @@ INITIALIZE_PASS(RISCVPreRAExpandPseudo, "riscv-prera-expand-pseudo",
 namespace llvm {
 
 FunctionPass *createRISCVExpandPseudoPass() { return new RISCVExpandPseudo(); }
-FunctionPass *createRISCVPreRAExpandPseudoPass() { return new RISCVPreRAExpandPseudo(); }
+FunctionPass *createRISCVPreRAExpandPseudoPass() {
+  return new RISCVPreRAExpandPseudo();
+}
 
 } // end of namespace llvm

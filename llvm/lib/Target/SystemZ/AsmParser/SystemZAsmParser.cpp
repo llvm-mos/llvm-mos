@@ -74,14 +74,7 @@ enum RegisterKind {
   CR64Reg,
 };
 
-enum MemoryKind {
-  BDMem,
-  BDXMem,
-  BDLMem,
-  BDRMem,
-  BDVMem,
-  LXAMem
-};
+enum MemoryKind { BDMem, BDXMem, BDLMem, BDRMem, BDVMem, LXAMem };
 
 class SystemZOperand : public MCParsedAsmOperand {
 private:
@@ -207,9 +200,10 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<SystemZOperand>
-  createImmTLS(const MCExpr *Imm, const MCExpr *Sym,
-               SMLoc StartLoc, SMLoc EndLoc) {
+  static std::unique_ptr<SystemZOperand> createImmTLS(const MCExpr *Imm,
+                                                      const MCExpr *Sym,
+                                                      SMLoc StartLoc,
+                                                      SMLoc EndLoc) {
     auto Op = std::make_unique<SystemZOperand>(KindImmTLS, StartLoc, EndLoc);
     Op->ImmTLS.Imm = Imm;
     Op->ImmTLS.Sym = Sym;
@@ -217,18 +211,14 @@ public:
   }
 
   // Token operands
-  bool isToken() const override {
-    return Kind == KindToken;
-  }
+  bool isToken() const override { return Kind == KindToken; }
   StringRef getToken() const {
     assert(Kind == KindToken && "Not a token");
     return StringRef(Token.Data, Token.Length);
   }
 
   // Register operands.
-  bool isReg() const override {
-    return Kind == KindReg;
-  }
+  bool isReg() const override { return Kind == KindReg; }
   bool isReg(RegisterKind RegKind) const {
     return Kind == KindReg && Reg.Kind == RegKind;
   }
@@ -238,9 +228,7 @@ public:
   }
 
   // Immediate operands.
-  bool isImm() const override {
-    return Kind == KindImm;
-  }
+  bool isImm() const override { return Kind == KindImm; }
   bool isImm(int64_t MinValue, int64_t MaxValue) const {
     return Kind == KindImm && inRange(Imm, MinValue, MaxValue, true);
   }
@@ -250,9 +238,7 @@ public:
   }
 
   // Immediate operands with optional TLS symbol.
-  bool isImmTLS() const {
-    return Kind == KindImmTLS;
-  }
+  bool isImmTLS() const { return Kind == KindImmTLS; }
 
   const ImmTLSOp getImmTLS() const {
     assert(Kind == KindImmTLS && "Not a TLS immediate");
@@ -260,15 +246,12 @@ public:
   }
 
   // Memory operands.
-  bool isMem() const override {
-    return Kind == KindMem;
-  }
+  bool isMem() const override { return Kind == KindMem; }
   bool isMem(MemoryKind MemKind) const {
-    return (Kind == KindMem &&
-            (Mem.MemKind == MemKind ||
-             // A BDMem can be treated as a BDXMem in which the index
-             // register field is 0.
-             (Mem.MemKind == BDMem && MemKind == BDXMem)));
+    return (Kind == KindMem && (Mem.MemKind == MemKind ||
+                                // A BDMem can be treated as a BDXMem in which
+                                // the index register field is 0.
+                                (Mem.MemKind == BDMem && MemKind == BDXMem)));
   }
   bool isMem(MemoryKind MemKind, RegisterKind RegKind) const {
     return isMem(MemKind) && Mem.RegKind == RegKind;
@@ -286,7 +269,7 @@ public:
     return isMemDisp12(BDLMem, RegKind) && inRange(Mem.Length.Imm, 1, 0x100);
   }
 
-  const MemOp& getMem() const {
+  const MemOp &getMem() const {
     assert(Kind == KindMem && "Not a Mem operand");
     return Mem;
   }
@@ -417,13 +400,7 @@ private:
   // apply the result.
   SmallVector<FeatureBitset> MachineStack;
 
-  enum RegisterGroup {
-    RegGR,
-    RegFP,
-    RegV,
-    RegAR,
-    RegCR
-  };
+  enum RegisterGroup { RegGR, RegFP, RegV, RegAR, RegCR };
   struct Register {
     RegisterGroup Group;
     unsigned Num;
@@ -650,84 +627,106 @@ struct InsnMatchEntry {
 
 // For equal_range comparison.
 struct CompareInsn {
-  bool operator() (const InsnMatchEntry &LHS, StringRef RHS) {
+  bool operator()(const InsnMatchEntry &LHS, StringRef RHS) {
     return LHS.Format < RHS;
   }
-  bool operator() (StringRef LHS, const InsnMatchEntry &RHS) {
+  bool operator()(StringRef LHS, const InsnMatchEntry &RHS) {
     return LHS < RHS.Format;
   }
-  bool operator() (const InsnMatchEntry &LHS, const InsnMatchEntry &RHS) {
+  bool operator()(const InsnMatchEntry &LHS, const InsnMatchEntry &RHS) {
     return LHS.Format < RHS.Format;
   }
 };
 
 // Table initializing information for parsing the .insn directive.
 static struct InsnMatchEntry InsnMatchTable[] = {
-  /* Format, Opcode, NumOperands, OperandKinds */
-  { "e", SystemZ::InsnE, 1,
-    { MCK_U16Imm } },
-  { "ri", SystemZ::InsnRI, 3,
-    { MCK_U32Imm, MCK_AnyReg, MCK_S16Imm } },
-  { "rie", SystemZ::InsnRIE, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_PCRel16 } },
-  { "ril", SystemZ::InsnRIL, 3,
-    { MCK_U48Imm, MCK_AnyReg, MCK_PCRel32 } },
-  { "rilu", SystemZ::InsnRILU, 3,
-    { MCK_U48Imm, MCK_AnyReg, MCK_U32Imm } },
-  { "ris", SystemZ::InsnRIS, 5,
-    { MCK_U48Imm, MCK_AnyReg, MCK_S8Imm, MCK_U4Imm, MCK_BDAddr64Disp12 } },
-  { "rr", SystemZ::InsnRR, 3,
-    { MCK_U16Imm, MCK_AnyReg, MCK_AnyReg } },
-  { "rre", SystemZ::InsnRRE, 3,
-    { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg } },
-  { "rrf", SystemZ::InsnRRF, 5,
-    { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg, MCK_AnyReg, MCK_U4Imm } },
-  { "rrs", SystemZ::InsnRRS, 5,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_U4Imm, MCK_BDAddr64Disp12 } },
-  { "rs", SystemZ::InsnRS, 4,
-    { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp12 } },
-  { "rse", SystemZ::InsnRSE, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp12 } },
-  { "rsi", SystemZ::InsnRSI, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_PCRel16 } },
-  { "rsy", SystemZ::InsnRSY, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp20 } },
-  { "rx", SystemZ::InsnRX, 3,
-    { MCK_U32Imm, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
-  { "rxe", SystemZ::InsnRXE, 3,
-    { MCK_U48Imm, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
-  { "rxf", SystemZ::InsnRXF, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
-  { "rxy", SystemZ::InsnRXY, 3,
-    { MCK_U48Imm, MCK_AnyReg, MCK_BDXAddr64Disp20 } },
-  { "s", SystemZ::InsnS, 2,
-    { MCK_U32Imm, MCK_BDAddr64Disp12 } },
-  { "si", SystemZ::InsnSI, 3,
-    { MCK_U32Imm, MCK_BDAddr64Disp12, MCK_S8Imm } },
-  { "sil", SystemZ::InsnSIL, 3,
-    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_U16Imm } },
-  { "siy", SystemZ::InsnSIY, 3,
-    { MCK_U48Imm, MCK_BDAddr64Disp20, MCK_U8Imm } },
-  { "ss", SystemZ::InsnSS, 4,
-    { MCK_U48Imm, MCK_BDXAddr64Disp12, MCK_BDAddr64Disp12, MCK_AnyReg } },
-  { "sse", SystemZ::InsnSSE, 3,
-    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_BDAddr64Disp12 } },
-  { "ssf", SystemZ::InsnSSF, 4,
-    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_BDAddr64Disp12, MCK_AnyReg } },
-  { "vri", SystemZ::InsnVRI, 6,
-    { MCK_U48Imm, MCK_VR128, MCK_VR128, MCK_U12Imm, MCK_U4Imm, MCK_U4Imm } },
-  { "vrr", SystemZ::InsnVRR, 7,
-    { MCK_U48Imm, MCK_VR128, MCK_VR128, MCK_VR128, MCK_U4Imm, MCK_U4Imm,
-      MCK_U4Imm } },
-  { "vrs", SystemZ::InsnVRS, 5,
-    { MCK_U48Imm, MCK_AnyReg, MCK_VR128, MCK_BDAddr64Disp12, MCK_U4Imm } },
-  { "vrv", SystemZ::InsnVRV, 4,
-    { MCK_U48Imm, MCK_VR128, MCK_BDVAddr64Disp12, MCK_U4Imm } },
-  { "vrx", SystemZ::InsnVRX, 4,
-    { MCK_U48Imm, MCK_VR128, MCK_BDXAddr64Disp12, MCK_U4Imm } },
-  { "vsi", SystemZ::InsnVSI, 4,
-    { MCK_U48Imm, MCK_VR128, MCK_BDAddr64Disp12, MCK_U8Imm } }
-};
+    /* Format, Opcode, NumOperands, OperandKinds */
+    {"e", SystemZ::InsnE, 1, {MCK_U16Imm}},
+    {"ri", SystemZ::InsnRI, 3, {MCK_U32Imm, MCK_AnyReg, MCK_S16Imm}},
+    {"rie",
+     SystemZ::InsnRIE,
+     4,
+     {MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_PCRel16}},
+    {"ril", SystemZ::InsnRIL, 3, {MCK_U48Imm, MCK_AnyReg, MCK_PCRel32}},
+    {"rilu", SystemZ::InsnRILU, 3, {MCK_U48Imm, MCK_AnyReg, MCK_U32Imm}},
+    {"ris",
+     SystemZ::InsnRIS,
+     5,
+     {MCK_U48Imm, MCK_AnyReg, MCK_S8Imm, MCK_U4Imm, MCK_BDAddr64Disp12}},
+    {"rr", SystemZ::InsnRR, 3, {MCK_U16Imm, MCK_AnyReg, MCK_AnyReg}},
+    {"rre", SystemZ::InsnRRE, 3, {MCK_U32Imm, MCK_AnyReg, MCK_AnyReg}},
+    {"rrf",
+     SystemZ::InsnRRF,
+     5,
+     {MCK_U32Imm, MCK_AnyReg, MCK_AnyReg, MCK_AnyReg, MCK_U4Imm}},
+    {"rrs",
+     SystemZ::InsnRRS,
+     5,
+     {MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_U4Imm, MCK_BDAddr64Disp12}},
+    {"rs",
+     SystemZ::InsnRS,
+     4,
+     {MCK_U32Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp12}},
+    {"rse",
+     SystemZ::InsnRSE,
+     4,
+     {MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp12}},
+    {"rsi",
+     SystemZ::InsnRSI,
+     4,
+     {MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_PCRel16}},
+    {"rsy",
+     SystemZ::InsnRSY,
+     4,
+     {MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp20}},
+    {"rx", SystemZ::InsnRX, 3, {MCK_U32Imm, MCK_AnyReg, MCK_BDXAddr64Disp12}},
+    {"rxe", SystemZ::InsnRXE, 3, {MCK_U48Imm, MCK_AnyReg, MCK_BDXAddr64Disp12}},
+    {"rxf",
+     SystemZ::InsnRXF,
+     4,
+     {MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDXAddr64Disp12}},
+    {"rxy", SystemZ::InsnRXY, 3, {MCK_U48Imm, MCK_AnyReg, MCK_BDXAddr64Disp20}},
+    {"s", SystemZ::InsnS, 2, {MCK_U32Imm, MCK_BDAddr64Disp12}},
+    {"si", SystemZ::InsnSI, 3, {MCK_U32Imm, MCK_BDAddr64Disp12, MCK_S8Imm}},
+    {"sil", SystemZ::InsnSIL, 3, {MCK_U48Imm, MCK_BDAddr64Disp12, MCK_U16Imm}},
+    {"siy", SystemZ::InsnSIY, 3, {MCK_U48Imm, MCK_BDAddr64Disp20, MCK_U8Imm}},
+    {"ss",
+     SystemZ::InsnSS,
+     4,
+     {MCK_U48Imm, MCK_BDXAddr64Disp12, MCK_BDAddr64Disp12, MCK_AnyReg}},
+    {"sse",
+     SystemZ::InsnSSE,
+     3,
+     {MCK_U48Imm, MCK_BDAddr64Disp12, MCK_BDAddr64Disp12}},
+    {"ssf",
+     SystemZ::InsnSSF,
+     4,
+     {MCK_U48Imm, MCK_BDAddr64Disp12, MCK_BDAddr64Disp12, MCK_AnyReg}},
+    {"vri",
+     SystemZ::InsnVRI,
+     6,
+     {MCK_U48Imm, MCK_VR128, MCK_VR128, MCK_U12Imm, MCK_U4Imm, MCK_U4Imm}},
+    {"vrr",
+     SystemZ::InsnVRR,
+     7,
+     {MCK_U48Imm, MCK_VR128, MCK_VR128, MCK_VR128, MCK_U4Imm, MCK_U4Imm,
+      MCK_U4Imm}},
+    {"vrs",
+     SystemZ::InsnVRS,
+     5,
+     {MCK_U48Imm, MCK_AnyReg, MCK_VR128, MCK_BDAddr64Disp12, MCK_U4Imm}},
+    {"vrv",
+     SystemZ::InsnVRV,
+     4,
+     {MCK_U48Imm, MCK_VR128, MCK_BDVAddr64Disp12, MCK_U4Imm}},
+    {"vrx",
+     SystemZ::InsnVRX,
+     4,
+     {MCK_U48Imm, MCK_VR128, MCK_BDXAddr64Disp12, MCK_U4Imm}},
+    {"vsi",
+     SystemZ::InsnVSI,
+     4,
+     {MCK_U48Imm, MCK_VR128, MCK_BDAddr64Disp12, MCK_U8Imm}}};
 
 void SystemZOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
@@ -938,11 +937,10 @@ ParseStatus SystemZAsmParser::parseAnyRegister(OperandVector &Operands) {
     }
 
     SMLoc EndLoc =
-      SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+        SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
 
     Operands.push_back(SystemZOperand::createImm(Register, StartLoc, EndLoc));
-  }
-  else {
+  } else {
     if (isParsingHLASM())
       return ParseStatus::NoMatch;
 
@@ -959,29 +957,24 @@ ParseStatus SystemZAsmParser::parseAnyRegister(OperandVector &Operands) {
     if (Reg.Group == RegGR) {
       Kind = GR64Reg;
       RegNo = SystemZMC::GR64Regs[Reg.Num];
-    }
-    else if (Reg.Group == RegFP) {
+    } else if (Reg.Group == RegFP) {
       Kind = FP64Reg;
       RegNo = SystemZMC::FP64Regs[Reg.Num];
-    }
-    else if (Reg.Group == RegV) {
+    } else if (Reg.Group == RegV) {
       Kind = VR128Reg;
       RegNo = SystemZMC::VR128Regs[Reg.Num];
-    }
-    else if (Reg.Group == RegAR) {
+    } else if (Reg.Group == RegAR) {
       Kind = AR32Reg;
       RegNo = SystemZMC::AR32Regs[Reg.Num];
-    }
-    else if (Reg.Group == RegCR) {
+    } else if (Reg.Group == RegCR) {
       Kind = CR64Reg;
       RegNo = SystemZMC::CR64Regs[Reg.Num];
-    }
-    else {
+    } else {
       return ParseStatus::Failure;
     }
 
-    Operands.push_back(SystemZOperand::createReg(Kind, RegNo,
-                                                 Reg.StartLoc, Reg.EndLoc));
+    Operands.push_back(
+        SystemZOperand::createReg(Kind, RegNo, Reg.StartLoc, Reg.EndLoc));
   }
   return ParseStatus::Success;
 }
@@ -1115,8 +1108,7 @@ bool SystemZAsmParser::parseAddress(bool &HaveReg1, Register &Reg1,
 }
 
 // Verify that Reg is a valid address register (base or index).
-bool
-SystemZAsmParser::parseAddressRegister(Register &Reg) {
+bool SystemZAsmParser::parseAddressRegister(Register &Reg) {
   if (Reg.Group == RegV) {
     Error(Reg.StartLoc, "invalid use of vector addressing");
     return true;
@@ -1148,9 +1140,14 @@ ParseStatus SystemZAsmParser::parseAddress(OperandVector &Operands,
 
   const unsigned *Regs;
   switch (RegKind) {
-  case GR32Reg: Regs = SystemZMC::GR32Regs; break;
-  case GR64Reg: Regs = SystemZMC::GR64Regs; break;
-  default: llvm_unreachable("invalid RegKind");
+  case GR32Reg:
+    Regs = SystemZMC::GR32Regs;
+    break;
+  case GR64Reg:
+    Regs = SystemZMC::GR64Regs;
+    break;
+  default:
+    llvm_unreachable("invalid RegKind");
   }
 
   switch (MemKind) {
@@ -1270,8 +1267,8 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
 
   // Find entry for this format in InsnMatchTable.
   auto EntryRange =
-    std::equal_range(std::begin(InsnMatchTable), std::end(InsnMatchTable),
-                     Format, CompareInsn());
+      std::equal_range(std::begin(InsnMatchTable), std::end(InsnMatchTable),
+                       Format, CompareInsn());
 
   // If first == second, couldn't find a match in the table.
   if (EntryRange.first == EntryRange.second)
@@ -1321,7 +1318,7 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
         return Error(StartLoc, "unexpected token in directive");
 
       SMLoc EndLoc =
-        SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+          SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
 
       Operands.push_back(SystemZOperand::createImm(Expr, StartLoc, EndLoc));
       ResTy = ParseStatus::Success;
@@ -1570,14 +1567,14 @@ bool SystemZAsmParser::parseOperand(OperandVector &Operands,
     return true;
   // If the register combination is not valid for any instruction, reject it.
   // Otherwise, fall back to reporting an unrecognized instruction.
-  if (HaveReg1 && Reg1.Group != RegGR && Reg1.Group != RegV
-      && parseAddressRegister(Reg1))
+  if (HaveReg1 && Reg1.Group != RegGR && Reg1.Group != RegV &&
+      parseAddressRegister(Reg1))
     return true;
   if (HaveReg2 && parseAddressRegister(Reg2))
     return true;
 
   SMLoc EndLoc =
-    SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+      SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   if (HaveReg1 || HaveReg2 || Length)
     Operands.push_back(SystemZOperand::createInvalid(StartLoc, EndLoc));
   else
@@ -1712,17 +1709,16 @@ ParseStatus SystemZAsmParser::parsePCRel(OperandVector &Operands,
       return Error(Parser.getTok().getLoc(), "unexpected token");
 
     StringRef Identifier = Parser.getTok().getString();
-    Sym = MCSymbolRefExpr::create(Ctx.getOrCreateSymbol(Identifier),
-                                  Kind, Ctx);
+    Sym = MCSymbolRefExpr::create(Ctx.getOrCreateSymbol(Identifier), Kind, Ctx);
     Parser.Lex();
   }
 
   SMLoc EndLoc =
-    SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+      SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
 
   if (AllowTLS)
-    Operands.push_back(SystemZOperand::createImmTLS(Expr, Sym,
-                                                    StartLoc, EndLoc));
+    Operands.push_back(
+        SystemZOperand::createImmTLS(Expr, Sym, StartLoc, EndLoc));
   else
     Operands.push_back(SystemZOperand::createImm(Expr, StartLoc, EndLoc));
 

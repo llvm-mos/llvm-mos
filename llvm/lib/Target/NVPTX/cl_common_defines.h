@@ -24,7 +24,7 @@ enum {
   CLK_LUMINANCE = 0x10B9
 
 #if (__NV_CL_C_VERSION >= __NV_CL_C_VERSION_1_1)
-      ,
+  ,
   CLK_Rx = 0x10BA,
   CLK_RGx = 0x10BB,
   CLK_RGBx = 0x10BC
@@ -76,9 +76,9 @@ typedef enum clk_sampler_type {
 #if (__NV_CL_C_VERSION >= __NV_CL_C_VERSION_1_1)
   CLK_ADDRESS_MIRRORED_REPEAT = CLK_ADDRESS_MIRROR,
 #endif
-  __CLK_ADDRESS_MASK =
-      CLK_ADDRESS_NONE | CLK_ADDRESS_CLAMP | CLK_ADDRESS_CLAMP_TO_EDGE |
-      CLK_ADDRESS_REPEAT | CLK_ADDRESS_MIRROR,
+  __CLK_ADDRESS_MASK = CLK_ADDRESS_NONE | CLK_ADDRESS_CLAMP |
+                       CLK_ADDRESS_CLAMP_TO_EDGE | CLK_ADDRESS_REPEAT |
+                       CLK_ADDRESS_MIRROR,
   __CLK_ADDRESS_BITS = 3, // number of bits required to
                           // represent address info
 
@@ -112,7 +112,7 @@ typedef enum clk_sampler_type {
 
   __CLK_ANISOTROPIC_RATIO_BITS = 5,
   __CLK_ANISOTROPIC_RATIO_MASK =
-      (int) 0x80000000 >> (__CLK_ANISOTROPIC_RATIO_BITS - 1)
+      (int)0x80000000 >> (__CLK_ANISOTROPIC_RATIO_BITS - 1)
 } clk_sampler_type;
 
 // Memory synchronization

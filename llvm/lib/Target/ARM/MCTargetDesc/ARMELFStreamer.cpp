@@ -227,7 +227,8 @@ void ARMTargetAsmStreamer::emitIntTextAttribute(unsigned Attribute,
                                                 unsigned IntValue,
                                                 StringRef StringValue) {
   switch (Attribute) {
-  default: llvm_unreachable("unsupported multi-value attribute in asm mode");
+  default:
+    llvm_unreachable("unsupported multi-value attribute in asm mode");
   case ARMBuildAttrs::compatibility:
     OS << "\t.eabi_attribute\t" << Attribute << ", " << IntValue;
     if (!StringValue.empty())
@@ -298,8 +299,8 @@ void ARMTargetAsmStreamer::emitInst(uint32_t Inst, char Suffix) {
   OS << "\t0x" << Twine::utohexstr(Inst) << "\n";
 }
 
-void ARMTargetAsmStreamer::emitUnwindRaw(int64_t Offset,
-                                      const SmallVectorImpl<uint8_t> &Opcodes) {
+void ARMTargetAsmStreamer::emitUnwindRaw(
+    int64_t Offset, const SmallVectorImpl<uint8_t> &Opcodes) {
   OS << "\t.unwind_raw " << Offset;
   for (uint8_t Opcode : Opcodes)
     OS << ", 0x" << Twine::utohexstr(Opcode);
@@ -455,7 +456,7 @@ private:
 
 public:
   ARMTargetELFStreamer(MCStreamer &S)
-    : ARMTargetStreamer(S), CurrentVendor("aeabi") {}
+      : ARMTargetStreamer(S), CurrentVendor("aeabi") {}
 };
 
 /// Extend the generic ELFStreamer class so that it can emit mapping symbols at
@@ -625,12 +626,7 @@ public:
   void setIsThumb(bool Val) { IsThumb = Val; }
 
 private:
-  enum ElfMappingSymbol {
-    EMS_None,
-    EMS_ARM,
-    EMS_Thumb,
-    EMS_Data
-  };
+  enum ElfMappingSymbol { EMS_None, EMS_ARM, EMS_Thumb, EMS_Data };
 
   struct ElfMappingSymbolInfo {
     void resetInfo() {
@@ -723,9 +719,9 @@ private:
   MCSymbol *FnStart;
   const MCSymbol *Personality;
   unsigned PersonalityIndex;
-  MCRegister FPReg; // Frame pointer register
-  int64_t FPOffset; // Offset: (final frame pointer) - (initial $sp)
-  int64_t SPOffset; // Offset: (final $sp) - (initial $sp)
+  MCRegister FPReg;      // Frame pointer register
+  int64_t FPOffset;      // Offset: (final frame pointer) - (initial $sp)
+  int64_t SPOffset;      // Offset: (final $sp) - (initial $sp)
   int64_t PendingOffset; // Offset: (final $sp) - (emitted $sp)
   bool UsedFP;
   bool CantUnwind;
@@ -773,8 +769,8 @@ void ARMTargetELFStreamer::emitRegSave(
   getStreamer().emitRegSave(RegList, isVector);
 }
 
-void ARMTargetELFStreamer::emitUnwindRaw(int64_t Offset,
-                                      const SmallVectorImpl<uint8_t> &Opcodes) {
+void ARMTargetELFStreamer::emitUnwindRaw(
+    int64_t Offset, const SmallVectorImpl<uint8_t> &Opcodes) {
   getStreamer().emitUnwindRaw(Offset, Opcodes);
 }
 
@@ -790,7 +786,6 @@ void ARMTargetELFStreamer::switchVendor(StringRef Vendor) {
   assert(getStreamer().Contents.empty() &&
          ".ARM.attributes should be flushed before changing vendor");
   CurrentVendor = Vendor;
-
 }
 
 void ARMTargetELFStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
@@ -811,9 +806,7 @@ void ARMTargetELFStreamer::emitIntTextAttribute(unsigned Attribute,
                                   /* OverwriteExisting= */ true);
 }
 
-void ARMTargetELFStreamer::emitArch(ARM::ArchKind Value) {
-  Arch = Value;
-}
+void ARMTargetELFStreamer::emitArch(ARM::ArchKind Value) { Arch = Value; }
 
 void ARMTargetELFStreamer::emitObjectArch(ARM::ArchKind Value) {
   EmittedArch = Value;
@@ -1166,13 +1159,11 @@ void ARMELFStreamer::reset() {
   getWriter().setELFHeaderEFlags(ELF::EF_ARM_EABI_VER5);
 }
 
-inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix,
-                                              unsigned Type,
-                                              unsigned Flags,
-                                              SectionKind Kind,
+inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix, unsigned Type,
+                                              unsigned Flags, SectionKind Kind,
                                               const MCSymbol &Fn) {
   const MCSectionELF &FnSection =
-    static_cast<const MCSectionELF &>(Fn.getSection());
+      static_cast<const MCSectionELF &>(Fn.getSection());
 
   // Create the name for new section
   StringRef FnSecName(FnSection.getName());
@@ -1268,10 +1259,8 @@ void ARMELFStreamer::emitFnEnd() {
            "Compact model must use __aeabi_unwind_cpp_pr0 as personality");
     assert(Opcodes.size() == 4u &&
            "Unwind opcode size for __aeabi_unwind_cpp_pr0 must be equal to 4");
-    uint64_t Intval = Opcodes[0] |
-                      Opcodes[1] << 8 |
-                      Opcodes[2] << 16 |
-                      Opcodes[3] << 24;
+    uint64_t Intval =
+        Opcodes[0] | Opcodes[1] << 8 | Opcodes[2] << 16 | Opcodes[3] << 24;
     emitIntValue(Intval, Opcodes.size());
   }
 
@@ -1341,9 +1330,7 @@ void ARMELFStreamer::FlushUnwindOpcodes(bool NoHandlerData) {
   assert((Opcodes.size() % 4) == 0 &&
          "Unwind opcode size for __aeabi_cpp_unwind_pr0 must be multiple of 4");
   for (unsigned I = 0; I != Opcodes.size(); I += 4) {
-    uint64_t Intval = Opcodes[I] |
-                      Opcodes[I + 1] << 8 |
-                      Opcodes[I + 2] << 16 |
+    uint64_t Intval = Opcodes[I] | Opcodes[I + 1] << 8 | Opcodes[I + 2] << 16 |
                       Opcodes[I + 3] << 24;
     emitInt32(Intval);
   }

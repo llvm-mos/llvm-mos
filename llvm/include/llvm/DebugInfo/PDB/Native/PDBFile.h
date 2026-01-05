@@ -140,7 +140,7 @@ private:
   std::unique_ptr<InjectedSourceStream> InjectedSources;
   std::unique_ptr<PDBStringTable> Strings;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

@@ -73,7 +73,7 @@ class CFGDeadness {
 
 public:
   /// Return the edge that coresponds to the predecessor.
-  static const Use& getEdge(const_pred_iterator &PredIt) {
+  static const Use &getEdge(const_pred_iterator &PredIt) {
     auto &PU = PredIt.getUse();
     return PU.getUser()->getOperandUse(PU.getOperandNo());
   }
@@ -82,9 +82,10 @@ public:
   /// basic block InBB listed in the phi node.
   bool hasLiveIncomingEdge(const PHINode *PN, const BasicBlock *InBB) const {
     assert(!isDeadBlock(InBB) && "block must be live");
-    const BasicBlock* BB = PN->getParent();
+    const BasicBlock *BB = PN->getParent();
     bool Listed = false;
-    for (const_pred_iterator PredIt(BB), End(BB, true); PredIt != End; ++PredIt) {
+    for (const_pred_iterator PredIt(BB), End(BB, true); PredIt != End;
+         ++PredIt) {
       if (InBB == *PredIt) {
         if (!isDeadEdge(&getEdge(PredIt)))
           return true;
@@ -96,10 +97,7 @@ public:
     return false;
   }
 
-
-  bool isDeadBlock(const BasicBlock *BB) const {
-    return DeadBlocks.count(BB);
-  }
+  bool isDeadBlock(const BasicBlock *BB) const { return DeadBlocks.count(BB); }
 
   bool isDeadEdge(const Use *U) const {
     assert(cast<Instruction>(U->getUser())->isTerminator() &&
@@ -113,7 +111,8 @@ public:
 
   bool hasLiveIncomingEdges(const BasicBlock *BB) const {
     // Check if all incoming edges are dead.
-    for (const_pred_iterator PredIt(BB), End(BB, true); PredIt != End; ++PredIt) {
+    for (const_pred_iterator PredIt(BB), End(BB, true); PredIt != End;
+         ++PredIt) {
       auto &PU = PredIt.getUse();
       const Use &U = PU.getUser()->getOperandUse(PU.getOperandNo());
       if (!isDeadBlock(*PredIt) && !isDeadEdge(&U))
@@ -136,13 +135,14 @@ public:
       const Instruction *TI = BB->getTerminator();
       assert(TI && "blocks must be well formed");
 
-      // For conditional branches, we can perform simple conditional propagation on
-      // the condition value itself.
+      // For conditional branches, we can perform simple conditional propagation
+      // on the condition value itself.
       const BranchInst *BI = dyn_cast<BranchInst>(TI);
       if (!BI || !BI->isConditional() || !isa<Constant>(BI->getCondition()))
         continue;
 
-      // If a branch has two identical successors, we cannot declare either dead.
+      // If a branch has two identical successors, we cannot declare either
+      // dead.
       if (BI->getSuccessor(0) == BI->getSuccessor(1))
         continue;
 
@@ -166,7 +166,7 @@ protected:
 
       // All blocks dominated by D are dead.
       SmallVector<BasicBlock *, 8> Dom;
-      DT->getDescendants(const_cast<BasicBlock*>(D), Dom);
+      DT->getDescendants(const_cast<BasicBlock *>(D), Dom);
       // Do not need to mark all in and out edges dead
       // because BB is marked dead and this is enough
       // to run further.
@@ -269,7 +269,7 @@ static bool containsGCPtrType(Type *Ty) {
 }
 
 // Debugging aid -- prints a [Begin, End) range of values.
-template<typename IteratorTy>
+template <typename IteratorTy>
 static void PrintValueSet(raw_ostream &OS, IteratorTy Begin, IteratorTy End) {
   OS << "[ ";
   while (Begin != End) {
@@ -331,7 +331,7 @@ static enum BaseType getBaseType(const Value *Val) {
   // Strip through all the bitcasts and geps to get base pointer. Also check for
   // the exclusive value when there can be multiple base pointers (through phis
   // or selects).
-  while(!Worklist.empty()) {
+  while (!Worklist.empty()) {
     const Value *V = Worklist.pop_back_val();
     if (!Visited.insert(V).second)
       continue;
@@ -541,7 +541,8 @@ private:
 } // end anonymous namespace
 
 GCPtrTracker::GCPtrTracker(const Function &F, const DominatorTree &DT,
-                           const CFGDeadness &CD) : F(F), CD(CD) {
+                           const CFGDeadness &CD)
+    : F(F), CD(CD) {
   // Calculate Contribution of each live BB.
   // Allocate BB states for live blocks.
   for (const BasicBlock &BB : F)
@@ -569,8 +570,8 @@ BasicBlockState *GCPtrTracker::getBasicBlockState(const BasicBlock *BB) {
   return BlockMap.lookup(BB);
 }
 
-const BasicBlockState *GCPtrTracker::getBasicBlockState(
-    const BasicBlock *BB) const {
+const BasicBlockState *
+GCPtrTracker::getBasicBlockState(const BasicBlock *BB) const {
   return const_cast<GCPtrTracker *>(this)->getBasicBlockState(BB);
 }
 
@@ -623,7 +624,8 @@ void GCPtrTracker::recalculateBBsStates() {
       continue; // Ignore dead successors.
 
     size_t OldInCount = BBS->AvailableIn.size();
-    for (const_pred_iterator PredIt(BB), End(BB, true); PredIt != End; ++PredIt) {
+    for (const_pred_iterator PredIt(BB), End(BB, true); PredIt != End;
+         ++PredIt) {
       const BasicBlock *PBB = *PredIt;
       BasicBlockState *PBBS = getBasicBlockState(PBB);
       if (PBBS && !CD.isDeadEdge(&CFGDeadness::getEdge(PredIt)))
@@ -667,8 +669,7 @@ bool GCPtrTracker::removeValidUnrelocatedDefs(const BasicBlock *BB,
         bool HasUnrelocatedInputs = false;
         for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
           const BasicBlock *InBB = PN->getIncomingBlock(i);
-          if (!isMapped(InBB) ||
-              !CD.hasLiveIncomingEdge(PN, InBB))
+          if (!isMapped(InBB) || !CD.hasLiveIncomingEdge(PN, InBB))
             continue; // Skip dead block or dead edge.
 
           const Value *InValue = PN->getIncomingValue(i);
@@ -801,8 +802,7 @@ void InstructionVerifier::verifyInstruction(
       for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
         const BasicBlock *InBB = PN->getIncomingBlock(i);
         const BasicBlockState *InBBS = Tracker->getBasicBlockState(InBB);
-        if (!InBBS ||
-            !Tracker->hasLiveIncomingEdge(PN, InBB))
+        if (!InBBS || !Tracker->hasLiveIncomingEdge(PN, InBB))
           continue; // Skip dead block or dead edge.
 
         const Value *InValue = PN->getIncomingValue(i);
@@ -811,53 +811,51 @@ void InstructionVerifier::verifyInstruction(
             !InBBS->AvailableOut.count(InValue))
           reportInvalidUse(*InValue, *PN);
       }
-  } else if (isa<CmpInst>(I) &&
-             containsGCPtrType(I.getOperand(0)->getType())) {
+  } else if (isa<CmpInst>(I) && containsGCPtrType(I.getOperand(0)->getType())) {
     Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
-    enum BaseType baseTyLHS = getBaseType(LHS),
-                  baseTyRHS = getBaseType(RHS);
+    enum BaseType baseTyLHS = getBaseType(LHS), baseTyRHS = getBaseType(RHS);
 
     // Returns true if LHS and RHS are unrelocated pointers and they are
     // valid unrelocated uses.
     auto hasValidUnrelocatedUse = [&AvailableSet, Tracker, baseTyLHS, baseTyRHS,
-                                   &LHS, &RHS] () {
-        // A cmp instruction has valid unrelocated pointer operands only if
-        // both operands are unrelocated pointers.
-        // In the comparison between two pointers, if one is an unrelocated
-        // use, the other *should be* an unrelocated use, for this
-        // instruction to contain valid unrelocated uses. This unrelocated
-        // use can be a null constant as well, or another unrelocated
-        // pointer.
-        if (AvailableSet.count(LHS) || AvailableSet.count(RHS))
-          return false;
-        // Constant pointers (that are not exclusively null) may have
-        // meaning in different VMs, so we cannot reorder the compare
-        // against constant pointers before the safepoint. In other words,
-        // comparison of an unrelocated use against a non-null constant
-        // maybe invalid.
-        if ((baseTyLHS == BaseType::ExclusivelySomeConstant &&
-             baseTyRHS == BaseType::NonConstant) ||
-            (baseTyLHS == BaseType::NonConstant &&
-             baseTyRHS == BaseType::ExclusivelySomeConstant))
-          return false;
+                                   &LHS, &RHS]() {
+      // A cmp instruction has valid unrelocated pointer operands only if
+      // both operands are unrelocated pointers.
+      // In the comparison between two pointers, if one is an unrelocated
+      // use, the other *should be* an unrelocated use, for this
+      // instruction to contain valid unrelocated uses. This unrelocated
+      // use can be a null constant as well, or another unrelocated
+      // pointer.
+      if (AvailableSet.count(LHS) || AvailableSet.count(RHS))
+        return false;
+      // Constant pointers (that are not exclusively null) may have
+      // meaning in different VMs, so we cannot reorder the compare
+      // against constant pointers before the safepoint. In other words,
+      // comparison of an unrelocated use against a non-null constant
+      // maybe invalid.
+      if ((baseTyLHS == BaseType::ExclusivelySomeConstant &&
+           baseTyRHS == BaseType::NonConstant) ||
+          (baseTyLHS == BaseType::NonConstant &&
+           baseTyRHS == BaseType::ExclusivelySomeConstant))
+        return false;
 
-        // If one of pointers is poisoned and other is not exclusively derived
-        // from null it is an invalid expression: it produces poisoned result
-        // and unless we want to track all defs (not only gc pointers) the only
-        // option is to prohibit such instructions.
-        if ((Tracker->isValuePoisoned(LHS) && baseTyRHS != ExclusivelyNull) ||
-            (Tracker->isValuePoisoned(RHS) && baseTyLHS != ExclusivelyNull))
-            return false;
+      // If one of pointers is poisoned and other is not exclusively derived
+      // from null it is an invalid expression: it produces poisoned result
+      // and unless we want to track all defs (not only gc pointers) the only
+      // option is to prohibit such instructions.
+      if ((Tracker->isValuePoisoned(LHS) && baseTyRHS != ExclusivelyNull) ||
+          (Tracker->isValuePoisoned(RHS) && baseTyLHS != ExclusivelyNull))
+        return false;
 
-        // All other cases are valid cases enumerated below:
-        // 1. Comparison between an exclusively derived null pointer and a
-        // constant base pointer.
-        // 2. Comparison between an exclusively derived null pointer and a
-        // non-constant unrelocated base pointer.
-        // 3. Comparison between 2 unrelocated pointers.
-        // 4. Comparison between a pointer exclusively derived from null and a
-        // non-constant poisoned pointer.
-        return true;
+      // All other cases are valid cases enumerated below:
+      // 1. Comparison between an exclusively derived null pointer and a
+      // constant base pointer.
+      // 2. Comparison between an exclusively derived null pointer and a
+      // non-constant unrelocated base pointer.
+      // 3. Comparison between 2 unrelocated pointers.
+      // 4. Comparison between a pointer exclusively derived from null and a
+      // non-constant poisoned pointer.
+      return true;
     };
     if (!hasValidUnrelocatedUse()) {
       // Print out all non-constant derived pointers that are unrelocated

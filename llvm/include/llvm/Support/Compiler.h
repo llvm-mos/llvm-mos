@@ -24,32 +24,32 @@
 #endif
 
 #ifndef __has_feature
-# define __has_feature(x) 0
+#define __has_feature(x) 0
 #endif
 
 #ifndef __has_extension
-# define __has_extension(x) 0
+#define __has_extension(x) 0
 #endif
 
 #ifndef __has_attribute
-# define __has_attribute(x) 0
+#define __has_attribute(x) 0
 #endif
 
 #ifndef __has_builtin
-# define __has_builtin(x) 0
+#define __has_builtin(x) 0
 #endif
 
 #ifndef __has_warning
-# define __has_warning(x) 0
+#define __has_warning(x) 0
 #endif
 
 // Only use __has_cpp_attribute in C++ mode. GCC defines __has_cpp_attribute in
 // C mode, but the :: in __has_cpp_attribute(scoped::attribute) is invalid.
 #ifndef LLVM_HAS_CPP_ATTRIBUTE
 #if defined(__cplusplus) && defined(__has_cpp_attribute)
-# define LLVM_HAS_CPP_ATTRIBUTE(x) __has_cpp_attribute(x)
+#define LLVM_HAS_CPP_ATTRIBUTE(x) __has_cpp_attribute(x)
 #else
-# define LLVM_HAS_CPP_ATTRIBUTE(x) 0
+#define LLVM_HAS_CPP_ATTRIBUTE(x) 0
 #endif
 #endif
 
@@ -57,16 +57,16 @@
 /// Extend the default __GNUC_PREREQ even if glibc's features.h isn't
 /// available.
 #ifndef LLVM_GNUC_PREREQ
-# if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
-#  define LLVM_GNUC_PREREQ(maj, min, patch) \
-    ((__GNUC__ << 20) + (__GNUC_MINOR__ << 10) + __GNUC_PATCHLEVEL__ >= \
-     ((maj) << 20) + ((min) << 10) + (patch))
-# elif defined(__GNUC__) && defined(__GNUC_MINOR__)
-#  define LLVM_GNUC_PREREQ(maj, min, patch) \
-    ((__GNUC__ << 20) + (__GNUC_MINOR__ << 10) >= ((maj) << 20) + ((min) << 10))
-# else
-#  define LLVM_GNUC_PREREQ(maj, min, patch) 0
-# endif
+#if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
+#define LLVM_GNUC_PREREQ(maj, min, patch)                                      \
+  ((__GNUC__ << 20) + (__GNUC_MINOR__ << 10) + __GNUC_PATCHLEVEL__ >=          \
+   ((maj) << 20) + ((min) << 10) + (patch))
+#elif defined(__GNUC__) && defined(__GNUC_MINOR__)
+#define LLVM_GNUC_PREREQ(maj, min, patch)                                      \
+  ((__GNUC__ << 20) + (__GNUC_MINOR__ << 10) >= ((maj) << 20) + ((min) << 10))
+#else
+#define LLVM_GNUC_PREREQ(maj, min, patch) 0
+#endif
 #endif
 
 /// \macro LLVM_MSC_PREREQ
@@ -392,7 +392,8 @@
 #endif
 
 /// LLVM_FALLTHROUGH - Mark fallthrough cases in switch statements.
-#if defined(__cplusplus) && __cplusplus > 201402L && LLVM_HAS_CPP_ATTRIBUTE(fallthrough)
+#if defined(__cplusplus) && __cplusplus > 201402L &&                           \
+    LLVM_HAS_CPP_ATTRIBUTE(fallthrough)
 #define LLVM_FALLTHROUGH [[fallthrough]]
 #elif LLVM_HAS_CPP_ATTRIBUTE(gnu::fallthrough)
 #define LLVM_FALLTHROUGH [[gnu::fallthrough]]
@@ -457,51 +458,51 @@
 /// LLVM_ASSUME_ALIGNED and llvm_unreachable()) can detect whether
 /// LLVM_BUILTIN_UNREACHABLE has a definition.
 #if __has_builtin(__builtin_unreachable) || defined(__GNUC__)
-# define LLVM_BUILTIN_UNREACHABLE __builtin_unreachable()
+#define LLVM_BUILTIN_UNREACHABLE __builtin_unreachable()
 #elif defined(_MSC_VER)
-# define LLVM_BUILTIN_UNREACHABLE __assume(false)
+#define LLVM_BUILTIN_UNREACHABLE __assume(false)
 #endif
 
 /// LLVM_BUILTIN_TRAP - On compilers which support it, expands to an expression
 /// which causes the program to exit abnormally.
 #if __has_builtin(__builtin_trap) || defined(__GNUC__)
-# define LLVM_BUILTIN_TRAP __builtin_trap()
+#define LLVM_BUILTIN_TRAP __builtin_trap()
 #elif defined(_MSC_VER)
 // The __debugbreak intrinsic is supported by MSVC, does not require forward
 // declarations involving platform-specific typedefs (unlike RaiseException),
 // results in a call to vectored exception handlers, and encodes to a short
 // instruction that still causes the trapping behavior we want.
-# define LLVM_BUILTIN_TRAP __debugbreak()
+#define LLVM_BUILTIN_TRAP __debugbreak()
 #else
-# define LLVM_BUILTIN_TRAP *(volatile int*)0x11 = 0
+#define LLVM_BUILTIN_TRAP *(volatile int *)0x11 = 0
 #endif
 
 /// LLVM_BUILTIN_DEBUGTRAP - On compilers which support it, expands to
 /// an expression which causes the program to break while running
 /// under a debugger.
 #if __has_builtin(__builtin_debugtrap)
-# define LLVM_BUILTIN_DEBUGTRAP __builtin_debugtrap()
+#define LLVM_BUILTIN_DEBUGTRAP __builtin_debugtrap()
 #elif defined(_MSC_VER)
 // The __debugbreak intrinsic is supported by MSVC and breaks while
 // running under the debugger, and also supports invoking a debugger
 // when the OS is configured appropriately.
-# define LLVM_BUILTIN_DEBUGTRAP __debugbreak()
+#define LLVM_BUILTIN_DEBUGTRAP __debugbreak()
 #else
 // Just continue execution when built with compilers that have no
 // support. This is a debugging aid and not intended to force the
 // program to abort if encountered.
-# define LLVM_BUILTIN_DEBUGTRAP
+#define LLVM_BUILTIN_DEBUGTRAP
 #endif
 
 /// \macro LLVM_ASSUME_ALIGNED
 /// Returns a pointer with an assumed alignment.
 #if __has_builtin(__builtin_assume_aligned) || defined(__GNUC__)
-# define LLVM_ASSUME_ALIGNED(p, a) __builtin_assume_aligned(p, a)
+#define LLVM_ASSUME_ALIGNED(p, a) __builtin_assume_aligned(p, a)
 #elif defined(LLVM_BUILTIN_UNREACHABLE)
-# define LLVM_ASSUME_ALIGNED(p, a) \
-           (((uintptr_t(p) % (a)) == 0) ? (p) : (LLVM_BUILTIN_UNREACHABLE, (p)))
+#define LLVM_ASSUME_ALIGNED(p, a)                                              \
+  (((uintptr_t(p) % (a)) == 0) ? (p) : (LLVM_BUILTIN_UNREACHABLE, (p)))
 #else
-# define LLVM_ASSUME_ALIGNED(p, a) (p)
+#define LLVM_ASSUME_ALIGNED(p, a) (p)
 #endif
 
 /// \macro LLVM_PACKED
@@ -523,34 +524,34 @@
 /// };
 /// LLVM_PACKED_END
 #ifdef _MSC_VER
-# define LLVM_PACKED(d) __pragma(pack(push, 1)) d __pragma(pack(pop))
-# define LLVM_PACKED_START __pragma(pack(push, 1))
-# define LLVM_PACKED_END   __pragma(pack(pop))
+#define LLVM_PACKED(d) __pragma(pack(push, 1)) d __pragma(pack(pop))
+#define LLVM_PACKED_START __pragma(pack(push, 1))
+#define LLVM_PACKED_END __pragma(pack(pop))
 #else
-# define LLVM_PACKED(d) d __attribute__((packed))
-# define LLVM_PACKED_START _Pragma("pack(push, 1)")
-# define LLVM_PACKED_END   _Pragma("pack(pop)")
+#define LLVM_PACKED(d) d __attribute__((packed))
+#define LLVM_PACKED_START _Pragma("pack(push, 1)")
+#define LLVM_PACKED_END _Pragma("pack(pop)")
 #endif
 
 /// \macro LLVM_MEMORY_SANITIZER_BUILD
 /// Whether LLVM itself is built with MemorySanitizer instrumentation.
 #if __has_feature(memory_sanitizer)
-# define LLVM_MEMORY_SANITIZER_BUILD 1
-# include <sanitizer/msan_interface.h>
-# define LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE __attribute__((no_sanitize_memory))
+#define LLVM_MEMORY_SANITIZER_BUILD 1
+#include <sanitizer/msan_interface.h>
+#define LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE __attribute__((no_sanitize_memory))
 #else
-# define LLVM_MEMORY_SANITIZER_BUILD 0
-# define __msan_allocated_memory(p, size)
-# define __msan_unpoison(p, size)
-# define LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE
+#define LLVM_MEMORY_SANITIZER_BUILD 0
+#define __msan_allocated_memory(p, size)
+#define __msan_unpoison(p, size)
+#define LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE
 #endif
 
 /// \macro LLVM_ADDRESS_SANITIZER_BUILD
 /// Whether LLVM itself is built with AddressSanitizer instrumentation.
 #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
-# define LLVM_ADDRESS_SANITIZER_BUILD 1
+#define LLVM_ADDRESS_SANITIZER_BUILD 1
 #if __has_include(<sanitizer/asan_interface.h>)
-# include <sanitizer/asan_interface.h>
+#include <sanitizer/asan_interface.h>
 #else
 // These declarations exist to support ASan with MSVC. If MSVC eventually ships
 // asan_interface.h in their headers, then we can remove this.
@@ -564,9 +565,9 @@ void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
 #endif
 #endif
 #else
-# define LLVM_ADDRESS_SANITIZER_BUILD 0
-# define __asan_poison_memory_region(p, size)
-# define __asan_unpoison_memory_region(p, size)
+#define LLVM_ADDRESS_SANITIZER_BUILD 0
+#define __asan_poison_memory_region(p, size)
+#define __asan_unpoison_memory_region(p, size)
 #endif
 
 /// \macro LLVM_HWADDRESS_SANITIZER_BUILD
@@ -580,9 +581,9 @@ void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
 /// \macro LLVM_THREAD_SANITIZER_BUILD
 /// Whether LLVM itself is built with ThreadSanitizer instrumentation.
 #if __has_feature(thread_sanitizer) || defined(__SANITIZE_THREAD__)
-# define LLVM_THREAD_SANITIZER_BUILD 1
+#define LLVM_THREAD_SANITIZER_BUILD 1
 #else
-# define LLVM_THREAD_SANITIZER_BUILD 0
+#define LLVM_THREAD_SANITIZER_BUILD 0
 #endif
 
 #if LLVM_THREAD_SANITIZER_BUILD
@@ -603,21 +604,21 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 // This marker is used to define a happens-before arc. The race detector will
 // infer an arc from the begin to the end when they share the same pointer
 // argument.
-# define TsanHappensBefore(cv) AnnotateHappensBefore(__FILE__, __LINE__, cv)
+#define TsanHappensBefore(cv) AnnotateHappensBefore(__FILE__, __LINE__, cv)
 
 // This marker defines the destination of a happens-before arc.
-# define TsanHappensAfter(cv) AnnotateHappensAfter(__FILE__, __LINE__, cv)
+#define TsanHappensAfter(cv) AnnotateHappensAfter(__FILE__, __LINE__, cv)
 
 // Ignore any races on writes between here and the next TsanIgnoreWritesEnd.
-# define TsanIgnoreWritesBegin() AnnotateIgnoreWritesBegin(__FILE__, __LINE__)
+#define TsanIgnoreWritesBegin() AnnotateIgnoreWritesBegin(__FILE__, __LINE__)
 
 // Resume checking for racy writes.
-# define TsanIgnoreWritesEnd() AnnotateIgnoreWritesEnd(__FILE__, __LINE__)
+#define TsanIgnoreWritesEnd() AnnotateIgnoreWritesEnd(__FILE__, __LINE__)
 #else
-# define TsanHappensBefore(cv)
-# define TsanHappensAfter(cv)
-# define TsanIgnoreWritesBegin()
-# define TsanIgnoreWritesEnd()
+#define TsanHappensBefore(cv)
+#define TsanHappensAfter(cv)
+#define TsanIgnoreWritesBegin()
+#define TsanIgnoreWritesEnd()
 #endif
 
 /// \macro LLVM_NO_SANITIZE

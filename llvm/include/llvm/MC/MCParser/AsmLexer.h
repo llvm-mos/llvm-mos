@@ -103,9 +103,7 @@ public:
     return CurTok.front();
   }
 
-  void UnLex(AsmToken const &Token) {
-    CurTok.insert(CurTok.begin(), Token);
-  }
+  void UnLex(AsmToken const &Token) { CurTok.insert(CurTok.begin(), Token); }
 
   bool justConsumedEOL() { return JustConsumedEOL; }
 

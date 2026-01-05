@@ -274,14 +274,15 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
     auto Name = Rec->getValueAsString("Name");
     auto Alias = Rec->getValueAsString("Alias");
     if (!Processors.contains(Alias))
-      PrintFatalError(
-          Rec, "Alias '" + Name + "' references a non-existent ProcessorModel '" + Alias + "'");
+      PrintFatalError(Rec, "Alias '" + Name +
+                               "' references a non-existent ProcessorModel '" +
+                               Alias + "'");
     if (Processors.contains(Name))
-      PrintFatalError(
-          Rec, "Alias '" + Name + "' duplicates an existing ProcessorModel");
+      PrintFatalError(Rec, "Alias '" + Name +
+                               "' duplicates an existing ProcessorModel");
     if (!Aliases.insert(Name).second)
-      PrintFatalError(
-          Rec, "Alias '" + Name + "' duplicates an existing ProcessorAlias");
+      PrintFatalError(Rec, "Alias '" + Name +
+                               "' duplicates an existing ProcessorAlias");
 
     OS << llvm::formatv(R"(  { "{0}", "{1}" },)", Name, Alias) << '\n';
   }

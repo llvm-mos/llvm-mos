@@ -438,11 +438,20 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     // Turn into regular MULX by duplicating the destination.
     unsigned NewOpc;
     switch (OutMI.getOpcode()) {
-    default: llvm_unreachable("Invalid opcode");
-    case X86::MULX32Hrr: NewOpc = X86::MULX32rr; break;
-    case X86::MULX32Hrm: NewOpc = X86::MULX32rm; break;
-    case X86::MULX64Hrr: NewOpc = X86::MULX64rr; break;
-    case X86::MULX64Hrm: NewOpc = X86::MULX64rm; break;
+    default:
+      llvm_unreachable("Invalid opcode");
+    case X86::MULX32Hrr:
+      NewOpc = X86::MULX32rr;
+      break;
+    case X86::MULX32Hrm:
+      NewOpc = X86::MULX32rm;
+      break;
+    case X86::MULX64Hrr:
+      NewOpc = X86::MULX64rr;
+      break;
+    case X86::MULX64Hrm:
+      NewOpc = X86::MULX64rm;
+      break;
     }
     OutMI.setOpcode(NewOpc);
     // Duplicate the destination.
@@ -673,7 +682,8 @@ static unsigned emitNop(MCStreamer &OS, unsigned NumBytes,
       MaxNopLength = 11;
     else
       MaxNopLength = 10;
-  } if (Subtarget->is32Bit())
+  }
+  if (Subtarget->is32Bit())
     MaxNopLength = 2;
 
   // Cap a single nop emission at the profitable value for the target
@@ -749,7 +759,8 @@ static unsigned emitNop(MCStreamer &OS, unsigned NumBytes,
     OS.emitBytes("\x66");
 
   switch (Opc) {
-  default: llvm_unreachable("Unexpected opcode");
+  default:
+    llvm_unreachable("Unexpected opcode");
   case X86::NOOP:
     OS.emitInstruction(MCInstBuilder(Opc), *Subtarget);
     break;
@@ -1432,7 +1443,7 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
     OutStreamer->emitLabel(FallthroughLabel);
 }
 
-static unsigned getSrcIdx(const MachineInstr* MI, unsigned SrcIdx) {
+static unsigned getSrcIdx(const MachineInstr *MI, unsigned SrcIdx) {
   if (X86II::isKMasked(MI->getDesc().TSFlags)) {
     // Skip mask operand.
     ++SrcIdx;
@@ -1885,9 +1896,16 @@ static void addConstantComments(const MachineInstr *MI,
 
     unsigned ElSize;
     switch (MI->getOpcode()) {
-    default: llvm_unreachable("Invalid opcode");
-    case X86::VPERMIL2PSrm: case X86::VPERMIL2PSYrm: ElSize = 32; break;
-    case X86::VPERMIL2PDrm: case X86::VPERMIL2PDYrm: ElSize = 64; break;
+    default:
+      llvm_unreachable("Invalid opcode");
+    case X86::VPERMIL2PSrm:
+    case X86::VPERMIL2PSYrm:
+      ElSize = 32;
+      break;
+    case X86::VPERMIL2PDrm:
+    case X86::VPERMIL2PDYrm:
+      ElSize = 64;
+      break;
     }
 
     if (auto *C = X86::getConstantFromPool(*MI, 3)) {
@@ -1985,7 +2003,7 @@ static void addConstantComments(const MachineInstr *MI,
 
   case X86::MOVSDrm:
   case X86::VMOVSDrm:
-  MASK_AVX512_CASE(X86::VMOVSDZrm)
+    MASK_AVX512_CASE(X86::VMOVSDZrm)
   case X86::MOVSDrm_alt:
   case X86::VMOVSDrm_alt:
   case X86::VMOVSDZrm_alt:
@@ -1995,7 +2013,7 @@ static void addConstantComments(const MachineInstr *MI,
     printZeroUpperMove(MI, OutStreamer, 64, 128, "mem[0],zero");
     break;
 
-  MASK_AVX512_CASE(X86::VMOVSHZrm)
+    MASK_AVX512_CASE(X86::VMOVSHZrm)
   case X86::VMOVSHZrm_alt:
     printZeroUpperMove(MI, OutStreamer, 16, 128,
                        "mem[0],zero,zero,zero,zero,zero,zero,zero");
@@ -2003,7 +2021,7 @@ static void addConstantComments(const MachineInstr *MI,
 
   case X86::MOVSSrm:
   case X86::VMOVSSrm:
-  MASK_AVX512_CASE(X86::VMOVSSZrm)
+    MASK_AVX512_CASE(X86::VMOVSSZrm)
   case X86::MOVSSrm_alt:
   case X86::VMOVSSrm_alt:
   case X86::VMOVSSZrm_alt:
@@ -2034,8 +2052,8 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VMOVUPD##Suffix##rm##Postfix:
 
 #define CASE_128_MOV_RM()                                                      \
-  MOV_CASE(, )   /* SSE */                                                     \
-  MOV_CASE(V, )  /* AVX-128 */                                                 \
+  MOV_CASE(, )  /* SSE */                                                      \
+  MOV_CASE(V, ) /* AVX-128 */                                                  \
   MOV_AVX512_CASE(Z128, )                                                      \
   MOV_AVX512_CASE(Z128, k)                                                     \
   MOV_AVX512_CASE(Z128, kz)
@@ -2044,12 +2062,12 @@ static void addConstantComments(const MachineInstr *MI,
   MOV_CASE(V, Y) /* AVX-256 */                                                 \
   MOV_AVX512_CASE(Z256, )                                                      \
   MOV_AVX512_CASE(Z256, k)                                                     \
-  MOV_AVX512_CASE(Z256, kz)                                                    \
+  MOV_AVX512_CASE(Z256, kz)
 
 #define CASE_512_MOV_RM()                                                      \
   MOV_AVX512_CASE(Z, )                                                         \
   MOV_AVX512_CASE(Z, k)                                                        \
-  MOV_AVX512_CASE(Z, kz)                                                       \
+  MOV_AVX512_CASE(Z, kz)
 
     // For loads from a constant pool to a vector register, print the constant
     // loaded.
@@ -2064,22 +2082,22 @@ static void addConstantComments(const MachineInstr *MI,
     break;
   case X86::VBROADCASTF128rm:
   case X86::VBROADCASTI128rm:
-  MASK_AVX512_CASE(X86::VBROADCASTF32X4Z256rm)
-  MASK_AVX512_CASE(X86::VBROADCASTF64X2Z256rm)
-  MASK_AVX512_CASE(X86::VBROADCASTI32X4Z256rm)
-  MASK_AVX512_CASE(X86::VBROADCASTI64X2Z256rm)
+    MASK_AVX512_CASE(X86::VBROADCASTF32X4Z256rm)
+    MASK_AVX512_CASE(X86::VBROADCASTF64X2Z256rm)
+    MASK_AVX512_CASE(X86::VBROADCASTI32X4Z256rm)
+    MASK_AVX512_CASE(X86::VBROADCASTI64X2Z256rm)
     printBroadcast(MI, OutStreamer, 2, 128);
     break;
-  MASK_AVX512_CASE(X86::VBROADCASTF32X4Zrm)
-  MASK_AVX512_CASE(X86::VBROADCASTF64X2Zrm)
-  MASK_AVX512_CASE(X86::VBROADCASTI32X4Zrm)
-  MASK_AVX512_CASE(X86::VBROADCASTI64X2Zrm)
+    MASK_AVX512_CASE(X86::VBROADCASTF32X4Zrm)
+    MASK_AVX512_CASE(X86::VBROADCASTF64X2Zrm)
+    MASK_AVX512_CASE(X86::VBROADCASTI32X4Zrm)
+    MASK_AVX512_CASE(X86::VBROADCASTI64X2Zrm)
     printBroadcast(MI, OutStreamer, 4, 128);
     break;
-  MASK_AVX512_CASE(X86::VBROADCASTF32X8Zrm)
-  MASK_AVX512_CASE(X86::VBROADCASTF64X4Zrm)
-  MASK_AVX512_CASE(X86::VBROADCASTI32X8Zrm)
-  MASK_AVX512_CASE(X86::VBROADCASTI64X4Zrm)
+    MASK_AVX512_CASE(X86::VBROADCASTF32X8Zrm)
+    MASK_AVX512_CASE(X86::VBROADCASTF64X4Zrm)
+    MASK_AVX512_CASE(X86::VBROADCASTI32X8Zrm)
+    MASK_AVX512_CASE(X86::VBROADCASTI64X4Zrm)
     printBroadcast(MI, OutStreamer, 2, 256);
     break;
 
@@ -2087,57 +2105,57 @@ static void addConstantComments(const MachineInstr *MI,
   // print the constant loaded.
   case X86::MOVDDUPrm:
   case X86::VMOVDDUPrm:
-  MASK_AVX512_CASE(X86::VMOVDDUPZ128rm)
+    MASK_AVX512_CASE(X86::VMOVDDUPZ128rm)
   case X86::VPBROADCASTQrm:
-  MASK_AVX512_CASE(X86::VPBROADCASTQZ128rm)
+    MASK_AVX512_CASE(X86::VPBROADCASTQZ128rm)
     printBroadcast(MI, OutStreamer, 2, 64);
     break;
   case X86::VBROADCASTSDYrm:
-  MASK_AVX512_CASE(X86::VBROADCASTSDZ256rm)
+    MASK_AVX512_CASE(X86::VBROADCASTSDZ256rm)
   case X86::VPBROADCASTQYrm:
-  MASK_AVX512_CASE(X86::VPBROADCASTQZ256rm)
+    MASK_AVX512_CASE(X86::VPBROADCASTQZ256rm)
     printBroadcast(MI, OutStreamer, 4, 64);
     break;
-  MASK_AVX512_CASE(X86::VBROADCASTSDZrm)
-  MASK_AVX512_CASE(X86::VPBROADCASTQZrm)
+    MASK_AVX512_CASE(X86::VBROADCASTSDZrm)
+    MASK_AVX512_CASE(X86::VPBROADCASTQZrm)
     printBroadcast(MI, OutStreamer, 8, 64);
     break;
   case X86::VBROADCASTSSrm:
-  MASK_AVX512_CASE(X86::VBROADCASTSSZ128rm)
+    MASK_AVX512_CASE(X86::VBROADCASTSSZ128rm)
   case X86::VPBROADCASTDrm:
-  MASK_AVX512_CASE(X86::VPBROADCASTDZ128rm)
+    MASK_AVX512_CASE(X86::VPBROADCASTDZ128rm)
     printBroadcast(MI, OutStreamer, 4, 32);
     break;
   case X86::VBROADCASTSSYrm:
     MASK_AVX512_CASE(X86::VBROADCASTSSZ256rm)
   case X86::VPBROADCASTDYrm:
-  MASK_AVX512_CASE(X86::VPBROADCASTDZ256rm)
+    MASK_AVX512_CASE(X86::VPBROADCASTDZ256rm)
     printBroadcast(MI, OutStreamer, 8, 32);
     break;
-  MASK_AVX512_CASE(X86::VBROADCASTSSZrm)
-  MASK_AVX512_CASE(X86::VPBROADCASTDZrm)
+    MASK_AVX512_CASE(X86::VBROADCASTSSZrm)
+    MASK_AVX512_CASE(X86::VPBROADCASTDZrm)
     printBroadcast(MI, OutStreamer, 16, 32);
     break;
   case X86::VPBROADCASTWrm:
-  MASK_AVX512_CASE(X86::VPBROADCASTWZ128rm)
+    MASK_AVX512_CASE(X86::VPBROADCASTWZ128rm)
     printBroadcast(MI, OutStreamer, 8, 16);
     break;
   case X86::VPBROADCASTWYrm:
-  MASK_AVX512_CASE(X86::VPBROADCASTWZ256rm)
+    MASK_AVX512_CASE(X86::VPBROADCASTWZ256rm)
     printBroadcast(MI, OutStreamer, 16, 16);
     break;
-  MASK_AVX512_CASE(X86::VPBROADCASTWZrm)
+    MASK_AVX512_CASE(X86::VPBROADCASTWZrm)
     printBroadcast(MI, OutStreamer, 32, 16);
     break;
   case X86::VPBROADCASTBrm:
-  MASK_AVX512_CASE(X86::VPBROADCASTBZ128rm)
+    MASK_AVX512_CASE(X86::VPBROADCASTBZ128rm)
     printBroadcast(MI, OutStreamer, 16, 8);
     break;
   case X86::VPBROADCASTBYrm:
-  MASK_AVX512_CASE(X86::VPBROADCASTBZ256rm)
+    MASK_AVX512_CASE(X86::VPBROADCASTBZ256rm)
     printBroadcast(MI, OutStreamer, 32, 8);
     break;
-  MASK_AVX512_CASE(X86::VPBROADCASTBZrm)
+    MASK_AVX512_CASE(X86::VPBROADCASTBZrm)
     printBroadcast(MI, OutStreamer, 64, 8);
     break;
 
@@ -2149,14 +2167,14 @@ static void addConstantComments(const MachineInstr *MI,
   MOVX_CASE(V, Ext, Type, , )                                                  \
   MOVX_CASE(V, Ext, Type, Y, )                                                 \
   MOVX_CASE(V, Ext, Type, Z128, )                                              \
-  MOVX_CASE(V, Ext, Type, Z128, k )                                            \
-  MOVX_CASE(V, Ext, Type, Z128, kz )                                           \
+  MOVX_CASE(V, Ext, Type, Z128, k)                                             \
+  MOVX_CASE(V, Ext, Type, Z128, kz)                                            \
   MOVX_CASE(V, Ext, Type, Z256, )                                              \
-  MOVX_CASE(V, Ext, Type, Z256, k )                                            \
-  MOVX_CASE(V, Ext, Type, Z256, kz )                                           \
+  MOVX_CASE(V, Ext, Type, Z256, k)                                             \
+  MOVX_CASE(V, Ext, Type, Z256, kz)                                            \
   MOVX_CASE(V, Ext, Type, Z, )                                                 \
-  MOVX_CASE(V, Ext, Type, Z, k )                                               \
-  MOVX_CASE(V, Ext, Type, Z, kz )
+  MOVX_CASE(V, Ext, Type, Z, k)                                                \
+  MOVX_CASE(V, Ext, Type, Z, kz)
 
     CASE_MOVX_RM(SX, BD)
     printSignExtend(MI, OutStreamer, 8, 32);

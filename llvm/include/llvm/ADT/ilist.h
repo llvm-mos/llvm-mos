@@ -149,13 +149,13 @@ public:
   // Miscellaneous inspection routines.
   size_type max_size() const { return size_type(-1); }
 
+  using base_list_type::back;
   using base_list_type::begin;
+  using base_list_type::empty;
   using base_list_type::end;
+  using base_list_type::front;
   using base_list_type::rbegin;
   using base_list_type::rend;
-  using base_list_type::empty;
-  using base_list_type::front;
-  using base_list_type::back;
 
   void swap(iplist_impl &RHS) {
     assert(0 && "Swap does not use list traits callback correctly yet!");
@@ -220,7 +220,8 @@ private:
   // transfer - The heart of the splice function.  Move linked list nodes from
   // [first, last) into position.
   //
-  void transfer(iterator position, iplist_impl &L2, iterator first, iterator last) {
+  void transfer(iterator position, iplist_impl &L2, iterator first,
+                iterator last) {
     if (position == last)
       return;
 
@@ -254,12 +255,14 @@ public:
   }
   void pop_back() {
     assert(!empty() && "pop_back() on empty list!");
-    iterator t = end(); erase(--t);
+    iterator t = end();
+    erase(--t);
   }
 
   // Special forms of insert...
-  template<class InIt> void insert(iterator where, InIt first, InIt last) {
-    for (; first != last; ++first) insert(where, *first);
+  template <class InIt> void insert(iterator where, InIt first, InIt last) {
+    for (; first != last; ++first)
+      insert(where, *first);
   }
 
   // Splice members - defined in terms of transfer...
@@ -268,12 +271,15 @@ public:
       transfer(where, L2, L2.begin(), L2.end());
   }
   void splice(iterator where, iplist_impl &L2, iterator first) {
-    iterator last = first; ++last;
-    if (where == first || where == last) return; // No change
+    iterator last = first;
+    ++last;
+    if (where == first || where == last)
+      return; // No change
     transfer(where, L2, first, last);
   }
   void splice(iterator where, iplist_impl &L2, iterator first, iterator last) {
-    if (first != last) transfer(where, L2, first, last);
+    if (first != last)
+      transfer(where, L2, first, last);
   }
   void splice(iterator where, iplist_impl &L2, reference N) {
     splice(where, L2, iterator(N));
@@ -282,8 +288,7 @@ public:
     splice(where, L2, iterator(N));
   }
 
-  template <class Compare>
-  void merge(iplist_impl &Right, Compare comp) {
+  template <class Compare> void merge(iplist_impl &Right, Compare comp) {
     if (this == &Right)
       return;
     this->transferNodesFromList(Right, Right.begin(), Right.end());
@@ -302,7 +307,7 @@ public:
   }
   /// Get the previous node, or \c nullptr for the list head.
   const_pointer getPrevNode(const_reference N) const {
-    return getPrevNode(const_cast<reference >(N));
+    return getPrevNode(const_cast<reference>(N));
   }
 
   /// Get the next node, or \c nullptr for the list tail.
@@ -314,7 +319,7 @@ public:
   }
   /// Get the next node, or \c nullptr for the list tail.
   const_pointer getNextNode(const_reference N) const {
-    return getNextNode(const_cast<reference >(N));
+    return getNextNode(const_cast<reference>(N));
   }
 };
 
@@ -347,11 +352,10 @@ template <class T, class... Options> using ilist = iplist<T, Options...>;
 
 namespace std {
 
-  // Ensure that swap uses the fast list swap...
-  template<class Ty>
-  void swap(llvm::iplist<Ty> &Left, llvm::iplist<Ty> &Right) {
-    Left.swap(Right);
-  }
+// Ensure that swap uses the fast list swap...
+template <class Ty> void swap(llvm::iplist<Ty> &Left, llvm::iplist<Ty> &Right) {
+  Left.swap(Right);
+}
 
 } // end namespace std
 

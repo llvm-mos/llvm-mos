@@ -132,7 +132,7 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
           State |= RegState::Undef;
 
         BuildMI(*EntryMBB, EntryInsPt, DebugLoc(), TII->get(ImpDef))
-          .addReg(NewReg, State, MO.getSubReg());
+            .addReg(NewReg, State, MO.getSubReg());
       }
 
       // Update all uses.

@@ -117,7 +117,7 @@ private:
 public:
   ARMBasicBlockUtils(MachineFunction &MF) : MF(MF) {
     TII =
-      static_cast<const ARMBaseInstrInfo*>(MF.getSubtarget().getInstrInfo());
+        static_cast<const ARMBaseInstrInfo *>(MF.getSubtarget().getInstrInfo());
     isThumb = MF.getInfo<ARMFunctionInfo>()->isThumbFunction();
   }
 
@@ -151,7 +151,6 @@ public:
   void clear() { BBInfo.clear(); }
 
   BBInfoVector &getBBInfo() { return BBInfo; }
-
 };
 
 } // end namespace llvm

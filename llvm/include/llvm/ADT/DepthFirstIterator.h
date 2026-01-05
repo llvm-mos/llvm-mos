@@ -47,14 +47,13 @@ namespace llvm {
 
 // df_iterator_storage - A private class which is used to figure out where to
 // store the visited set.
-template<class SetType, bool External>   // Non-external set
+template <class SetType, bool External> // Non-external set
 class df_iterator_storage {
 public:
   SetType Visited;
 };
 
-template<class SetType>
-class df_iterator_storage<SetType, true> {
+template <class SetType> class df_iterator_storage<SetType, true> {
 public:
   df_iterator_storage(SetType &VSet) : Visited(VSet) {}
   df_iterator_storage(const df_iterator_storage &S) : Visited(S.Visited) {}
@@ -71,9 +70,10 @@ struct df_iterator_default_set : SmallPtrSet<NodeRef, SmallSize> {
   using BaseSet = SmallPtrSet<NodeRef, SmallSize>;
   using iterator = typename BaseSet::iterator;
 
-  std::pair<iterator,bool> insert(NodeRef N) { return BaseSet::insert(N); }
-  template <typename IterT>
-  void insert(IterT Begin, IterT End) { BaseSet::insert(Begin,End); }
+  std::pair<iterator, bool> insert(NodeRef N) { return BaseSet::insert(N); }
+  template <typename IterT> void insert(IterT Begin, IterT End) {
+    BaseSet::insert(Begin, End);
+  }
 
   void completed(NodeRef) {}
 };
@@ -119,8 +119,7 @@ private:
       VisitStack.push_back(StackElement(Node, std::nullopt));
   }
 
-  inline df_iterator(SetType &S)
-    : df_iterator_storage<SetType, ExtStorage>(S) {
+  inline df_iterator(SetType &S) : df_iterator_storage<SetType, ExtStorage>(S) {
     // End is when stack is empty
   }
 
@@ -203,9 +202,7 @@ public:
   // specified node.  This is public, and will probably be used to iterate over
   // nodes that a depth first iteration did not find: ie unreachable nodes.
   //
-  bool nodeVisited(NodeRef Node) const {
-    return this->Visited.contains(Node);
-  }
+  bool nodeVisited(NodeRef Node) const { return this->Visited.contains(Node); }
 
   /// getPathLength - Return the length of the path from the entry node to the
   /// current node, counting both nodes.
@@ -218,19 +215,16 @@ public:
 
 // Provide global constructors that automatically figure out correct types...
 //
-template <class T>
-df_iterator<T> df_begin(const T& G) {
+template <class T> df_iterator<T> df_begin(const T &G) {
   return df_iterator<T>::begin(G);
 }
 
-template <class T>
-df_iterator<T> df_end(const T& G) {
+template <class T> df_iterator<T> df_end(const T &G) {
   return df_iterator<T>::end(G);
 }
 
 // Provide an accessor method to use them in range-based patterns.
-template <class T>
-iterator_range<df_iterator<T>> depth_first(const T& G) {
+template <class T> iterator_range<df_iterator<T>> depth_first(const T &G) {
   return make_range(df_begin(G), df_end(G));
 }
 
@@ -240,21 +234,21 @@ template <class T,
               df_iterator_default_set<typename GraphTraits<T>::NodeRef>>
 struct df_ext_iterator : df_iterator<T, SetTy, true> {
   df_ext_iterator(const df_iterator<T, SetTy, true> &V)
-    : df_iterator<T, SetTy, true>(V) {}
+      : df_iterator<T, SetTy, true>(V) {}
 };
 
 template <class T, class SetTy>
-df_ext_iterator<T, SetTy> df_ext_begin(const T& G, SetTy &S) {
+df_ext_iterator<T, SetTy> df_ext_begin(const T &G, SetTy &S) {
   return df_ext_iterator<T, SetTy>::begin(G, S);
 }
 
 template <class T, class SetTy>
-df_ext_iterator<T, SetTy> df_ext_end(const T& G, SetTy &S) {
+df_ext_iterator<T, SetTy> df_ext_end(const T &G, SetTy &S) {
   return df_ext_iterator<T, SetTy>::end(G, S);
 }
 
 template <class T, class SetTy>
-iterator_range<df_ext_iterator<T, SetTy>> depth_first_ext(const T& G,
+iterator_range<df_ext_iterator<T, SetTy>> depth_first_ext(const T &G,
                                                           SetTy &S) {
   return make_range(df_ext_begin(G, S), df_ext_end(G, S));
 }
@@ -266,22 +260,20 @@ template <class T,
           bool External = false>
 struct idf_iterator : df_iterator<Inverse<T>, SetTy, External> {
   idf_iterator(const df_iterator<Inverse<T>, SetTy, External> &V)
-    : df_iterator<Inverse<T>, SetTy, External>(V) {}
+      : df_iterator<Inverse<T>, SetTy, External>(V) {}
 };
 
-template <class T>
-idf_iterator<T> idf_begin(const T& G) {
+template <class T> idf_iterator<T> idf_begin(const T &G) {
   return idf_iterator<T>::begin(Inverse<T>(G));
 }
 
-template <class T>
-idf_iterator<T> idf_end(const T& G){
+template <class T> idf_iterator<T> idf_end(const T &G) {
   return idf_iterator<T>::end(Inverse<T>(G));
 }
 
 // Provide an accessor method to use them in range-based patterns.
 template <class T>
-iterator_range<idf_iterator<T>> inverse_depth_first(const T& G) {
+iterator_range<idf_iterator<T>> inverse_depth_first(const T &G) {
   return make_range(idf_begin(G), idf_end(G));
 }
 
@@ -291,23 +283,23 @@ template <class T,
               df_iterator_default_set<typename GraphTraits<T>::NodeRef>>
 struct idf_ext_iterator : idf_iterator<T, SetTy, true> {
   idf_ext_iterator(const idf_iterator<T, SetTy, true> &V)
-    : idf_iterator<T, SetTy, true>(V) {}
+      : idf_iterator<T, SetTy, true>(V) {}
   idf_ext_iterator(const df_iterator<Inverse<T>, SetTy, true> &V)
-    : idf_iterator<T, SetTy, true>(V) {}
+      : idf_iterator<T, SetTy, true>(V) {}
 };
 
 template <class T, class SetTy>
-idf_ext_iterator<T, SetTy> idf_ext_begin(const T& G, SetTy &S) {
+idf_ext_iterator<T, SetTy> idf_ext_begin(const T &G, SetTy &S) {
   return idf_ext_iterator<T, SetTy>::begin(Inverse<T>(G), S);
 }
 
 template <class T, class SetTy>
-idf_ext_iterator<T, SetTy> idf_ext_end(const T& G, SetTy &S) {
+idf_ext_iterator<T, SetTy> idf_ext_end(const T &G, SetTy &S) {
   return idf_ext_iterator<T, SetTy>::end(Inverse<T>(G), S);
 }
 
 template <class T, class SetTy>
-iterator_range<idf_ext_iterator<T, SetTy>> inverse_depth_first_ext(const T& G,
+iterator_range<idf_ext_iterator<T, SetTy>> inverse_depth_first_ext(const T &G,
                                                                    SetTy &S) {
   return make_range(idf_ext_begin(G, S), idf_ext_end(G, S));
 }

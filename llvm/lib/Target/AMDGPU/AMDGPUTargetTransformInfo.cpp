@@ -34,24 +34,25 @@ using namespace llvm;
 #define DEBUG_TYPE "AMDGPUtti"
 
 static cl::opt<unsigned> UnrollThresholdPrivate(
-  "amdgpu-unroll-threshold-private",
-  cl::desc("Unroll threshold for AMDGPU if private memory used in a loop"),
-  cl::init(2700), cl::Hidden);
+    "amdgpu-unroll-threshold-private",
+    cl::desc("Unroll threshold for AMDGPU if private memory used in a loop"),
+    cl::init(2700), cl::Hidden);
 
 static cl::opt<unsigned> UnrollThresholdLocal(
-  "amdgpu-unroll-threshold-local",
-  cl::desc("Unroll threshold for AMDGPU if local memory used in a loop"),
-  cl::init(1000), cl::Hidden);
+    "amdgpu-unroll-threshold-local",
+    cl::desc("Unroll threshold for AMDGPU if local memory used in a loop"),
+    cl::init(1000), cl::Hidden);
 
-static cl::opt<unsigned> UnrollThresholdIf(
-  "amdgpu-unroll-threshold-if",
-  cl::desc("Unroll threshold increment for AMDGPU for each if statement inside loop"),
-  cl::init(200), cl::Hidden);
+static cl::opt<unsigned>
+    UnrollThresholdIf("amdgpu-unroll-threshold-if",
+                      cl::desc("Unroll threshold increment for AMDGPU for each "
+                               "if statement inside loop"),
+                      cl::init(200), cl::Hidden);
 
 static cl::opt<bool> UnrollRuntimeLocal(
-  "amdgpu-unroll-runtime-local",
-  cl::desc("Allow runtime unroll for AMDGPU if local memory used in a loop"),
-  cl::init(true), cl::Hidden);
+    "amdgpu-unroll-runtime-local",
+    cl::desc("Allow runtime unroll for AMDGPU if local memory used in a loop"),
+    cl::init(true), cl::Hidden);
 
 static cl::opt<unsigned> UnrollMaxBlockToAnalyze(
     "amdgpu-unroll-max-block-to-analyze",
@@ -93,18 +94,18 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
     if (!L->contains(I))
       continue;
     if (const PHINode *PHI = dyn_cast<PHINode>(V)) {
-      if (llvm::none_of(L->getSubLoops(), [PHI](const Loop* SubLoop) {
-                  return SubLoop->contains(PHI); }))
+      if (llvm::none_of(L->getSubLoops(), [PHI](const Loop *SubLoop) {
+            return SubLoop->contains(PHI);
+          }))
         return true;
-    } else if (Depth < 10 && dependsOnLocalPhi(L, V, Depth+1))
+    } else if (Depth < 10 && dependsOnLocalPhi(L, V, Depth + 1))
       return true;
   }
   return false;
 }
 
 AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getDataLayout()),
-      TargetTriple(TM->getTargetTriple()),
+    : BaseT(TM, F.getDataLayout()), TargetTriple(TM->getTargetTriple()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()) {}
 
@@ -155,9 +156,10 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
     const DataLayout &DL = BB->getDataLayout();
     unsigned LocalGEPsSeen = 0;
 
-    if (llvm::any_of(L->getSubLoops(), [BB](const Loop* SubLoop) {
-               return SubLoop->contains(BB); }))
-        continue; // Block belongs to an inner loop.
+    if (llvm::any_of(L->getSubLoops(), [BB](const Loop *SubLoop) {
+          return SubLoop->contains(BB);
+        }))
+      continue; // Block belongs to an inner loop.
 
     for (const Instruction &I : *BB) {
       // Unroll a loop which contains an "if" statement whose condition
@@ -236,8 +238,9 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
         if (!Inst || L->isLoopInvariant(Op))
           continue;
 
-        if (llvm::any_of(L->getSubLoops(), [Inst](const Loop* SubLoop) {
-             return SubLoop->contains(Inst); }))
+        if (llvm::any_of(L->getSubLoops(), [Inst](const Loop *SubLoop) {
+              return SubLoop->contains(Inst);
+            }))
           continue;
         HasLoopDef = true;
         break;
@@ -341,9 +344,7 @@ GCNTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   llvm_unreachable("Unsupported register kind");
 }
 
-unsigned GCNTTIImpl::getMinVectorRegisterBitWidth() const {
-  return 32;
-}
+unsigned GCNTTIImpl::getMinVectorRegisterBitWidth() const { return 32; }
 
 unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   if (Opcode == Instruction::Load || Opcode == Instruction::Store)
@@ -368,8 +369,8 @@ unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
 }
 
 unsigned GCNTTIImpl::getStoreVectorFactor(unsigned VF, unsigned StoreSize,
-                                             unsigned ChainSizeInBytes,
-                                             VectorType *VecTy) const {
+                                          unsigned ChainSizeInBytes,
+                                          VectorType *VecTy) const {
   unsigned VecRegBitWidth = VF * StoreSize;
   if (VecRegBitWidth > 128)
     return 128 / StoreSize;
@@ -502,7 +503,7 @@ unsigned GCNTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
 }
 
 bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
-                                       MemIntrinsicInfo &Info) const {
+                                    MemIntrinsicInfo &Info) const {
   switch (Inst->getIntrinsicID()) {
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap: {
@@ -512,7 +513,8 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
       return false; // Invalid.
 
     unsigned OrderingVal = Ordering->getZExtValue();
-    if (OrderingVal > static_cast<unsigned>(AtomicOrdering::SequentiallyConsistent))
+    if (OrderingVal >
+        static_cast<unsigned>(AtomicOrdering::SequentiallyConsistent))
       return false;
 
     Info.PtrVal = Inst->getArgOperand(0);
@@ -538,8 +540,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
 
   // Because we don't have any legal vector operations, but the legal types, we
   // need to account for split vectors.
-  unsigned NElts = LT.second.isVector() ?
-    LT.second.getVectorNumElements() : 1;
+  unsigned NElts = LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
 
   MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
 
@@ -743,8 +744,7 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
 
-  unsigned NElts = LT.second.isVector() ?
-    LT.second.getVectorNumElements() : 1;
+  unsigned NElts = LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
 
   MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
 
@@ -890,8 +890,8 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
-    unsigned EltSize
-      = DL.getTypeSizeInBits(cast<VectorType>(ValTy)->getElementType());
+    unsigned EltSize =
+        DL.getTypeSizeInBits(cast<VectorType>(ValTy)->getElementType());
     if (EltSize < 32) {
       if (EltSize == 16 && Index == 0 && ST->has16BitInsts())
         return 0;
@@ -916,7 +916,7 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
 /// this is only querying a specific result index if this returns multiple
 /// registers in a struct.
 bool GCNTTIImpl::isInlineAsmSourceOfDivergence(
-  const CallInst *CI, ArrayRef<unsigned> Indices) const {
+    const CallInst *CI, ArrayRef<unsigned> Indices) const {
   // TODO: Handle complex extract indices
   if (Indices.size() > 1)
     return true;
@@ -939,8 +939,10 @@ bool GCNTTIImpl::isInlineAsmSourceOfDivergence(
 
     TLI->ComputeConstraintToUse(TC, SDValue());
 
-    const TargetRegisterClass *RC = TLI->getRegForInlineAsmConstraint(
-        TRI, TC.ConstraintCode, TC.ConstraintVT).second;
+    const TargetRegisterClass *RC =
+        TLI->getRegForInlineAsmConstraint(TRI, TC.ConstraintCode,
+                                          TC.ConstraintVT)
+            .second;
 
     // For AGPR constraints null is returned on subtargets without AGPRs, so
     // assume divergent for null.
@@ -1142,12 +1144,13 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   switch (IntrID) {
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private: {
-    unsigned TrueAS = IntrID == Intrinsic::amdgcn_is_shared ?
-      AMDGPUAS::LOCAL_ADDRESS : AMDGPUAS::PRIVATE_ADDRESS;
+    unsigned TrueAS = IntrID == Intrinsic::amdgcn_is_shared
+                          ? AMDGPUAS::LOCAL_ADDRESS
+                          : AMDGPUAS::PRIVATE_ADDRESS;
     unsigned NewAS = NewV->getType()->getPointerAddressSpace();
     LLVMContext &Ctx = NewV->getType()->getContext();
-    ConstantInt *NewVal = (TrueAS == NewAS) ?
-      ConstantInt::getTrue(Ctx) : ConstantInt::getFalse(Ctx);
+    ConstantInt *NewVal = (TrueAS == NewAS) ? ConstantInt::getTrue(Ctx)
+                                            : ConstantInt::getFalse(Ctx);
     return NewVal;
   }
   case Intrinsic::ptrmask: {
@@ -1309,10 +1312,10 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
 bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
                                      const Function *Callee) const {
   const TargetMachine &TM = getTLI()->getTargetMachine();
-  const GCNSubtarget *CallerST
-    = static_cast<const GCNSubtarget *>(TM.getSubtargetImpl(*Caller));
-  const GCNSubtarget *CalleeST
-    = static_cast<const GCNSubtarget *>(TM.getSubtargetImpl(*Callee));
+  const GCNSubtarget *CallerST =
+      static_cast<const GCNSubtarget *>(TM.getSubtargetImpl(*Caller));
+  const GCNSubtarget *CalleeST =
+      static_cast<const GCNSubtarget *>(TM.getSubtargetImpl(*Callee));
 
   const FeatureBitset &CallerBits = CallerST->getFeatureBits();
   const FeatureBitset &CalleeBits = CalleeST->getFeatureBits();
@@ -1487,10 +1490,9 @@ void GCNTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
 }
 
 int GCNTTIImpl::get64BitInstrCost(TTI::TargetCostKind CostKind) const {
-  return ST->hasFullRate64Ops()
-             ? getFullRateInstrCost()
-             : ST->hasHalfRate64Ops() ? getHalfRateInstrCost(CostKind)
-                                      : getQuarterRateInstrCost(CostKind);
+  return ST->hasFullRate64Ops()   ? getFullRateInstrCost()
+         : ST->hasHalfRate64Ops() ? getHalfRateInstrCost(CostKind)
+                                  : getQuarterRateInstrCost(CostKind);
 }
 
 std::pair<InstructionCost, MVT>

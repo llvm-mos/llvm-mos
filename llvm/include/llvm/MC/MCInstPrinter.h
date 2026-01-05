@@ -88,7 +88,8 @@ protected:
 
 public:
   MCInstPrinter(const MCAsmInfo &mai, const MCInstrInfo &mii,
-                const MCRegisterInfo &mri) : MAI(mai), MII(mii), MRI(mri) {}
+                const MCRegisterInfo &mri)
+      : MAI(mai), MII(mii), MRI(mri) {}
 
   virtual ~MCInstPrinter();
 

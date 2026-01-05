@@ -47,7 +47,7 @@ using namespace llvm;
 namespace llvm {
 namespace Sparc {
 
-    using namespace SP;
+using namespace SP;
 
 } // end namespace Sparc
 } // end namespace llvm
@@ -159,39 +159,33 @@ public:
 
 } // end anonymous namespace
 
-  static const MCPhysReg IntRegs[32] = {
-    Sparc::G0, Sparc::G1, Sparc::G2, Sparc::G3,
-    Sparc::G4, Sparc::G5, Sparc::G6, Sparc::G7,
-    Sparc::O0, Sparc::O1, Sparc::O2, Sparc::O3,
-    Sparc::O4, Sparc::O5, Sparc::O6, Sparc::O7,
-    Sparc::L0, Sparc::L1, Sparc::L2, Sparc::L3,
-    Sparc::L4, Sparc::L5, Sparc::L6, Sparc::L7,
-    Sparc::I0, Sparc::I1, Sparc::I2, Sparc::I3,
-    Sparc::I4, Sparc::I5, Sparc::I6, Sparc::I7 };
+static const MCPhysReg IntRegs[32] = {
+    Sparc::G0, Sparc::G1, Sparc::G2, Sparc::G3, Sparc::G4, Sparc::G5, Sparc::G6,
+    Sparc::G7, Sparc::O0, Sparc::O1, Sparc::O2, Sparc::O3, Sparc::O4, Sparc::O5,
+    Sparc::O6, Sparc::O7, Sparc::L0, Sparc::L1, Sparc::L2, Sparc::L3, Sparc::L4,
+    Sparc::L5, Sparc::L6, Sparc::L7, Sparc::I0, Sparc::I1, Sparc::I2, Sparc::I3,
+    Sparc::I4, Sparc::I5, Sparc::I6, Sparc::I7};
 
-  static const MCPhysReg DoubleRegs[32] = {
-    Sparc::D0,  Sparc::D1,  Sparc::D2,  Sparc::D3,
-    Sparc::D4,  Sparc::D5,  Sparc::D6,  Sparc::D7,
-    Sparc::D8,  Sparc::D9,  Sparc::D10, Sparc::D11,
-    Sparc::D12, Sparc::D13, Sparc::D14, Sparc::D15,
-    Sparc::D16, Sparc::D17, Sparc::D18, Sparc::D19,
-    Sparc::D20, Sparc::D21, Sparc::D22, Sparc::D23,
-    Sparc::D24, Sparc::D25, Sparc::D26, Sparc::D27,
-    Sparc::D28, Sparc::D29, Sparc::D30, Sparc::D31 };
+static const MCPhysReg DoubleRegs[32] = {
+    Sparc::D0,  Sparc::D1,  Sparc::D2,  Sparc::D3,  Sparc::D4,  Sparc::D5,
+    Sparc::D6,  Sparc::D7,  Sparc::D8,  Sparc::D9,  Sparc::D10, Sparc::D11,
+    Sparc::D12, Sparc::D13, Sparc::D14, Sparc::D15, Sparc::D16, Sparc::D17,
+    Sparc::D18, Sparc::D19, Sparc::D20, Sparc::D21, Sparc::D22, Sparc::D23,
+    Sparc::D24, Sparc::D25, Sparc::D26, Sparc::D27, Sparc::D28, Sparc::D29,
+    Sparc::D30, Sparc::D31};
 
-  static const MCPhysReg QuadFPRegs[32] = {
-    Sparc::Q0,  Sparc::Q1,  Sparc::Q2,  Sparc::Q3,
-    Sparc::Q4,  Sparc::Q5,  Sparc::Q6,  Sparc::Q7,
-    Sparc::Q8,  Sparc::Q9,  Sparc::Q10, Sparc::Q11,
-    Sparc::Q12, Sparc::Q13, Sparc::Q14, Sparc::Q15 };
+static const MCPhysReg QuadFPRegs[32] = {
+    Sparc::Q0,  Sparc::Q1,  Sparc::Q2,  Sparc::Q3, Sparc::Q4,  Sparc::Q5,
+    Sparc::Q6,  Sparc::Q7,  Sparc::Q8,  Sparc::Q9, Sparc::Q10, Sparc::Q11,
+    Sparc::Q12, Sparc::Q13, Sparc::Q14, Sparc::Q15};
 
-  static const MCPhysReg IntPairRegs[] = {
+static const MCPhysReg IntPairRegs[] = {
     Sparc::G0_G1, Sparc::G2_G3, Sparc::G4_G5, Sparc::G6_G7,
     Sparc::O0_O1, Sparc::O2_O3, Sparc::O4_O5, Sparc::O6_O7,
     Sparc::L0_L1, Sparc::L2_L3, Sparc::L4_L5, Sparc::L6_L7,
     Sparc::I0_I1, Sparc::I2_I3, Sparc::I4_I5, Sparc::I6_I7};
 
-  static const MCPhysReg CoprocPairRegs[] = {
+static const MCPhysReg CoprocPairRegs[] = {
     Sparc::C0_C1,   Sparc::C2_C3,   Sparc::C4_C5,   Sparc::C6_C7,
     Sparc::C8_C9,   Sparc::C10_C11, Sparc::C12_C13, Sparc::C14_C15,
     Sparc::C16_C17, Sparc::C18_C19, Sparc::C20_C21, Sparc::C22_C23,
@@ -311,8 +305,8 @@ public:
   }
 
   bool isFloatOrDoubleReg() const {
-    return (Kind == k_Register && (Reg.Kind == rk_FloatReg
-                                   || Reg.Kind == rk_DoubleReg));
+    return (Kind == k_Register &&
+            (Reg.Kind == rk_FloatReg || Reg.Kind == rk_DoubleReg));
   }
 
   bool isCoprocReg() const {
@@ -365,26 +359,27 @@ public:
   }
 
   /// getStartLoc - Get the location of the first token of this operand.
-  SMLoc getStartLoc() const override {
-    return StartLoc;
-  }
+  SMLoc getStartLoc() const override { return StartLoc; }
   /// getEndLoc - Get the location of the last token of this operand.
-  SMLoc getEndLoc() const override {
-    return EndLoc;
-  }
+  SMLoc getEndLoc() const override { return EndLoc; }
 
   void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
-    case k_Token:     OS << "Token: " << getToken() << "\n"; break;
+    case k_Token:
+      OS << "Token: " << getToken() << "\n";
+      break;
     case k_Register:
       OS << "Reg: #" << getReg().id() << "\n";
       break;
-    case k_Immediate: OS << "Imm: " << getImm() << "\n"; break;
+    case k_Immediate:
+      OS << "Imm: " << getImm() << "\n";
+      break;
     case k_MemoryReg:
       OS << "Mem: " << getMemBase().id() << "+" << getMemOffsetReg().id()
          << "\n";
       break;
-    case k_MemoryImm: assert(getMemOff() != nullptr);
+    case k_MemoryImm:
+      assert(getMemOff() != nullptr);
       OS << "Mem: " << getMemBase().id() << "+";
       MAI.printExpr(OS, *getMemOff());
       OS << "\n";
@@ -421,7 +416,7 @@ public:
     addExpr(Inst, getImm());
   }
 
-  void addExpr(MCInst &Inst, const MCExpr *Expr) const{
+  void addExpr(MCInst &Inst, const MCExpr *Expr) const {
     // Add as immediate when possible.  Null MCExpr = 0.
     if (!Expr)
       Inst.addOperand(MCOperand::createImm(0));
@@ -488,7 +483,7 @@ public:
                                                  SMLoc S, SMLoc E) {
     auto Op = std::make_unique<SparcOperand>(k_Register);
     Op->Reg.Reg = Reg;
-    Op->Reg.Kind   = (SparcOperand::RegisterKind)Kind;
+    Op->Reg.Kind = (SparcOperand::RegisterKind)Kind;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -564,7 +559,8 @@ public:
     MCRegister Reg = Op.getReg();
     unsigned regIdx = 0;
     switch (Op.Reg.Kind) {
-    default: llvm_unreachable("Unexpected register kind!");
+    default:
+      llvm_unreachable("Unexpected register kind!");
     case rk_FloatReg:
       regIdx = Reg - Sparc::F0;
       if (regIdx % 4 || regIdx > 31)
@@ -572,7 +568,7 @@ public:
       Reg = QuadFPRegs[regIdx / 4];
       break;
     case rk_DoubleReg:
-      regIdx =  Reg - Sparc::D0;
+      regIdx = Reg - Sparc::D0;
       if (regIdx % 2 || regIdx > 31)
         return false;
       Reg = QuadFPRegs[regIdx / 2];
@@ -610,7 +606,7 @@ public:
                                                   SMLoc E) {
     auto Op = std::make_unique<SparcOperand>(k_MemoryReg);
     Op->Mem.Base = Base;
-    Op->Mem.OffsetReg = Sparc::G0;  // always 0
+    Op->Mem.OffsetReg = Sparc::G0; // always 0
     Op->Mem.Off = nullptr;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -619,7 +615,7 @@ public:
 
   static std::unique_ptr<SparcOperand>
   MorphToMEMri(MCRegister Base, std::unique_ptr<SparcOperand> Op) {
-    const MCExpr *Imm  = Op->getImm();
+    const MCExpr *Imm = Op->getImm();
     Op->Kind = k_MemoryImm;
     Op->Mem.Base = Base;
     Op->Mem.OffsetReg = MCRegister();
@@ -884,8 +880,8 @@ bool SparcAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                              bool MatchingInlineAsm) {
   MCInst Inst;
   SmallVector<MCInst, 8> Instructions;
-  unsigned MatchResult = MatchInstructionImpl(Operands, Inst, ErrorInfo,
-                                              MatchingInlineAsm);
+  unsigned MatchResult =
+      MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm);
   switch (MatchResult) {
   case Match_Success: {
     switch (Inst.getOpcode()) {
@@ -1011,8 +1007,10 @@ bool SparcAsmParser::parseInstruction(ParseInstructionInfo &Info,
 
     while (getLexer().is(AsmToken::Comma) || getLexer().is(AsmToken::Plus)) {
       if (getLexer().is(AsmToken::Plus)) {
-      // Plus tokens are significant in software_traps (p83, sparcv8.pdf). We must capture them.
-        Operands.push_back(SparcOperand::CreateToken("+", Parser.getTok().getLoc()));
+        // Plus tokens are significant in software_traps (p83, sparcv8.pdf). We
+        // must capture them.
+        Operands.push_back(
+            SparcOperand::CreateToken("+", Parser.getTok().getLoc()));
       }
       Parser.Lex(); // Eat the comma or plus.
       // Parse and remember the operand.
@@ -1212,14 +1210,14 @@ ParseStatus SparcAsmParser::parseMembarTag(OperandVector &Operands) {
     SMLoc TagStart = getLexer().getLoc();
     Parser.Lex(); // Eat the '#'.
     unsigned MaskVal = StringSwitch<unsigned>(Parser.getTok().getString())
-      .Case("LoadLoad", 0x1)
-      .Case("StoreLoad", 0x2)
-      .Case("LoadStore", 0x4)
-      .Case("StoreStore", 0x8)
-      .Case("Lookaside", 0x10)
-      .Case("MemIssue", 0x20)
-      .Case("Sync", 0x40)
-      .Default(0);
+                           .Case("LoadLoad", 0x1)
+                           .Case("StoreLoad", 0x2)
+                           .Case("LoadStore", 0x4)
+                           .Case("StoreStore", 0x8)
+                           .Case("Lookaside", 0x10)
+                           .Case("MemIssue", 0x20)
+                           .Case("Sync", 0x40)
+                           .Default(0);
 
     Parser.Lex(); // Eat the identifier token.
 
@@ -1346,8 +1344,8 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
 
   if (getLexer().is(AsmToken::LBrac)) {
     // Memory operand
-    Operands.push_back(SparcOperand::CreateToken("[",
-                                                 Parser.getTok().getLoc()));
+    Operands.push_back(
+        SparcOperand::CreateToken("[", Parser.getTok().getLoc()));
     Parser.Lex(); // Eat the [
 
     if (Mnemonic == "cas" || Mnemonic == "casl" || Mnemonic == "casa" ||
@@ -1363,7 +1361,8 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
         return ParseStatus::NoMatch;
 
       Parser.Lex(); // Eat the identifier token.
-      SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer()-1);
+      SMLoc E =
+          SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
       Operands.push_back(SparcOperand::CreateReg(Reg, RegKind, S, E));
       Res = ParseStatus::Success;
     } else {
@@ -1376,8 +1375,8 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
     if (!getLexer().is(AsmToken::RBrac))
       return ParseStatus::Failure;
 
-    Operands.push_back(SparcOperand::CreateToken("]",
-                                                 Parser.getTok().getLoc()));
+    Operands.push_back(
+        SparcOperand::CreateToken("]", Parser.getTok().getLoc()));
     Parser.Lex(); // Eat the ]
 
     // Parse an optional address-space identifier after the address.
@@ -1449,7 +1448,8 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op) {
 
   Op = nullptr;
   switch (getLexer().getKind()) {
-  default:  break;
+  default:
+    break;
 
   case AsmToken::Percent: {
     Parser.Lex(); // Eat the '%'.
@@ -1496,8 +1496,8 @@ ParseStatus SparcAsmParser::parseBranchModifiers(OperandVector &Operands) {
       return ParseStatus::Failure;
     StringRef modName = Parser.getTok().getString();
     if (modName == "a" || modName == "pn" || modName == "pt") {
-      Operands.push_back(SparcOperand::CreateToken(modName,
-                                                   Parser.getTok().getLoc()));
+      Operands.push_back(
+          SparcOperand::CreateToken(modName, Parser.getTok().getLoc()));
       Parser.Lex(); // eat the identifier.
     }
   }
@@ -1684,7 +1684,8 @@ SparcAsmParser::adjustPICRelocation(uint16_t RelType, const MCExpr *subExpr) {
 
   if (getContext().getObjectFileInfo()->isPositionIndependent()) {
     switch (RelType) {
-    default: break;
+    default:
+      break;
     case ELF::R_SPARC_LO10:
       RelType =
           hasGOTReference(subExpr) ? ELF::R_SPARC_PC10 : ELF::R_SPARC_GOT10;
@@ -1768,7 +1769,8 @@ unsigned SparcAsmParser::validateTargetOperandClass(MCParsedAsmOperand &GOp,
   SparcOperand &Op = (SparcOperand &)GOp;
   if (Op.isFloatOrDoubleReg()) {
     switch (Kind) {
-    default: break;
+    default:
+      break;
     case MCK_DFPRegs:
       if (!Op.isFloatReg() || SparcOperand::MorphToDoubleReg(Op))
         return MCTargetAsmParser::Match_Success;
@@ -1784,8 +1786,8 @@ unsigned SparcAsmParser::validateTargetOperandClass(MCParsedAsmOperand &GOp,
       return MCTargetAsmParser::Match_Success;
   }
   if (Op.isCoprocReg() && Kind == MCK_CoprocPair) {
-     if (SparcOperand::MorphToCoprocPairReg(Op))
-       return MCTargetAsmParser::Match_Success;
-   }
+    if (SparcOperand::MorphToCoprocPairReg(Op))
+      return MCTargetAsmParser::Match_Success;
+  }
   return Match_InvalidOperand;
 }

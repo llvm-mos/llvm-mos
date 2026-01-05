@@ -22,12 +22,12 @@
 
 namespace llvm {
 class ByteStreamer {
- protected:
+protected:
   ~ByteStreamer() = default;
-  ByteStreamer(const ByteStreamer&) = default;
+  ByteStreamer(const ByteStreamer &) = default;
   ByteStreamer() = default;
 
- public:
+public:
   // For now we're just handling the calls we need for dwarf emission/hashing.
   virtual void emitInt8(uint8_t Byte, const Twine &Comment = "") = 0;
   virtual void emitSLEB128(uint64_t DWord, const Twine &Comment = "") = 0;
@@ -67,12 +67,13 @@ public:
 };
 
 class HashingByteStreamer final : public ByteStreamer {
- private:
+private:
   DIEHash &Hash;
- public:
-   HashingByteStreamer(DIEHash &H) : Hash(H) {}
-   void emitInt8(uint8_t Byte, const Twine &Comment) override {
-     Hash.update(Byte);
+
+public:
+  HashingByteStreamer(DIEHash &H) : Hash(H) {}
+  void emitInt8(uint8_t Byte, const Twine &Comment) override {
+    Hash.update(Byte);
   }
   void emitSLEB128(uint64_t DWord, const Twine &Comment) override {
     Hash.addSLEB128(DWord);
@@ -116,7 +117,6 @@ public:
       // with each other.
       for (size_t i = 1; i < Length; ++i)
         Comments.push_back("");
-
     }
   }
   void emitULEB128(uint64_t DWord, const Twine &Comment,
@@ -140,6 +140,6 @@ public:
   }
 };
 
-}
+} // namespace llvm
 
 #endif

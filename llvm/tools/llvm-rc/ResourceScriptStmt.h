@@ -84,15 +84,12 @@ private:
 
 public:
   IntWithNotMask() : IntWithNotMask(RCInt(0)) {}
-  IntWithNotMask(RCInt Value, int32_t NotMask = 0) : Value(Value), NotMask(NotMask) {}
+  IntWithNotMask(RCInt Value, int32_t NotMask = 0)
+      : Value(Value), NotMask(NotMask) {}
 
-  RCInt getValue() const {
-    return Value;
-  }
+  RCInt getValue() const { return Value; }
 
-  uint32_t getNotMask() const {
-    return NotMask;
-  }
+  uint32_t getNotMask() const { return NotMask; }
 
   IntWithNotMask &operator+=(const IntWithNotMask &Rhs) {
     Value &= ~Rhs.NotMask;

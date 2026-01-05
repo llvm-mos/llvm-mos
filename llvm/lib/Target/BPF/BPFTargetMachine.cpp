@@ -35,9 +35,9 @@
 #include <optional>
 using namespace llvm;
 
-static cl::
-opt<bool> DisableMIPeephole("disable-bpf-peephole", cl::Hidden,
-                            cl::desc("Disable machine peepholes for BPF"));
+static cl::opt<bool>
+    DisableMIPeephole("disable-bpf-peephole", cl::Hidden,
+                      cl::desc("Disable machine peepholes for BPF"));
 
 static cl::opt<bool>
     DisableCheckUnreachable("bpf-disable-trap-unreachable", cl::Hidden,
@@ -108,7 +108,7 @@ public:
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
 };
-}
+} // namespace
 
 TargetPassConfig *BPFTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new BPFPassConfig(*this, PM);

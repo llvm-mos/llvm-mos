@@ -308,8 +308,7 @@ bool HexagonMCChecker::checkAXOK() {
           HasSoloAXInst->getLoc(),
           Twine("Instruction can only be in a packet with ALU or non-FPU XTYPE "
                 "instructions"));
-      reportError(I.getLoc(),
-                  Twine("Not an ALU or non-FPU XTYPE instruction"));
+      reportError(I.getLoc(), Twine("Not an ALU or non-FPU XTYPE instruction"));
       return false;
     }
   }
@@ -812,8 +811,7 @@ bool HexagonMCChecker::checkLegalVecRegPair() {
 }
 
 // Vd.tmp can't be accumulated
-bool HexagonMCChecker::checkHVXAccum()
-{
+bool HexagonMCChecker::checkHVXAccum() {
   for (const auto &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
     bool IsTarget =
         HexagonMCInstrInfo::isAccumulator(MCII, I) && I.getOperand(0).isReg();

@@ -90,8 +90,7 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
          "singlethread synchronization scope ID drifted!");
   (void)SingleThreadSSID;
 
-  SyncScope::ID SystemSSID =
-      pImpl->getOrInsertSyncScopeID("");
+  SyncScope::ID SystemSSID = pImpl->getOrInsertSyncScopeID("");
   assert(SystemSSID == SyncScope::System &&
          "system synchronization scope ID drifted!");
   (void)SystemSSID;
@@ -99,9 +98,7 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
 
 LLVMContext::~LLVMContext() { delete pImpl; }
 
-void LLVMContext::addModule(Module *M) {
-  pImpl->OwnedModules.insert(M);
-}
+void LLVMContext::addModule(Module *M) { pImpl->OwnedModules.insert(M); }
 
 void LLVMContext::removeModule(Module *M) {
   pImpl->OwnedModules.erase(M);
@@ -127,7 +124,7 @@ void LLVMContext::setDiagnosticHandlerCallBack(
 }
 
 void LLVMContext::setDiagnosticHandler(std::unique_ptr<DiagnosticHandler> &&DH,
-                                      bool RespectFilters) {
+                                       bool RespectFilters) {
   pImpl->DiagHandler = std::move(DH);
   pImpl->RespectDiagnosticFilters = RespectFilters;
 }
@@ -139,7 +136,8 @@ bool LLVMContext::getDiagnosticsHotnessRequested() const {
   return pImpl->DiagnosticsHotnessRequested;
 }
 
-void LLVMContext::setDiagnosticsHotnessThreshold(std::optional<uint64_t> Threshold) {
+void LLVMContext::setDiagnosticsHotnessThreshold(
+    std::optional<uint64_t> Threshold) {
   pImpl->DiagnosticsHotnessThreshold = Threshold;
 }
 void LLVMContext::setMisExpectWarningRequested(bool Requested) {
@@ -194,8 +192,8 @@ void *LLVMContext::getDiagnosticContext() const {
   return pImpl->DiagHandler->DiagnosticContext;
 }
 
-void LLVMContext::setYieldCallback(YieldCallbackTy Callback, void *OpaqueHandle)
-{
+void LLVMContext::setYieldCallback(YieldCallbackTy Callback,
+                                   void *OpaqueHandle) {
   pImpl->YieldCallback = Callback;
   pImpl->YieldOpaqueHandle = OpaqueHandle;
 }
@@ -277,9 +275,8 @@ void LLVMContext::diagnose(const DiagnosticInfo &DI) {
 /// Return a unique non-zero ID for the specified metadata kind.
 unsigned LLVMContext::getMDKindID(StringRef Name) const {
   // If this is new, assign it its ID.
-  return pImpl->CustomMDKindNames.insert(
-                                     std::make_pair(
-                                         Name, pImpl->CustomMDKindNames.size()))
+  return pImpl->CustomMDKindNames
+      .insert(std::make_pair(Name, pImpl->CustomMDKindNames.size()))
       .first->second;
 }
 
@@ -288,7 +285,8 @@ unsigned LLVMContext::getMDKindID(StringRef Name) const {
 void LLVMContext::getMDKindNames(SmallVectorImpl<StringRef> &Names) const {
   Names.resize(pImpl->CustomMDKindNames.size());
   for (StringMap<unsigned>::const_iterator I = pImpl->CustomMDKindNames.begin(),
-       E = pImpl->CustomMDKindNames.end(); I != E; ++I)
+                                           E = pImpl->CustomMDKindNames.end();
+       I != E; ++I)
     Names[I->second] = I->first();
 }
 
@@ -325,9 +323,7 @@ const std::string &LLVMContext::getGC(const Function &Fn) {
   return pImpl->GCNames[&Fn];
 }
 
-void LLVMContext::deleteGC(const Function &Fn) {
-  pImpl->GCNames.erase(&Fn);
-}
+void LLVMContext::deleteGC(const Function &Fn) { pImpl->GCNames.erase(&Fn); }
 
 bool LLVMContext::shouldDiscardValueNames() const {
   return pImpl->DiscardValueNames;
@@ -352,7 +348,7 @@ OptPassGate &LLVMContext::getOptPassGate() const {
   return pImpl->getOptPassGate();
 }
 
-void LLVMContext::setOptPassGate(OptPassGate& OPG) {
+void LLVMContext::setOptPassGate(OptPassGate &OPG) {
   pImpl->setOptPassGate(OPG);
 }
 
@@ -364,9 +360,7 @@ std::unique_ptr<DiagnosticHandler> LLVMContext::getDiagnosticHandler() {
   return std::move(pImpl->DiagHandler);
 }
 
-StringRef LLVMContext::getDefaultTargetCPU() {
-  return pImpl->DefaultTargetCPU;
-}
+StringRef LLVMContext::getDefaultTargetCPU() { return pImpl->DefaultTargetCPU; }
 
 void LLVMContext::setDefaultTargetCPU(StringRef CPU) {
   pImpl->DefaultTargetCPU = CPU;

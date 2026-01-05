@@ -89,7 +89,8 @@ static void visitComponent(const std::string &Name,
   // Lookup the component.
   AvailableComponent *AC = ComponentMap.lookup(Name);
   if (!AC) {
-    errs() << "Can't find component: '" << Name << "' in the map. Available components are: ";
+    errs() << "Can't find component: '" << Name
+           << "' in the map. Available components are: ";
     for (const auto &Component : ComponentMap)
       errs() << "'" << Component.first() << "' ";
     errs() << "\n";
@@ -264,7 +265,8 @@ getAllDyLibComponents(const bool IsInDevelopmentTree,
   size_t Offset = 0;
   while (true) {
     const size_t NextOffset = DyLibComponentsStr.find(';', Offset);
-    DyLibComponents.push_back(DyLibComponentsStr.substr(Offset, NextOffset-Offset));
+    DyLibComponents.push_back(
+        DyLibComponentsStr.substr(Offset, NextOffset - Offset));
     if (NextOffset == std::string::npos)
       break;
     Offset = NextOffset + 1;
@@ -325,7 +327,7 @@ int main(int argc, char **argv) {
   // Compute various directory locations based on the derived location
   // information.
   std::string ActivePrefix, ActiveBinDir, ActiveIncludeDir, ActiveLibDir,
-              ActiveCMakeDir;
+      ActiveCMakeDir;
   std::vector<std::string> ActiveIncludeOptions;
   if (IsInDevelopmentTree) {
     ActiveIncludeDir = std::string(LLVM_SRC_ROOT) + "/include";

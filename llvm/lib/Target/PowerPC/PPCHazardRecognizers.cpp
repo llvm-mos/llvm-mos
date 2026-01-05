@@ -35,7 +35,7 @@ bool PPCDispatchGroupSBHazardRecognizer::isLoadAfterStore(SUnit *SU) {
 
   // SU is a load; for any predecessors in this dispatch group, that are stores,
   // and with which we have an ordering dependency, return true.
-  for (unsigned i = 0, ie = (unsigned) SU->Preds.size(); i != ie; ++i) {
+  for (unsigned i = 0, ie = (unsigned)SU->Preds.size(); i != ie; ++i) {
     const MCInstrDesc *PredMCID = DAG->getInstrDesc(SU->Preds[i].getSUnit());
     if (!PredMCID || !PredMCID->mayStore())
       continue;
@@ -61,7 +61,7 @@ bool PPCDispatchGroupSBHazardRecognizer::isBCTRAfterSet(SUnit *SU) {
 
   // SU is a branch; for any predecessors in this dispatch group, with which we
   // have a data dependence and set the counter register, return true.
-  for (unsigned i = 0, ie = (unsigned) SU->Preds.size(); i != ie; ++i) {
+  for (unsigned i = 0, ie = (unsigned)SU->Preds.size(); i != ie; ++i) {
     const MCInstrDesc *PredMCID = DAG->getInstrDesc(SU->Preds[i].getSUnit());
     if (!PredMCID || PredMCID->getSchedClass() != PPC::Sched::IIC_SprMTSPR)
       continue;
@@ -78,7 +78,11 @@ bool PPCDispatchGroupSBHazardRecognizer::isBCTRAfterSet(SUnit *SU) {
 }
 
 // FIXME: Remove this when we don't need this:
-namespace llvm { namespace PPC { extern int getNonRecordFormOpcode(uint16_t); } }
+namespace llvm {
+namespace PPC {
+extern int getNonRecordFormOpcode(uint16_t);
+}
+} // namespace llvm
 
 // FIXME: A lot of code in PPCDispatchGroupSBHazardRecognizer is P7 specific.
 
@@ -114,7 +118,7 @@ bool PPCDispatchGroupSBHazardRecognizer::mustComeFirst(const MCInstrDesc *MCID,
   case PPC::Sched::IIC_LdStSTDCX:
   case PPC::Sched::IIC_LdStSTWCX:
   case PPC::Sched::IIC_BrMCRX: // mtcr
-  // FIXME: Add sync/isync (here and in the itinerary).
+    // FIXME: Add sync/isync (here and in the itinerary).
     NSlots = 4;
     break;
   }
@@ -157,8 +161,7 @@ unsigned PPCDispatchGroupSBHazardRecognizer::PreEmitNoops(SUnit *SU) {
   // only be a second branch, and otherwise the next instruction will start a
   // new group.
   if (isLoadAfterStore(SU) && CurSlots < 6) {
-    unsigned Directive =
-        DAG->MF.getSubtarget<PPCSubtarget>().getCPUDirective();
+    unsigned Directive = DAG->MF.getSubtarget<PPCSubtarget>().getCPUDirective();
     // If we're using a special group-terminating nop, then we need only one.
     // FIXME: the same for P9 as previous gen until POWER9 scheduling is ready
     if (Directive == PPC::DIR_PWR6 || Directive == PPC::DIR_PWR7 ||
@@ -217,8 +220,7 @@ void PPCDispatchGroupSBHazardRecognizer::Reset() {
 }
 
 void PPCDispatchGroupSBHazardRecognizer::EmitNoop() {
-  unsigned Directive =
-      DAG->MF.getSubtarget<PPCSubtarget>().getCPUDirective();
+  unsigned Directive = DAG->MF.getSubtarget<PPCSubtarget>().getCPUDirective();
   // If the group has now filled all of its slots, or if we're using a special
   // group-terminating nop, the group is complete.
   // FIXME: the same for P9 as previous gen until POWER9 scheduling is ready
@@ -273,30 +275,27 @@ void PPCHazardRecognizer970::EndDispatchGroup() {
   NumStores = 0;
 }
 
-
 PPCII::PPC970_Unit
-PPCHazardRecognizer970::GetInstrType(unsigned Opcode,
-                                     bool &isFirst, bool &isSingle,
-                                     bool &isCracked,
+PPCHazardRecognizer970::GetInstrType(unsigned Opcode, bool &isFirst,
+                                     bool &isSingle, bool &isCracked,
                                      bool &isLoad, bool &isStore) {
   const MCInstrDesc &MCID = DAG.TII->get(Opcode);
 
-  isLoad  = MCID.mayLoad();
+  isLoad = MCID.mayLoad();
   isStore = MCID.mayStore();
 
   uint64_t TSFlags = MCID.TSFlags;
 
-  isFirst   = TSFlags & PPCII::PPC970_First;
-  isSingle  = TSFlags & PPCII::PPC970_Single;
+  isFirst = TSFlags & PPCII::PPC970_First;
+  isSingle = TSFlags & PPCII::PPC970_Single;
   isCracked = TSFlags & PPCII::PPC970_Cracked;
   return (PPCII::PPC970_Unit)(TSFlags & PPCII::PPC970_Mask);
 }
 
 /// isLoadOfStoredAddress - If we have a load from the previously stored pointer
 /// as indicated by StorePtr1/StorePtr2/StoreSize, return true.
-bool PPCHazardRecognizer970::
-isLoadOfStoredAddress(uint64_t LoadSize, int64_t LoadOffset,
-  const Value *LoadValue) const {
+bool PPCHazardRecognizer970::isLoadOfStoredAddress(
+    uint64_t LoadSize, int64_t LoadOffset, const Value *LoadValue) const {
   for (unsigned i = 0, e = NumStores; i != e; ++i) {
     // Handle exact and commuted addresses.
     if (LoadValue == StoreValue[i] && LoadOffset == StoreOffset[i])
@@ -308,9 +307,11 @@ isLoadOfStoredAddress(uint64_t LoadSize, int64_t LoadOffset,
       // Okay the base pointers match, so we have [c1+r] vs [c2+r].  Check
       // to see if the load and store actually overlap.
       if (StoreOffset[i] < LoadOffset) {
-        if (int64_t(StoreOffset[i]+StoreSize[i]) > LoadOffset) return true;
+        if (int64_t(StoreOffset[i] + StoreSize[i]) > LoadOffset)
+          return true;
       } else {
-        if (int64_t(LoadOffset+LoadSize) > StoreOffset[i]) return true;
+        if (int64_t(LoadOffset + LoadSize) > StoreOffset[i])
+          return true;
       }
     }
   }
@@ -321,8 +322,8 @@ isLoadOfStoredAddress(uint64_t LoadSize, int64_t LoadOffset,
 /// terminate the dispatch group.  We turn NoopHazard for any
 /// instructions that wouldn't terminate the dispatch group that would cause a
 /// pipeline flush.
-ScheduleHazardRecognizer::HazardType PPCHazardRecognizer970::
-getHazardType(SUnit *SU, int Stalls) {
+ScheduleHazardRecognizer::HazardType
+PPCHazardRecognizer970::getHazardType(SUnit *SU, int Stalls) {
   assert(Stalls == 0 && "PPC hazards don't support scoreboard lookahead");
 
   MachineInstr *MI = SU->getInstr();
@@ -333,9 +334,9 @@ getHazardType(SUnit *SU, int Stalls) {
   unsigned Opcode = MI->getOpcode();
   bool isFirst, isSingle, isCracked, isLoad, isStore;
   PPCII::PPC970_Unit InstrType =
-    GetInstrType(Opcode, isFirst, isSingle, isCracked,
-                 isLoad, isStore);
-  if (InstrType == PPCII::PPC970_Pseudo) return NoHazard;
+      GetInstrType(Opcode, isFirst, isSingle, isCracked, isLoad, isStore);
+  if (InstrType == PPCII::PPC970_Pseudo)
+    return NoHazard;
 
   // We can only issue a PPC970_First/PPC970_Single instruction (such as
   // crand/mtspr/etc) if this is the first cycle of the dispatch group.
@@ -349,18 +350,21 @@ getHazardType(SUnit *SU, int Stalls) {
     return Hazard;
 
   switch (InstrType) {
-  default: llvm_unreachable("Unknown instruction type!");
+  default:
+    llvm_unreachable("Unknown instruction type!");
   case PPCII::PPC970_FXU:
   case PPCII::PPC970_LSU:
   case PPCII::PPC970_FPU:
   case PPCII::PPC970_VALU:
   case PPCII::PPC970_VPERM:
     // We can only issue a branch as the last instruction in a group.
-    if (NumIssued == 4) return Hazard;
+    if (NumIssued == 4)
+      return Hazard;
     break;
   case PPCII::PPC970_CRU:
     // We can only issue a CR instruction in the first two slots.
-    if (NumIssued >= 2) return Hazard;
+    if (NumIssued >= 2)
+      return Hazard;
     break;
   case PPCII::PPC970_BRU:
     break;
@@ -392,12 +396,13 @@ void PPCHazardRecognizer970::EmitInstruction(SUnit *SU) {
   unsigned Opcode = MI->getOpcode();
   bool isFirst, isSingle, isCracked, isLoad, isStore;
   PPCII::PPC970_Unit InstrType =
-    GetInstrType(Opcode, isFirst, isSingle, isCracked,
-                 isLoad, isStore);
-  if (InstrType == PPCII::PPC970_Pseudo) return;
+      GetInstrType(Opcode, isFirst, isSingle, isCracked, isLoad, isStore);
+  if (InstrType == PPCII::PPC970_Pseudo)
+    return;
 
   // Update structural hazard information.
-  if (Opcode == PPC::MTCTR || Opcode == PPC::MTCTR8) HasCTRSet = true;
+  if (Opcode == PPC::MTCTR || Opcode == PPC::MTCTR8)
+    HasCTRSet = true;
 
   // Track the address stored to.
   if (isStore && NumStores < 4 && !MI->memoperands_empty() &&
@@ -410,7 +415,7 @@ void PPCHazardRecognizer970::EmitInstruction(SUnit *SU) {
   }
 
   if (InstrType == PPCII::PPC970_BRU || isSingle)
-    NumIssued = 4;  // Terminate a d-group.
+    NumIssued = 4; // Terminate a d-group.
   ++NumIssued;
 
   // If this instruction is cracked into two ops by the decoder, remember that
@@ -429,7 +434,4 @@ void PPCHazardRecognizer970::AdvanceCycle() {
     EndDispatchGroup();
 }
 
-void PPCHazardRecognizer970::Reset() {
-  EndDispatchGroup();
-}
-
+void PPCHazardRecognizer970::Reset() { EndDispatchGroup(); }

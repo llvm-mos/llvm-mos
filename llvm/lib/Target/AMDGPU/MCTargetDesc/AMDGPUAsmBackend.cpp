@@ -51,7 +51,7 @@ public:
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 };
 
-} //End anonymous namespace
+} // End anonymous namespace
 
 void AMDGPUAsmBackend::relaxInstruction(MCInst &Inst,
                                         const MCSubtargetInfo &STI) const {
@@ -67,7 +67,7 @@ bool AMDGPUAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
   // if the branch target has an offset of x3f this needs to be relaxed to
   // add a s_nop 0 immediately after branch to effectively increment offset
   // for hardware workaround in gfx1010
-  return (((int64_t(Value)/4)-1) == 0x3f);
+  return (((int64_t(Value) / 4) - 1) == 0x3f);
 }
 
 bool AMDGPUAsmBackend::mayNeedRelaxation(unsigned Opcode,
@@ -187,9 +187,7 @@ MCFixupKindInfo AMDGPUAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-unsigned AMDGPUAsmBackend::getMinimumNopSize() const {
-  return 4;
-}
+unsigned AMDGPUAsmBackend::getMinimumNopSize() const { return 4; }
 
 bool AMDGPUAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                     const MCSubtargetInfo *STI) const {

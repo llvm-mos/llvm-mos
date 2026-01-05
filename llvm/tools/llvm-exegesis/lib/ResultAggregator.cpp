@@ -13,10 +13,10 @@ namespace exegesis {
 
 class DefaultResultAggregator : public ResultAggregator {
   void AggregateResults(Benchmark &Result,
-                        ArrayRef<Benchmark> OtherResults) const override{};
+                        ArrayRef<Benchmark> OtherResults) const override {};
   void AggregateMeasurement(BenchmarkMeasure &Measurement,
                             const BenchmarkMeasure &NewMeasurement,
-                            const Benchmark &Result) const override{};
+                            const Benchmark &Result) const override {};
 };
 
 class MinimumResultAggregator : public ResultAggregator {

@@ -131,7 +131,7 @@ LLVMDisasmContextRef LLVMCreateDisasm(const char *TT, void *DisInfo,
 //
 // LLVMDisasmDispose() disposes of the disassembler specified by the context.
 //
-void LLVMDisasmDispose(LLVMDisasmContextRef DCR){
+void LLVMDisasmDispose(LLVMDisasmContextRef DCR) {
   LLVMDisasmContext *DC = static_cast<LLVMDisasmContext *>(DCR);
   delete DC;
 }
@@ -155,7 +155,7 @@ static void emitComments(LLVMDisasmContext *DC,
     size_t Position = Comments.find('\n');
     FormattedOS << CommentBegin << ' ' << Comments.substr(0, Position);
     // Move after the newline character.
-    Comments = Comments.substr(Position+1);
+    Comments = Comments.substr(Position + 1);
     IsFirst = false;
   }
   FormattedOS.flush();
@@ -193,7 +193,7 @@ static void emitLatency(LLVMDisasmContext *DC, const MCInst &Inst) {
 //
 size_t LLVMDisasmInstruction(LLVMDisasmContextRef DCR, uint8_t *Bytes,
                              uint64_t BytesSize, uint64_t PC, char *OutString,
-                             size_t OutStringSize){
+                             size_t OutStringSize) {
   LLVMDisasmContext *DC = static_cast<LLVMDisasmContext *>(DCR);
   // Wrap the pointer to the Bytes, BytesSize and PC in a MemoryObject.
   ArrayRef<uint8_t> Data(Bytes, BytesSize);
@@ -233,7 +233,7 @@ size_t LLVMDisasmInstruction(LLVMDisasmContextRef DCR, uint8_t *Bytes,
     emitComments(DC, FormattedOS);
 
     assert(OutStringSize != 0 && "Output buffer cannot be zero size");
-    size_t OutputSize = std::min(OutStringSize-1, InsnStr.size());
+    size_t OutputSize = std::min(OutStringSize - 1, InsnStr.size());
     std::memcpy(OutString, InsnStr.data(), OutputSize);
     OutString[OutputSize] = '\0'; // Terminate string.
 
@@ -247,36 +247,36 @@ size_t LLVMDisasmInstruction(LLVMDisasmContextRef DCR, uint8_t *Bytes,
 // LLVMSetDisasmOptions() sets the disassembler's options.  It returns 1 if it
 // can set all the Options and 0 otherwise.
 //
-int LLVMSetDisasmOptions(LLVMDisasmContextRef DCR, uint64_t Options){
-  if (Options & LLVMDisassembler_Option_UseMarkup){
-      LLVMDisasmContext *DC = static_cast<LLVMDisasmContext *>(DCR);
-      MCInstPrinter *IP = DC->getIP();
-      IP->setUseMarkup(true);
-      DC->addOptions(LLVMDisassembler_Option_UseMarkup);
-      Options &= ~LLVMDisassembler_Option_UseMarkup;
+int LLVMSetDisasmOptions(LLVMDisasmContextRef DCR, uint64_t Options) {
+  if (Options & LLVMDisassembler_Option_UseMarkup) {
+    LLVMDisasmContext *DC = static_cast<LLVMDisasmContext *>(DCR);
+    MCInstPrinter *IP = DC->getIP();
+    IP->setUseMarkup(true);
+    DC->addOptions(LLVMDisassembler_Option_UseMarkup);
+    Options &= ~LLVMDisassembler_Option_UseMarkup;
   }
-  if (Options & LLVMDisassembler_Option_PrintImmHex){
-      LLVMDisasmContext *DC = static_cast<LLVMDisasmContext *>(DCR);
-      MCInstPrinter *IP = DC->getIP();
-      IP->setPrintImmHex(true);
-      DC->addOptions(LLVMDisassembler_Option_PrintImmHex);
-      Options &= ~LLVMDisassembler_Option_PrintImmHex;
+  if (Options & LLVMDisassembler_Option_PrintImmHex) {
+    LLVMDisasmContext *DC = static_cast<LLVMDisasmContext *>(DCR);
+    MCInstPrinter *IP = DC->getIP();
+    IP->setPrintImmHex(true);
+    DC->addOptions(LLVMDisassembler_Option_PrintImmHex);
+    Options &= ~LLVMDisassembler_Option_PrintImmHex;
   }
-  if (Options & LLVMDisassembler_Option_AsmPrinterVariant){
-      LLVMDisasmContext *DC = static_cast<LLVMDisasmContext *>(DCR);
-      // Try to set up the new instruction printer.
-      const MCAsmInfo *MAI = DC->getAsmInfo();
-      const MCInstrInfo *MII = DC->getInstrInfo();
-      const MCRegisterInfo *MRI = DC->getRegisterInfo();
-      int AsmPrinterVariant = MAI->getAssemblerDialect();
-      AsmPrinterVariant = AsmPrinterVariant == 0 ? 1 : 0;
-      MCInstPrinter *IP = DC->getTarget()->createMCInstPrinter(
-          Triple(DC->getTripleName()), AsmPrinterVariant, *MAI, *MII, *MRI);
-      if (IP) {
-        DC->setIP(IP);
-        DC->addOptions(LLVMDisassembler_Option_AsmPrinterVariant);
-        Options &= ~LLVMDisassembler_Option_AsmPrinterVariant;
-      }
+  if (Options & LLVMDisassembler_Option_AsmPrinterVariant) {
+    LLVMDisasmContext *DC = static_cast<LLVMDisasmContext *>(DCR);
+    // Try to set up the new instruction printer.
+    const MCAsmInfo *MAI = DC->getAsmInfo();
+    const MCInstrInfo *MII = DC->getInstrInfo();
+    const MCRegisterInfo *MRI = DC->getRegisterInfo();
+    int AsmPrinterVariant = MAI->getAssemblerDialect();
+    AsmPrinterVariant = AsmPrinterVariant == 0 ? 1 : 0;
+    MCInstPrinter *IP = DC->getTarget()->createMCInstPrinter(
+        Triple(DC->getTripleName()), AsmPrinterVariant, *MAI, *MII, *MRI);
+    if (IP) {
+      DC->setIP(IP);
+      DC->addOptions(LLVMDisassembler_Option_AsmPrinterVariant);
+      Options &= ~LLVMDisassembler_Option_AsmPrinterVariant;
+    }
   }
   if (Options & LLVMDisassembler_Option_SetInstrComments) {
     LLVMDisasmContext *DC = static_cast<LLVMDisasmContext *>(DCR);

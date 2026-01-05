@@ -41,7 +41,7 @@ LLVM_ABI bool discoverTypeIndicesInSymbol(ArrayRef<uint8_t> RecordData,
                                           SmallVectorImpl<TiReference> &Refs);
 LLVM_ABI bool discoverTypeIndicesInSymbol(ArrayRef<uint8_t> RecordData,
                                           SmallVectorImpl<TypeIndex> &Indices);
-}
-}
+} // namespace codeview
+} // namespace llvm
 
 #endif

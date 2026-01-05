@@ -164,8 +164,7 @@ static bool CC_X86_64_VectorCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
       // At that case for each argument a shadow stack of 8 bytes is allocated.
       const TargetRegisterInfo *TRI =
           State.getMachineFunction().getSubtarget().getRegisterInfo();
-      if (TRI->regsOverlap(Reg, X86::XMM4) ||
-          TRI->regsOverlap(Reg, X86::XMM5))
+      if (TRI->regsOverlap(Reg, X86::XMM4) || TRI->regsOverlap(Reg, X86::XMM5))
         State.AllocateStack(8, Align(8));
 
       if (!ArgFlags.isHva()) {

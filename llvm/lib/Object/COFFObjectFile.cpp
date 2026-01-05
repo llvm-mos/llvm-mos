@@ -37,10 +37,10 @@
 using namespace llvm;
 using namespace object;
 
+using support::little16_t;
 using support::ulittle16_t;
 using support::ulittle32_t;
 using support::ulittle64_t;
-using support::little16_t;
 
 // Returns false if size is greater than the buffer size. And sets ec.
 static bool checkSize(MemoryBufferRef M, std::error_code &EC, uint64_t Size) {
@@ -116,7 +116,7 @@ const coff_symbol_type *COFFObjectFile::toSymb(DataRefImpl Ref) const {
 }
 
 const coff_section *COFFObjectFile::toSec(DataRefImpl Ref) const {
-  const coff_section *Addr = reinterpret_cast<const coff_section*>(Ref.p);
+  const coff_section *Addr = reinterpret_cast<const coff_section *>(Ref.p);
 
 #ifndef NDEBUG
   // Verify that the section points to a valid entry in the section table.
@@ -593,8 +593,8 @@ Error COFFObjectFile::initImportTablePtr() {
     return E;
   if (Error E = checkOffset(Data, IntPtr, DataEntry->Size))
     return E;
-  ImportDirectory = reinterpret_cast<
-      const coff_import_directory_table_entry *>(IntPtr);
+  ImportDirectory =
+      reinterpret_cast<const coff_import_directory_table_entry *>(IntPtr);
   return Error::success();
 }
 
@@ -608,8 +608,8 @@ Error COFFObjectFile::initDelayImportTablePtr() {
     return Error::success();
 
   uint32_t RVA = DataEntry->RelativeVirtualAddress;
-  NumberOfDelayImportDirectory = DataEntry->Size /
-      sizeof(delay_import_directory_table_entry) - 1;
+  NumberOfDelayImportDirectory =
+      DataEntry->Size / sizeof(delay_import_directory_table_entry) - 1;
 
   uintptr_t IntPtr = 0;
   if (Error E = getRvaPtr(RVA, IntPtr, "delay import table"))
@@ -617,8 +617,8 @@ Error COFFObjectFile::initDelayImportTablePtr() {
   if (Error E = checkOffset(Data, IntPtr, DataEntry->Size))
     return E;
 
-  DelayImportDirectory = reinterpret_cast<
-      const delay_import_directory_table_entry *>(IntPtr);
+  DelayImportDirectory =
+      reinterpret_cast<const delay_import_directory_table_entry *>(IntPtr);
   return Error::success();
 }
 
@@ -661,8 +661,8 @@ Error COFFObjectFile::initBaseRelocPtr() {
   if (Error E = checkOffset(Data, IntPtr, DataEntry->Size))
     return E;
 
-  BaseRelocHeader = reinterpret_cast<const coff_base_reloc_block_header *>(
-      IntPtr);
+  BaseRelocHeader =
+      reinterpret_cast<const coff_base_reloc_block_header *>(IntPtr);
   BaseRelocEnd = reinterpret_cast<coff_base_reloc_block_header *>(
       IntPtr + DataEntry->Size);
   // FIXME: Verify the section containing BaseRelocHeader has at least
@@ -693,8 +693,8 @@ Error COFFObjectFile::initDebugDirectoryPtr() {
     return E;
 
   DebugDirectoryBegin = reinterpret_cast<const debug_directory *>(IntPtr);
-  DebugDirectoryEnd = reinterpret_cast<const debug_directory *>(
-      IntPtr + DataEntry->Size);
+  DebugDirectoryEnd =
+      reinterpret_cast<const debug_directory *>(IntPtr + DataEntry->Size);
   // FIXME: Verify the section containing DebugDirectoryBegin has at least
   // DataEntry->Size bytes after DataEntry->RelativeVirtualAddress.
   return Error::success();
@@ -1049,8 +1049,7 @@ import_directory_iterator COFFObjectFile::import_directory_begin() const {
 }
 
 import_directory_iterator COFFObjectFile::import_directory_end() const {
-  return import_directory_iterator(
-      ImportDirectoryEntryRef(nullptr, -1, this));
+  return import_directory_iterator(ImportDirectoryEntryRef(nullptr, -1, this));
 }
 
 delay_import_directory_iterator
@@ -1061,9 +1060,8 @@ COFFObjectFile::delay_import_directory_begin() const {
 
 delay_import_directory_iterator
 COFFObjectFile::delay_import_directory_end() const {
-  return delay_import_directory_iterator(
-      DelayImportDirectoryEntryRef(
-          DelayImportDirectory, NumberOfDelayImportDirectory, this));
+  return delay_import_directory_iterator(DelayImportDirectoryEntryRef(
+      DelayImportDirectory, NumberOfDelayImportDirectory, this));
 }
 
 export_directory_iterator COFFObjectFile::export_directory_begin() const {
@@ -1119,7 +1117,7 @@ uint8_t COFFObjectFile::getBytesInAddress() const {
 }
 
 StringRef COFFObjectFile::getFileFormatName() const {
-  switch(getMachine()) {
+  switch (getMachine()) {
   case COFF::IMAGE_FILE_MACHINE_I386:
     return "COFF-i386";
   case COFF::IMAGE_FILE_MACHINE_AMD64:
@@ -1224,8 +1222,7 @@ COFFObjectFile::getSymbolName(const coff_symbol_generic *Symbol) const {
   return StringRef(Symbol->Name.ShortName, COFF::NameSize);
 }
 
-ArrayRef<uint8_t>
-COFFObjectFile::getSymbolAuxData(COFFSymbolRef Symbol) const {
+ArrayRef<uint8_t> COFFObjectFile::getSymbolAuxData(COFFSymbolRef Symbol) const {
   const uint8_t *Aux = nullptr;
 
   size_t SymbolSize = getSymbolTableEntrySize();
@@ -1314,12 +1311,12 @@ Error COFFObjectFile::getSectionContents(const coff_section *Sec,
 }
 
 const coff_relocation *COFFObjectFile::toRel(DataRefImpl Rel) const {
-  return reinterpret_cast<const coff_relocation*>(Rel.p);
+  return reinterpret_cast<const coff_relocation *>(Rel.p);
 }
 
 void COFFObjectFile::moveRelocationNext(DataRefImpl &Rel) const {
   Rel.p = reinterpret_cast<uintptr_t>(
-            reinterpret_cast<const coff_relocation*>(Rel.p) + 1);
+      reinterpret_cast<const coff_relocation *>(Rel.p) + 1);
 }
 
 uint64_t COFFObjectFile::getRelocationOffset(DataRefImpl Rel) const {
@@ -1342,7 +1339,7 @@ symbol_iterator COFFObjectFile::getRelocationSymbol(DataRefImpl Rel) const {
 }
 
 uint64_t COFFObjectFile::getRelocationType(DataRefImpl Rel) const {
-  const coff_relocation* R = toRel(Rel);
+  const coff_relocation *R = toRel(Rel);
   return R->Type;
 }
 
@@ -1382,87 +1379,87 @@ StringRef COFFObjectFile::getRelocationTypeName(uint16_t Type) const {
   switch (getArch()) {
   case Triple::x86_64:
     switch (Type) {
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ABSOLUTE);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ADDR64);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ADDR32);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ADDR32NB);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_REL32);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_REL32_1);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_REL32_2);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_REL32_3);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_REL32_4);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_REL32_5);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_SECTION);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_SECREL);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_SECREL7);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_TOKEN);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_SREL32);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_PAIR);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_SSPAN32);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ABSOLUTE);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ADDR64);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ADDR32);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ADDR32NB);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_REL32);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_REL32_1);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_REL32_2);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_REL32_3);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_REL32_4);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_REL32_5);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_SECTION);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_SECREL);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_SECREL7);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_TOKEN);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_SREL32);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_PAIR);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_SSPAN32);
     default:
       return "Unknown";
     }
     break;
   case Triple::thumb:
     switch (Type) {
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_ABSOLUTE);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_ADDR32);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_ADDR32NB);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BRANCH24);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BRANCH11);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_TOKEN);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BLX24);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BLX11);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_REL32);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_SECTION);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_SECREL);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_MOV32A);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_MOV32T);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BRANCH20T);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BRANCH24T);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BLX23T);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_PAIR);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_ABSOLUTE);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_ADDR32);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_ADDR32NB);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BRANCH24);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BRANCH11);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_TOKEN);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BLX24);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BLX11);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_REL32);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_SECTION);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_SECREL);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_MOV32A);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_MOV32T);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BRANCH20T);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BRANCH24T);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BLX23T);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_PAIR);
     default:
       return "Unknown";
     }
     break;
   case Triple::aarch64:
     switch (Type) {
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ABSOLUTE);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32NB);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_BRANCH26);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_PAGEBASE_REL21);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_REL21);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_PAGEOFFSET_12A);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_PAGEOFFSET_12L);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECREL);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECREL_LOW12A);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECREL_HIGH12A);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECREL_LOW12L);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_TOKEN);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECTION);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR64);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_BRANCH19);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_BRANCH14);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_REL32);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ABSOLUTE);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32NB);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_BRANCH26);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_PAGEBASE_REL21);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_REL21);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_PAGEOFFSET_12A);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_PAGEOFFSET_12L);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECREL);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECREL_LOW12A);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECREL_HIGH12A);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECREL_LOW12L);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_TOKEN);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_SECTION);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR64);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_BRANCH19);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_BRANCH14);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_REL32);
     default:
       return "Unknown";
     }
     break;
   case Triple::x86:
     switch (Type) {
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_ABSOLUTE);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_DIR16);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_REL16);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_DIR32);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_DIR32NB);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_SEG12);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_SECTION);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_SECREL);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_TOKEN);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_SECREL7);
-    LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_REL32);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_ABSOLUTE);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_DIR16);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_REL16);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_DIR32);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_DIR32NB);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_SEG12);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_SECTION);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_SECREL);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_TOKEN);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_SECREL7);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_REL32);
     default:
       return "Unknown";
     }
@@ -1502,9 +1499,7 @@ void COFFObjectFile::getRelocationTypeName(
   Result.append(Res.begin(), Res.end());
 }
 
-bool COFFObjectFile::isRelocatableObject() const {
-  return !DataDirectory;
-}
+bool COFFObjectFile::isRelocatableObject() const { return !DataDirectory; }
 
 StringRef COFFObjectFile::mapDebugSectionName(StringRef Name) const {
   return StringSwitch<StringRef>(Name)
@@ -1560,8 +1555,8 @@ std::unique_ptr<MemoryBuffer> COFFObjectFile::getHybridObjectView() const {
   return HybridView;
 }
 
-bool ImportDirectoryEntryRef::
-operator==(const ImportDirectoryEntryRef &Other) const {
+bool ImportDirectoryEntryRef::operator==(
+    const ImportDirectoryEntryRef &Other) const {
   return ImportTable == Other.ImportTable && Index == Other.Index;
 }
 
@@ -1579,8 +1574,8 @@ Error ImportDirectoryEntryRef::getImportTableEntry(
 }
 
 static imported_symbol_iterator
-makeImportedSymbolIterator(const COFFObjectFile *Object,
-                           uintptr_t Ptr, int Index) {
+makeImportedSymbolIterator(const COFFObjectFile *Object, uintptr_t Ptr,
+                           int Index) {
   if (Object->getBytesInAddress() == 4) {
     auto *P = reinterpret_cast<const import_lookup_table_entry32 *>(Ptr);
     return imported_symbol_iterator(ImportedSymbolRef(P, Index, Object));
@@ -1622,8 +1617,7 @@ ImportDirectoryEntryRef::imported_symbol_begin() const {
                              OwningObject);
 }
 
-imported_symbol_iterator
-ImportDirectoryEntryRef::imported_symbol_end() const {
+imported_symbol_iterator ImportDirectoryEntryRef::imported_symbol_end() const {
   return importedSymbolEnd(ImportTable[Index].ImportAddressTableRVA,
                            OwningObject);
 }
@@ -1657,8 +1651,7 @@ Error ImportDirectoryEntryRef::getName(StringRef &Result) const {
   return Error::success();
 }
 
-Error
-ImportDirectoryEntryRef::getImportLookupTableRVA(uint32_t  &Result) const {
+Error ImportDirectoryEntryRef::getImportLookupTableRVA(uint32_t &Result) const {
   Result = ImportTable[Index].ImportLookupTableRVA;
   return Error::success();
 }
@@ -1669,25 +1662,21 @@ Error ImportDirectoryEntryRef::getImportAddressTableRVA(
   return Error::success();
 }
 
-bool DelayImportDirectoryEntryRef::
-operator==(const DelayImportDirectoryEntryRef &Other) const {
+bool DelayImportDirectoryEntryRef::operator==(
+    const DelayImportDirectoryEntryRef &Other) const {
   return Table == Other.Table && Index == Other.Index;
 }
 
-void DelayImportDirectoryEntryRef::moveNext() {
-  ++Index;
-}
+void DelayImportDirectoryEntryRef::moveNext() { ++Index; }
 
 imported_symbol_iterator
 DelayImportDirectoryEntryRef::imported_symbol_begin() const {
-  return importedSymbolBegin(Table[Index].DelayImportNameTable,
-                             OwningObject);
+  return importedSymbolBegin(Table[Index].DelayImportNameTable, OwningObject);
 }
 
 imported_symbol_iterator
 DelayImportDirectoryEntryRef::imported_symbol_end() const {
-  return importedSymbolEnd(Table[Index].DelayImportNameTable,
-                           OwningObject);
+  return importedSymbolEnd(Table[Index].DelayImportNameTable, OwningObject);
 }
 
 iterator_range<imported_symbol_iterator>
@@ -1713,7 +1702,7 @@ Error DelayImportDirectoryEntryRef::getDelayImportTable(
 Error DelayImportDirectoryEntryRef::getImportAddress(int AddrIndex,
                                                      uint64_t &Result) const {
   uint32_t RVA = Table[Index].DelayImportAddressTable +
-      AddrIndex * (OwningObject->is64() ? 8 : 4);
+                 AddrIndex * (OwningObject->is64() ? 8 : 4);
   uintptr_t IntPtr = 0;
   if (Error E = OwningObject->getRvaPtr(RVA, IntPtr, "import address"))
     return E;
@@ -1724,14 +1713,12 @@ Error DelayImportDirectoryEntryRef::getImportAddress(int AddrIndex,
   return Error::success();
 }
 
-bool ExportDirectoryEntryRef::
-operator==(const ExportDirectoryEntryRef &Other) const {
+bool ExportDirectoryEntryRef::operator==(
+    const ExportDirectoryEntryRef &Other) const {
   return ExportTable == Other.ExportTable && Index == Other.Index;
 }
 
-void ExportDirectoryEntryRef::moveNext() {
-  ++Index;
-}
+void ExportDirectoryEntryRef::moveNext() { ++Index; }
 
 // Returns the name of the current export symbol. If the symbol is exported only
 // by ordinal, the empty string is set as a result.
@@ -1770,8 +1757,7 @@ Error ExportDirectoryEntryRef::getExportRVA(uint32_t &Result) const {
 
 // Returns the name of the current export symbol. If the symbol is exported only
 // by ordinal, the empty string is set as a result.
-Error
-ExportDirectoryEntryRef::getSymbolName(StringRef &Result) const {
+Error ExportDirectoryEntryRef::getSymbolName(StringRef &Result) const {
   uintptr_t IntPtr = 0;
   if (Error EC = OwningObject->getRvaPtr(ExportTable->OrdinalTableRVA, IntPtr,
                                          "export ordinal table"))
@@ -1780,8 +1766,8 @@ ExportDirectoryEntryRef::getSymbolName(StringRef &Result) const {
 
   uint32_t NumEntries = ExportTable->NumberOfNamePointers;
   int Offset = 0;
-  for (const ulittle16_t *I = Start, *E = Start + NumEntries;
-       I < E; ++I, ++Offset) {
+  for (const ulittle16_t *I = Start, *E = Start + NumEntries; I < E;
+       ++I, ++Offset) {
     if (*I != Index)
       continue;
     if (Error EC = OwningObject->getRvaPtr(ExportTable->NamePointerRVA, IntPtr,
@@ -1824,15 +1810,12 @@ Error ExportDirectoryEntryRef::getForwardTo(StringRef &Result) const {
   return Error::success();
 }
 
-bool ImportedSymbolRef::
-operator==(const ImportedSymbolRef &Other) const {
-  return Entry32 == Other.Entry32 && Entry64 == Other.Entry64
-      && Index == Other.Index;
+bool ImportedSymbolRef::operator==(const ImportedSymbolRef &Other) const {
+  return Entry32 == Other.Entry32 && Entry64 == Other.Entry64 &&
+         Index == Other.Index;
 }
 
-void ImportedSymbolRef::moveNext() {
-  ++Index;
-}
+void ImportedSymbolRef::moveNext() { ++Index; }
 
 Error ImportedSymbolRef::getSymbolName(StringRef &Result) const {
   uint32_t RVA;
@@ -1904,8 +1887,8 @@ bool BaseRelocRef::operator==(const BaseRelocRef &Other) const {
 void BaseRelocRef::moveNext() {
   // Header->BlockSize is the size of the current block, including the
   // size of the header itself.
-  uint32_t Size = sizeof(*Header) +
-      sizeof(coff_base_reloc_block_entry) * (Index + 1);
+  uint32_t Size =
+      sizeof(*Header) + sizeof(coff_base_reloc_block_entry) * (Index + 1);
   if (Size == Header->BlockSize) {
     // .reloc contains a list of base relocation blocks. Each block
     // consists of the header followed by entries. The header contains
@@ -1920,13 +1903,15 @@ void BaseRelocRef::moveNext() {
 }
 
 Error BaseRelocRef::getType(uint8_t &Type) const {
-  auto *Entry = reinterpret_cast<const coff_base_reloc_block_entry *>(Header + 1);
+  auto *Entry =
+      reinterpret_cast<const coff_base_reloc_block_entry *>(Header + 1);
   Type = Entry[Index].getType();
   return Error::success();
 }
 
 Error BaseRelocRef::getRVA(uint32_t &Result) const {
-  auto *Entry = reinterpret_cast<const coff_base_reloc_block_entry *>(Header + 1);
+  auto *Entry =
+      reinterpret_cast<const coff_base_reloc_block_entry *>(Header + 1);
   Result = Header->PageRVA + Entry[Index].getOffset();
   return Error::success();
 }

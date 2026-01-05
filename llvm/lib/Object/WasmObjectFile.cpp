@@ -39,9 +39,15 @@ void WasmSymbol::print(raw_ostream &Out) const {
       << ", Kind=" << toString(wasm::WasmSymbolType(Info.Kind)) << ", Flags=0x"
       << Twine::utohexstr(Info.Flags) << " [";
   switch (getBinding()) {
-    case wasm::WASM_SYMBOL_BINDING_GLOBAL: Out << "global"; break;
-    case wasm::WASM_SYMBOL_BINDING_LOCAL: Out << "local"; break;
-    case wasm::WASM_SYMBOL_BINDING_WEAK: Out << "weak"; break;
+  case wasm::WASM_SYMBOL_BINDING_GLOBAL:
+    Out << "global";
+    break;
+  case wasm::WASM_SYMBOL_BINDING_LOCAL:
+    Out << "local";
+    break;
+  case wasm::WASM_SYMBOL_BINDING_WEAK:
+    Out << "weak";
+    break;
   }
   if (isHidden()) {
     Out << ", hidden";
@@ -592,8 +598,8 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
             return make_error<GenericBinaryError>(
                 "segment named more than once", object_error::parse_failed);
           if (Index > DataSegments.size())
-            return make_error<GenericBinaryError>("invalid data segment name entry",
-                                                  object_error::parse_failed);
+            return make_error<GenericBinaryError>(
+                "invalid data segment name entry", object_error::parse_failed);
           nameType = wasm::NameType::DATA_SEGMENT;
           Info.Kind = wasm::WASM_SYMBOL_TYPE_DATA;
           Info.Flags |= wasm::WASM_SYMBOL_BINDING_LOCAL;
@@ -1612,7 +1618,7 @@ Error WasmObjectFile::parseCodeSection(ReadContext &Ctx) {
   }
 
   for (uint32_t i = 0; i < FunctionCount; i++) {
-    wasm::WasmFunction& Function = Functions[i];
+    wasm::WasmFunction &Function = Functions[i];
     const uint8_t *FunctionStart = Ctx.Ptr;
     uint32_t Size = readVaruint32(Ctx);
     const uint8_t *FunctionEnd = Ctx.Ptr + Size;

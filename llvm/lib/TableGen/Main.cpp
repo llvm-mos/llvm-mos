@@ -39,32 +39,32 @@
 #include <utility>
 using namespace llvm;
 
-static cl::opt<std::string>
-OutputFilename("o", cl::desc("Output filename"), cl::value_desc("filename"),
-               cl::init("-"));
+static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
+                                           cl::value_desc("filename"),
+                                           cl::init("-"));
+
+static cl::opt<std::string> DependFilename("d", cl::desc("Dependency filename"),
+                                           cl::value_desc("filename"),
+                                           cl::init(""));
 
 static cl::opt<std::string>
-DependFilename("d",
-               cl::desc("Dependency filename"),
-               cl::value_desc("filename"),
-               cl::init(""));
+    InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
 
-static cl::opt<std::string>
-InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
+static cl::list<std::string> IncludeDirs("I",
+                                         cl::desc("Directory of include files"),
+                                         cl::value_desc("directory"),
+                                         cl::Prefix);
 
 static cl::list<std::string>
-IncludeDirs("I", cl::desc("Directory of include files"),
-            cl::value_desc("directory"), cl::Prefix);
-
-static cl::list<std::string>
-MacroNames("D", cl::desc("Name of the macro to be defined"),
-            cl::value_desc("macro name"), cl::Prefix);
+    MacroNames("D", cl::desc("Name of the macro to be defined"),
+               cl::value_desc("macro name"), cl::Prefix);
 
 static cl::opt<bool>
-WriteIfChanged("write-if-changed", cl::desc("Only write output if it changed"));
+    WriteIfChanged("write-if-changed",
+                   cl::desc("Only write output if it changed"));
 
-static cl::opt<bool>
-TimePhases("time-phases", cl::desc("Time phases of parser and backend"));
+static cl::opt<bool> TimePhases("time-phases",
+                                cl::desc("Time phases of parser and backend"));
 
 cl::opt<bool> llvm::EmitLongStrLiterals(
     "long-string-literals",

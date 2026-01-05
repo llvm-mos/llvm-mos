@@ -435,7 +435,7 @@ void MachODumper::dumpBindOpcodes(
       BindOp.ULEBExtraData.push_back(ULEB);
       OpCode += Count;
       [[fallthrough]];
-    // Intentionally no break here -- this opcode has two ULEB values
+      // Intentionally no break here -- this opcode has two ULEB values
 
     case MachO::BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB:
     case MachO::BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB:
@@ -528,7 +528,7 @@ void MachODumper::dumpBindOpcodes(
  * This graph represents the trie for the exports "__mh_execute_header" and
  * "_main". In the graph only the "_main" and "__mh_execute_header" nodes are
  * terminal.
-*/
+ */
 
 const uint8_t *processExportNode(const uint8_t *Start, const uint8_t *CurrPtr,
                                  const uint8_t *const End,

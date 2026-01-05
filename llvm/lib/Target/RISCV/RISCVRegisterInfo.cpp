@@ -55,8 +55,8 @@ static_assert(RISCV::V1 == RISCV::V0 + 1, "Register list not consecutive");
 static_assert(RISCV::V31 == RISCV::V0 + 31, "Register list not consecutive");
 
 RISCVRegisterInfo::RISCVRegisterInfo(unsigned HwMode)
-    : RISCVGenRegisterInfo(RISCV::X1, /*DwarfFlavour*/0, /*EHFlavor*/0,
-                           /*PC*/0, HwMode) {}
+    : RISCVGenRegisterInfo(RISCV::X1, /*DwarfFlavour*/ 0, /*EHFlavor*/ 0,
+                           /*PC*/ 0, HwMode) {}
 
 const MCPhysReg *
 RISCVRegisterInfo::getIPRACSRegs(const MachineFunction *MF) const {
@@ -571,13 +571,15 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       DestReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     adjustReg(*II->getParent(), II, DL, DestReg, FrameReg, Offset,
               MachineInstr::NoFlags, std::nullopt);
-    MI.getOperand(FIOperandNum).ChangeToRegister(DestReg, /*IsDef*/false,
-                                                 /*IsImp*/false,
-                                                 /*IsKill*/true);
+    MI.getOperand(FIOperandNum)
+        .ChangeToRegister(DestReg, /*IsDef*/ false,
+                          /*IsImp*/ false,
+                          /*IsKill*/ true);
   } else {
-    MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, /*IsDef*/false,
-                                                 /*IsImp*/false,
-                                                 /*IsKill*/false);
+    MI.getOperand(FIOperandNum)
+        .ChangeToRegister(FrameReg, /*IsDef*/ false,
+                          /*IsImp*/ false,
+                          /*IsKill*/ false);
   }
 
   // If after materializing the adjustment, we have a pointless ADDI, remove it
@@ -764,7 +766,7 @@ StringRef RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {
 }
 
 const uint32_t *
-RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
+RISCVRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                         CallingConv::ID CC) const {
   auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 

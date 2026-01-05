@@ -21,6 +21,7 @@ class ARMSubtarget;
 
 class Thumb2InstrInfo : public ARMBaseInstrInfo {
   ThumbRegisterInfo RI;
+
 public:
   explicit Thumb2InstrInfo(const ARMSubtarget &STI);
 

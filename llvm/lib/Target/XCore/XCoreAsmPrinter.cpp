@@ -44,56 +44,55 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
-  class XCoreAsmPrinter : public AsmPrinter {
-    XCoreMCInstLower MCInstLowering;
-    XCoreTargetStreamer &getTargetStreamer();
+class XCoreAsmPrinter : public AsmPrinter {
+  XCoreMCInstLower MCInstLowering;
+  XCoreTargetStreamer &getTargetStreamer();
 
-  public:
-    static char ID;
+public:
+  static char ID;
 
-    explicit XCoreAsmPrinter(TargetMachine &TM,
-                             std::unique_ptr<MCStreamer> Streamer)
-        : AsmPrinter(TM, std::move(Streamer), ID), MCInstLowering(*this) {}
+  explicit XCoreAsmPrinter(TargetMachine &TM,
+                           std::unique_ptr<MCStreamer> Streamer)
+      : AsmPrinter(TM, std::move(Streamer), ID), MCInstLowering(*this) {}
 
-    StringRef getPassName() const override { return "XCore Assembly Printer"; }
+  StringRef getPassName() const override { return "XCore Assembly Printer"; }
 
-    void printInlineJT(const MachineInstr *MI, int opNum, raw_ostream &O,
-                       const std::string &directive = ".jmptable");
-    void printInlineJT32(const MachineInstr *MI, int opNum, raw_ostream &O) {
-      printInlineJT(MI, opNum, O, ".jmptable32");
-    }
-    void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
-    bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                         const char *ExtraCode, raw_ostream &O) override;
-    bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
-                               const char *ExtraCode, raw_ostream &O) override;
+  void printInlineJT(const MachineInstr *MI, int opNum, raw_ostream &O,
+                     const std::string &directive = ".jmptable");
+  void printInlineJT32(const MachineInstr *MI, int opNum, raw_ostream &O) {
+    printInlineJT(MI, opNum, O, ".jmptable32");
+  }
+  void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
+  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                       const char *ExtraCode, raw_ostream &O) override;
+  bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
+                             const char *ExtraCode, raw_ostream &O) override;
 
-    void emitArrayBound(MCSymbol *Sym, const GlobalVariable *GV);
-    void emitGlobalVariable(const GlobalVariable *GV) override;
+  void emitArrayBound(MCSymbol *Sym, const GlobalVariable *GV);
+  void emitGlobalVariable(const GlobalVariable *GV) override;
 
-    void emitFunctionEntryLabel() override;
-    void emitInstruction(const MachineInstr *MI) override;
-    void emitFunctionBodyStart() override;
-    void emitFunctionBodyEnd() override;
-  };
+  void emitFunctionEntryLabel() override;
+  void emitInstruction(const MachineInstr *MI) override;
+  void emitFunctionBodyStart() override;
+  void emitFunctionBodyEnd() override;
+};
 } // end of anonymous namespace
 
 XCoreTargetStreamer &XCoreAsmPrinter::getTargetStreamer() {
-  return static_cast<XCoreTargetStreamer&>(*OutStreamer->getTargetStreamer());
+  return static_cast<XCoreTargetStreamer &>(*OutStreamer->getTargetStreamer());
 }
 
 void XCoreAsmPrinter::emitArrayBound(MCSymbol *Sym, const GlobalVariable *GV) {
-  assert( ( GV->hasExternalLinkage() || GV->hasWeakLinkage() ||
-            GV->hasLinkOnceLinkage() || GV->hasCommonLinkage() ) &&
-          "Unexpected linkage");
+  assert((GV->hasExternalLinkage() || GV->hasWeakLinkage() ||
+          GV->hasLinkOnceLinkage() || GV->hasCommonLinkage()) &&
+         "Unexpected linkage");
   if (ArrayType *ATy = dyn_cast<ArrayType>(GV->getValueType())) {
 
     MCSymbol *SymGlob = OutContext.getOrCreateSymbol(
-                          Twine(Sym->getName() + StringRef(".globound")));
+        Twine(Sym->getName() + StringRef(".globound")));
     OutStreamer->emitSymbolAttribute(SymGlob, MCSA_Global);
-    OutStreamer->emitAssignment(SymGlob,
-                                MCConstantExpr::create(ATy->getNumElements(),
-                                                       OutContext));
+    OutStreamer->emitAssignment(
+        SymGlob, MCConstantExpr::create(ATy->getNumElements(), OutContext));
     if (GV->hasWeakLinkage() || GV->hasLinkOnceLinkage() ||
         GV->hasCommonLinkage()) {
       OutStreamer->emitSymbolAttribute(SymGlob, MCSA_Weak);
@@ -178,14 +177,14 @@ void XCoreAsmPrinter::emitFunctionEntryLabel() {
   OutStreamer->emitLabel(CurrentFnSym);
 }
 
-void XCoreAsmPrinter::
-printInlineJT(const MachineInstr *MI, int opNum, raw_ostream &O,
-              const std::string &directive) {
+void XCoreAsmPrinter::printInlineJT(const MachineInstr *MI, int opNum,
+                                    raw_ostream &O,
+                                    const std::string &directive) {
   unsigned JTI = MI->getOperand(opNum).getIndex();
   const MachineFunction *MF = MI->getParent()->getParent();
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
-  const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
+  const std::vector<MachineBasicBlock *> &JTBBs = JT[JTI].MBBs;
   O << "\t" << directive << " ";
   for (unsigned i = 0, e = JTBBs.size(); i != e; ++i) {
     MachineBasicBlock *MBB = JTBBs[i];

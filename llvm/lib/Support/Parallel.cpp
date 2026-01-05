@@ -242,11 +242,12 @@ size_t getThreadCount() {
 TaskGroup::TaskGroup()
 #if LLVM_ENABLE_THREADS
     : Parallel((parallel::strategy.ThreadsRequested != 1) &&
-               (threadIndex == UINT_MAX)) {}
+               (threadIndex == UINT_MAX)){}
 #else
-    : Parallel(false) {}
+    : Parallel(false) {
+}
 #endif
-TaskGroup::~TaskGroup() {
+      TaskGroup::~TaskGroup() {
   // We must ensure that all the workloads have finished before decrementing the
   // instances count.
   L.sync();

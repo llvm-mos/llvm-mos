@@ -119,8 +119,7 @@ void MissingFrameInferrer::initialize(
       };
 
   LLVM_DEBUG(dbgs() << "============================\n ";
-             dbgs() << "Call targets:\n";
-             PrintCallTargets(CallEdges, false);
+             dbgs() << "Call targets:\n"; PrintCallTargets(CallEdges, false);
              dbgs() << "\nTail call targets:\n";
              PrintCallTargets(CallEdges, true);
              dbgs() << "============================\n";);
@@ -256,8 +255,7 @@ bool MissingFrameInferrer::inferMissingFrames(
   CurSearchingDepth = 0;
   uint64_t NumPaths = 0;
   for (auto Target : It->second) {
-    NumPaths +=
-        computeUniqueTailCallPath(Target, ToFRange->Func, UniquePath);
+    NumPaths += computeUniqueTailCallPath(Target, ToFRange->Func, UniquePath);
     // Stop analyzing the remaining if we are already seeing more than one
     // reachable paths.
     if (NumPaths > 1)
@@ -283,8 +281,7 @@ bool MissingFrameInferrer::inferMissingFrames(
                         << "\n");
     }
   } else if (NumPaths > 1) {
-    if (ReachableViaMultiPaths.insert({From, ToFRange->StartAddress})
-            .second) {
+    if (ReachableViaMultiPaths.insert({From, ToFRange->StartAddress}).second) {
       TailCallMultiReachable++;
       LLVM_DEBUG(dbgs() << "Multiple paths found from "
                         << format("%8" PRIx64 ":", From) << " to "

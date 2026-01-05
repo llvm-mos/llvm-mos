@@ -139,7 +139,8 @@ private:
 
   // Split out common case for creating the RelocationEntry for when the
   // relocation requires no particular advanced processing.
-  void processSimpleRelocation(unsigned SectionID, uint64_t Offset, unsigned RelType, RelocationValueRef Value);
+  void processSimpleRelocation(unsigned SectionID, uint64_t Offset,
+                               unsigned RelType, RelocationValueRef Value);
 
   // Return matching *LO16 relocation (Mips specific)
   uint32_t getMatchingLoRelocation(uint32_t RelType,
@@ -241,8 +242,7 @@ public:
   void resolveRelocation(const RelocationEntry &RE, uint64_t Value) override;
   Expected<relocation_iterator>
   processRelocationRef(unsigned SectionID, relocation_iterator RelI,
-                       const ObjectFile &Obj,
-                       ObjSectionToIDMap &ObjSectionToID,
+                       const ObjectFile &Obj, ObjSectionToIDMap &ObjSectionToID,
                        StubMap &Stubs) override;
   bool isCompatibleFile(const object::ObjectFile &Obj) const override;
   void registerEHFrames() override;

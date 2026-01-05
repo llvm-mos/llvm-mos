@@ -321,7 +321,7 @@ template <typename... Preds> struct And {
 template <typename Pred, typename... Preds>
 struct And<Pred, Preds...> : And<Preds...> {
   Pred P;
-  And(Pred &&p, Preds &&... preds)
+  And(Pred &&p, Preds &&...preds)
       : And<Preds...>(std::forward<Preds>(preds)...), P(std::forward<Pred>(p)) {
   }
   template <typename MatchSrc>
@@ -340,7 +340,7 @@ template <typename... Preds> struct Or {
 template <typename Pred, typename... Preds>
 struct Or<Pred, Preds...> : Or<Preds...> {
   Pred P;
-  Or(Pred &&p, Preds &&... preds)
+  Or(Pred &&p, Preds &&...preds)
       : Or<Preds...>(std::forward<Preds>(preds)...), P(std::forward<Pred>(p)) {}
   template <typename MatchSrc>
   bool match(const MachineRegisterInfo &MRI, MatchSrc &&src) {
@@ -348,11 +348,11 @@ struct Or<Pred, Preds...> : Or<Preds...> {
   }
 };
 
-template <typename... Preds> And<Preds...> m_all_of(Preds &&... preds) {
+template <typename... Preds> And<Preds...> m_all_of(Preds &&...preds) {
   return And<Preds...>(std::forward<Preds>(preds)...);
 }
 
-template <typename... Preds> Or<Preds...> m_any_of(Preds &&... preds) {
+template <typename... Preds> Or<Preds...> m_any_of(Preds &&...preds) {
   return Or<Preds...>(std::forward<Preds>(preds)...);
 }
 

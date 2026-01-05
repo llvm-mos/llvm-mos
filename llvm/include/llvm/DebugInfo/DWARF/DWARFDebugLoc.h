@@ -149,7 +149,8 @@ class LLVM_ABI ResolverError : public ErrorInfo<ResolverError> {
 public:
   static char ID;
 
-  ResolverError(uint32_t Index, dwarf::LoclistEntries Kind) : Index(Index), Kind(Kind) {}
+  ResolverError(uint32_t Index, dwarf::LoclistEntries Kind)
+      : Index(Index), Kind(Kind) {}
 
   void log(raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override {

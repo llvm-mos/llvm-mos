@@ -27,7 +27,7 @@ class CCValAssign;
 class MachineIRBuilder;
 class Type;
 
-class AArch64CallLowering: public CallLowering {
+class AArch64CallLowering : public CallLowering {
 public:
   AArch64CallLowering(const AArch64TargetLowering &TLI);
 
@@ -60,8 +60,8 @@ public:
   bool isTypeIsValidForThisReturn(EVT Ty) const override;
 
 private:
-  using RegHandler = std::function<void(MachineIRBuilder &, Type *, unsigned,
-                                        CCValAssign &)>;
+  using RegHandler =
+      std::function<void(MachineIRBuilder &, Type *, unsigned, CCValAssign &)>;
 
   using MemHandler =
       std::function<void(MachineIRBuilder &, int, CCValAssign &)>;

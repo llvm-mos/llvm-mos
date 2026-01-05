@@ -60,7 +60,7 @@ public:
 
   StringRef getPassName() const override { return "X86 Partial Reduction"; }
 };
-}
+} // namespace
 
 FunctionPass *llvm::createX86PartialReductionLegacyPass() {
   return new X86PartialReductionLegacy();
@@ -324,7 +324,8 @@ bool X86PartialReduction::trySADReplacement(Instruction *Op) {
     for (unsigned i = 0; i != 1U << (s - 1); ++i) {
       SmallVector<int, 64> ConcatMask(NumConcatElts);
       std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
-      Ops[i] = Builder.CreateShuffleVector(Ops[i*2], Ops[i*2+1], ConcatMask);
+      Ops[i] =
+          Builder.CreateShuffleVector(Ops[i * 2], Ops[i * 2 + 1], ConcatMask);
     }
   }
 

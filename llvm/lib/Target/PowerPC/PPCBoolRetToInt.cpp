@@ -97,8 +97,8 @@ class PPCBoolRetToInt : public FunctionPass {
       // Temporarily set the operands to 0. We'll fix this later in
       // runOnUse.
       Value *Zero = Constant::getNullValue(IntTy);
-      PHINode *Q =
-        PHINode::Create(IntTy, P->getNumIncomingValues(), P->getName(), P->getIterator());
+      PHINode *Q = PHINode::Create(IntTy, P->getNumIncomingValues(),
+                                   P->getName(), P->getIterator());
       for (unsigned I = 0; I < P->getNumOperands(); ++I)
         Q->addIncoming(Zero, P->getIncomingBlock(I));
       return Q;
@@ -134,12 +134,12 @@ class PPCBoolRetToInt : public FunctionPass {
     SmallVector<const PHINode *, 8> ToRemove;
     for (const PHINode *P : Promotable) {
       // Condition 2 and 3
-      auto IsValidUser = [] (const Value *V) -> bool {
+      auto IsValidUser = [](const Value *V) -> bool {
         return isa<ReturnInst>(V) || isa<CallInst>(V) || isa<PHINode>(V);
       };
-      auto IsValidOperand = [] (const Value *V) -> bool {
+      auto IsValidOperand = [](const Value *V) -> bool {
         return isa<Constant>(V) || isa<Argument>(V) || isa<CallInst>(V) ||
-        isa<PHINode>(V);
+               isa<PHINode>(V);
       };
       const auto &Users = P->users();
       const auto &Operands = P->operands();
@@ -149,7 +149,7 @@ class PPCBoolRetToInt : public FunctionPass {
     }
 
     // Iterate to convergence
-    auto IsPromotable = [&Promotable] (const Value *V) -> bool {
+    auto IsPromotable = [&Promotable](const Value *V) -> bool {
       const auto *Phi = dyn_cast<PHINode>(V);
       return !Phi || Promotable.count(Phi);
     };
@@ -173,7 +173,7 @@ class PPCBoolRetToInt : public FunctionPass {
 
   typedef DenseMap<Value *, Value *> B2IMap;
 
- public:
+public:
   static char ID;
 
   PPCBoolRetToInt() : FunctionPass(ID) {}
@@ -198,7 +198,7 @@ class PPCBoolRetToInt : public FunctionPass {
         if (auto *R = dyn_cast<ReturnInst>(&I))
           if (F.getReturnType()->isIntegerTy(1))
             Changed |=
-              runOnUse(R->getOperandUse(0), PromotablePHINodes, Bool2IntMap);
+                runOnUse(R->getOperandUse(0), PromotablePHINodes, Bool2IntMap);
 
         if (auto *CI = dyn_cast<CallInst>(&I))
           for (auto &U : CI->operands())
@@ -211,7 +211,7 @@ class PPCBoolRetToInt : public FunctionPass {
   }
 
   bool runOnUse(Use &U, const PHINodeSet &PromotablePHINodes,
-                       B2IMap &BoolToIntMap) {
+                B2IMap &BoolToIntMap) {
     auto Defs = findAllDefs(U);
 
     // If the values are all Constants or Arguments, don't bother
@@ -222,8 +222,8 @@ class PPCBoolRetToInt : public FunctionPass {
     // CallInst. Potentially, bitwise operations (AND, OR, XOR, NOT) and sign
     // extension could also be handled in the future.
     for (Value *V : Defs)
-      if (!isa<PHINode>(V) && !isa<Constant>(V) &&
-          !isa<Argument>(V) && !isa<CallInst>(V))
+      if (!isa<PHINode>(V) && !isa<Constant>(V) && !isa<Argument>(V) &&
+          !isa<CallInst>(V))
         return false;
 
     for (Value *V : Defs)
@@ -283,4 +283,6 @@ INITIALIZE_PASS(PPCBoolRetToInt, "ppc-bool-ret-to-int",
                 "Convert i1 constants to i32/i64 if they are returned", false,
                 false)
 
-FunctionPass *llvm::createPPCBoolRetToIntPass() { return new PPCBoolRetToInt(); }
+FunctionPass *llvm::createPPCBoolRetToIntPass() {
+  return new PPCBoolRetToInt();
+}

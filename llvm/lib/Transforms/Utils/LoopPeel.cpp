@@ -495,7 +495,7 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
                     m_BasicBlock(Succ1), m_BasicBlock(Succ2))) &&
          ((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
           (Pred == CmpInst::ICMP_NE && Succ1 == L.getHeader())) &&
-         Bound->getType()->isIntegerTy() && 
+         Bound->getType()->isIntegerTy() &&
          SE.isLoopInvariant(SE.getSCEV(Bound), &L) &&
          match(SE.getSCEV(Inc),
                m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(&L)));
@@ -646,7 +646,7 @@ countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE,
         !SE.isKnownPredicate(Pred, IterVal, RightSCEV) &&
         SE.isKnownPredicate(Pred, NextIterVal, RightSCEV)) {
       if (NewPeelCount >= MaxPeelCount)
-        return; // Need to peel one more iteration, but can't. Give up.
+        return;       // Need to peel one more iteration, but can't. Give up.
       ++NewPeelCount; // Great!
     }
 
@@ -739,10 +739,9 @@ static bool violatesLegacyMultiExitLoopCheck(Loop *L) {
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getUniqueNonLatchExitBlocks(ExitBlocks);
   return any_of(ExitBlocks, [](const BasicBlock *EB) {
-      return !EB->getTerminatingDeoptimizeCall();
-    });
+    return !EB->getTerminatingDeoptimizeCall();
+  });
 }
-
 
 // Return the number of iterations we want to peel off.
 void llvm::computePeelCount(Loop *L, unsigned LoopSize,

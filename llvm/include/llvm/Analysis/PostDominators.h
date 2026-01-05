@@ -93,13 +93,13 @@ struct LLVM_ABI PostDominatorTreeWrapperPass : public FunctionPass {
 
   void releaseMemory() override { DT.reset(); }
 
-  void print(raw_ostream &OS, const Module*) const override;
+  void print(raw_ostream &OS, const Module *) const override;
 };
 
 LLVM_ABI FunctionPass *createPostDomTree();
 
-template <> struct GraphTraits<PostDominatorTree*>
-  : public GraphTraits<DomTreeNode*> {
+template <>
+struct GraphTraits<PostDominatorTree *> : public GraphTraits<DomTreeNode *> {
   static NodeRef getEntryNode(PostDominatorTree *DT) {
     return DT->getRootNode();
   }

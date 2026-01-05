@@ -85,9 +85,8 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
     setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i32, LibCall);
   setOperationAction(ISD::MUL, MVT::i64, LibCall);
 
-  for (auto OP :
-       {ISD::SREM, ISD::UREM, ISD::UDIVREM, ISD::SDIVREM,
-        ISD::MULHS, ISD::MULHU, ISD::UMUL_LOHI, ISD::SMUL_LOHI}) {
+  for (auto OP : {ISD::SREM, ISD::UREM, ISD::UDIVREM, ISD::SDIVREM, ISD::MULHS,
+                  ISD::MULHU, ISD::UMUL_LOHI, ISD::SMUL_LOHI}) {
     setOperationAction(OP, MVT::i8, Promote);
     setOperationAction(OP, MVT::i16, Legal);
     setOperationAction(OP, MVT::i32, LibCall);
@@ -99,7 +98,7 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
   }
 
   for (auto OP : {ISD::SMULO, ISD::UMULO}) {
-    setOperationAction(OP, MVT::i8,  Custom);
+    setOperationAction(OP, MVT::i8, Custom);
     setOperationAction(OP, MVT::i16, Custom);
     setOperationAction(OP, MVT::i32, Custom);
   }
@@ -430,13 +429,11 @@ SDValue M68kTargetLowering::EmitTailCallStoreRetAddr(
   return Chain;
 }
 
-SDValue
-M68kTargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
-                                     const SmallVectorImpl<ISD::InputArg> &Ins,
-                                     const SDLoc &DL, SelectionDAG &DAG,
-                                     const CCValAssign &VA,
-                                     MachineFrameInfo &MFI,
-                                     unsigned ArgIdx) const {
+SDValue M68kTargetLowering::LowerMemArgument(
+    SDValue Chain, CallingConv::ID CallConv,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
+    SelectionDAG &DAG, const CCValAssign &VA, MachineFrameInfo &MFI,
+    unsigned ArgIdx) const {
   // Create the nodes corresponding to a load from this parameter slot.
   ISD::ArgFlagsTy Flags = Ins[ArgIdx].Flags;
   EVT ValVT;
@@ -3538,12 +3535,12 @@ static SDValue combineCarryThroughADD(SDValue CCR) {
   if (CCR.getOpcode() == M68kISD::ADD) {
     if (isAllOnesConstant(CCR.getOperand(1))) {
       SDValue Carry = CCR.getOperand(0);
-      while (Carry.getOpcode() == ISD::TRUNCATE ||
-             Carry.getOpcode() == ISD::ZERO_EXTEND ||
-             Carry.getOpcode() == ISD::SIGN_EXTEND ||
-             Carry.getOpcode() == ISD::ANY_EXTEND ||
-             (Carry.getOpcode() == ISD::AND &&
-              isOneConstant(Carry.getOperand(1))))
+      while (
+          Carry.getOpcode() == ISD::TRUNCATE ||
+          Carry.getOpcode() == ISD::ZERO_EXTEND ||
+          Carry.getOpcode() == ISD::SIGN_EXTEND ||
+          Carry.getOpcode() == ISD::ANY_EXTEND ||
+          (Carry.getOpcode() == ISD::AND && isOneConstant(Carry.getOperand(1))))
         Carry = Carry.getOperand(0);
       if (Carry.getOpcode() == M68kISD::SETCC ||
           Carry.getOpcode() == M68kISD::SETCC_CARRY) {

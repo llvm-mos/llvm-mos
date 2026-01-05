@@ -194,10 +194,10 @@ public:
   /// which is used in PIC generation), or if the LR stack slot is explicitly
   /// referenced by builtin_return_address.
   void setMustSaveLR(bool U) { MustSaveLR = U; }
-  bool mustSaveLR() const    { return MustSaveLR; }
+  bool mustSaveLR() const { return MustSaveLR; }
 
   void setMustSaveTOC(bool U) { MustSaveTOC = U; }
-  bool mustSaveTOC() const    { return MustSaveTOC; }
+  bool mustSaveTOC() const { return MustSaveTOC; }
 
   /// We certainly don't want to shrink wrap functions if we've emitted a
   /// MovePCtoLR8 as that has to go into the entry, so the prologue definitely
@@ -205,13 +205,13 @@ public:
   void setShrinkWrapDisabled(bool U) { ShrinkWrapDisabled = U; }
   bool shrinkWrapDisabled() const { return ShrinkWrapDisabled; }
 
-  void setHasSpills()      { HasSpills = true; }
-  bool hasSpills() const   { return HasSpills; }
+  void setHasSpills() { HasSpills = true; }
+  bool hasSpills() const { return HasSpills; }
 
-  void setHasNonRISpills()    { HasNonRISpills = true; }
+  void setHasNonRISpills() { HasNonRISpills = true; }
   bool hasNonRISpills() const { return HasNonRISpills; }
 
-  void setSpillsCR()       { SpillsCR = true; }
+  void setSpillsCR() { SpillsCR = true; }
   bool isCRSpilled() const { return SpillsCR; }
 
   void setDisableNonVolatileCR() { DisableNonVolatileCR = true; }
@@ -220,11 +220,11 @@ public:
   void setLRStoreRequired() { LRStoreRequired = true; }
   bool isLRStoreRequired() const { return LRStoreRequired; }
 
-  void setUsesTOCBasePtr()    { UsesTOCBasePtr = true; }
+  void setUsesTOCBasePtr() { UsesTOCBasePtr = true; }
   bool usesTOCBasePtr() const { return UsesTOCBasePtr; }
 
   void setHasFastCall() { HasFastCall = true; }
-  bool hasFastCall() const { return HasFastCall;}
+  bool hasFastCall() const { return HasFastCall; }
 
   void setAIXFuncTLSModelOptInitDone() { AIXFuncTLSModelOptInitDone = true; }
   bool isAIXFuncTLSModelOptInitDone() const {
@@ -272,8 +272,9 @@ public:
   int getCRSpillFrameIndex() const { return CRSpillFrameIndex; }
   void setCRSpillFrameIndex(int idx) { CRSpillFrameIndex = idx; }
 
-  const SmallVectorImpl<Register> &
-    getMustSaveCRs() const { return MustSaveCRs; }
+  const SmallVectorImpl<Register> &getMustSaveCRs() const {
+    return MustSaveCRs;
+  }
   void addMustSaveCR(Register Reg) { MustSaveCRs.push_back(Reg); }
 
   void setUsesPICBase(bool uses) { UsesPICBase = uses; }

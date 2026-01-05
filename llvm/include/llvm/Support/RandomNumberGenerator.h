@@ -64,6 +64,6 @@ private:
 
 // Get random vector of specified size
 LLVM_ABI std::error_code getRandomBytes(void *Buffer, size_t Size);
-}
+} // namespace llvm
 
 #endif

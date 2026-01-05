@@ -23,20 +23,20 @@
 using namespace llvm;
 
 namespace {
-  class UnpackMachineBundles : public MachineFunctionPass {
-  public:
-    static char ID; // Pass identification
-    UnpackMachineBundles(
-        std::function<bool(const MachineFunction &)> Ftor = nullptr)
-        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {
-      initializeUnpackMachineBundlesPass(*PassRegistry::getPassRegistry());
-    }
+class UnpackMachineBundles : public MachineFunctionPass {
+public:
+  static char ID; // Pass identification
+  UnpackMachineBundles(
+      std::function<bool(const MachineFunction &)> Ftor = nullptr)
+      : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {
+    initializeUnpackMachineBundlesPass(*PassRegistry::getPassRegistry());
+  }
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-  private:
-    std::function<bool(const MachineFunction &)> PredicateFtor;
-  };
+private:
+  std::function<bool(const MachineFunction &)> PredicateFtor;
+};
 } // end anonymous namespace
 
 char UnpackMachineBundles::ID = 0;
@@ -51,7 +51,8 @@ bool UnpackMachineBundles::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::instr_iterator MII = MBB.instr_begin(),
-           MIE = MBB.instr_end(); MII != MIE; ) {
+                                           MIE = MBB.instr_end();
+         MII != MIE;) {
       MachineInstr *MI = &*MII;
 
       // Remove BUNDLE instruction and the InsideBundle flags from bundled
@@ -59,7 +60,7 @@ bool UnpackMachineBundles::runOnMachineFunction(MachineFunction &MF) {
       if (MI->isBundle()) {
         while (++MII != MIE && MII->isBundledWithPred()) {
           MII->unbundleFromPred();
-          for (MachineOperand &MO  : MII->operands()) {
+          for (MachineOperand &MO : MII->operands()) {
             if (MO.isReg() && MO.isInternalRead())
               MO.setIsInternalRead(false);
           }
@@ -77,8 +78,7 @@ bool UnpackMachineBundles::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-FunctionPass *
-llvm::createUnpackMachineBundles(
+FunctionPass *llvm::createUnpackMachineBundles(
     std::function<bool(const MachineFunction &)> Ftor) {
   return new UnpackMachineBundles(std::move(Ftor));
 }
@@ -267,7 +267,7 @@ bool llvm::finalizeBundles(MachineFunction &MF) {
     assert(!MII->isInsideBundle() &&
            "First instr cannot be inside bundle before finalization!");
 
-    for (++MII; MII != MIE; ) {
+    for (++MII; MII != MIE;) {
       if (!MII->isInsideBundle())
         ++MII;
       else {

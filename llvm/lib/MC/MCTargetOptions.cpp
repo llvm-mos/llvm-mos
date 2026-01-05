@@ -22,9 +22,7 @@ MCTargetOptions::MCTargetOptions()
       EmitCompactUnwindNonCanonical(false), EmitSFrameUnwind(false),
       PPCUseFullRegisterNames(false) {}
 
-StringRef MCTargetOptions::getABIName() const {
-  return ABIName;
-}
+StringRef MCTargetOptions::getABIName() const { return ABIName; }
 
 StringRef MCTargetOptions::getAssemblyLanguage() const {
   return AssemblyLanguage;

@@ -55,7 +55,7 @@ bool llvm::parseWidenableBranch(const User *U, Value *&Condition,
                                 BasicBlock *&IfTrueBB, BasicBlock *&IfFalseBB) {
 
   Use *C, *WC;
-  if (parseWidenableBranch(const_cast<User*>(U), C, WC, IfTrueBB, IfFalseBB)) {
+  if (parseWidenableBranch(const_cast<User *>(U), C, WC, IfTrueBB, IfFalseBB)) {
     if (C)
       Condition = C->get();
     else
@@ -66,7 +66,7 @@ bool llvm::parseWidenableBranch(const User *U, Value *&Condition,
   return false;
 }
 
-bool llvm::parseWidenableBranch(User *U, Use *&C,Use *&WC,
+bool llvm::parseWidenableBranch(User *U, Use *&C, Use *&WC,
                                 BasicBlock *&IfTrueBB, BasicBlock *&IfFalseBB) {
 
   auto *BI = dyn_cast<BranchInst>(U);

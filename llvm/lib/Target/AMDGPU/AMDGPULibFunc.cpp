@@ -33,43 +33,43 @@ static cl::opt<bool> EnableOCLManglingMismatchWA(
 namespace {
 
 enum EManglingParam {
-    E_NONE,
-    EX_EVENT,
-    EX_FLOAT4,
-    EX_INTV4,
-    EX_RESERVEDID,
-    EX_SAMPLER,
-    EX_SIZET,
-    EX_UINT,
-    EX_UINTV4,
-    E_ANY,
-    E_CONSTPTR_ANY,
-    E_CONSTPTR_SWAPGL,
-    E_COPY,
-    E_IMAGECOORDS,
-    E_POINTEE,
-    E_SETBASE_I32,
-    E_SETBASE_U32,
-    E_MAKEBASE_UNS,
-    E_V16_OF_POINTEE,
-    E_V2_OF_POINTEE,
-    E_V3_OF_POINTEE,
-    E_V4_OF_POINTEE,
-    E_V8_OF_POINTEE,
-    E_VLTLPTR_ANY,
+  E_NONE,
+  EX_EVENT,
+  EX_FLOAT4,
+  EX_INTV4,
+  EX_RESERVEDID,
+  EX_SAMPLER,
+  EX_SIZET,
+  EX_UINT,
+  EX_UINTV4,
+  E_ANY,
+  E_CONSTPTR_ANY,
+  E_CONSTPTR_SWAPGL,
+  E_COPY,
+  E_IMAGECOORDS,
+  E_POINTEE,
+  E_SETBASE_I32,
+  E_SETBASE_U32,
+  E_MAKEBASE_UNS,
+  E_V16_OF_POINTEE,
+  E_V2_OF_POINTEE,
+  E_V3_OF_POINTEE,
+  E_V4_OF_POINTEE,
+  E_V8_OF_POINTEE,
+  E_VLTLPTR_ANY,
 };
 
 struct ManglingRule {
-   const char *Name;
-   unsigned char Lead[2];
-   unsigned char Param[5];
+  const char *Name;
+  unsigned char Lead[2];
+  unsigned char Param[5];
 
-   int maxLeadIndex() const { return (std::max)(Lead[0], Lead[1]); }
-   int getNumLeads() const { return (Lead[0] ? 1 : 0) + (Lead[1] ? 1 : 0); }
+  int maxLeadIndex() const { return (std::max)(Lead[0], Lead[1]); }
+  int getNumLeads() const { return (Lead[0] ? 1 : 0) + (Lead[1] ? 1 : 0); }
 
-   unsigned getNumArgs() const;
+  unsigned getNumArgs() const;
 
-   static StringMap<int> buildManglingRulesMap();
+  static StringMap<int> buildManglingRulesMap();
 };
 
 // Information about library functions with unmangled names.
@@ -99,8 +99,7 @@ public:
            static_cast<unsigned>(AMDGPULibFunc::EI_LAST_MANGLED);
   }
   static ID toFuncId(unsigned Index) {
-    assert(Index < TableSize &&
-           "Invalid unmangled library function");
+    assert(Index < TableSize && "Invalid unmangled library function");
     return static_cast<ID>(
         Index + 1 + static_cast<unsigned>(AMDGPULibFunc::EI_LAST_MANGLED));
   }
@@ -109,9 +108,10 @@ public:
 };
 
 unsigned ManglingRule::getNumArgs() const {
-   unsigned I=0;
-   while (I < (sizeof Param/sizeof Param[0]) && Param[I]) ++I;
-   return I;
+  unsigned I = 0;
+  while (I < (sizeof Param / sizeof Param[0]) && Param[I])
+    ++I;
+  return I;
 }
 
 // This table describes function formal argument type rules. The order of rules
@@ -120,14 +120,13 @@ unsigned ManglingRule::getNumArgs() const {
 // "<func name>", { <leads> }, { <param rules> }
 // where:
 //  <leads> - list of integers that are one-based indexes of formal argument
-//    used to mangle a function name. Other argument types are derived from types
-//    of these 'leads'. The order of integers in this list correspond to the
-//    order in which these arguments are mangled in the EDG mangling scheme. The
-//    same order should be preserved for arguments in the AMDGPULibFunc structure
-//    when it is used for mangling. For example:
-//    { "vstorea_half", {3,1}, {E_ANY,EX_SIZET,E_ANY}},
-//    will be mangled in EDG scheme as  vstorea_half_<3dparam>_<1stparam>
-//    When mangling from code use:
+//    used to mangle a function name. Other argument types are derived from
+//    types of these 'leads'. The order of integers in this list correspond to
+//    the order in which these arguments are mangled in the EDG mangling scheme.
+//    The same order should be preserved for arguments in the AMDGPULibFunc
+//    structure when it is used for mangling. For example: { "vstorea_half",
+//    {3,1}, {E_ANY,EX_SIZET,E_ANY}}, will be mangled in EDG scheme as
+//    vstorea_half_<3dparam>_<1stparam> When mangling from code use:
 //    AMDGPULibFunc insc;
 //    insc.param[0] = ... // describe 3rd parameter
 //    insc.param[1] = ... // describe 1rd parameter
@@ -139,204 +138,208 @@ unsigned ManglingRule::getNumArgs() const {
 //    prev lead type, etc. see ParamIterator::getNextParam() for details.
 
 static constexpr ManglingRule manglingRules[] = {
-{ "", {0}, {0} },
-{ "abs"                             , {1},   {E_ANY}},
-{ "abs_diff"                        , {1},   {E_ANY,E_COPY}},
-{ "acos"                            , {1},   {E_ANY}},
-{ "acosh"                           , {1},   {E_ANY}},
-{ "acospi"                          , {1},   {E_ANY}},
-{ "add_sat"                         , {1},   {E_ANY,E_COPY}},
-{ "all"                             , {1},   {E_ANY}},
-{ "any"                             , {1},   {E_ANY}},
-{ "asin"                            , {1},   {E_ANY}},
-{ "asinh"                           , {1},   {E_ANY}},
-{ "asinpi"                          , {1},   {E_ANY}},
-{ "async_work_group_copy"           , {1},   {E_ANY,E_CONSTPTR_SWAPGL,EX_SIZET,EX_EVENT}},
-{ "async_work_group_strided_copy"   , {1},   {E_ANY,E_CONSTPTR_SWAPGL,EX_SIZET,EX_SIZET,EX_EVENT}},
-{ "atan"                            , {1},   {E_ANY}},
-{ "atan2"                           , {1},   {E_ANY,E_COPY}},
-{ "atan2pi"                         , {1},   {E_ANY,E_COPY}},
-{ "atanh"                           , {1},   {E_ANY}},
-{ "atanpi"                          , {1},   {E_ANY}},
-{ "atomic_add"                      , {1},   {E_VLTLPTR_ANY,E_POINTEE}},
-{ "atomic_and"                      , {1},   {E_VLTLPTR_ANY,E_POINTEE}},
-{ "atomic_cmpxchg"                  , {1},   {E_VLTLPTR_ANY,E_POINTEE,E_POINTEE}},
-{ "atomic_dec"                      , {1},   {E_VLTLPTR_ANY}},
-{ "atomic_inc"                      , {1},   {E_VLTLPTR_ANY}},
-{ "atomic_max"                      , {1},   {E_VLTLPTR_ANY,E_POINTEE}},
-{ "atomic_min"                      , {1},   {E_VLTLPTR_ANY,E_POINTEE}},
-{ "atomic_or"                       , {1},   {E_VLTLPTR_ANY,E_POINTEE}},
-{ "atomic_sub"                      , {1},   {E_VLTLPTR_ANY,E_POINTEE}},
-{ "atomic_xchg"                     , {1},   {E_VLTLPTR_ANY,E_POINTEE}},
-{ "atomic_xor"                      , {1},   {E_VLTLPTR_ANY,E_POINTEE}},
-{ "bitselect"                       , {1},   {E_ANY,E_COPY,E_COPY}},
-{ "cbrt"                            , {1},   {E_ANY}},
-{ "ceil"                            , {1},   {E_ANY}},
-{ "clamp"                           , {1},   {E_ANY,E_COPY,E_COPY}},
-{ "clz"                             , {1},   {E_ANY}},
-{ "commit_read_pipe"                , {1},   {E_ANY,EX_RESERVEDID}},
-{ "commit_write_pipe"               , {1},   {E_ANY,EX_RESERVEDID}},
-{ "copysign"                        , {1},   {E_ANY,E_COPY}},
-{ "cos"                             , {1},   {E_ANY}},
-{ "cosh"                            , {1},   {E_ANY}},
-{ "cospi"                           , {1},   {E_ANY}},
-{ "cross"                           , {1},   {E_ANY,E_COPY}},
-{ "ctz"                             , {1},   {E_ANY}},
-{ "degrees"                         , {1},   {E_ANY}},
-{ "distance"                        , {1},   {E_ANY,E_COPY}},
-{ "divide"                          , {1},   {E_ANY,E_COPY}},
-{ "dot"                             , {1},   {E_ANY,E_COPY}},
-{ "erf"                             , {1},   {E_ANY}},
-{ "erfc"                            , {1},   {E_ANY}},
-{ "exp"                             , {1},   {E_ANY}},
-{ "exp10"                           , {1},   {E_ANY}},
-{ "exp2"                            , {1},   {E_ANY}},
-{ "expm1"                           , {1},   {E_ANY}},
-{ "fabs"                            , {1},   {E_ANY}},
-{ "fast_distance"                   , {1},   {E_ANY,E_COPY}},
-{ "fast_length"                     , {1},   {E_ANY}},
-{ "fast_normalize"                  , {1},   {E_ANY}},
-{ "fdim"                            , {1},   {E_ANY,E_COPY}},
-{ "floor"                           , {1},   {E_ANY}},
-{ "fma"                             , {1},   {E_ANY,E_COPY,E_COPY}},
-{ "fmax"                            , {1},   {E_ANY,E_COPY}},
-{ "fmin"                            , {1},   {E_ANY,E_COPY}},
-{ "fmod"                            , {1},   {E_ANY,E_COPY}},
-{ "fract"                           , {2},   {E_POINTEE,E_ANY}},
-{ "frexp"                           , {1,2}, {E_ANY,E_ANY}},
-{ "get_image_array_size"            , {1},   {E_ANY}},
-{ "get_image_channel_data_type"     , {1},   {E_ANY}},
-{ "get_image_channel_order"         , {1},   {E_ANY}},
-{ "get_image_dim"                   , {1},   {E_ANY}},
-{ "get_image_height"                , {1},   {E_ANY}},
-{ "get_image_width"                 , {1},   {E_ANY}},
-{ "get_pipe_max_packets"            , {1},   {E_ANY}},
-{ "get_pipe_num_packets"            , {1},   {E_ANY}},
-{ "hadd"                            , {1},   {E_ANY,E_COPY}},
-{ "hypot"                           , {1},   {E_ANY,E_COPY}},
-{ "ilogb"                           , {1},   {E_ANY}},
-{ "isequal"                         , {1},   {E_ANY,E_COPY}},
-{ "isfinite"                        , {1},   {E_ANY}},
-{ "isgreater"                       , {1},   {E_ANY,E_COPY}},
-{ "isgreaterequal"                  , {1},   {E_ANY,E_COPY}},
-{ "isinf"                           , {1},   {E_ANY}},
-{ "isless"                          , {1},   {E_ANY,E_COPY}},
-{ "islessequal"                     , {1},   {E_ANY,E_COPY}},
-{ "islessgreater"                   , {1},   {E_ANY,E_COPY}},
-{ "isnan"                           , {1},   {E_ANY}},
-{ "isnormal"                        , {1},   {E_ANY}},
-{ "isnotequal"                      , {1},   {E_ANY,E_COPY}},
-{ "isordered"                       , {1},   {E_ANY,E_COPY}},
-{ "isunordered"                     , {1},   {E_ANY,E_COPY}},
-{ "ldexp"                           , {1},   {E_ANY,E_SETBASE_I32}},
-{ "length"                          , {1},   {E_ANY}},
-{ "lgamma"                          , {1},   {E_ANY}},
-{ "lgamma_r"                        , {1,2}, {E_ANY,E_ANY}},
-{ "log"                             , {1},   {E_ANY}},
-{ "log10"                           , {1},   {E_ANY}},
-{ "log1p"                           , {1},   {E_ANY}},
-{ "log2"                            , {1},   {E_ANY}},
-{ "logb"                            , {1},   {E_ANY}},
-{ "mad"                             , {1},   {E_ANY,E_COPY,E_COPY}},
-{ "mad24"                           , {1},   {E_ANY,E_COPY,E_COPY}},
-{ "mad_hi"                          , {1},   {E_ANY,E_COPY,E_COPY}},
-{ "mad_sat"                         , {1},   {E_ANY,E_COPY,E_COPY}},
-{ "max"                             , {1},   {E_ANY,E_COPY}},
-{ "maxmag"                          , {1},   {E_ANY,E_COPY}},
-{ "min"                             , {1},   {E_ANY,E_COPY}},
-{ "minmag"                          , {1},   {E_ANY,E_COPY}},
-{ "mix"                             , {1},   {E_ANY,E_COPY,E_COPY}},
-{ "modf"                            , {2},   {E_POINTEE,E_ANY}},
-{ "mul24"                           , {1},   {E_ANY,E_COPY}},
-{ "mul_hi"                          , {1},   {E_ANY,E_COPY}},
-{ "nan"                             , {1},   {E_ANY}},
-{ "nextafter"                       , {1},   {E_ANY,E_COPY}},
-{ "normalize"                       , {1},   {E_ANY}},
-{ "popcount"                        , {1},   {E_ANY}},
-{ "pow"                             , {1},   {E_ANY,E_COPY}},
-{ "pown"                            , {1},   {E_ANY,E_SETBASE_I32}},
-{ "powr"                            , {1},   {E_ANY,E_COPY}},
-{ "prefetch"                        , {1},   {E_CONSTPTR_ANY,EX_SIZET}},
-{ "radians"                         , {1},   {E_ANY}},
-{ "recip"                           , {1},   {E_ANY}},
-{ "remainder"                       , {1},   {E_ANY,E_COPY}},
-{ "remquo"                          , {1,3}, {E_ANY,E_COPY,E_ANY}},
-{ "reserve_read_pipe"               , {1},   {E_ANY,EX_UINT}},
-{ "reserve_write_pipe"              , {1},   {E_ANY,EX_UINT}},
-{ "rhadd"                           , {1},   {E_ANY,E_COPY}},
-{ "rint"                            , {1},   {E_ANY}},
-{ "rootn"                           , {1},   {E_ANY,E_SETBASE_I32}},
-{ "rotate"                          , {1},   {E_ANY,E_COPY}},
-{ "round"                           , {1},   {E_ANY}},
-{ "rsqrt"                           , {1},   {E_ANY}},
-{ "select"                          , {1,3}, {E_ANY,E_COPY,E_ANY}},
-{ "shuffle"                         , {1,2}, {E_ANY,E_ANY}},
-{ "shuffle2"                        , {1,3}, {E_ANY,E_COPY,E_ANY}},
-{ "sign"                            , {1},   {E_ANY}},
-{ "signbit"                         , {1},   {E_ANY}},
-{ "sin"                             , {1},   {E_ANY}},
-{ "sincos"                          , {2},   {E_POINTEE,E_ANY}},
-{ "sinh"                            , {1},   {E_ANY}},
-{ "sinpi"                           , {1},   {E_ANY}},
-{ "smoothstep"                      , {1},   {E_ANY,E_COPY,E_COPY}},
-{ "sqrt"                            , {1},   {E_ANY}},
-{ "step"                            , {1},   {E_ANY,E_COPY}},
-{ "sub_group_broadcast"             , {1},   {E_ANY,EX_UINT}},
-{ "sub_group_commit_read_pipe"      , {1},   {E_ANY,EX_RESERVEDID}},
-{ "sub_group_commit_write_pipe"     , {1},   {E_ANY,EX_RESERVEDID}},
-{ "sub_group_reduce_add"            , {1},   {E_ANY}},
-{ "sub_group_reduce_max"            , {1},   {E_ANY}},
-{ "sub_group_reduce_min"            , {1},   {E_ANY}},
-{ "sub_group_reserve_read_pipe"     , {1},   {E_ANY,EX_UINT}},
-{ "sub_group_reserve_write_pipe"    , {1},   {E_ANY,EX_UINT}},
-{ "sub_group_scan_exclusive_add"    , {1},   {E_ANY}},
-{ "sub_group_scan_exclusive_max"    , {1},   {E_ANY}},
-{ "sub_group_scan_exclusive_min"    , {1},   {E_ANY}},
-{ "sub_group_scan_inclusive_add"    , {1},   {E_ANY}},
-{ "sub_group_scan_inclusive_max"    , {1},   {E_ANY}},
-{ "sub_group_scan_inclusive_min"    , {1},   {E_ANY}},
-{ "sub_sat"                         , {1},   {E_ANY,E_COPY}},
-{ "tan"                             , {1},   {E_ANY}},
-{ "tanh"                            , {1},   {E_ANY}},
-{ "tanpi"                           , {1},   {E_ANY}},
-{ "tgamma"                          , {1},   {E_ANY}},
-{ "trunc"                           , {1},   {E_ANY}},
-{ "upsample"                        , {1},   {E_ANY,E_MAKEBASE_UNS}},
-{ "vec_step"                        , {1},   {E_ANY}},
-{ "vstore"                          , {3},   {E_POINTEE,EX_SIZET,E_ANY}},
-{ "vstore16"                        , {3},   {E_V16_OF_POINTEE,EX_SIZET,E_ANY}},
-{ "vstore2"                         , {3},   {E_V2_OF_POINTEE,EX_SIZET,E_ANY}},
-{ "vstore3"                         , {3},   {E_V3_OF_POINTEE,EX_SIZET,E_ANY}},
-{ "vstore4"                         , {3},   {E_V4_OF_POINTEE,EX_SIZET,E_ANY}},
-{ "vstore8"                         , {3},   {E_V8_OF_POINTEE,EX_SIZET,E_ANY}},
-{ "work_group_commit_read_pipe"     , {1},   {E_ANY,EX_RESERVEDID}},
-{ "work_group_commit_write_pipe"    , {1},   {E_ANY,EX_RESERVEDID}},
-{ "work_group_reduce_add"           , {1},   {E_ANY}},
-{ "work_group_reduce_max"           , {1},   {E_ANY}},
-{ "work_group_reduce_min"           , {1},   {E_ANY}},
-{ "work_group_reserve_read_pipe"    , {1},   {E_ANY,EX_UINT}},
-{ "work_group_reserve_write_pipe"   , {1},   {E_ANY,EX_UINT}},
-{ "work_group_scan_exclusive_add"   , {1},   {E_ANY}},
-{ "work_group_scan_exclusive_max"   , {1},   {E_ANY}},
-{ "work_group_scan_exclusive_min"   , {1},   {E_ANY}},
-{ "work_group_scan_inclusive_add"   , {1},   {E_ANY}},
-{ "work_group_scan_inclusive_max"   , {1},   {E_ANY}},
-{ "work_group_scan_inclusive_min"   , {1},   {E_ANY}},
-{ "write_imagef"                    , {1},   {E_ANY,E_IMAGECOORDS,EX_FLOAT4}},
-{ "write_imagei"                    , {1},   {E_ANY,E_IMAGECOORDS,EX_INTV4}},
-{ "write_imageui"                   , {1},   {E_ANY,E_IMAGECOORDS,EX_UINTV4}},
-{ "ncos"                            , {1},   {E_ANY} },
-{ "nexp2"                           , {1},   {E_ANY} },
-{ "nfma"                            , {1},   {E_ANY, E_COPY, E_COPY} },
-{ "nlog2"                           , {1},   {E_ANY} },
-{ "nrcp"                            , {1},   {E_ANY} },
-{ "nrsqrt"                          , {1},   {E_ANY} },
-{ "nsin"                            , {1},   {E_ANY} },
-{ "nsqrt"                           , {1},   {E_ANY} },
-{ "ftz"                             , {1},   {E_ANY} },
-{ "fldexp"                          , {1},   {E_ANY, EX_UINT} },
-{ "class"                           , {1},   {E_ANY, EX_UINT} },
-{ "rcbrt"                           , {1},   {E_ANY} },
+    {"", {0}, {0}},
+    {"abs", {1}, {E_ANY}},
+    {"abs_diff", {1}, {E_ANY, E_COPY}},
+    {"acos", {1}, {E_ANY}},
+    {"acosh", {1}, {E_ANY}},
+    {"acospi", {1}, {E_ANY}},
+    {"add_sat", {1}, {E_ANY, E_COPY}},
+    {"all", {1}, {E_ANY}},
+    {"any", {1}, {E_ANY}},
+    {"asin", {1}, {E_ANY}},
+    {"asinh", {1}, {E_ANY}},
+    {"asinpi", {1}, {E_ANY}},
+    {"async_work_group_copy",
+     {1},
+     {E_ANY, E_CONSTPTR_SWAPGL, EX_SIZET, EX_EVENT}},
+    {"async_work_group_strided_copy",
+     {1},
+     {E_ANY, E_CONSTPTR_SWAPGL, EX_SIZET, EX_SIZET, EX_EVENT}},
+    {"atan", {1}, {E_ANY}},
+    {"atan2", {1}, {E_ANY, E_COPY}},
+    {"atan2pi", {1}, {E_ANY, E_COPY}},
+    {"atanh", {1}, {E_ANY}},
+    {"atanpi", {1}, {E_ANY}},
+    {"atomic_add", {1}, {E_VLTLPTR_ANY, E_POINTEE}},
+    {"atomic_and", {1}, {E_VLTLPTR_ANY, E_POINTEE}},
+    {"atomic_cmpxchg", {1}, {E_VLTLPTR_ANY, E_POINTEE, E_POINTEE}},
+    {"atomic_dec", {1}, {E_VLTLPTR_ANY}},
+    {"atomic_inc", {1}, {E_VLTLPTR_ANY}},
+    {"atomic_max", {1}, {E_VLTLPTR_ANY, E_POINTEE}},
+    {"atomic_min", {1}, {E_VLTLPTR_ANY, E_POINTEE}},
+    {"atomic_or", {1}, {E_VLTLPTR_ANY, E_POINTEE}},
+    {"atomic_sub", {1}, {E_VLTLPTR_ANY, E_POINTEE}},
+    {"atomic_xchg", {1}, {E_VLTLPTR_ANY, E_POINTEE}},
+    {"atomic_xor", {1}, {E_VLTLPTR_ANY, E_POINTEE}},
+    {"bitselect", {1}, {E_ANY, E_COPY, E_COPY}},
+    {"cbrt", {1}, {E_ANY}},
+    {"ceil", {1}, {E_ANY}},
+    {"clamp", {1}, {E_ANY, E_COPY, E_COPY}},
+    {"clz", {1}, {E_ANY}},
+    {"commit_read_pipe", {1}, {E_ANY, EX_RESERVEDID}},
+    {"commit_write_pipe", {1}, {E_ANY, EX_RESERVEDID}},
+    {"copysign", {1}, {E_ANY, E_COPY}},
+    {"cos", {1}, {E_ANY}},
+    {"cosh", {1}, {E_ANY}},
+    {"cospi", {1}, {E_ANY}},
+    {"cross", {1}, {E_ANY, E_COPY}},
+    {"ctz", {1}, {E_ANY}},
+    {"degrees", {1}, {E_ANY}},
+    {"distance", {1}, {E_ANY, E_COPY}},
+    {"divide", {1}, {E_ANY, E_COPY}},
+    {"dot", {1}, {E_ANY, E_COPY}},
+    {"erf", {1}, {E_ANY}},
+    {"erfc", {1}, {E_ANY}},
+    {"exp", {1}, {E_ANY}},
+    {"exp10", {1}, {E_ANY}},
+    {"exp2", {1}, {E_ANY}},
+    {"expm1", {1}, {E_ANY}},
+    {"fabs", {1}, {E_ANY}},
+    {"fast_distance", {1}, {E_ANY, E_COPY}},
+    {"fast_length", {1}, {E_ANY}},
+    {"fast_normalize", {1}, {E_ANY}},
+    {"fdim", {1}, {E_ANY, E_COPY}},
+    {"floor", {1}, {E_ANY}},
+    {"fma", {1}, {E_ANY, E_COPY, E_COPY}},
+    {"fmax", {1}, {E_ANY, E_COPY}},
+    {"fmin", {1}, {E_ANY, E_COPY}},
+    {"fmod", {1}, {E_ANY, E_COPY}},
+    {"fract", {2}, {E_POINTEE, E_ANY}},
+    {"frexp", {1, 2}, {E_ANY, E_ANY}},
+    {"get_image_array_size", {1}, {E_ANY}},
+    {"get_image_channel_data_type", {1}, {E_ANY}},
+    {"get_image_channel_order", {1}, {E_ANY}},
+    {"get_image_dim", {1}, {E_ANY}},
+    {"get_image_height", {1}, {E_ANY}},
+    {"get_image_width", {1}, {E_ANY}},
+    {"get_pipe_max_packets", {1}, {E_ANY}},
+    {"get_pipe_num_packets", {1}, {E_ANY}},
+    {"hadd", {1}, {E_ANY, E_COPY}},
+    {"hypot", {1}, {E_ANY, E_COPY}},
+    {"ilogb", {1}, {E_ANY}},
+    {"isequal", {1}, {E_ANY, E_COPY}},
+    {"isfinite", {1}, {E_ANY}},
+    {"isgreater", {1}, {E_ANY, E_COPY}},
+    {"isgreaterequal", {1}, {E_ANY, E_COPY}},
+    {"isinf", {1}, {E_ANY}},
+    {"isless", {1}, {E_ANY, E_COPY}},
+    {"islessequal", {1}, {E_ANY, E_COPY}},
+    {"islessgreater", {1}, {E_ANY, E_COPY}},
+    {"isnan", {1}, {E_ANY}},
+    {"isnormal", {1}, {E_ANY}},
+    {"isnotequal", {1}, {E_ANY, E_COPY}},
+    {"isordered", {1}, {E_ANY, E_COPY}},
+    {"isunordered", {1}, {E_ANY, E_COPY}},
+    {"ldexp", {1}, {E_ANY, E_SETBASE_I32}},
+    {"length", {1}, {E_ANY}},
+    {"lgamma", {1}, {E_ANY}},
+    {"lgamma_r", {1, 2}, {E_ANY, E_ANY}},
+    {"log", {1}, {E_ANY}},
+    {"log10", {1}, {E_ANY}},
+    {"log1p", {1}, {E_ANY}},
+    {"log2", {1}, {E_ANY}},
+    {"logb", {1}, {E_ANY}},
+    {"mad", {1}, {E_ANY, E_COPY, E_COPY}},
+    {"mad24", {1}, {E_ANY, E_COPY, E_COPY}},
+    {"mad_hi", {1}, {E_ANY, E_COPY, E_COPY}},
+    {"mad_sat", {1}, {E_ANY, E_COPY, E_COPY}},
+    {"max", {1}, {E_ANY, E_COPY}},
+    {"maxmag", {1}, {E_ANY, E_COPY}},
+    {"min", {1}, {E_ANY, E_COPY}},
+    {"minmag", {1}, {E_ANY, E_COPY}},
+    {"mix", {1}, {E_ANY, E_COPY, E_COPY}},
+    {"modf", {2}, {E_POINTEE, E_ANY}},
+    {"mul24", {1}, {E_ANY, E_COPY}},
+    {"mul_hi", {1}, {E_ANY, E_COPY}},
+    {"nan", {1}, {E_ANY}},
+    {"nextafter", {1}, {E_ANY, E_COPY}},
+    {"normalize", {1}, {E_ANY}},
+    {"popcount", {1}, {E_ANY}},
+    {"pow", {1}, {E_ANY, E_COPY}},
+    {"pown", {1}, {E_ANY, E_SETBASE_I32}},
+    {"powr", {1}, {E_ANY, E_COPY}},
+    {"prefetch", {1}, {E_CONSTPTR_ANY, EX_SIZET}},
+    {"radians", {1}, {E_ANY}},
+    {"recip", {1}, {E_ANY}},
+    {"remainder", {1}, {E_ANY, E_COPY}},
+    {"remquo", {1, 3}, {E_ANY, E_COPY, E_ANY}},
+    {"reserve_read_pipe", {1}, {E_ANY, EX_UINT}},
+    {"reserve_write_pipe", {1}, {E_ANY, EX_UINT}},
+    {"rhadd", {1}, {E_ANY, E_COPY}},
+    {"rint", {1}, {E_ANY}},
+    {"rootn", {1}, {E_ANY, E_SETBASE_I32}},
+    {"rotate", {1}, {E_ANY, E_COPY}},
+    {"round", {1}, {E_ANY}},
+    {"rsqrt", {1}, {E_ANY}},
+    {"select", {1, 3}, {E_ANY, E_COPY, E_ANY}},
+    {"shuffle", {1, 2}, {E_ANY, E_ANY}},
+    {"shuffle2", {1, 3}, {E_ANY, E_COPY, E_ANY}},
+    {"sign", {1}, {E_ANY}},
+    {"signbit", {1}, {E_ANY}},
+    {"sin", {1}, {E_ANY}},
+    {"sincos", {2}, {E_POINTEE, E_ANY}},
+    {"sinh", {1}, {E_ANY}},
+    {"sinpi", {1}, {E_ANY}},
+    {"smoothstep", {1}, {E_ANY, E_COPY, E_COPY}},
+    {"sqrt", {1}, {E_ANY}},
+    {"step", {1}, {E_ANY, E_COPY}},
+    {"sub_group_broadcast", {1}, {E_ANY, EX_UINT}},
+    {"sub_group_commit_read_pipe", {1}, {E_ANY, EX_RESERVEDID}},
+    {"sub_group_commit_write_pipe", {1}, {E_ANY, EX_RESERVEDID}},
+    {"sub_group_reduce_add", {1}, {E_ANY}},
+    {"sub_group_reduce_max", {1}, {E_ANY}},
+    {"sub_group_reduce_min", {1}, {E_ANY}},
+    {"sub_group_reserve_read_pipe", {1}, {E_ANY, EX_UINT}},
+    {"sub_group_reserve_write_pipe", {1}, {E_ANY, EX_UINT}},
+    {"sub_group_scan_exclusive_add", {1}, {E_ANY}},
+    {"sub_group_scan_exclusive_max", {1}, {E_ANY}},
+    {"sub_group_scan_exclusive_min", {1}, {E_ANY}},
+    {"sub_group_scan_inclusive_add", {1}, {E_ANY}},
+    {"sub_group_scan_inclusive_max", {1}, {E_ANY}},
+    {"sub_group_scan_inclusive_min", {1}, {E_ANY}},
+    {"sub_sat", {1}, {E_ANY, E_COPY}},
+    {"tan", {1}, {E_ANY}},
+    {"tanh", {1}, {E_ANY}},
+    {"tanpi", {1}, {E_ANY}},
+    {"tgamma", {1}, {E_ANY}},
+    {"trunc", {1}, {E_ANY}},
+    {"upsample", {1}, {E_ANY, E_MAKEBASE_UNS}},
+    {"vec_step", {1}, {E_ANY}},
+    {"vstore", {3}, {E_POINTEE, EX_SIZET, E_ANY}},
+    {"vstore16", {3}, {E_V16_OF_POINTEE, EX_SIZET, E_ANY}},
+    {"vstore2", {3}, {E_V2_OF_POINTEE, EX_SIZET, E_ANY}},
+    {"vstore3", {3}, {E_V3_OF_POINTEE, EX_SIZET, E_ANY}},
+    {"vstore4", {3}, {E_V4_OF_POINTEE, EX_SIZET, E_ANY}},
+    {"vstore8", {3}, {E_V8_OF_POINTEE, EX_SIZET, E_ANY}},
+    {"work_group_commit_read_pipe", {1}, {E_ANY, EX_RESERVEDID}},
+    {"work_group_commit_write_pipe", {1}, {E_ANY, EX_RESERVEDID}},
+    {"work_group_reduce_add", {1}, {E_ANY}},
+    {"work_group_reduce_max", {1}, {E_ANY}},
+    {"work_group_reduce_min", {1}, {E_ANY}},
+    {"work_group_reserve_read_pipe", {1}, {E_ANY, EX_UINT}},
+    {"work_group_reserve_write_pipe", {1}, {E_ANY, EX_UINT}},
+    {"work_group_scan_exclusive_add", {1}, {E_ANY}},
+    {"work_group_scan_exclusive_max", {1}, {E_ANY}},
+    {"work_group_scan_exclusive_min", {1}, {E_ANY}},
+    {"work_group_scan_inclusive_add", {1}, {E_ANY}},
+    {"work_group_scan_inclusive_max", {1}, {E_ANY}},
+    {"work_group_scan_inclusive_min", {1}, {E_ANY}},
+    {"write_imagef", {1}, {E_ANY, E_IMAGECOORDS, EX_FLOAT4}},
+    {"write_imagei", {1}, {E_ANY, E_IMAGECOORDS, EX_INTV4}},
+    {"write_imageui", {1}, {E_ANY, E_IMAGECOORDS, EX_UINTV4}},
+    {"ncos", {1}, {E_ANY}},
+    {"nexp2", {1}, {E_ANY}},
+    {"nfma", {1}, {E_ANY, E_COPY, E_COPY}},
+    {"nlog2", {1}, {E_ANY}},
+    {"nrcp", {1}, {E_ANY}},
+    {"nrsqrt", {1}, {E_ANY}},
+    {"nsin", {1}, {E_ANY}},
+    {"nsqrt", {1}, {E_ANY}},
+    {"ftz", {1}, {E_ANY}},
+    {"fldexp", {1}, {E_ANY, EX_UINT}},
+    {"class", {1}, {E_ANY, EX_UINT}},
+    {"rcbrt", {1}, {E_ANY}},
 };
 
 // Library functions with unmangled name.
@@ -366,66 +369,98 @@ static AMDGPULibFunc::Param getRetType(AMDGPULibFunc::EFuncId id,
 
 class ParamIterator {
   const AMDGPULibFunc::Param (&Leads)[2];
-  const ManglingRule& Rule;
+  const ManglingRule &Rule;
   int Index = 0;
+
 public:
   ParamIterator(const AMDGPULibFunc::Param (&leads)[2],
-                const ManglingRule& rule)
-    : Leads(leads), Rule(rule) {}
+                const ManglingRule &rule)
+      : Leads(leads), Rule(rule) {}
 
   AMDGPULibFunc::Param getNextParam();
 };
 
 AMDGPULibFunc::Param ParamIterator::getNextParam() {
   AMDGPULibFunc::Param P;
-  if (Index >= int(sizeof Rule.Param/sizeof Rule.Param[0])) return P;
+  if (Index >= int(sizeof Rule.Param / sizeof Rule.Param[0]))
+    return P;
 
   const char R = Rule.Param[Index];
   switch (R) {
-  case E_NONE:     break;
+  case E_NONE:
+    break;
   case EX_UINT:
-    P.ArgType = AMDGPULibFunc::U32; break;
+    P.ArgType = AMDGPULibFunc::U32;
+    break;
   case EX_INTV4:
-    P.ArgType = AMDGPULibFunc::I32; P.VectorSize = 4; break;
+    P.ArgType = AMDGPULibFunc::I32;
+    P.VectorSize = 4;
+    break;
   case EX_UINTV4:
-    P.ArgType = AMDGPULibFunc::U32; P.VectorSize = 4; break;
+    P.ArgType = AMDGPULibFunc::U32;
+    P.VectorSize = 4;
+    break;
   case EX_FLOAT4:
-    P.ArgType = AMDGPULibFunc::F32; P.VectorSize = 4; break;
+    P.ArgType = AMDGPULibFunc::F32;
+    P.VectorSize = 4;
+    break;
   case EX_SIZET:
-    P.ArgType = AMDGPULibFunc::U64; break;
+    P.ArgType = AMDGPULibFunc::U64;
+    break;
   case EX_EVENT:
-    P.ArgType = AMDGPULibFunc::EVENT;   break;
+    P.ArgType = AMDGPULibFunc::EVENT;
+    break;
   case EX_SAMPLER:
-    P.ArgType = AMDGPULibFunc::SAMPLER; break;
-  case EX_RESERVEDID: break; // TBD
+    P.ArgType = AMDGPULibFunc::SAMPLER;
+    break;
+  case EX_RESERVEDID:
+    break; // TBD
   default:
-    if (Index == (Rule.Lead[1] - 1)) P = Leads[1];
-    else P = Leads[0];
+    if (Index == (Rule.Lead[1] - 1))
+      P = Leads[1];
+    else
+      P = Leads[0];
 
     switch (R) {
     case E_ANY:
-    case E_COPY: break;
+    case E_COPY:
+      break;
 
     case E_POINTEE:
-      P.PtrKind = AMDGPULibFunc::BYVALUE; break;
+      P.PtrKind = AMDGPULibFunc::BYVALUE;
+      break;
     case E_V2_OF_POINTEE:
-      P.VectorSize = 2; P.PtrKind = AMDGPULibFunc::BYVALUE; break;
+      P.VectorSize = 2;
+      P.PtrKind = AMDGPULibFunc::BYVALUE;
+      break;
     case E_V3_OF_POINTEE:
-      P.VectorSize = 3; P.PtrKind = AMDGPULibFunc::BYVALUE; break;
+      P.VectorSize = 3;
+      P.PtrKind = AMDGPULibFunc::BYVALUE;
+      break;
     case E_V4_OF_POINTEE:
-      P.VectorSize = 4; P.PtrKind = AMDGPULibFunc::BYVALUE; break;
+      P.VectorSize = 4;
+      P.PtrKind = AMDGPULibFunc::BYVALUE;
+      break;
     case E_V8_OF_POINTEE:
-      P.VectorSize = 8; P.PtrKind = AMDGPULibFunc::BYVALUE; break;
+      P.VectorSize = 8;
+      P.PtrKind = AMDGPULibFunc::BYVALUE;
+      break;
     case E_V16_OF_POINTEE:
-      P.VectorSize = 16; P.PtrKind = AMDGPULibFunc::BYVALUE; break;
+      P.VectorSize = 16;
+      P.PtrKind = AMDGPULibFunc::BYVALUE;
+      break;
     case E_CONSTPTR_ANY:
-      P.PtrKind |= AMDGPULibFunc::CONST; break;
+      P.PtrKind |= AMDGPULibFunc::CONST;
+      break;
     case E_VLTLPTR_ANY:
-      P.PtrKind |= AMDGPULibFunc::VOLATILE; break;
+      P.PtrKind |= AMDGPULibFunc::VOLATILE;
+      break;
     case E_SETBASE_I32:
-      P.ArgType = AMDGPULibFunc::I32; break;
+      P.ArgType = AMDGPULibFunc::I32;
+      break;
     case E_SETBASE_U32:
-      P.ArgType = AMDGPULibFunc::U32; break;
+      P.ArgType = AMDGPULibFunc::U32;
+      break;
 
     case E_MAKEBASE_UNS:
       P.ArgType &= ~AMDGPULibFunc::BASE_TYPE_MASK;
@@ -434,12 +469,24 @@ AMDGPULibFunc::Param ParamIterator::getNextParam() {
 
     case E_IMAGECOORDS:
       switch (P.ArgType) {
-      case AMDGPULibFunc::IMG1DA: P.VectorSize = 2; break;
-      case AMDGPULibFunc::IMG1DB: P.VectorSize = 1; break;
-      case AMDGPULibFunc::IMG2DA: P.VectorSize = 4; break;
-      case AMDGPULibFunc::IMG1D:  P.VectorSize = 1; break;
-      case AMDGPULibFunc::IMG2D:  P.VectorSize = 2; break;
-      case AMDGPULibFunc::IMG3D:  P.VectorSize = 4; break;
+      case AMDGPULibFunc::IMG1DA:
+        P.VectorSize = 2;
+        break;
+      case AMDGPULibFunc::IMG1DB:
+        P.VectorSize = 1;
+        break;
+      case AMDGPULibFunc::IMG2DA:
+        P.VectorSize = 4;
+        break;
+      case AMDGPULibFunc::IMG1D:
+        P.VectorSize = 1;
+        break;
+      case AMDGPULibFunc::IMG2D:
+        P.VectorSize = 2;
+        break;
+      case AMDGPULibFunc::IMG3D:
+        P.VectorSize = 4;
+        break;
       }
       P.PtrKind = AMDGPULibFunc::BYVALUE;
       P.ArgType = AMDGPULibFunc::I32;
@@ -448,8 +495,12 @@ AMDGPULibFunc::Param ParamIterator::getNextParam() {
     case E_CONSTPTR_SWAPGL: {
       unsigned AS = AMDGPULibFunc::getAddrSpaceFromEPtrKind(P.PtrKind);
       switch (AS) {
-      case AMDGPUAS::GLOBAL_ADDRESS: AS = AMDGPUAS::LOCAL_ADDRESS; break;
-      case AMDGPUAS::LOCAL_ADDRESS:  AS = AMDGPUAS::GLOBAL_ADDRESS; break;
+      case AMDGPUAS::GLOBAL_ADDRESS:
+        AS = AMDGPUAS::LOCAL_ADDRESS;
+        break;
+      case AMDGPUAS::LOCAL_ADDRESS:
+        AS = AMDGPUAS::GLOBAL_ADDRESS;
+        break;
       }
       P.PtrKind = AMDGPULibFunc::getEPtrKindFromAddrSpace(AS);
       P.PtrKind |= AMDGPULibFunc::CONST;
@@ -464,11 +515,11 @@ AMDGPULibFunc::Param ParamIterator::getNextParam() {
   return P;
 }
 
-inline static void drop_front(StringRef& str, size_t n = 1) {
+inline static void drop_front(StringRef &str, size_t n = 1) {
   str = str.drop_front(n);
 }
 
-static bool eatTerm(StringRef& mangledName, const char c) {
+static bool eatTerm(StringRef &mangledName, const char c) {
   if (mangledName.front() == c) {
     drop_front(mangledName);
     return true;
@@ -477,25 +528,25 @@ static bool eatTerm(StringRef& mangledName, const char c) {
 }
 
 template <size_t N>
-static bool eatTerm(StringRef& mangledName, const char (&str)[N]) {
+static bool eatTerm(StringRef &mangledName, const char (&str)[N]) {
   if (mangledName.starts_with(StringRef(str, N - 1))) {
-    drop_front(mangledName, N-1);
+    drop_front(mangledName, N - 1);
     return true;
   }
   return false;
 }
 
-static int eatNumber(StringRef& s) {
+static int eatNumber(StringRef &s) {
   size_t const savedSize = s.size();
   int n = 0;
   while (!s.empty() && isDigit(s.front())) {
-    n = n*10 + s.front() - '0';
+    n = n * 10 + s.front() - '0';
     drop_front(s);
   }
   return s.size() < savedSize ? n : -1;
 }
 
-static StringRef eatLengthPrefixedName(StringRef& mangledName) {
+static StringRef eatLengthPrefixedName(StringRef &mangledName) {
   int const Len = eatNumber(mangledName);
   if (Len <= 0 || static_cast<size_t>(Len) > mangledName.size())
     return StringRef();
@@ -540,10 +591,14 @@ AMDGPUMangledLibFunc::AMDGPUMangledLibFunc(EFuncId id, FunctionType *FT,
 ///////////////////////////////////////////////////////////////////////////////
 // Demangling
 
-static int parseVecSize(StringRef& mangledName) {
+static int parseVecSize(StringRef &mangledName) {
   size_t const Len = eatNumber(mangledName);
   switch (Len) {
-  case 2: case 3: case 4: case 8: case 16:
+  case 2:
+  case 3:
+  case 4:
+  case 8:
+  case 16:
     return Len;
   default:
     break;
@@ -551,13 +606,13 @@ static int parseVecSize(StringRef& mangledName) {
   return 1;
 }
 
-static AMDGPULibFunc::ENamePrefix parseNamePrefix(StringRef& mangledName) {
+static AMDGPULibFunc::ENamePrefix parseNamePrefix(StringRef &mangledName) {
   std::pair<StringRef, StringRef> const P = mangledName.split('_');
   AMDGPULibFunc::ENamePrefix Pfx =
-    StringSwitch<AMDGPULibFunc::ENamePrefix>(P.first)
-    .Case("native", AMDGPULibFunc::NATIVE)
-    .Case("half"  , AMDGPULibFunc::HALF)
-    .Default(AMDGPULibFunc::NOPFX);
+      StringSwitch<AMDGPULibFunc::ENamePrefix>(P.first)
+          .Case("native", AMDGPULibFunc::NATIVE)
+          .Case("half", AMDGPULibFunc::HALF)
+          .Default(AMDGPULibFunc::NOPFX);
 
   if (Pfx != AMDGPULibFunc::NOPFX)
     mangledName = P.second;
@@ -586,19 +641,22 @@ bool AMDGPUMangledLibFunc::parseUnmangledName(StringRef FullName) {
 namespace {
 struct ItaniumParamParser {
   AMDGPULibFunc::Param Prev;
-  bool parseItaniumParam(StringRef& param, AMDGPULibFunc::Param &res);
+  bool parseItaniumParam(StringRef &param, AMDGPULibFunc::Param &res);
 };
 } // namespace
 
-bool ItaniumParamParser::parseItaniumParam(StringRef& param,
+bool ItaniumParamParser::parseItaniumParam(StringRef &param,
                                            AMDGPULibFunc::Param &res) {
   res.reset();
-  if (param.empty()) return false;
+  if (param.empty())
+    return false;
 
   // parse pointer prefix
   if (eatTerm(param, 'P')) {
-    if (eatTerm(param, 'K')) res.PtrKind |= AMDGPULibFunc::CONST;
-    if (eatTerm(param, 'V')) res.PtrKind |= AMDGPULibFunc::VOLATILE;
+    if (eatTerm(param, 'K'))
+      res.PtrKind |= AMDGPULibFunc::CONST;
+    if (eatTerm(param, 'V'))
+      res.PtrKind |= AMDGPULibFunc::VOLATILE;
     unsigned AS;
     if (!eatTerm(param, "U3AS")) {
       AS = 0;
@@ -612,9 +670,10 @@ bool ItaniumParamParser::parseItaniumParam(StringRef& param,
   }
 
   // parse vector size
-  if (eatTerm(param,"Dv")) {
+  if (eatTerm(param, "Dv")) {
     res.VectorSize = parseVecSize(param);
-    if (res.VectorSize==1 || !eatTerm(param, '_')) return false;
+    if (res.VectorSize == 1 || !eatTerm(param, '_'))
+      return false;
   }
 
   // parse type
@@ -634,32 +693,57 @@ bool ItaniumParamParser::parseItaniumParam(StringRef& param,
   } else {
     drop_front(param);
     switch (TC) {
-    case 'h': res.ArgType =  AMDGPULibFunc::U8; break;
-    case 't': res.ArgType = AMDGPULibFunc::U16; break;
-    case 'j': res.ArgType = AMDGPULibFunc::U32; break;
-    case 'm': res.ArgType = AMDGPULibFunc::U64; break;
-    case 'c': res.ArgType =  AMDGPULibFunc::I8; break;
-    case 's': res.ArgType = AMDGPULibFunc::I16; break;
-    case 'i': res.ArgType = AMDGPULibFunc::I32; break;
-    case 'l': res.ArgType = AMDGPULibFunc::I64; break;
-    case 'f': res.ArgType = AMDGPULibFunc::F32; break;
-    case 'd': res.ArgType = AMDGPULibFunc::F64; break;
-    case 'D': if (!eatTerm(param, 'h')) return false;
-              res.ArgType = AMDGPULibFunc::F16; break;
+    case 'h':
+      res.ArgType = AMDGPULibFunc::U8;
+      break;
+    case 't':
+      res.ArgType = AMDGPULibFunc::U16;
+      break;
+    case 'j':
+      res.ArgType = AMDGPULibFunc::U32;
+      break;
+    case 'm':
+      res.ArgType = AMDGPULibFunc::U64;
+      break;
+    case 'c':
+      res.ArgType = AMDGPULibFunc::I8;
+      break;
+    case 's':
+      res.ArgType = AMDGPULibFunc::I16;
+      break;
+    case 'i':
+      res.ArgType = AMDGPULibFunc::I32;
+      break;
+    case 'l':
+      res.ArgType = AMDGPULibFunc::I64;
+      break;
+    case 'f':
+      res.ArgType = AMDGPULibFunc::F32;
+      break;
+    case 'd':
+      res.ArgType = AMDGPULibFunc::F64;
+      break;
+    case 'D':
+      if (!eatTerm(param, 'h'))
+        return false;
+      res.ArgType = AMDGPULibFunc::F16;
+      break;
     case 'S':
       if (!eatTerm(param, '_')) {
         eatNumber(param);
-        if (!eatTerm(param, '_')) return false;
+        if (!eatTerm(param, '_'))
+          return false;
       }
       res.VectorSize = Prev.VectorSize;
-      res.ArgType    = Prev.ArgType;
+      res.ArgType = Prev.ArgType;
       break;
     default:;
     }
   }
-  if (res.ArgType == 0) return false;
+  if (res.ArgType == 0)
+    return false;
   Prev.VectorSize = res.VectorSize;
-  Prev.ArgType    = res.ArgType;
+  Prev.ArgType = res.ArgType;
   return true;
 }
 
@@ -669,15 +753,17 @@ bool AMDGPUMangledLibFunc::parseFuncName(StringRef &mangledName) {
   if (!parseUnmangledName(Name))
     return false;
 
-  const ManglingRule& Rule = manglingRules[FuncId];
+  const ManglingRule &Rule = manglingRules[FuncId];
   ItaniumParamParser Parser;
-  for (int I=0; I < Rule.maxLeadIndex(); ++I) {
+  for (int I = 0; I < Rule.maxLeadIndex(); ++I) {
     Param P;
     if (!Parser.parseItaniumParam(mangledName, P))
       return false;
 
-    if ((I + 1) == Rule.Lead[0]) Leads[0] = P;
-    if ((I + 1) == Rule.Lead[1]) Leads[1] = P;
+    if ((I + 1) == Rule.Lead[0])
+      Leads[0] = P;
+    if ((I + 1) == Rule.Lead[1])
+      Leads[1] = P;
   }
   return true;
 }
@@ -720,15 +806,20 @@ template <typename Stream>
 void AMDGPUMangledLibFunc::writeName(Stream &OS) const {
   const char *Pfx = "";
   switch (FKind) {
-  case NATIVE: Pfx = "native_"; break;
-  case HALF:   Pfx = "half_";   break;
-  default: break;
+  case NATIVE:
+    Pfx = "native_";
+    break;
+  case HALF:
+    Pfx = "half_";
+    break;
+  default:
+    break;
   }
   if (!Name.empty()) {
     OS << Pfx << Name;
   } else if (FuncId != EI_NONE) {
     OS << Pfx;
-    const StringRef& S = manglingRules[FuncId].Name;
+    const StringRef &S = manglingRules[FuncId].Name;
     OS.write(S.data(), S.size());
   }
 }
@@ -740,25 +831,44 @@ std::string AMDGPUMangledLibFunc::mangle() const { return mangleNameItanium(); }
 
 static const char *getItaniumTypeName(AMDGPULibFunc::EType T) {
   switch (T) {
-  case AMDGPULibFunc::U8:      return "h";
-  case AMDGPULibFunc::U16:     return "t";
-  case AMDGPULibFunc::U32:     return "j";
-  case AMDGPULibFunc::U64:     return "m";
-  case AMDGPULibFunc::I8:      return "c";
-  case AMDGPULibFunc::I16:     return "s";
-  case AMDGPULibFunc::I32:     return "i";
-  case AMDGPULibFunc::I64:     return "l";
-  case AMDGPULibFunc::F16:     return "Dh";
-  case AMDGPULibFunc::F32:     return "f";
-  case AMDGPULibFunc::F64:     return "d";
-  case AMDGPULibFunc::IMG1DA:  return "16ocl_image1darray";
-  case AMDGPULibFunc::IMG1DB:  return "17ocl_image1dbuffer";
-  case AMDGPULibFunc::IMG2DA:  return "16ocl_image2darray";
-  case AMDGPULibFunc::IMG1D:   return "11ocl_image1d";
-  case AMDGPULibFunc::IMG2D:   return "11ocl_image2d";
-  case AMDGPULibFunc::IMG3D:   return "11ocl_image3d";
-  case AMDGPULibFunc::SAMPLER: return "11ocl_sampler";
-  case AMDGPULibFunc::EVENT:   return "9ocl_event";
+  case AMDGPULibFunc::U8:
+    return "h";
+  case AMDGPULibFunc::U16:
+    return "t";
+  case AMDGPULibFunc::U32:
+    return "j";
+  case AMDGPULibFunc::U64:
+    return "m";
+  case AMDGPULibFunc::I8:
+    return "c";
+  case AMDGPULibFunc::I16:
+    return "s";
+  case AMDGPULibFunc::I32:
+    return "i";
+  case AMDGPULibFunc::I64:
+    return "l";
+  case AMDGPULibFunc::F16:
+    return "Dh";
+  case AMDGPULibFunc::F32:
+    return "f";
+  case AMDGPULibFunc::F64:
+    return "d";
+  case AMDGPULibFunc::IMG1DA:
+    return "16ocl_image1darray";
+  case AMDGPULibFunc::IMG1DB:
+    return "17ocl_image1dbuffer";
+  case AMDGPULibFunc::IMG2DA:
+    return "16ocl_image2darray";
+  case AMDGPULibFunc::IMG1D:
+    return "11ocl_image1d";
+  case AMDGPULibFunc::IMG2D:
+    return "11ocl_image2d";
+  case AMDGPULibFunc::IMG3D:
+    return "11ocl_image3d";
+  case AMDGPULibFunc::SAMPLER:
+    return "11ocl_sampler";
+  case AMDGPULibFunc::EVENT:
+    return "9ocl_event";
   default:
     llvm_unreachable("Unhandled param type");
   }
@@ -791,15 +901,15 @@ namespace {
 // substitution.
 
 class ItaniumMangler {
-  SmallVector<AMDGPULibFunc::Param, 10> Str; // list of accumulated substitutions
-  bool  UseAddrSpace;
+  SmallVector<AMDGPULibFunc::Param, 10>
+      Str; // list of accumulated substitutions
+  bool UseAddrSpace;
 
-  int findSubst(const AMDGPULibFunc::Param& P) const {
-    for(unsigned I = 0; I < Str.size(); ++I) {
-      const AMDGPULibFunc::Param& T = Str[I];
-      if (P.PtrKind    == T.PtrKind &&
-          P.VectorSize == T.VectorSize &&
-          P.ArgType    == T.ArgType) {
+  int findSubst(const AMDGPULibFunc::Param &P) const {
+    for (unsigned I = 0; I < Str.size(); ++I) {
+      const AMDGPULibFunc::Param &T = Str[I];
+      if (P.PtrKind == T.PtrKind && P.VectorSize == T.VectorSize &&
+          P.ArgType == T.ArgType) {
         return I;
       }
     }
@@ -807,41 +917,46 @@ class ItaniumMangler {
   }
 
   template <typename Stream>
-  bool trySubst(Stream& os, const AMDGPULibFunc::Param& p) {
+  bool trySubst(Stream &os, const AMDGPULibFunc::Param &p) {
     int const subst = findSubst(p);
-    if (subst < 0) return false;
+    if (subst < 0)
+      return false;
     // Substitutions are mangled as S(XX)?_ where XX is a hexadecimal number
     // 0   1    2
     // S_  S0_  S1_
-    if (subst == 0) os << "S_";
-    else os << 'S' << (subst-1) << '_';
+    if (subst == 0)
+      os << "S_";
+    else
+      os << 'S' << (subst - 1) << '_';
     return true;
   }
 
 public:
-  ItaniumMangler(bool useAddrSpace)
-    : UseAddrSpace(useAddrSpace) {}
+  ItaniumMangler(bool useAddrSpace) : UseAddrSpace(useAddrSpace) {}
 
   template <typename Stream>
-  void operator()(Stream& os, AMDGPULibFunc::Param p) {
+  void operator()(Stream &os, AMDGPULibFunc::Param p) {
 
     // Itanium mangling ABI 5.1.8. Compression:
     // Logically, the substitutable components of a mangled name are considered
     // left-to-right, components before the composite structure of which they
     // are a part. If a component has been encountered before, it is substituted
-    // as described below. This decision is independent of whether its components
-    // have been substituted, so an implementation may optimize by considering
-    // large structures for substitution before their components. If a component
-    // has not been encountered before, its mangling is identified, and it is
-    // added to a dictionary of substitution candidates. No entity is added to
-    // the dictionary twice.
+    // as described below. This decision is independent of whether its
+    // components have been substituted, so an implementation may optimize by
+    // considering large structures for substitution before their components. If
+    // a component has not been encountered before, its mangling is identified,
+    // and it is added to a dictionary of substitution candidates. No entity is
+    // added to the dictionary twice.
     AMDGPULibFunc::Param Ptr;
 
     if (p.PtrKind) {
-      if (trySubst(os, p)) return;
+      if (trySubst(os, p))
+        return;
       os << 'P';
-      if (p.PtrKind & AMDGPULibFunc::CONST) os << 'K';
-      if (p.PtrKind & AMDGPULibFunc::VOLATILE) os << 'V';
+      if (p.PtrKind & AMDGPULibFunc::CONST)
+        os << 'K';
+      if (p.PtrKind & AMDGPULibFunc::VOLATILE)
+        os << 'V';
       unsigned AS = UseAddrSpace
                         ? AMDGPULibFuncBase::getAddrSpaceFromEPtrKind(p.PtrKind)
                         : 0;
@@ -852,7 +967,8 @@ public:
     }
 
     if (p.VectorSize > 1) {
-      if (trySubst(os, p)) goto exit;
+      if (trySubst(os, p))
+        goto exit;
       Str.push_back(p);
       os << "Dv" << static_cast<unsigned>(p.VectorSize) << '_';
     }
@@ -860,7 +976,8 @@ public:
     os << getItaniumTypeName((AMDGPULibFunc::EType)p.ArgType);
 
   exit:
-    if (Ptr.ArgType) Str.push_back(Ptr);
+    if (Ptr.ArgType)
+      Str.push_back(Ptr);
   }
 };
 } // namespace
@@ -871,7 +988,7 @@ std::string AMDGPUMangledLibFunc::mangleNameItanium() const {
   SmallString<128> NameBuf;
   raw_svector_ostream Name(NameBuf);
   writeName(Name);
-  const StringRef& NameStr = Name.str();
+  const StringRef &NameStr = Name.str();
   S << "_Z" << static_cast<int>(NameStr.size()) << NameStr;
 
   ItaniumMangler Mangler(true);
@@ -992,8 +1109,8 @@ static Type *getIntrinsicParamType(LLVMContext &C,
 }
 
 FunctionType *AMDGPUMangledLibFunc::getFunctionType(const Module &M) const {
-  LLVMContext& C = M.getContext();
-  std::vector<Type*> Args;
+  LLVMContext &C = M.getContext();
+  std::vector<Type *> Args;
   ParamIterator I(Leads, manglingRules[FuncId]);
   Param P;
   while ((P = I.getNextParam()).ArgType != 0) {
@@ -1068,8 +1185,8 @@ bool AMDGPULibFunc::isCompatibleSignature(const Module &M,
 
 Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
   std::string FuncName = fInfo.mangle();
-  Function *F = dyn_cast_or_null<Function>(
-    M->getValueSymbolTable().lookup(FuncName));
+  Function *F =
+      dyn_cast_or_null<Function>(M->getValueSymbolTable().lookup(FuncName));
   if (!F || F->isDeclaration())
     return nullptr;
 
@@ -1085,8 +1202,8 @@ Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
 FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
                                                   const AMDGPULibFunc &fInfo) {
   std::string const FuncName = fInfo.mangle();
-  Function *F = dyn_cast_or_null<Function>(
-    M->getValueSymbolTable().lookup(FuncName));
+  Function *F =
+      dyn_cast_or_null<Function>(M->getValueSymbolTable().lookup(FuncName));
 
   if (F) {
     if (F->hasFnAttribute(Attribute::NoBuiltin))
@@ -1100,11 +1217,10 @@ FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
   assert(FuncTy);
 
   bool hasPtr = false;
-  for (FunctionType::param_iterator
-         PI = FuncTy->param_begin(),
-         PE = FuncTy->param_end();
+  for (FunctionType::param_iterator PI = FuncTy->param_begin(),
+                                    PE = FuncTy->param_end();
        PI != PE; ++PI) {
-    const Type* argTy = static_cast<const Type*>(*PI);
+    const Type *argTy = static_cast<const Type *>(*PI);
     if (argTy->isPointerTy()) {
       hasPtr = true;
       break;

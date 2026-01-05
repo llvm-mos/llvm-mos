@@ -41,17 +41,26 @@ class TargetMachine;
 namespace PICStyles {
 
 enum class Style {
-  StubPIC,          // Used on i386-darwin in pic mode.
-  GOT,              // Used on 32 bit elf on when in pic mode.
-  RIPRel,           // Used on X86-64 when in pic mode.
-  None              // Set when not in pic mode.
+  StubPIC, // Used on i386-darwin in pic mode.
+  GOT,     // Used on 32 bit elf on when in pic mode.
+  RIPRel,  // Used on X86-64 when in pic mode.
+  None     // Set when not in pic mode.
 };
 
 } // end namespace PICStyles
 
 class X86Subtarget final : public X86GenSubtargetInfo {
   enum X86SSEEnum {
-    NoSSE, SSE1, SSE2, SSE3, SSSE3, SSE41, SSE42, AVX, AVX2, AVX512
+    NoSSE,
+    SSE1,
+    SSE2,
+    SSE3,
+    SSSE3,
+    SSE41,
+    SSE42,
+    AVX,
+    AVX2,
+    AVX512
   };
 
   /// Which PIC style to use
@@ -164,7 +173,6 @@ private:
   void initSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
 public:
-
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }
 #include "X86GenSubtargetInfo.inc"
@@ -176,7 +184,7 @@ public:
   bool isTarget64BitLP64() const { return Is64Bit && !IsX32; }
 
   PICStyles::Style getPICStyle() const { return PICStyle; }
-  void setPICStyle(PICStyles::Style Style)  { PICStyle = Style; }
+  void setPICStyle(PICStyles::Style Style) { PICStyle = Style; }
 
   bool canUseCMPXCHG8B() const { return hasCX8(); }
   bool canUseCMPXCHG16B() const {
@@ -228,19 +236,17 @@ public:
   bool canExtendTo512DQ() const {
     return hasAVX512() && (!hasVLX() || getPreferVectorWidth() >= 512);
   }
-  bool canExtendTo512BW() const  {
-    return hasBWI() && canExtendTo512DQ();
-  }
+  bool canExtendTo512BW() const { return hasBWI() && canExtendTo512DQ(); }
 
   bool hasNoDomainDelay() const { return NoDomainDelay; }
   bool hasNoDomainDelayMov() const {
-      return hasNoDomainDelay() || NoDomainDelayMov;
+    return hasNoDomainDelay() || NoDomainDelayMov;
   }
   bool hasNoDomainDelayBlend() const {
-      return hasNoDomainDelay() || NoDomainDelayBlend;
+    return hasNoDomainDelay() || NoDomainDelayBlend;
   }
   bool hasNoDomainDelayShuffle() const {
-      return hasNoDomainDelay() || NoDomainDelayShuffle;
+    return hasNoDomainDelay() || NoDomainDelayShuffle;
   }
 
   // If there are no 512-bit vectors and we prefer not to use 512-bit registers,
@@ -253,9 +259,7 @@ public:
     return getPreferVectorWidth() >= 256 || AllowLight256Bit;
   }
 
-  bool useBWIRegs() const {
-    return hasBWI() && useAVX512Regs();
-  }
+  bool useBWIRegs() const { return hasBWI() && useAVX512Regs(); }
 
   // Returns true if the destination register of a BSF/BSR instruction is
   // not touched if the source register is zero.
@@ -396,7 +400,7 @@ public:
     const Triple &TT = getTargetTriple();
 
     unsigned Major = TT.getOSVersion().getMajor();
-    switch(TT.getOS()) {
+    switch (TT.getOS()) {
     default:
       return false;
     case Triple::IOS:

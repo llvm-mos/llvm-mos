@@ -154,7 +154,7 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
       unsigned NumElts = MaybeNum.get();
 
       // Get the element encoding.
-      assert(i+2 == e && "array op not second to last?");
+      assert(i + 2 == e && "array op not second to last?");
       const BitCodeAbbrevOp &EltEnc = Abbv->getOperandInfo(++i);
 
       // Read all the elements.
@@ -192,14 +192,14 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
     if (!MaybeNum)
       return MaybeNum.takeError();
     unsigned NumElts = MaybeNum.get();
-    SkipToFourByteBoundary();  // 32-bit alignment
+    SkipToFourByteBoundary(); // 32-bit alignment
 
     // Figure out where the end of this blob will be including tail padding.
     const size_t NewEnd = GetCurrentBitNo() + alignTo(NumElts, 4) * 8;
 
     // If this would read off the end of the bitcode file, just set the
     // record to empty and return.
-    if (!canSkipToPos(NewEnd/8)) {
+    if (!canSkipToPos(NewEnd / 8)) {
       skipToEnd();
       break;
     }
@@ -291,8 +291,7 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
         return error("Array op not second to last");
       const BitCodeAbbrevOp &EltEnc = Abbv->getOperandInfo(++i);
       if (!EltEnc.isEncoding())
-        return error(
-            "Array element type has to be an encoding of a type");
+        return error("Array element type has to be an encoding of a type");
 
       // Read all the elements.
       switch (EltEnc.getEncoding()) {
@@ -330,7 +329,7 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
     if (!MaybeNumElts)
       return MaybeNumElts.takeError();
     uint32_t NumElts = MaybeNumElts.get();
-    SkipToFourByteBoundary();  // 32-bit alignment
+    SkipToFourByteBoundary(); // 32-bit alignment
 
     // Figure out where the end of this blob will be including tail padding.
     size_t CurBitPos = GetCurrentBitNo();
@@ -338,7 +337,7 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
         CurBitPos + static_cast<uint64_t>(alignTo(NumElts, 4)) * 8;
 
     // Make sure the bitstream is large enough to contain the blob.
-    if (!canSkipToPos(NewEnd/8))
+    if (!canSkipToPos(NewEnd / 8))
       return error("Blob ends too soon");
 
     // Otherwise, inform the streamer that we need these bytes in memory.  Skip
@@ -483,7 +482,7 @@ BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
       CurBlockInfo->Name = std::string(Record.begin(), Record.end());
       break;
     }
-      case bitc::BLOCKINFO_CODE_SETRECORDNAME: {
+    case bitc::BLOCKINFO_CODE_SETRECORDNAME: {
       if (!CurBlockInfo)
         return std::nullopt;
       if (!ReadBlockInfoNames)
@@ -491,7 +490,7 @@ BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
       CurBlockInfo->RecordNames.emplace_back(
           (unsigned)Record[0], std::string(Record.begin() + 1, Record.end()));
       break;
-      }
-      }
+    }
+    }
   }
 }

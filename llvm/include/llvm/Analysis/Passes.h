@@ -17,29 +17,29 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-  class FunctionPass;
-  class ImmutablePass;
-  class ModulePass;
+class FunctionPass;
+class ImmutablePass;
+class ModulePass;
 
-  //===--------------------------------------------------------------------===//
-  //
-  /// createLazyValueInfoPass - This creates an instance of the LazyValueInfo
-  /// pass.
-  LLVM_ABI FunctionPass *createLazyValueInfoPass();
+//===--------------------------------------------------------------------===//
+//
+/// createLazyValueInfoPass - This creates an instance of the LazyValueInfo
+/// pass.
+LLVM_ABI FunctionPass *createLazyValueInfoPass();
 
-  //===--------------------------------------------------------------------===//
-  //
-  // createDependenceAnalysisWrapperPass - This creates an instance of the
-  // DependenceAnalysisWrapper pass.
-  //
-  LLVM_ABI FunctionPass *createDependenceAnalysisWrapperPass();
+//===--------------------------------------------------------------------===//
+//
+// createDependenceAnalysisWrapperPass - This creates an instance of the
+// DependenceAnalysisWrapper pass.
+//
+LLVM_ABI FunctionPass *createDependenceAnalysisWrapperPass();
 
-  //===--------------------------------------------------------------------===//
-  //
-  // createRegionInfoPass - This pass finds all single entry single exit regions
-  // in a function and builds the region hierarchy.
-  //
-  LLVM_ABI FunctionPass *createRegionInfoPass();
-}
+//===--------------------------------------------------------------------===//
+//
+// createRegionInfoPass - This pass finds all single entry single exit regions
+// in a function and builds the region hierarchy.
+//
+LLVM_ABI FunctionPass *createRegionInfoPass();
+} // namespace llvm
 
 #endif

@@ -138,8 +138,8 @@ private:
 
     // We store pointers to vectors here since references may be invalidated
     // while we hold them if we stored the vectors directly.
-    DenseMap<const Value *, VRegListT*> ValToVRegs;
-    DenseMap<const Type *, OffsetListT*> TypeToOffsets;
+    DenseMap<const Value *, VRegListT *> ValToVRegs;
+    DenseMap<const Type *, OffsetListT *> TypeToOffsets;
   };
 
   /// Mapping of the values of the current LLVM IR function to the related
@@ -201,24 +201,25 @@ private:
 
   /// Examine any debug-info attached to the instruction (in the form of
   /// DbgRecords) and translate it.
-  void translateDbgInfo(const Instruction &Inst,
-                          MachineIRBuilder &MIRBuilder);
+  void translateDbgInfo(const Instruction &Inst, MachineIRBuilder &MIRBuilder);
 
   /// Translate a debug-info record of a dbg.value into a DBG_* instruction.
   /// Pass in all the contents of the record, rather than relying on how it's
   /// stored.
   void translateDbgValueRecord(Value *V, bool HasArgList,
-                         const DILocalVariable *Variable,
-                         const DIExpression *Expression, const DebugLoc &DL,
-                         MachineIRBuilder &MIRBuilder);
+                               const DILocalVariable *Variable,
+                               const DIExpression *Expression,
+                               const DebugLoc &DL,
+                               MachineIRBuilder &MIRBuilder);
 
   /// Translate a debug-info record of a dbg.declare into an indirect DBG_*
   /// instruction. Pass in all the contents of the record, rather than relying
   /// on how it's stored.
   void translateDbgDeclareRecord(Value *Address, bool HasArgList,
-                         const DILocalVariable *Variable,
-                         const DIExpression *Expression, const DebugLoc &DL,
-                         MachineIRBuilder &MIRBuilder);
+                                 const DILocalVariable *Variable,
+                                 const DIExpression *Expression,
+                                 const DebugLoc &DL,
+                                 MachineIRBuilder &MIRBuilder);
 
   // Translate U as a copy of V.
   bool translateCopy(const User &U, const Value &V,

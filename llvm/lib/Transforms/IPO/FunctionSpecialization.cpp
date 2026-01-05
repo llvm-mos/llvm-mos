@@ -37,9 +37,9 @@ static cl::opt<bool> ForceSpecialization(
         "argument"));
 
 static cl::opt<unsigned> MaxClones(
-    "funcspec-max-clones", cl::init(3), cl::Hidden, cl::desc(
-    "The maximum number of clones allowed for a single function "
-    "specialization"));
+    "funcspec-max-clones", cl::init(3), cl::Hidden,
+    cl::desc("The maximum number of clones allowed for a single function "
+             "specialization"));
 
 static cl::opt<unsigned>
     MaxDiscoveryIterations("funcspec-max-discovery-iterations", cl::init(100),
@@ -54,18 +54,18 @@ static cl::opt<unsigned> MaxIncomingPhiValues(
              "considered during the specialization bonus estimation"));
 
 static cl::opt<unsigned> MaxBlockPredecessors(
-    "funcspec-max-block-predecessors", cl::init(2), cl::Hidden, cl::desc(
-    "The maximum number of predecessors a basic block can have to be "
-    "considered during the estimation of dead code"));
+    "funcspec-max-block-predecessors", cl::init(2), cl::Hidden,
+    cl::desc("The maximum number of predecessors a basic block can have to be "
+             "considered during the estimation of dead code"));
 
 static cl::opt<unsigned> MinFunctionSize(
     "funcspec-min-function-size", cl::init(500), cl::Hidden,
     cl::desc("Don't specialize functions that have less than this number of "
              "instructions"));
 
-static cl::opt<unsigned> MaxCodeSizeGrowth(
-    "funcspec-max-codesize-growth", cl::init(3), cl::Hidden, cl::desc(
-    "Maximum codesize growth allowed per function"));
+static cl::opt<unsigned>
+    MaxCodeSizeGrowth("funcspec-max-codesize-growth", cl::init(3), cl::Hidden,
+                      cl::desc("Maximum codesize growth allowed per function"));
 
 static cl::opt<unsigned> MinCodeSizeSavings(
     "funcspec-min-codesize-savings", cl::init(20), cl::Hidden,
@@ -83,8 +83,8 @@ static cl::opt<unsigned> MinInliningBonus(
              "much percent of the original function size"));
 
 static cl::opt<bool> SpecializeOnAddress(
-    "funcspec-on-address", cl::init(false), cl::Hidden, cl::desc(
-    "Enable function specialization on the address of global values"));
+    "funcspec-on-address", cl::init(false), cl::Hidden,
+    cl::desc("Enable function specialization on the address of global values"));
 
 static cl::opt<bool> SpecializeLiteralConstant(
     "funcspec-for-literal-constant", cl::init(true), cl::Hidden,
@@ -112,7 +112,7 @@ bool InstCostVisitor::canEliminateSuccessor(BasicBlock *BB,
 // the \p Solver found they were executable prior to specialization, and only
 // if all their predecessors are dead.
 Cost InstCostVisitor::estimateBasicBlocks(
-                          SmallVectorImpl<BasicBlock *> &WorkList) {
+    SmallVectorImpl<BasicBlock *> &WorkList) {
   Cost CodeSize = 0;
   // Accumulate the codesize savings of each basic block.
   while (!WorkList.empty()) {
@@ -223,8 +223,8 @@ Cost InstCostVisitor::getCodeSizeSavingsForUser(Instruction *User, Value *Use,
     return 0;
 
   // Cache the iterator before visiting.
-  LastVisited = Use ? KnownConstants.insert({Use, C}).first
-                    : KnownConstants.end();
+  LastVisited =
+      Use ? KnownConstants.insert({Use, C}).first : KnownConstants.end();
 
   Cost CodeSize = 0;
   if (auto *I = dyn_cast<SwitchInst>(User)) {
@@ -631,7 +631,6 @@ void FunctionSpecializer::cleanUpSSA() {
     removeSSACopy(*F);
 }
 
-
 template <> struct llvm::DenseMapInfo<SpecSig> {
   static inline SpecSig getEmptyKey() { return {~0U, {}}; }
 
@@ -647,9 +646,8 @@ template <> struct llvm::DenseMapInfo<SpecSig> {
 };
 
 FunctionSpecializer::~FunctionSpecializer() {
-  LLVM_DEBUG(
-    if (NumSpecsCreated > 0)
-      dbgs() << "FnSpecialization: Created " << NumSpecsCreated
+  LLVM_DEBUG(if (NumSpecsCreated > 0) dbgs()
+             << "FnSpecialization: Created " << NumSpecsCreated
              << " specializations in module " << M.getName() << "\n");
   // Eliminate dead code.
   removeDeadFunctions();
@@ -683,7 +681,7 @@ bool FunctionSpecializer::run() {
 
     auto [It, Inserted] = FunctionMetrics.try_emplace(&F);
     CodeMetrics &Metrics = It->second;
-    //Analyze the function.
+    // Analyze the function.
     if (Inserted) {
       SmallPtrSet<const Value *, 32> EphValues;
       CodeMetrics::collectEphemeralValues(&F, &GetAC(F), EphValues);
@@ -754,8 +752,7 @@ bool FunctionSpecializer::run() {
   if (AllSpecs.size() > NSpecs) {
     LLVM_DEBUG(dbgs() << "FnSpecialization: Number of candidates exceed "
                       << "the maximum number of clones threshold.\n"
-                      << "FnSpecialization: Specializing the "
-                      << NSpecs
+                      << "FnSpecialization: Specializing the " << NSpecs
                       << " most profitable candidates.\n");
     std::make_heap(BestSpecs.begin(), BestSpecs.begin() + NSpecs, CompareScore);
     for (unsigned I = NSpecs, N = AllSpecs.size(); I < N; ++I) {
@@ -849,7 +846,7 @@ bool FunctionSpecializer::run() {
     }
     for (User *U : F->users()) {
       if (auto *CS = dyn_cast<CallBase>(U)) {
-        //The user instruction does not call our function.
+        // The user instruction does not call our function.
         if (CS->getCalledFunction() != F)
           continue;
         Solver.resetLatticeValueFor(CS);
@@ -1154,8 +1151,9 @@ bool FunctionSpecializer::isArgumentInteresting(Argument *A) {
     return false;
 
   Type *Ty = A->getType();
-  if (!Ty->isPointerTy() && (!SpecializeLiteralConstant ||
-      (!Ty->isIntegerTy() && !Ty->isFloatingPointTy() && !Ty->isStructTy())))
+  if (!Ty->isPointerTy() &&
+      (!SpecializeLiteralConstant ||
+       (!Ty->isIntegerTy() && !Ty->isFloatingPointTy() && !Ty->isStructTy())))
     return false;
 
   // SCCP solver does not record an argument that will be constructed on
@@ -1170,18 +1168,18 @@ bool FunctionSpecializer::isArgumentInteresting(Argument *A) {
   // Check the lattice value and decide if we should attemt to specialize,
   // based on this argument. No point in specialization, if the lattice value
   // is already a constant.
-  bool IsOverdefined = Ty->isStructTy()
-    ? any_of(Solver.getStructLatticeValueFor(A), SCCPSolver::isOverdefined)
-    : SCCPSolver::isOverdefined(Solver.getLatticeValueFor(A));
+  bool IsOverdefined =
+      Ty->isStructTy()
+          ? any_of(Solver.getStructLatticeValueFor(A),
+                   SCCPSolver::isOverdefined)
+          : SCCPSolver::isOverdefined(Solver.getLatticeValueFor(A));
 
-  LLVM_DEBUG(
-    if (IsOverdefined)
-      dbgs() << "FnSpecialization: Found interesting parameter "
-             << A->getNameOrAsOperand() << "\n";
-    else
-      dbgs() << "FnSpecialization: Nothing to do, parameter "
-             << A->getNameOrAsOperand() << " is already constant\n";
-  );
+  LLVM_DEBUG(if (IsOverdefined) dbgs()
+                 << "FnSpecialization: Found interesting parameter "
+                 << A->getNameOrAsOperand() << "\n";
+             else dbgs() << "FnSpecialization: Nothing to do, parameter "
+                         << A->getNameOrAsOperand()
+                         << " is already constant\n";);
   return IsOverdefined;
 }
 

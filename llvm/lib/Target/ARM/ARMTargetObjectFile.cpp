@@ -35,7 +35,8 @@ ARMElfTargetObjectFile::ARMElfTargetObjectFile() {
 
 void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
                                         const TargetMachine &TM) {
-  const ARMBaseTargetMachine &ARM_TM = static_cast<const ARMBaseTargetMachine &>(TM);
+  const ARMBaseTargetMachine &ARM_TM =
+      static_cast<const ARMBaseTargetMachine &>(TM);
   bool isAAPCS_ABI = ARM_TM.TargetABI == ARM::ARMABI::ARM_ABI_AAPCS;
   bool genExecuteOnly =
       ARM_TM.getMCSubtargetInfo()->hasFeature(ARM::FeatureExecuteOnly);
@@ -72,8 +73,8 @@ const MCExpr *ARMElfTargetObjectFile::getIndirectSymViaGOTPCRel(
   return MCBinaryExpr::createAdd(Res, Off, getContext());
 }
 
-const MCExpr *ARMElfTargetObjectFile::
-getIndirectSymViaRWPI(const MCSymbol *Sym) const {
+const MCExpr *
+ARMElfTargetObjectFile::getIndirectSymViaRWPI(const MCSymbol *Sym) const {
   return MCSymbolRefExpr::create(Sym, ARM::S_SBREL, getContext());
 }
 
@@ -90,8 +91,8 @@ const MCExpr *ARMElfTargetObjectFile::getTTypeGlobalReference(
                                  getContext());
 }
 
-const MCExpr *ARMElfTargetObjectFile::
-getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
+const MCExpr *
+ARMElfTargetObjectFile::getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
   return MCSymbolRefExpr::create(Sym, ARM::S_TLSLDO, getContext());
 }
 

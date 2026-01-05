@@ -48,7 +48,7 @@ public:
   HexagonHazardRecognizer(const InstrItineraryData *II,
                           const HexagonInstrInfo *HII,
                           const HexagonSubtarget &ST)
-    : Resources(ST.createDFAPacketizer(II)), TII(HII) { }
+      : Resources(ST.createDFAPacketizer(II)), TII(HII) {}
 
   ~HexagonHazardRecognizer() override { delete Resources; }
 

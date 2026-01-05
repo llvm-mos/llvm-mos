@@ -20,35 +20,32 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace {
-  struct ForceCodegenLinking {
-    ForceCodegenLinking() {
-      // We must reference the passes in such a way that compilers will not
-      // delete it all as dead code, even with whole program optimization,
-      // yet is effectively a NO-OP. This is so that globals in the translation
-      // units where these functions are defined are forced to be initialized,
-      // populating various registries.
-      if (llvm::getNonFoldableAlwaysTrue())
-        return;
+struct ForceCodegenLinking {
+  ForceCodegenLinking() {
+    // We must reference the passes in such a way that compilers will not
+    // delete it all as dead code, even with whole program optimization,
+    // yet is effectively a NO-OP. This is so that globals in the translation
+    // units where these functions are defined are forced to be initialized,
+    // populating various registries.
+    if (llvm::getNonFoldableAlwaysTrue())
+      return;
 
-      (void) llvm::createFastRegisterAllocator();
-      (void) llvm::createBasicRegisterAllocator();
-      (void) llvm::createGreedyRegisterAllocator();
-      (void) llvm::createDefaultPBQPRegisterAllocator();
+    (void)llvm::createFastRegisterAllocator();
+    (void)llvm::createBasicRegisterAllocator();
+    (void)llvm::createGreedyRegisterAllocator();
+    (void)llvm::createDefaultPBQPRegisterAllocator();
 
-      (void)llvm::createBURRListDAGScheduler(nullptr,
+    (void)llvm::createBURRListDAGScheduler(nullptr,
+                                           llvm::CodeGenOptLevel::Default);
+    (void)llvm::createSourceListDAGScheduler(nullptr,
                                              llvm::CodeGenOptLevel::Default);
-      (void)llvm::createSourceListDAGScheduler(nullptr,
-                                               llvm::CodeGenOptLevel::Default);
-      (void)llvm::createHybridListDAGScheduler(nullptr,
-                                               llvm::CodeGenOptLevel::Default);
-      (void)llvm::createFastDAGScheduler(nullptr,
-                                         llvm::CodeGenOptLevel::Default);
-      (void)llvm::createDefaultScheduler(nullptr,
-                                         llvm::CodeGenOptLevel::Default);
-      (void)llvm::createVLIWDAGScheduler(nullptr,
-                                         llvm::CodeGenOptLevel::Default);
-    }
-  } ForceCodegenLinking; // Force link by creating a global definition.
-}
+    (void)llvm::createHybridListDAGScheduler(nullptr,
+                                             llvm::CodeGenOptLevel::Default);
+    (void)llvm::createFastDAGScheduler(nullptr, llvm::CodeGenOptLevel::Default);
+    (void)llvm::createDefaultScheduler(nullptr, llvm::CodeGenOptLevel::Default);
+    (void)llvm::createVLIWDAGScheduler(nullptr, llvm::CodeGenOptLevel::Default);
+  }
+} ForceCodegenLinking; // Force link by creating a global definition.
+} // namespace
 
 #endif

@@ -41,7 +41,7 @@ std::optional<TypeIndex> AppendingTypeTableBuilder::getNext(TypeIndex Prev) {
   return Prev;
 }
 
-CVType AppendingTypeTableBuilder::getType(TypeIndex Index){
+CVType AppendingTypeTableBuilder::getType(TypeIndex Index) {
   return CVType(SeenRecords[Index.toArrayIndex()]);
 }
 

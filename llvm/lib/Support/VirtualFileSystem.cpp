@@ -53,8 +53,8 @@
 using namespace llvm;
 using namespace llvm::vfs;
 
-using llvm::sys::fs::file_t;
 using llvm::sys::fs::file_status;
+using llvm::sys::fs::file_t;
 using llvm::sys::fs::file_type;
 using llvm::sys::fs::kInvalidFile;
 using llvm::sys::fs::perms;
@@ -1087,7 +1087,7 @@ llvm::ErrorOr<Status> InMemoryFileSystem::status(const Twine &Path) {
 
 llvm::ErrorOr<std::unique_ptr<File>>
 InMemoryFileSystem::openFileForRead(const Twine &Path) {
-  auto Node = lookupNode(Path,/*FollowFinalSymlink=*/true);
+  auto Node = lookupNode(Path, /*FollowFinalSymlink=*/true);
   if (!Node)
     return Node.getError();
 
@@ -1254,7 +1254,6 @@ static bool isFileNotFound(std::error_code EC,
 
 } // anonymous namespace
 
-
 RedirectingFileSystem::RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> FS)
     : ExternalFS(std::move(FS)) {
   if (ExternalFS)
@@ -1380,7 +1379,8 @@ std::error_code RedirectingFileSystem::isLocal(const Twine &Path_,
   return ExternalFS->isLocal(Path, Result);
 }
 
-std::error_code RedirectingFileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
+std::error_code
+RedirectingFileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
   // is_absolute(..., Style::windows_*) accepts paths with both slash types.
   if (llvm::sys::path::is_absolute(Path, llvm::sys::path::Style::posix) ||
       llvm::sys::path::is_absolute(Path,
@@ -2847,9 +2847,8 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
   if (!Entries.empty()) {
     const YAMLVFSEntry &Entry = Entries.front();
 
-    startDirectory(
-      Entry.IsDirectory ? Entry.VPath : path::parent_path(Entry.VPath)
-    );
+    startDirectory(Entry.IsDirectory ? Entry.VPath
+                                     : path::parent_path(Entry.VPath));
 
     StringRef RPath = Entry.RPath;
     if (UseOverlayRelative) {

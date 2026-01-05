@@ -24,8 +24,8 @@
 #include "llvm/InitializePasses.h"
 using namespace llvm;
 
-static bool canComputePointerDiff(ScalarEvolution &SE,
-                                  const SCEV *A, const SCEV *B) {
+static bool canComputePointerDiff(ScalarEvolution &SE, const SCEV *A,
+                                  const SCEV *B) {
   if (SE.getEffectiveSCEVType(A->getType()) !=
       SE.getEffectiveSCEVType(B->getType()))
     return false;

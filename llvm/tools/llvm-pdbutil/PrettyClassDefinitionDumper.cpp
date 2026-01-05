@@ -60,8 +60,8 @@ void ClassDefinitionDumper::prettyPrintClassIntro(const ClassLayout &Layout) {
 
   WithColor(Printer, PDB_ColorItem::Keyword).get() << Class.getUdtKind() << " ";
   WithColor(Printer, PDB_ColorItem::Type).get() << Class.getName();
-  WithColor(Printer, PDB_ColorItem::Comment).get() << " [sizeof = " << Size
-                                                   << "]";
+  WithColor(Printer, PDB_ColorItem::Comment).get()
+      << " [sizeof = " << Size << "]";
   uint32_t BaseCount = Layout.bases().size();
   if (BaseCount > 0) {
     Printer.Indent();

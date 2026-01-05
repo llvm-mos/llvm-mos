@@ -54,5 +54,5 @@ private:
   MapVector<Instruction *, Value *> ConvertedInsts;
   LLVMContext *Ctx;
 };
-}
+} // namespace llvm
 #endif // LLVM_TRANSFORMS_SCALAR_FLOAT2INT_H

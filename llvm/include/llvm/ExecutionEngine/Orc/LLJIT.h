@@ -163,8 +163,7 @@ public:
 
   /// Look up a symbol in JITDylib JD by the symbol's linker-mangled name (to
   /// look up symbols based on their IR name use the lookup function instead).
-  Expected<ExecutorAddr> lookupLinkerMangled(JITDylib &JD,
-                                             StringRef Name) {
+  Expected<ExecutorAddr> lookupLinkerMangled(JITDylib &JD, StringRef Name) {
     return lookupLinkerMangled(JD, ES->intern(Name));
   }
 
@@ -270,7 +269,6 @@ class LLLazyJIT : public LLJIT {
   template <typename, typename, typename> friend class LLJITBuilderSetters;
 
 public:
-
   /// Sets the partition function.
   void setPartitionFunction(IRPartitionLayer::PartitionFunction Partition) {
     IPLayer->setPartitionFunction(std::move(Partition));
@@ -288,7 +286,6 @@ public:
   }
 
 private:
-
   // Create a single-threaded LLLazyJIT instance.
   LLVM_ABI LLLazyJIT(LLLazyJITBuilderState &S, Error &Err);
 

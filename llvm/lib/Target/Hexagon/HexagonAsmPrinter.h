@@ -26,57 +26,55 @@ class MCInst;
 class raw_ostream;
 class TargetMachine;
 
-  class HexagonAsmPrinter : public AsmPrinter {
-  public:
-    static char ID;
+class HexagonAsmPrinter : public AsmPrinter {
+public:
+  static char ID;
 
-  private:
-    const HexagonSubtarget *Subtarget = nullptr;
+private:
+  const HexagonSubtarget *Subtarget = nullptr;
 
-    void emitAttributes();
+  void emitAttributes();
 
-  public:
-    explicit HexagonAsmPrinter(TargetMachine &TM,
-                               std::unique_ptr<MCStreamer> Streamer)
-        : AsmPrinter(TM, std::move(Streamer), ID) {}
+public:
+  explicit HexagonAsmPrinter(TargetMachine &TM,
+                             std::unique_ptr<MCStreamer> Streamer)
+      : AsmPrinter(TM, std::move(Streamer), ID) {}
 
-    bool runOnMachineFunction(MachineFunction &Fn) override {
-      Subtarget = &Fn.getSubtarget<HexagonSubtarget>();
-      const bool Modified = AsmPrinter::runOnMachineFunction(Fn);
-      // Emit the XRay table for this function.
-      emitXRayTable();
+  bool runOnMachineFunction(MachineFunction &Fn) override {
+    Subtarget = &Fn.getSubtarget<HexagonSubtarget>();
+    const bool Modified = AsmPrinter::runOnMachineFunction(Fn);
+    // Emit the XRay table for this function.
+    emitXRayTable();
 
-      return Modified;
-    }
+    return Modified;
+  }
 
-    StringRef getPassName() const override {
-      return "Hexagon Assembly Printer";
-    }
+  StringRef getPassName() const override { return "Hexagon Assembly Printer"; }
 
-    bool isBlockOnlyReachableByFallthrough(const MachineBasicBlock *MBB)
-          const override;
+  bool isBlockOnlyReachableByFallthrough(
+      const MachineBasicBlock *MBB) const override;
 
-    void emitInstruction(const MachineInstr *MI) override;
+  void emitInstruction(const MachineInstr *MI) override;
 
-    //===------------------------------------------------------------------===//
-    // XRay implementation
-    //===------------------------------------------------------------------===//
-    // XRay-specific lowering for Hexagon.
-    void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
-    void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
-    void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
-    void EmitSled(const MachineInstr &MI, SledKind Kind);
+  //===------------------------------------------------------------------===//
+  // XRay implementation
+  //===------------------------------------------------------------------===//
+  // XRay-specific lowering for Hexagon.
+  void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
+  void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
+  void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
+  void EmitSled(const MachineInstr &MI, SledKind Kind);
 
-    void HexagonProcessInstruction(MCInst &Inst, const MachineInstr &MBB);
+  void HexagonProcessInstruction(MCInst &Inst, const MachineInstr &MBB);
 
-    void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
-    bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                         const char *ExtraCode, raw_ostream &OS) override;
-    bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
-                               const char *ExtraCode, raw_ostream &OS) override;
-    void emitStartOfAsmFile(Module &M) override;
-    void emitEndOfAsmFile(Module &M) override;
-  };
+  void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
+  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                       const char *ExtraCode, raw_ostream &OS) override;
+  bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
+                             const char *ExtraCode, raw_ostream &OS) override;
+  void emitStartOfAsmFile(Module &M) override;
+  void emitEndOfAsmFile(Module &M) override;
+};
 
 } // end namespace llvm
 

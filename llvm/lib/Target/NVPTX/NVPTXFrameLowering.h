@@ -36,6 +36,6 @@ protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

@@ -474,9 +474,8 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
                                    Range.Alignment);
     AMemSet->mergeDIAssignID(Range.TheStores);
 
-    LLVM_DEBUG(dbgs() << "Replace stores:\n"; for (Instruction *SI
-                                                   : Range.TheStores) dbgs()
-                                              << *SI << '\n';
+    LLVM_DEBUG(dbgs() << "Replace stores:\n";
+               for (Instruction *SI : Range.TheStores) dbgs() << *SI << '\n';
                dbgs() << "With: " << *AMemSet << '\n');
     if (!Range.TheStores.empty())
       AMemSet->setDebugLoc(Range.TheStores[0]->getDebugLoc());
@@ -1754,8 +1753,8 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   // If copying from a constant, try to turn the memcpy into a memset.
   if (auto *GV = dyn_cast<GlobalVariable>(M->getSource()))
     if (GV->isConstant() && GV->hasDefinitiveInitializer())
-      if (Value *ByteVal = isBytewiseValue(GV->getInitializer(),
-                                           M->getDataLayout())) {
+      if (Value *ByteVal =
+              isBytewiseValue(GV->getInitializer(), M->getDataLayout())) {
         IRBuilder<> Builder(M);
         Instruction *NewM = Builder.CreateMemSet(
             M->getRawDest(), ByteVal, M->getLength(), M->getDestAlign(), false);

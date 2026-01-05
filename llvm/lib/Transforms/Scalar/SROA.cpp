@@ -4517,8 +4517,7 @@ private:
     enqueueUsers(*NewPhi);
 
     LLVM_DEBUG(dbgs() << "          to: ";
-               for (Value *In
-                    : NewPhi->incoming_values()) dbgs()
+               for (Value *In : NewPhi->incoming_values()) dbgs()
                << "\n              " << *In;
                dbgs() << "\n              " << *NewPhi << '\n');
 

@@ -137,7 +137,8 @@ const VPRecipeBase *VPValue::getDefiningRecipe() const {
 }
 
 // Get the top-most entry block of \p Start. This is the entry block of the
-// containing VPlan. This function is templated to support both const and non-const blocks
+// containing VPlan. This function is templated to support both const and
+// non-const blocks
 template <typename T> static T *getPlanEntry(T *Start) {
   T *Next = Start;
   T *Current = Start;
@@ -1255,13 +1256,13 @@ void VPlanPrinter::dump() {
 
   {
     // Print live-ins.
-  std::string Str;
-  raw_string_ostream SS(Str);
-  Plan.printLiveIns(SS);
-  SmallVector<StringRef, 0> Lines;
-  StringRef(Str).rtrim('\n').split(Lines, "\n");
-  for (auto Line : Lines)
-    OS << DOT::EscapeString(Line.str()) << "\\n";
+    std::string Str;
+    raw_string_ostream SS(Str);
+    Plan.printLiveIns(SS);
+    SmallVector<StringRef, 0> Lines;
+    StringRef(Str).rtrim('\n').split(Lines, "\n");
+    for (auto Line : Lines)
+      OS << DOT::EscapeString(Line.str()) << "\\n";
   }
 
   OS << "\"]\n";

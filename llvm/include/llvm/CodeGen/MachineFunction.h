@@ -83,7 +83,8 @@ template <> struct ilist_callback_traits<MachineBasicBlock> {
   LLVM_ABI void removeNodeFromList(MachineBasicBlock *N);
 
   template <class Iterator>
-  void transferNodesFromList(ilist_callback_traits &OldList, Iterator, Iterator) {
+  void transferNodesFromList(ilist_callback_traits &OldList, Iterator,
+                             Iterator) {
     assert(this == &OldList && "never transfer MBBs between functions");
   }
 };
@@ -272,15 +273,14 @@ struct SEHHandler {
 
 /// This structure is used to retain landing pad info for the current function.
 struct LandingPadInfo {
-  MachineBasicBlock *LandingPadBlock;      // Landing pad block.
-  SmallVector<MCSymbol *, 1> BeginLabels;  // Labels prior to invoke.
-  SmallVector<MCSymbol *, 1> EndLabels;    // Labels after invoke.
-  SmallVector<SEHHandler, 1> SEHHandlers;  // SEH handlers active at this lpad.
-  MCSymbol *LandingPadLabel = nullptr;     // Label at beginning of landing pad.
-  std::vector<int> TypeIds;                // List of type ids (filters negative).
+  MachineBasicBlock *LandingPadBlock;     // Landing pad block.
+  SmallVector<MCSymbol *, 1> BeginLabels; // Labels prior to invoke.
+  SmallVector<MCSymbol *, 1> EndLabels;   // Labels after invoke.
+  SmallVector<SEHHandler, 1> SEHHandlers; // SEH handlers active at this lpad.
+  MCSymbol *LandingPadLabel = nullptr;    // Label at beginning of landing pad.
+  std::vector<int> TypeIds; // List of type ids (filters negative).
 
-  explicit LandingPadInfo(MachineBasicBlock *MBB)
-      : LandingPadBlock(MBB) {}
+  explicit LandingPadInfo(MachineBasicBlock *MBB) : LandingPadBlock(MBB) {}
 };
 
 class LLVM_ABI MachineFunction {
@@ -320,7 +320,7 @@ class LLVM_ABI MachineFunction {
   // Function-level unique numbering for MachineBasicBlocks.  When a
   // MachineBasicBlock is inserted into a MachineFunction is it automatically
   // numbered and this vector keeps track of the mapping from ID's to MBB's.
-  std::vector<MachineBasicBlock*> MBBNumbering;
+  std::vector<MachineBasicBlock *> MBBNumbering;
 
   // MBBNumbering epoch, incremented after renumbering to detect use of old
   // block numbers.
@@ -389,13 +389,13 @@ class LLVM_ABI MachineFunction {
   std::vector<LandingPadInfo> LandingPads;
 
   /// Map a landing pad's EH symbol to the call site indexes.
-  DenseMap<MCSymbol*, SmallVector<unsigned, 4>> LPadToCallSiteMap;
+  DenseMap<MCSymbol *, SmallVector<unsigned, 4>> LPadToCallSiteMap;
 
   /// Map a landing pad to its index.
   DenseMap<const MachineBasicBlock *, unsigned> WasmLPadToIndexMap;
 
   /// Map of invoke call site index values to associated begin EH_LABEL.
-  DenseMap<MCSymbol*, unsigned> CallSiteMap;
+  DenseMap<MCSymbol *, unsigned> CallSiteMap;
 
   /// CodeView label annotations.
   std::vector<std::pair<MCSymbol *, MDNode *>> CodeViewAnnotations;
@@ -764,7 +764,7 @@ public:
   /// getSubtarget - This method returns a pointer to the specified type of
   /// TargetSubtargetInfo.  In debug builds, it verifies that the object being
   /// returned is of the correct type.
-  template<typename STC> const STC &getSubtarget() const {
+  template <typename STC> const STC &getSubtarget() const {
     return static_cast<const STC &>(STI);
   }
 
@@ -821,29 +821,19 @@ public:
   /// exposesReturnsTwice - Returns true if the function calls setjmp or
   /// any other similar functions with attribute "returns twice" without
   /// having the attribute itself.
-  bool exposesReturnsTwice() const {
-    return ExposesReturnsTwice;
-  }
+  bool exposesReturnsTwice() const { return ExposesReturnsTwice; }
 
   /// setCallsSetJmp - Set a flag that indicates if there's a call to
   /// a "returns twice" function.
-  void setExposesReturnsTwice(bool B) {
-    ExposesReturnsTwice = B;
-  }
+  void setExposesReturnsTwice(bool B) { ExposesReturnsTwice = B; }
 
   /// Returns true if the function contains any inline assembly.
-  bool hasInlineAsm() const {
-    return HasInlineAsm;
-  }
+  bool hasInlineAsm() const { return HasInlineAsm; }
 
   /// Set a flag that indicates that the function contains inline assembly.
-  void setHasInlineAsm(bool B) {
-    HasInlineAsm = B;
-  }
+  void setHasInlineAsm(bool B) { HasInlineAsm = B; }
 
-  bool hasWinCFI() const {
-    return HasWinCFI;
-  }
+  bool hasWinCFI() const { return HasWinCFI; }
   void setHasWinCFI(bool v) { HasWinCFI = v; }
 
   /// True if this function needs frame moves for debug or exceptions.
@@ -856,13 +846,9 @@ public:
   /// getInfo - Keep track of various per-function pieces of information for
   /// backends that would like to do so.
   ///
-  template<typename Ty>
-  Ty *getInfo() {
-    return static_cast<Ty*>(MFInfo);
-  }
+  template <typename Ty> Ty *getInfo() { return static_cast<Ty *>(MFInfo); }
 
-  template<typename Ty>
-  const Ty *getInfo() const {
+  template <typename Ty> const Ty *getInfo() const {
     return static_cast<const Ty *>(MFInfo);
   }
 
@@ -922,7 +908,7 @@ public:
 
   /// print - Print out the MachineFunction in a format suitable for debugging
   /// to the specified stream.
-  void print(raw_ostream &OS, const SlotIndexes* = nullptr) const;
+  void print(raw_ostream &OS, const SlotIndexes * = nullptr) const;
 
   /// viewCFG - This function is meant for use from the debugger.  You can just
   /// say 'call F->viewCFG()' and a ghostview window should pop up from the
@@ -981,24 +967,24 @@ public:
   //===--------------------------------------------------------------------===//
   // BasicBlock accessor functions.
   //
-  iterator                 begin()       { return BasicBlocks.begin(); }
-  const_iterator           begin() const { return BasicBlocks.begin(); }
-  iterator                 end  ()       { return BasicBlocks.end();   }
-  const_iterator           end  () const { return BasicBlocks.end();   }
+  iterator begin() { return BasicBlocks.begin(); }
+  const_iterator begin() const { return BasicBlocks.begin(); }
+  iterator end() { return BasicBlocks.end(); }
+  const_iterator end() const { return BasicBlocks.end(); }
 
-  reverse_iterator        rbegin()       { return BasicBlocks.rbegin(); }
-  const_reverse_iterator  rbegin() const { return BasicBlocks.rbegin(); }
-  reverse_iterator        rend  ()       { return BasicBlocks.rend();   }
-  const_reverse_iterator  rend  () const { return BasicBlocks.rend();   }
+  reverse_iterator rbegin() { return BasicBlocks.rbegin(); }
+  const_reverse_iterator rbegin() const { return BasicBlocks.rbegin(); }
+  reverse_iterator rend() { return BasicBlocks.rend(); }
+  const_reverse_iterator rend() const { return BasicBlocks.rend(); }
 
-  unsigned                  size() const { return (unsigned)BasicBlocks.size();}
-  bool                     empty() const { return BasicBlocks.empty(); }
+  unsigned size() const { return (unsigned)BasicBlocks.size(); }
+  bool empty() const { return BasicBlocks.empty(); }
   const MachineBasicBlock &front() const { return BasicBlocks.front(); }
-        MachineBasicBlock &front()       { return BasicBlocks.front(); }
-  const MachineBasicBlock & back() const { return BasicBlocks.back(); }
-        MachineBasicBlock & back()       { return BasicBlocks.back(); }
+  MachineBasicBlock &front() { return BasicBlocks.front(); }
+  const MachineBasicBlock &back() const { return BasicBlocks.back(); }
+  MachineBasicBlock &back() { return BasicBlocks.back(); }
 
-  void push_back (MachineBasicBlock *MBB) { BasicBlocks.push_back (MBB); }
+  void push_back(MachineBasicBlock *MBB) { BasicBlocks.push_back(MBB); }
   void push_front(MachineBasicBlock *MBB) { BasicBlocks.push_front(MBB); }
   void insert(iterator MBBI, MachineBasicBlock *MBB) {
     BasicBlocks.insert(MBBI, MBB);
@@ -1018,10 +1004,7 @@ public:
   void erase(iterator MBBI) { BasicBlocks.erase(MBBI); }
   void erase(MachineBasicBlock *MBBI) { BasicBlocks.erase(MBBI); }
 
-  template <typename Comp>
-  void sort(Comp comp) {
-    BasicBlocks.sort(comp);
-  }
+  template <typename Comp> void sort(Comp comp) { BasicBlocks.sort(comp); }
 
   /// Return the number of \p MachineInstrs in this \p MachineFunction.
   unsigned getInstructionCount() const {
@@ -1038,7 +1021,7 @@ public:
   /// assigned to the MBB.
   unsigned addToMBBNumbering(MachineBasicBlock *MBB) {
     MBBNumbering.push_back(MBB);
-    return (unsigned)MBBNumbering.size()-1;
+    return (unsigned)MBBNumbering.size() - 1;
   }
 
   /// removeFromMBBNumbering - Remove the specific machine basic block from our
@@ -1307,8 +1290,8 @@ public:
 
   /// Provide the begin and end labels of an invoke style call and associate it
   /// with a try landing pad block.
-  void addInvoke(MachineBasicBlock *LandingPad,
-                 MCSymbol *BeginLabel, MCSymbol *EndLabel);
+  void addInvoke(MachineBasicBlock *LandingPad, MCSymbol *BeginLabel,
+                 MCSymbol *EndLabel);
 
   /// Add a new panding pad, and extract the exception handling information from
   /// the landingpad instruction. Returns the label ID for the landing pad
@@ -1325,9 +1308,7 @@ public:
   void setCallSiteLandingPad(MCSymbol *Sym, ArrayRef<unsigned> Sites);
 
   /// Return if there is any wasm exception handling.
-  bool hasAnyWasmLandingPadIndex() const {
-    return !WasmLPadToIndexMap.empty();
-  }
+  bool hasAnyWasmLandingPadIndex() const { return !WasmLPadToIndexMap.empty(); }
 
   /// Map the landing pad to its index. Used for Wasm exception handling.
   void setWasmLandingPadIndex(const MachineBasicBlock *LPad, unsigned Index) {
@@ -1345,9 +1326,7 @@ public:
     return WasmLPadToIndexMap.lookup(LPad);
   }
 
-  bool hasAnyCallSiteLandingPad() const {
-    return !LPadToCallSiteMap.empty();
-  }
+  bool hasAnyCallSiteLandingPad() const { return !LPadToCallSiteMap.empty(); }
 
   /// Get the call site indexes for a landing pad EH symbol.
   SmallVectorImpl<unsigned> &getCallSiteLandingPad(MCSymbol *Sym) {
@@ -1361,9 +1340,7 @@ public:
     return !LPadToCallSiteMap[Sym].empty();
   }
 
-  bool hasAnyCallSiteLabel() const {
-    return !CallSiteMap.empty();
-  }
+  bool hasAnyCallSiteLabel() const { return !CallSiteMap.empty(); }
 
   /// Map the begin label for a call site.
   void setCallSiteBeginLabel(MCSymbol *BeginLabel, unsigned Site) {
@@ -1398,9 +1375,7 @@ public:
 
   /// Return a reference to the typeids encoding filters used in the current
   /// function.
-  const std::vector<unsigned> &getFilterIds() const {
-    return FilterIds;
-  }
+  const std::vector<unsigned> &getFilterIds() const { return FilterIds; }
 
   /// \}
 
@@ -1456,9 +1431,7 @@ public:
     assert(Inserted && "Call site info not unique");
   }
 
-  const CallSiteInfoMap &getCallSitesInfo() const {
-    return CallSitesInfo;
-  }
+  const CallSiteInfoMap &getCallSitesInfo() const { return CallSitesInfo; }
 
   /// Following functions update call site info. They should be called before
   /// removing, replacing or copying call instruction.
@@ -1476,9 +1449,7 @@ public:
   /// the same callee.
   void moveAdditionalCallInfo(const MachineInstr *Old, const MachineInstr *New);
 
-  unsigned getNewDebugInstrNum() {
-    return ++DebugInstrNumberingCount;
-  }
+  unsigned getNewDebugInstrNum() { return ++DebugInstrNumberingCount; }
 };
 
 //===--------------------------------------------------------------------===//
@@ -1490,8 +1461,9 @@ public:
 // the same as the machine basic block iterators, except that the root
 // node is implicitly the first node of the function.
 //
-template <> struct GraphTraits<MachineFunction*> :
-  public GraphTraits<MachineBasicBlock*> {
+template <>
+struct GraphTraits<MachineFunction *>
+    : public GraphTraits<MachineBasicBlock *> {
   static NodeRef getEntryNode(MachineFunction *F) { return &F->front(); }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
@@ -1505,7 +1477,7 @@ template <> struct GraphTraits<MachineFunction*> :
     return nodes_iterator(F->end());
   }
 
-  static unsigned       size       (MachineFunction *F) { return F->size(); }
+  static unsigned size(MachineFunction *F) { return F->size(); }
 
   static unsigned getMaxNumber(MachineFunction *F) {
     return F->getNumBlockIDs();
@@ -1514,8 +1486,9 @@ template <> struct GraphTraits<MachineFunction*> :
     return F->getBlockNumberEpoch();
   }
 };
-template <> struct GraphTraits<const MachineFunction*> :
-  public GraphTraits<const MachineBasicBlock*> {
+template <>
+struct GraphTraits<const MachineFunction *>
+    : public GraphTraits<const MachineBasicBlock *> {
   static NodeRef getEntryNode(const MachineFunction *F) { return &F->front(); }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
@@ -1525,13 +1498,11 @@ template <> struct GraphTraits<const MachineFunction*> :
     return nodes_iterator(F->begin());
   }
 
-  static nodes_iterator nodes_end  (const MachineFunction *F) {
+  static nodes_iterator nodes_end(const MachineFunction *F) {
     return nodes_iterator(F->end());
   }
 
-  static unsigned       size       (const MachineFunction *F)  {
-    return F->size();
-  }
+  static unsigned size(const MachineFunction *F) { return F->size(); }
 
   static unsigned getMaxNumber(const MachineFunction *F) {
     return F->getNumBlockIDs();
@@ -1546,8 +1517,9 @@ template <> struct GraphTraits<const MachineFunction*> :
 // a function is considered to be when traversing the predecessor edges of a BB
 // instead of the successor edges.
 //
-template <> struct GraphTraits<Inverse<MachineFunction*>> :
-  public GraphTraits<Inverse<MachineBasicBlock*>> {
+template <>
+struct GraphTraits<Inverse<MachineFunction *>>
+    : public GraphTraits<Inverse<MachineBasicBlock *>> {
   static NodeRef getEntryNode(Inverse<MachineFunction *> G) {
     return &G.Graph->front();
   }
@@ -1559,8 +1531,9 @@ template <> struct GraphTraits<Inverse<MachineFunction*>> :
     return F->getBlockNumberEpoch();
   }
 };
-template <> struct GraphTraits<Inverse<const MachineFunction*>> :
-  public GraphTraits<Inverse<const MachineBasicBlock*>> {
+template <>
+struct GraphTraits<Inverse<const MachineFunction *>>
+    : public GraphTraits<Inverse<const MachineBasicBlock *>> {
   static NodeRef getEntryNode(Inverse<const MachineFunction *> G) {
     return &G.Graph->front();
   }

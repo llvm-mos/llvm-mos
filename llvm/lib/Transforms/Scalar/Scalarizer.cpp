@@ -313,8 +313,8 @@ private:
                                               const DataLayout &DL);
   bool finish();
 
-  template<typename T> bool splitUnary(Instruction &, const T &);
-  template<typename T> bool splitBinary(Instruction &, const T &);
+  template <typename T> bool splitUnary(Instruction &, const T &);
+  template <typename T> bool splitBinary(Instruction &, const T &);
 
   bool splitCall(CallInst &CI);
 
@@ -542,14 +542,13 @@ void ScalarizerVisitor::replaceUses(Instruction *Op, Value *CV) {
 // Return true if it is safe to transfer the given metadata tag from
 // vector to scalar instructions.
 bool ScalarizerVisitor::canTransferMetadata(unsigned Tag) {
-  return (Tag == LLVMContext::MD_tbaa
-          || Tag == LLVMContext::MD_fpmath
-          || Tag == LLVMContext::MD_tbaa_struct
-          || Tag == LLVMContext::MD_invariant_load
-          || Tag == LLVMContext::MD_alias_scope
-          || Tag == LLVMContext::MD_noalias
-          || Tag == LLVMContext::MD_mem_parallel_loop_access
-          || Tag == LLVMContext::MD_access_group);
+  return (Tag == LLVMContext::MD_tbaa || Tag == LLVMContext::MD_fpmath ||
+          Tag == LLVMContext::MD_tbaa_struct ||
+          Tag == LLVMContext::MD_invariant_load ||
+          Tag == LLVMContext::MD_alias_scope ||
+          Tag == LLVMContext::MD_noalias ||
+          Tag == LLVMContext::MD_mem_parallel_loop_access ||
+          Tag == LLVMContext::MD_access_group);
 }
 
 // Transfer metadata from Op to the instructions in CV if it is known
@@ -626,7 +625,7 @@ ScalarizerVisitor::getVectorLayout(Type *Ty, Align Alignment,
 
 // Scalarize one-operand instruction I, using Split(Builder, X, Name)
 // to create an instruction like I with operand X and name Name.
-template<typename Splitter>
+template <typename Splitter>
 bool ScalarizerVisitor::splitUnary(Instruction &I, const Splitter &Split) {
   std::optional<VectorSplit> VS = getVectorSplit(I.getType());
   if (!VS)
@@ -654,7 +653,7 @@ bool ScalarizerVisitor::splitUnary(Instruction &I, const Splitter &Split) {
 
 // Scalarize two-operand instruction I, using Split(Builder, X, Y, Name)
 // to create an instruction like I with operands X and Y and name Name.
-template<typename Splitter>
+template <typename Splitter>
 bool ScalarizerVisitor::splitBinary(Instruction &I, const Splitter &Split) {
   std::optional<VectorSplit> VS = getVectorSplit(I.getType());
   if (!VS)
@@ -831,16 +830,16 @@ bool ScalarizerVisitor::visitSelectInst(SelectInst &SI) {
       Value *Op0 = VOp0[I];
       Value *Op1 = VOp1[I];
       Value *Op2 = VOp2[I];
-      Res[I] = Builder.CreateSelect(Op0, Op1, Op2,
-                                    SI.getName() + ".i" + Twine(I));
+      Res[I] =
+          Builder.CreateSelect(Op0, Op1, Op2, SI.getName() + ".i" + Twine(I));
     }
   } else {
     Value *Op0 = SI.getOperand(0);
     for (unsigned I = 0; I < VS->NumFragments; ++I) {
       Value *Op1 = VOp1[I];
       Value *Op2 = VOp2[I];
-      Res[I] = Builder.CreateSelect(Op0, Op1, Op2,
-                                    SI.getName() + ".i" + Twine(I));
+      Res[I] =
+          Builder.CreateSelect(Op0, Op1, Op2, SI.getName() + ".i" + Twine(I));
     }
   }
   gather(&SI, Res, *VS);
@@ -1211,8 +1210,8 @@ bool ScalarizerVisitor::visitLoadInst(LoadInst &LI) {
   if (!LI.isSimple())
     return false;
 
-  std::optional<VectorLayout> Layout = getVectorLayout(
-      LI.getType(), LI.getAlign(), LI.getDataLayout());
+  std::optional<VectorLayout> Layout =
+      getVectorLayout(LI.getType(), LI.getAlign(), LI.getDataLayout());
   if (!Layout)
     return false;
 
@@ -1237,8 +1236,8 @@ bool ScalarizerVisitor::visitStoreInst(StoreInst &SI) {
     return false;
 
   Value *FullValue = SI.getValueOperand();
-  std::optional<VectorLayout> Layout = getVectorLayout(
-      FullValue->getType(), SI.getAlign(), SI.getDataLayout());
+  std::optional<VectorLayout> Layout =
+      getVectorLayout(FullValue->getType(), SI.getAlign(), SI.getDataLayout());
   if (!Layout)
     return false;
 
@@ -1258,9 +1257,7 @@ bool ScalarizerVisitor::visitStoreInst(StoreInst &SI) {
   return true;
 }
 
-bool ScalarizerVisitor::visitCallInst(CallInst &CI) {
-  return splitCall(CI);
-}
+bool ScalarizerVisitor::visitCallInst(CallInst &CI) { return splitCall(CI); }
 
 bool ScalarizerVisitor::visitFreezeInst(FreezeInst &FI) {
   return splitUnary(FI, [](IRBuilder<> &Builder, Value *Op, const Twine &Name) {
@@ -1342,7 +1339,8 @@ bool ScalarizerVisitor::finish() {
   return true;
 }
 
-PreservedAnalyses ScalarizerPass::run(Function &F, FunctionAnalysisManager &AM) {
+PreservedAnalyses ScalarizerPass::run(Function &F,
+                                      FunctionAnalysisManager &AM) {
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   const TargetTransformInfo *TTI = &AM.getResult<TargetIRAnalysis>(F);
   ScalarizerVisitor Impl(DT, TTI, Options);

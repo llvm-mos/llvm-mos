@@ -63,12 +63,10 @@ static std::string getEnqueuedBlockSymbolName(const AMDGPUTargetMachine &TM,
 
 namespace llvm {
 
-static cl::opt<bool> DumpHSAMetadata(
-    "amdgpu-dump-hsa-metadata",
-    cl::desc("Dump AMDGPU HSA Metadata"));
-static cl::opt<bool> VerifyHSAMetadata(
-    "amdgpu-verify-hsa-metadata",
-    cl::desc("Verify AMDGPU HSA Metadata"));
+static cl::opt<bool> DumpHSAMetadata("amdgpu-dump-hsa-metadata",
+                                     cl::desc("Dump AMDGPU HSA Metadata"));
+static cl::opt<bool> VerifyHSAMetadata("amdgpu-verify-hsa-metadata",
+                                       cl::desc("Verify AMDGPU HSA Metadata"));
 
 namespace AMDGPU::HSAMD {
 
@@ -359,8 +357,8 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
 
   emitKernelArg(DL, ArgTy, ArgAlign,
                 getValueKind(ArgTy, TypeQual, BaseTypeName), Offset, Args,
-                PointeeAlign, Name, TypeName, BaseTypeName, ActAccQual,
-                AccQual, TypeQual);
+                PointeeAlign, Name, TypeName, BaseTypeName, ActAccQual, AccQual,
+                TypeQual);
 }
 
 void MetadataStreamerMsgPackV4::emitKernelArg(
@@ -477,8 +475,8 @@ void MetadataStreamerMsgPackV4::emitHiddenKernelArgs(
   // Emit the pointer argument for multi-grid object.
   if (HiddenArgNumBytes >= 56) {
     if (!Func.hasFnAttribute("amdgpu-no-multigrid-sync-arg")) {
-      emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_multigrid_sync_arg", Offset,
-                    Args);
+      emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_multigrid_sync_arg",
+                    Offset, Args);
     } else {
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_none", Offset, Args);
     }
@@ -515,8 +513,7 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
   // FIXME: The metadata treats the minimum as 16?
   Kern[".kernarg_segment_align"] =
       Kern.getDocument()->getNode(std::max(Align(4), MaxKernArgAlign).value());
-  Kern[".wavefront_size"] =
-      Kern.getDocument()->getNode(STM.getWavefrontSize());
+  Kern[".wavefront_size"] = Kern.getDocument()->getNode(STM.getWavefrontSize());
   DelayedExprs->assignDocNode(Kern[".sgpr_count"], msgpack::Type::UInt,
                               ProgramInfo.NumSGPR);
   DelayedExprs->assignDocNode(Kern[".vgpr_count"], msgpack::Type::UInt,
@@ -590,8 +587,7 @@ void MetadataStreamerMsgPackV4::emitKernel(const MachineFunction &MF,
       AMDGPU::getAMDHSACodeObjectVersion(*Func.getParent());
   auto Kern = getHSAKernelProps(MF, ProgramInfo, CodeObjectVersion);
 
-  auto Kernels =
-      getRootMetadata("amdhsa.kernels").getArray(/*Convert=*/true);
+  auto Kernels = getRootMetadata("amdhsa.kernels").getArray(/*Convert=*/true);
 
   auto &TM = static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
   {
@@ -678,7 +674,7 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
 
   if (!Func.hasFnAttribute("amdgpu-no-multigrid-sync-arg")) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_multigrid_sync_arg", Offset,
-                Args);
+                  Args);
   } else {
     Offset += 8; // Skipped.
   }

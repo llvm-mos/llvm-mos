@@ -88,8 +88,8 @@ struct ConstantCandidate {
   ConstantExpr *ConstExpr;
   unsigned CumulativeCost = 0;
 
-  ConstantCandidate(ConstantInt *ConstInt, ConstantExpr *ConstExpr=nullptr) :
-      ConstInt(ConstInt), ConstExpr(ConstExpr) {}
+  ConstantCandidate(ConstantInt *ConstInt, ConstantExpr *ConstExpr = nullptr)
+      : ConstInt(ConstInt), ConstExpr(ConstExpr) {}
 
   /// Add the user to the use list and update the cost.
   void addUser(Instruction *Inst, unsigned Idx, unsigned Cost) {
@@ -106,7 +106,8 @@ struct RebasedConstantInfo {
   Type *Ty;
 
   RebasedConstantInfo(ConstantUseListType &&Uses, Constant *Offset,
-      Type *Ty=nullptr) : Uses(std::move(Uses)), Offset(Offset), Ty(Ty) {}
+                      Type *Ty = nullptr)
+      : Uses(std::move(Uses)), Offset(Offset), Ty(Ty) {}
 };
 
 using RebasedConstantListType = SmallVector<RebasedConstantInfo, 4>;
@@ -191,8 +192,8 @@ private:
   void collectConstantCandidates(ConstCandMapType &ConstCandMap,
                                  Instruction *Inst);
   void collectConstantCandidates(Function &Fn);
-  void findAndMakeBaseConstant(ConstCandVecType::iterator S,
-                               ConstCandVecType::iterator E,
+  void findAndMakeBaseConstant(
+      ConstCandVecType::iterator S, ConstCandVecType::iterator E,
       SmallVectorImpl<consthoist::ConstantInfo> &ConstInfoVec);
   unsigned maximizeConstantsInRange(ConstCandVecType::iterator S,
                                     ConstCandVecType::iterator E,

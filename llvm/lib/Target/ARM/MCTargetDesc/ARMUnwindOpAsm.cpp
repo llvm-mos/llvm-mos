@@ -21,45 +21,45 @@ using namespace llvm;
 
 namespace {
 
-  /// UnwindOpcodeStreamer - The simple wrapper over SmallVector to emit bytes
-  /// with MSB to LSB per uint32_t ordering.  For example, the first byte will
-  /// be placed in Vec[3], and the following bytes will be placed in 2, 1, 0,
-  /// 7, 6, 5, 4, 11, 10, 9, 8, and so on.
-  class UnwindOpcodeStreamer {
-  private:
-    SmallVectorImpl<uint8_t> &Vec;
-    size_t Pos = 3;
+/// UnwindOpcodeStreamer - The simple wrapper over SmallVector to emit bytes
+/// with MSB to LSB per uint32_t ordering.  For example, the first byte will
+/// be placed in Vec[3], and the following bytes will be placed in 2, 1, 0,
+/// 7, 6, 5, 4, 11, 10, 9, 8, and so on.
+class UnwindOpcodeStreamer {
+private:
+  SmallVectorImpl<uint8_t> &Vec;
+  size_t Pos = 3;
 
-  public:
-    UnwindOpcodeStreamer(SmallVectorImpl<uint8_t> &V) : Vec(V) {}
+public:
+  UnwindOpcodeStreamer(SmallVectorImpl<uint8_t> &V) : Vec(V) {}
 
-    /// Emit the byte in MSB to LSB per uint32_t order.
-    void EmitByte(uint8_t elem) {
-      Vec[Pos] = elem;
-      Pos = (((Pos ^ 0x3u) + 1) ^ 0x3u);
-    }
+  /// Emit the byte in MSB to LSB per uint32_t order.
+  void EmitByte(uint8_t elem) {
+    Vec[Pos] = elem;
+    Pos = (((Pos ^ 0x3u) + 1) ^ 0x3u);
+  }
 
-    /// Emit the size prefix.
-    void EmitSize(size_t Size) {
-      size_t SizeInWords = (Size + 3) / 4;
-      assert(SizeInWords <= 0x100u &&
-             "Only 256 additional words are allowed for unwind opcodes");
-      EmitByte(static_cast<uint8_t>(SizeInWords - 1));
-    }
+  /// Emit the size prefix.
+  void EmitSize(size_t Size) {
+    size_t SizeInWords = (Size + 3) / 4;
+    assert(SizeInWords <= 0x100u &&
+           "Only 256 additional words are allowed for unwind opcodes");
+    EmitByte(static_cast<uint8_t>(SizeInWords - 1));
+  }
 
-    /// Emit the personality index prefix.
-    void EmitPersonalityIndex(unsigned PI) {
-      assert(PI < ARM::EHABI::NUM_PERSONALITY_INDEX &&
-             "Invalid personality prefix");
-      EmitByte(ARM::EHABI::EHT_COMPACT | PI);
-    }
+  /// Emit the personality index prefix.
+  void EmitPersonalityIndex(unsigned PI) {
+    assert(PI < ARM::EHABI::NUM_PERSONALITY_INDEX &&
+           "Invalid personality prefix");
+    EmitByte(ARM::EHABI::EHT_COMPACT | PI);
+  }
 
-    /// Fill the rest of bytes with FINISH opcode.
-    void FillFinishOpcode() {
-      while (Pos < Vec.size())
-        EmitByte(ARM::EHABI::UNWIND_OPCODE_FINISH);
-    }
-  };
+  /// Fill the rest of bytes with FINISH opcode.
+  void FillFinishOpcode() {
+    while (Pos < Vec.size())
+      EmitByte(ARM::EHABI::UNWIND_OPCODE_FINISH);
+  }
+};
 
 } // end anonymous namespace
 

@@ -29,14 +29,14 @@
 #include "llvm/MC/MCDwarf.h"
 using namespace llvm;
 
-static cl::opt<bool> VerifyCFI("verify-cfiinstrs",
-    cl::desc("Verify Call Frame Information instructions"),
-    cl::init(false),
-    cl::Hidden);
+static cl::opt<bool>
+    VerifyCFI("verify-cfiinstrs",
+              cl::desc("Verify Call Frame Information instructions"),
+              cl::init(false), cl::Hidden);
 
 namespace {
 class CFIInstrInserter : public MachineFunctionPass {
- public:
+public:
   static char ID;
 
   CFIInstrInserter() : MachineFunctionPass(ID) {
@@ -65,7 +65,7 @@ class CFIInstrInserter : public MachineFunctionPass {
     return insertedCFI;
   }
 
- private:
+private:
   struct MBBCFAInfo {
     MachineBasicBlock *MBB;
     /// Value of cfa offset valid at basic block entry.
@@ -133,7 +133,7 @@ class CFIInstrInserter : public MachineFunctionPass {
   /// outgoing offset and register of the MBB.
   unsigned verify(MachineFunction &MF);
 };
-}  // namespace
+} // namespace
 
 char CFIInstrInserter::ID = 0;
 INITIALIZE_PASS(CFIInstrInserter, "cfi-instr-inserter",
@@ -327,7 +327,8 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
   BitVector SetDifference;
   for (MachineBasicBlock &MBB : MF) {
     // Skip the first MBB in a function
-    if (MBB.getNumber() == MF.front().getNumber()) continue;
+    if (MBB.getNumber() == MF.front().getNumber())
+      continue;
 
     const MBBCFAInfo &MBBInfo = MBBVector[MBB.getNumber()];
     auto MBBI = MBBInfo.MBB->begin();

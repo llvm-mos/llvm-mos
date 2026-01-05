@@ -719,8 +719,8 @@ SampleProfileLoader::findCalleeFunctionSamples(const CallBase &Inst) const {
 /// of \p Inst. The vector is sorted by the total number of samples. Stores
 /// the total call count of the indirect call in \p Sum.
 std::vector<const FunctionSamples *>
-SampleProfileLoader::findIndirectCallFunctionSamples(
-    const Instruction &Inst, uint64_t &Sum) const {
+SampleProfileLoader::findIndirectCallFunctionSamples(const Instruction &Inst,
+                                                     uint64_t &Sum) const {
   const DILocation *DIL = Inst.getDebugLoc();
   std::vector<const FunctionSamples *> R;
 
@@ -785,7 +785,7 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   if (!DIL)
     return Samples;
 
-  auto it = DILocation2SampleMap.try_emplace(DIL,nullptr);
+  auto it = DILocation2SampleMap.try_emplace(DIL, nullptr);
   if (it.second) {
     if (FunctionSamples::ProfileIsCS)
       it.first->second = ContextTracker->getContextSamplesFor(DIL);
@@ -944,8 +944,8 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
   // recursive. As llvm does not inline recursive calls, we will
   // simply ignore it instead of handling it explicitly.
   if (!R->second->isDeclaration() && R->second->getSubprogram() &&
-      R->second->hasFnAttribute("use-sample-profile") &&
-      R->second != &F && isLegalToPromote(CI, R->second, &Reason)) {
+      R->second->hasFnAttribute("use-sample-profile") && R->second != &F &&
+      isLegalToPromote(CI, R->second, &Reason)) {
     // For promoted target, set its value with NOMORE_ICP_MAGICNUM count
     // in the value profile metadata so the target won't be promoted again.
     SmallVector<InstrProfValueData, 1> SortedCallTargets = {InstrProfValueData{
@@ -953,8 +953,8 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
         NOMORE_ICP_MAGICNUM}};
     updateIDTMetaData(CI, SortedCallTargets, 0);
 
-    auto *DI = &pgo::promoteIndirectCall(
-        CI, R->second, Candidate.CallsiteCount, Sum, false, ORE);
+    auto *DI = &pgo::promoteIndirectCall(CI, R->second, Candidate.CallsiteCount,
+                                         Sum, false, ORE);
     if (DI) {
       Sum -= Candidate.CallsiteCount;
       // Do not prorate the indirect callsite distribution since the original
@@ -984,8 +984,8 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
   } else {
     LLVM_DEBUG(dbgs() << "\nFailed to promote indirect call to "
                       << FunctionSamples::getCanonicalFnName(
-                             Candidate.CallInstr->getName())<< " because "
-                      << Reason << "\n");
+                             Candidate.CallInstr->getName())
+                      << " because " << Reason << "\n");
   }
   return false;
 }
@@ -1284,7 +1284,7 @@ bool SampleProfileLoader::tryInlineCandidate(
     for (auto &I : IFI.InlinedCallSites) {
       if (std::optional<PseudoProbe> Probe = extractProbe(*I))
         setProbeDistributionFactor(*I, Probe->Factor *
-                                   Candidate.CallsiteDistribution);
+                                           Candidate.CallsiteDistribution);
     }
     NumDuplicatedInlinesite++;
   }
@@ -1582,8 +1582,8 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
         // If outlined function does not exist in the profile, add it to a
         // separate map so that it does not rehash the original profile.
         if (!OutlineFS)
-          OutlineFS = &OutlineFunctionSamples[
-              FunctionId(FunctionSamples::getCanonicalFnName(Callee->getName()))];
+          OutlineFS = &OutlineFunctionSamples[FunctionId(
+              FunctionSamples::getCanonicalFnName(Callee->getName()))];
         OutlineFS->merge(*FS, 1);
         // Set outlined profile to be synthetic to not bias the inliner.
         OutlineFS->setContextSynthetic();
@@ -1601,8 +1601,7 @@ static SmallVector<InstrProfValueData, 2>
 GetSortedValueDataFromCallTargets(const SampleRecord::CallTargetMap &M) {
   SmallVector<InstrProfValueData, 2> R;
   for (const auto &I : SampleRecord::sortCallTargets(M)) {
-    R.emplace_back(
-        InstrProfValueData{I.first.getHashCode(), I.second});
+    R.emplace_back(InstrProfValueData{I.first.getHashCode(), I.second});
   }
   return R;
 }
@@ -1842,7 +1841,7 @@ SampleProfileLoader::buildProfiledCallGraph(Module &M) {
     if (skipProfileForFunction(F))
       continue;
     ProfiledCG->addProfiledFunction(
-          getRepInFormat(FunctionSamples::getCanonicalFnName(F)));
+        getRepInFormat(FunctionSamples::getCanonicalFnName(F)));
   }
 
   return ProfiledCG;
@@ -2009,7 +2008,8 @@ bool SampleProfileLoader::doInitialization(Module &M,
                               ProfileInlineReplayScope,
                               ProfileInlineReplayFallback,
                               {ProfileInlineReplayFormat}},
-        /*EmitRemarks=*/false, InlineContext{LTOPhase, InlinePass::ReplaySampleProfileInliner});
+        /*EmitRemarks=*/false,
+        InlineContext{LTOPhase, InlinePass::ReplaySampleProfileInliner});
   }
 
   // Apply tweaks if context-sensitive or probe-based profile is available.

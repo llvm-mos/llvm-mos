@@ -166,7 +166,7 @@ public:
   ///
   /// Similar in behavior to `isZeroIdiom`. However, it knows how to identify
   /// all dependency breaking instructions (i.e. not just zero-idioms).
-  /// 
+  ///
   /// As for `isZeroIdiom`, this method returns a mask of "broken" dependencies.
   /// (See method `isZeroIdiom` for a detailed description of Mask).
   virtual bool isDependencyBreaking(const MachineInstr *MI, APInt &Mask) const {
@@ -180,8 +180,9 @@ public:
   /// instantiating tablegen class `IsOptimizableRegisterMove` (see
   /// llvm/Target/TargetInstrPredicate.td).
   ///
-  /// SubtargetEmitter is responsible for processing all the definitions of class
-  /// IsOptimizableRegisterMove, and auto-generate an override for this method.
+  /// SubtargetEmitter is responsible for processing all the definitions of
+  /// class IsOptimizableRegisterMove, and auto-generate an override for this
+  /// method.
   virtual bool isOptimizableRegisterMove(const MachineInstr *MI) const {
     return false;
   }
@@ -272,14 +273,12 @@ public:
   // Provide an ordered list of schedule DAG mutations for the post-RA
   // scheduler.
   virtual void getPostRAMutations(
-      std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  }
+      std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {}
 
   // Provide an ordered list of schedule DAG mutations for the machine
   // pipeliner.
   virtual void getSMSMutations(
-      std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  }
+      std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {}
 
   /// Default to DFA for resource management, return false when target will use
   /// ProcResource in InstrSchedModel instead.
@@ -303,9 +302,7 @@ public:
 
   /// \brief Sink addresses into blocks using GEP instructions rather than
   /// pointer casts and arithmetic.
-  virtual bool addrSinkUsingGEPs() const {
-    return useAA();
-  }
+  virtual bool addrSinkUsingGEPs() const { return useAA(); }
 
   /// Enable the use of the early if conversion pass.
   virtual bool enableEarlyIfConversion() const { return false; }

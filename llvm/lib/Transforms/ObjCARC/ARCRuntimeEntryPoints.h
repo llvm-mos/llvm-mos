@@ -91,8 +91,8 @@ public:
     case ARCRuntimeEntryPointKind::StoreStrong:
       return getIntrinsicEntryPoint(StoreStrong, Intrinsic::objc_storeStrong);
     case ARCRuntimeEntryPointKind::RetainRV:
-      return getIntrinsicEntryPoint(RetainRV,
-                                Intrinsic::objc_retainAutoreleasedReturnValue);
+      return getIntrinsicEntryPoint(
+          RetainRV, Intrinsic::objc_retainAutoreleasedReturnValue);
     case ARCRuntimeEntryPointKind::ClaimRV:
       return getIntrinsicEntryPoint(
           ClaimRV, Intrinsic::objc_claimAutoreleasedReturnValue);
@@ -103,8 +103,8 @@ public:
       return getIntrinsicEntryPoint(RetainAutorelease,
                                     Intrinsic::objc_retainAutorelease);
     case ARCRuntimeEntryPointKind::RetainAutoreleaseRV:
-      return getIntrinsicEntryPoint(RetainAutoreleaseRV,
-                                Intrinsic::objc_retainAutoreleaseReturnValue);
+      return getIntrinsicEntryPoint(
+          RetainAutoreleaseRV, Intrinsic::objc_retainAutoreleaseReturnValue);
     case ARCRuntimeEntryPointKind::AutoreleasePoolPush:
       return getIntrinsicEntryPoint(AutoreleasePoolPush,
                                     Intrinsic::objc_autoreleasePoolPush);

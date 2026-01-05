@@ -104,7 +104,7 @@ public:
     static_assert(std::is_copy_constructible_v<ValueT>,
                   "Cannot call lookup() if ValueT is not copyable.");
     typename MapType::const_iterator Pos = Map.find(Key);
-    return Pos == Map.end()? ValueT() : Vector[Pos->second].second;
+    return Pos == Map.end() ? ValueT() : Vector[Pos->second].second;
   }
 
   template <typename... Ts>
@@ -148,14 +148,12 @@ public:
 
   [[nodiscard]] iterator find(const KeyT &Key) {
     typename MapType::const_iterator Pos = Map.find(Key);
-    return Pos == Map.end()? Vector.end() :
-                            (Vector.begin() + Pos->second);
+    return Pos == Map.end() ? Vector.end() : (Vector.begin() + Pos->second);
   }
 
   [[nodiscard]] const_iterator find(const KeyT &Key) const {
     typename MapType::const_iterator Pos = Map.find(Key);
-    return Pos == Map.end()? Vector.end() :
-                            (Vector.begin() + Pos->second);
+    return Pos == Map.end() ? Vector.end() : (Vector.begin() + Pos->second);
   }
 
   /// Remove the last element from the vector.
@@ -254,8 +252,7 @@ void MapVector<KeyT, ValueT, MapType, VectorType>::remove_if(Function Pred) {
 template <typename KeyT, typename ValueT, unsigned N>
 struct SmallMapVector
     : MapVector<KeyT, ValueT, SmallDenseMap<KeyT, unsigned, N>,
-                SmallVector<std::pair<KeyT, ValueT>, N>> {
-};
+                SmallVector<std::pair<KeyT, ValueT>, N>> {};
 
 } // end namespace llvm
 

@@ -16,8 +16,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/TargetParser/Triple.h"
 #include "llvm/Pass.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils.h"
 
 using namespace llvm;
@@ -27,13 +27,9 @@ static void insertCall(Function &CurFn, StringRef Func,
   Module &M = *InsertionPt->getParent()->getParent()->getParent();
   LLVMContext &C = InsertionPt->getParent()->getContext();
 
-  if (Func == "mcount" ||
-      Func == ".mcount" ||
-      Func == "llvm.arm.gnu.eabi.mcount" ||
-      Func == "\01_mcount" ||
-      Func == "\01mcount" ||
-      Func == "__mcount" ||
-      Func == "_mcount" ||
+  if (Func == "mcount" || Func == ".mcount" ||
+      Func == "llvm.arm.gnu.eabi.mcount" || Func == "\01_mcount" ||
+      Func == "\01mcount" || Func == "__mcount" || Func == "_mcount" ||
       Func == "__cyg_profile_func_enter_bare") {
     Triple TargetTriple(M.getTargetTriple());
     if (TargetTriple.isOSAIX() && Func == "__mcount") {
@@ -43,9 +39,9 @@ static void insertCall(Function &CurFn, StringRef Func,
                                               GlobalValue::InternalLinkage,
                                               ConstantInt::get(SizeTy, 0));
       CallInst *Call = CallInst::Create(
-          M.getOrInsertFunction(Func,
-                                FunctionType::get(Type::getVoidTy(C), {SizePtrTy},
-                                                  /*isVarArg=*/false)),
+          M.getOrInsertFunction(Func, FunctionType::get(Type::getVoidTy(C),
+                                                        {SizePtrTy},
+                                                        /*isVarArg=*/false)),
           {GV}, "", InsertionPt);
       Call->setDebugLoc(DL);
     } else if (TargetTriple.isRISCV() || TargetTriple.isAArch64() ||
@@ -178,7 +174,7 @@ struct PostInlineEntryExitInstrumenter : public FunctionPass {
   bool runOnFunction(Function &F) override { return ::runOnFunction(F, true); }
 };
 char PostInlineEntryExitInstrumenter::ID = 0;
-}
+} // namespace
 
 INITIALIZE_PASS_BEGIN(
     PostInlineEntryExitInstrumenter, "post-inline-ee-instrument",

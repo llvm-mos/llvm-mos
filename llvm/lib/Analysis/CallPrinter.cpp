@@ -40,11 +40,11 @@ static cl::opt<bool> ShowHeatColors("callgraph-heat-colors", cl::init(false),
 
 static cl::opt<bool>
     ShowEdgeWeight("callgraph-show-weights", cl::init(false), cl::Hidden,
-                       cl::desc("Show edges labeled with weights"));
+                   cl::desc("Show edges labeled with weights"));
 
-static cl::opt<bool>
-    CallMultiGraph("callgraph-multigraph", cl::init(false), cl::Hidden,
-            cl::desc("Show call-multigraph (do not remove parallel edges)"));
+static cl::opt<bool> CallMultiGraph(
+    "callgraph-multigraph", cl::init(false), cl::Hidden,
+    cl::desc("Show call-multigraph (do not remove parallel edges)"));
 
 static cl::opt<std::string> CallGraphDotFilenamePrefix(
     "callgraph-dot-filename-prefix", cl::Hidden,
@@ -189,8 +189,7 @@ struct DOTGraphTraits<CallGraphDOTInfo *> : public DefaultDOTGraphTraits {
       return "";
 
     uint64_t Counter = getNumOfCalls(*Caller, *Callee);
-    double Width =
-        1 + 2 * (double(Counter) / CGInfo->getMaxFreq());
+    double Width = 1 + 2 * (double(Counter) / CGInfo->getMaxFreq());
     std::string Attrs = "label=\"" + std::to_string(Counter) +
                         "\" penwidth=" + std::to_string(Width);
     return Attrs;

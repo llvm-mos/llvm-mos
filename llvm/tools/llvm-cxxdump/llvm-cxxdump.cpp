@@ -56,8 +56,7 @@ static void error(std::error_code EC) {
   exit(1);
 }
 
-template <typename T>
-T unwrapOrError(Expected<T> EO) {
+template <typename T> T unwrapOrError(Expected<T> EO) {
   if (!EO)
     error(EO.takeError());
   return std::move(*EO);

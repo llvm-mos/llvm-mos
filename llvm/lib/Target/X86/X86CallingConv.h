@@ -27,7 +27,6 @@ bool RetCC_X86(unsigned ValNo, MVT ValVT, MVT LocVT,
 bool CC_X86(unsigned ValNo, MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
             ISD::ArgFlagsTy ArgFlags, Type *OrigTy, CCState &State);
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif
-

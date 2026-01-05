@@ -483,12 +483,10 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
   } while (!TraverseStack.empty());
   assert(DFSTreeStack.empty());
 
-  LLVM_DEBUG(
-    errs() << "Preorder:\n";
-    for (int i = 0, e = BlockPreorder.size(); i != e; ++i) {
-      errs() << "  " << Info.Context.print(BlockPreorder[i]) << ": " << i << "\n";
-    }
-  );
+  LLVM_DEBUG(errs() << "Preorder:\n"; for (int i = 0, e = BlockPreorder.size();
+                                           i != e; ++i) {
+    errs() << "  " << Info.Context.print(BlockPreorder[i]) << ": " << i << "\n";
+  });
 }
 
 /// \brief Reset the object to its initial state.

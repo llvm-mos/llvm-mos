@@ -21,13 +21,11 @@ static void print_usage(void) {
   fprintf(stderr, "  * --module-dump\n");
   fprintf(stderr, "    Read bitcode from stdin - print disassembly\n\n");
   fprintf(stderr, "  * --lazy-module-dump\n");
-  fprintf(stderr,
-          "    Lazily read bitcode from stdin - print disassembly\n\n");
+  fprintf(stderr, "    Lazily read bitcode from stdin - print disassembly\n\n");
   fprintf(stderr, "  * --new-module-dump\n");
   fprintf(stderr, "    Read bitcode from stdin - print disassembly\n\n");
   fprintf(stderr, "  * --lazy-new-module-dump\n");
-  fprintf(stderr,
-          "    Lazily read bitcode from stdin - print disassembly\n\n");
+  fprintf(stderr, "    Lazily read bitcode from stdin - print disassembly\n\n");
   fprintf(stderr, "  * --module-list-functions\n");
   fprintf(stderr,
           "    Read bitcode from stdin - list summary of functions\n\n");

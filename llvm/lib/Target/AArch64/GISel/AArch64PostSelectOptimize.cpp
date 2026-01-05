@@ -131,7 +131,6 @@ bool AArch64PostSelectOptimize::foldSimpleCrossClassCopies(MachineInstr &MI) {
   if (SrcRC == DstRC)
     return false;
 
-
   if (SrcRC->hasSubClass(DstRC)) {
     // This is the case where the source class is a superclass of the dest, so
     // if the copy is the only user of the source, we can just constrain the
@@ -306,11 +305,9 @@ bool AArch64PostSelectOptimize::runOnMachineFunction(MachineFunction &MF) {
 
 char AArch64PostSelectOptimize::ID = 0;
 INITIALIZE_PASS_BEGIN(AArch64PostSelectOptimize, DEBUG_TYPE,
-                      "Optimize AArch64 selected instructions",
-                      false, false)
+                      "Optimize AArch64 selected instructions", false, false)
 INITIALIZE_PASS_END(AArch64PostSelectOptimize, DEBUG_TYPE,
-                    "Optimize AArch64 selected instructions", false,
-                    false)
+                    "Optimize AArch64 selected instructions", false, false)
 
 namespace llvm {
 FunctionPass *createAArch64PostSelectOptimize() {

@@ -37,6 +37,6 @@ struct BPFRegisterInfo : public BPFGenRegisterInfo {
 
   Register getFrameRegister(const MachineFunction &MF) const override;
 };
-}
+} // namespace llvm
 
 #endif

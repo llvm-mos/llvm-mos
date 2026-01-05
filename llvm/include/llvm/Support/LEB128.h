@@ -100,8 +100,7 @@ inline unsigned encodeULEB128(uint64_t Value, raw_ostream &OS,
 
 /// Utility function to encode a ULEB128 value to a buffer. Returns
 /// the length in bytes of the encoded value.
-inline unsigned encodeULEB128(uint64_t Value, uint8_t *p,
-                              unsigned PadTo = 0) {
+inline unsigned encodeULEB128(uint64_t Value, uint8_t *p, unsigned PadTo = 0) {
   uint8_t *orig_p = p;
   unsigned Count = 0;
   do {

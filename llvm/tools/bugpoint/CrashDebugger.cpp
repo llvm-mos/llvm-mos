@@ -1218,7 +1218,8 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
 
         OldSize += Attrs.size();
         Expected<bool> Result =
-          ReduceCrashingFunctionAttributes(BD, Name, TestFn).reduceList(Attrs);
+            ReduceCrashingFunctionAttributes(BD, Name, TestFn)
+                .reduceList(Attrs);
         if (Error E = Result.takeError())
           return E;
 

@@ -62,12 +62,10 @@ void SubtargetFeatures::print(raw_ostream &OS) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void SubtargetFeatures::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void SubtargetFeatures::dump() const { print(dbgs()); }
 #endif
 
-void SubtargetFeatures::getDefaultSubtargetFeatures(const Triple& Triple) {
+void SubtargetFeatures::getDefaultSubtargetFeatures(const Triple &Triple) {
   // FIXME: This is an inelegant way of specifying the features of a
   // subtarget. It would be better if we could encode this information
   // into the IR.

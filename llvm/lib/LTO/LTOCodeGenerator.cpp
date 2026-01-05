@@ -58,7 +58,7 @@
 #include <system_error>
 using namespace llvm;
 
-const char* LTOCodeGenerator::getVersionString() {
+const char *LTOCodeGenerator::getVersionString() {
   return PACKAGE_NAME " version " PACKAGE_VERSION;
 }
 
@@ -259,10 +259,8 @@ bool LTOCodeGenerator::runAIXSystemAssembler(SmallString<128> &AssemblyFile) {
   std::string ObjectFileName(AssemblyFile);
   ObjectFileName[ObjectFileName.size() - 1] = 'o';
   SmallVector<StringRef, 8> Args = {
-      "/bin/env",     LDR_CNTRL_var,
-      AssemblerPath,  Arch,
-      "-many",        "-o",
-      ObjectFileName, AssemblyFile};
+      "/bin/env", LDR_CNTRL_var, AssemblerPath,  Arch,
+      "-many",    "-o",          ObjectFileName, AssemblyFile};
 
   // Invoke the assembler.
   int RC = sys::ExecuteAndWait(Args[0], Args);
@@ -336,8 +334,7 @@ bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
   return true;
 }
 
-std::unique_ptr<MemoryBuffer>
-LTOCodeGenerator::compileOptimized() {
+std::unique_ptr<MemoryBuffer> LTOCodeGenerator::compileOptimized() {
   const char *name;
   if (!compileOptimizedToFile(&name))
     return nullptr;
@@ -426,10 +423,12 @@ void LTOCodeGenerator::preserveDiscardableGVs(
     if (GV.hasAvailableExternallyLinkage())
       return emitWarning(
           (Twine("Linker asked to preserve available_externally global: '") +
-           GV.getName() + "'").str());
+           GV.getName() + "'")
+              .str());
     if (GV.hasInternalLinkage())
       return emitWarning((Twine("Linker asked to preserve internal global: '") +
-                   GV.getName() + "'").str());
+                          GV.getName() + "'")
+                             .str());
     Used.push_back(&GV);
   };
   for (auto &GV : TheModule)
@@ -717,11 +716,10 @@ struct LTODiagnosticHandler : public DiagnosticHandler {
     return true;
   }
 };
-}
+} // namespace
 
-void
-LTOCodeGenerator::setDiagnosticHandler(lto_diagnostic_handler_t DiagHandler,
-                                       void *Ctxt) {
+void LTOCodeGenerator::setDiagnosticHandler(
+    lto_diagnostic_handler_t DiagHandler, void *Ctxt) {
   this->DiagHandler = DiagHandler;
   this->DiagContext = Ctxt;
   if (!DiagHandler)
@@ -735,13 +733,14 @@ LTOCodeGenerator::setDiagnosticHandler(lto_diagnostic_handler_t DiagHandler,
 namespace {
 class LTODiagnosticInfo : public DiagnosticInfo {
   const Twine &Msg;
+
 public:
   LTODiagnosticInfo(const Twine &DiagMsg LLVM_LIFETIME_BOUND,
                     DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Linker, Severity), Msg(DiagMsg) {}
   void print(DiagnosticPrinter &DP) const override { DP << Msg; }
 };
-}
+} // namespace
 
 void LTOCodeGenerator::emitError(const std::string &ErrMsg) {
   if (DiagHandler)

@@ -13,17 +13,16 @@
 #ifndef LLVM_LIB_TARGET_MOS_MOSINSTRUCTIONSELECTOR_H
 #define LLVM_LIB_TARGET_MOS_MOSINSTRUCTIONSELECTOR_H
 
-#include "MOSTargetMachine.h"
 #include "MOSRegisterBankInfo.h"
 #include "MOSSubtarget.h"
+#include "MOSTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 
 namespace llvm {
 
-InstructionSelector *
-createMOSInstructionSelector(const MOSTargetMachine &TM,
-                                 MOSSubtarget &STI,
-                                 MOSRegisterBankInfo &RBI);
+InstructionSelector *createMOSInstructionSelector(const MOSTargetMachine &TM,
+                                                  MOSSubtarget &STI,
+                                                  MOSRegisterBankInfo &RBI);
 
 } // namespace llvm
 

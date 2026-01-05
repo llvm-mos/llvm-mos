@@ -1047,8 +1047,8 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   if (VerifyMemorySSA)
     MSSAU.getMemorySSA()->verifyMemorySSA();
 
-    // Now that we've finished hoisting make sure that LI and DT are still
-    // valid.
+  // Now that we've finished hoisting make sure that LI and DT are still
+  // valid.
 #ifdef EXPENSIVE_CHECKS
   if (Changed) {
     assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
@@ -1196,8 +1196,8 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
 
     bool InvariantGroup = LI->hasMetadata(LLVMContext::MD_invariant_group);
 
-    bool Invalidated = pointerInvalidatedByLoop(
-        MSSA, MU, CurLoop, I, Flags, InvariantGroup);
+    bool Invalidated =
+        pointerInvalidatedByLoop(MSSA, MU, CurLoop, I, Flags, InvariantGroup);
     // Check loop-invariant address because this may also be a sinkable load
     // whose address is not necessarily loop-invariant.
     if (ORE && Invalidated && CurLoop->isLoopInvariant(LI->getPointerOperand()))
@@ -1248,8 +1248,8 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
 
       // If we can prove there are no writes to the memory read by the call, we
       // can hoist or sink.
-      return !pointerInvalidatedByLoop(
-          MSSA, MU, CurLoop, I, Flags, /*InvariantGroup=*/false);
+      return !pointerInvalidatedByLoop(MSSA, MU, CurLoop, I, Flags,
+                                       /*InvariantGroup=*/false);
     }
 
     if (Behavior.onlyWritesMemory()) {
@@ -1299,7 +1299,7 @@ static bool isTriviallyReplaceablePHI(const PHINode &PN, const Instruction &I) {
 
 /// Return true if the instruction is foldable in the loop.
 static bool isFoldableInLoop(const Instruction &I, const Loop *CurLoop,
-                         const TargetTransformInfo *TTI) {
+                             const TargetTransformInfo *TTI) {
   if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
     InstructionCost CostI =
         TTI->getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
@@ -1654,7 +1654,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
   // the instruction.
   // First check if I is worth sinking for all uses. Sink only when it is worth
   // across all uses.
-  SmallSetVector<User*, 8> Users(I.user_begin(), I.user_end());
+  SmallSetVector<User *, 8> Users(I.user_begin(), I.user_end());
   for (auto *UI : Users) {
     auto *User = cast<Instruction>(UI);
 
@@ -1687,8 +1687,8 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
   LLVM_DEBUG(dbgs() << "LICM hoisting to " << Dest->getNameOrAsOperand() << ": "
                     << I << "\n");
   ORE->emit([&]() {
-    return OptimizationRemark(DEBUG_TYPE, "Hoisted", &I) << "hoisting "
-                                                         << ore::NV("Inst", &I);
+    return OptimizationRemark(DEBUG_TYPE, "Hoisted", &I)
+           << "hoisting " << ore::NV("Inst", &I);
   });
 
   // Metadata can be dependent on conditions we are hoisting above.
@@ -2392,7 +2392,8 @@ static bool pointerInvalidatedByLoop(MemorySSA *MSSA, MemoryUse *MU,
     MemoryAccess *Source = getClobberingMemoryAccess(*MSSA, BAA, Flags, MU);
     return !MSSA->isLiveOnEntryDef(Source) &&
            CurLoop->contains(Source->getBlock()) &&
-           !(InvariantGroup && Source->getBlock() == CurLoop->getHeader() && isa<MemoryPhi>(Source));
+           !(InvariantGroup && Source->getBlock() == CurLoop->getHeader() &&
+             isa<MemoryPhi>(Source));
   }
 
   // For sinking, we'd need to check all Defs below this use. The getClobbering

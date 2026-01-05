@@ -47,7 +47,7 @@ public:
 
   AMDGPUPALMetadata *getPALMetadata() { return &PALMetadata; }
 
-  virtual void EmitDirectiveAMDGCNTarget(){};
+  virtual void EmitDirectiveAMDGCNTarget() {};
 
   virtual void EmitDirectiveAMDHSACodeObjectVersion(unsigned COV) {
     CodeObjectVersion = COV;
@@ -55,7 +55,7 @@ public:
 
   virtual void EmitAMDKernelCodeT(AMDGPU::AMDGPUMCKernelCodeT &Header) {};
 
-  virtual void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type){};
+  virtual void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) {};
 
   virtual void emitAMDGPULDS(MCSymbol *Symbol, unsigned Size, Align Alignment) {
   }
@@ -126,6 +126,7 @@ public:
 
 class AMDGPUTargetAsmStreamer final : public AMDGPUTargetStreamer {
   formatted_raw_ostream &OS;
+
 public:
   AMDGPUTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
 
@@ -220,5 +221,5 @@ public:
                              const MCExpr *ReserveVCC,
                              const MCExpr *ReserveFlatScr) override;
 };
-}
+} // namespace llvm
 #endif

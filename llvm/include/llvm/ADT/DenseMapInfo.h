@@ -50,8 +50,7 @@ inline unsigned combineHashValue(unsigned a, unsigned b) {
 /// parameter that is used to support SFINAE (generally using std::enable_if_t)
 /// in derived DenseMapInfo specializations; in non-SFINAE use cases this should
 /// just be `void`.
-template<typename T, typename Enable = void>
-struct DenseMapInfo {
+template <typename T, typename Enable = void> struct DenseMapInfo {
   // static constexpr T getEmptyKey();
   // static constexpr T getTombstoneKey();
   // static unsigned getHashValue(const T &Val);
@@ -63,8 +62,7 @@ struct DenseMapInfo {
 // complete. This allows clients to instantiate DenseMap<T*, ...> with forward
 // declared key types. Assume that no pointer key type requires more than 4096
 // bytes of alignment.
-template<typename T>
-struct DenseMapInfo<T*> {
+template <typename T> struct DenseMapInfo<T *> {
   // The following should hold, but it would require T to be complete:
   // static_assert(alignof(T) <= (1 << Log2MaxAlign),
   //               "DenseMap does not support pointer keys requiring more than "
@@ -74,13 +72,13 @@ struct DenseMapInfo<T*> {
   static constexpr T *getEmptyKey() {
     uintptr_t Val = static_cast<uintptr_t>(-1);
     Val <<= Log2MaxAlign;
-    return reinterpret_cast<T*>(Val);
+    return reinterpret_cast<T *>(Val);
   }
 
   static constexpr T *getTombstoneKey() {
     uintptr_t Val = static_cast<uintptr_t>(-2);
     Val <<= Log2MaxAlign;
-    return reinterpret_cast<T*>(Val);
+    return reinterpret_cast<T *>(Val);
   }
 
   static unsigned getHashValue(const T *PtrVal) {
@@ -92,14 +90,12 @@ struct DenseMapInfo<T*> {
 };
 
 // Provide DenseMapInfo for chars.
-template<> struct DenseMapInfo<char> {
+template <> struct DenseMapInfo<char> {
   static constexpr char getEmptyKey() { return ~0; }
   static constexpr char getTombstoneKey() { return ~0 - 1; }
-  static unsigned getHashValue(const char& Val) { return Val * 37U; }
+  static unsigned getHashValue(const char &Val) { return Val * 37U; }
 
-  static bool isEqual(const char &LHS, const char &RHS) {
-    return LHS == RHS;
-  }
+  static bool isEqual(const char &LHS, const char &RHS) { return LHS == RHS; }
 };
 
 // Provide DenseMapInfo for all integral types except char.
@@ -132,8 +128,7 @@ struct DenseMapInfo<
 };
 
 // Provide DenseMapInfo for all pairs whose members have info.
-template<typename T, typename U>
-struct DenseMapInfo<std::pair<T, U>> {
+template <typename T, typename U> struct DenseMapInfo<std::pair<T, U>> {
   using Pair = std::pair<T, U>;
   using FirstInfo = DenseMapInfo<T>;
   using SecondInfo = DenseMapInfo<U>;
@@ -146,7 +141,7 @@ struct DenseMapInfo<std::pair<T, U>> {
     return {FirstInfo::getTombstoneKey(), SecondInfo::getTombstoneKey()};
   }
 
-  static unsigned getHashValue(const Pair& PairVal) {
+  static unsigned getHashValue(const Pair &PairVal) {
     return detail::combineHashValue(FirstInfo::getHashValue(PairVal.first),
                                     SecondInfo::getHashValue(PairVal.second));
   }

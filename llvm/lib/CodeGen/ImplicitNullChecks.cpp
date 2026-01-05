@@ -170,11 +170,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
                                     MachineBasicBlock *HandlerMBB);
   void rewriteNullChecks(ArrayRef<NullCheck> NullCheckList);
 
-  enum AliasResult {
-    AR_NoAlias,
-    AR_MayAlias,
-    AR_WillAliasEverything
-  };
+  enum AliasResult { AR_NoAlias, AR_MayAlias, AR_WillAliasEverything };
 
   /// Returns AR_NoAlias if \p MI memory operation does not alias with
   /// \p PrevMI, AR_MayAlias if they may alias and AR_WillAliasEverything if
@@ -182,11 +178,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
   AliasResult areMemoryOpsAliased(const MachineInstr &MI,
                                   const MachineInstr *PrevMI) const;
 
-  enum SuitabilityResult {
-    SR_Suitable,
-    SR_Unsuitable,
-    SR_Impossible
-  };
+  enum SuitabilityResult { SR_Suitable, SR_Unsuitable, SR_Impossible };
 
   /// Return SR_Suitable if \p MI a memory operation that can be used to
   /// implicitly null check the value in \p PointerReg, SR_Unsuitable if
@@ -366,7 +358,7 @@ ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
   // Implementation restriction for faulting_op insertion
   // TODO: This could be relaxed if we find a test case which warrants it.
   if (MI.getDesc().getNumDefs() > 1)
-   return SR_Unsuitable;
+    return SR_Unsuitable;
 
   if (!MI.mayLoadOrStore() || MI.isPredicable())
     return SR_Unsuitable;
@@ -500,7 +492,6 @@ bool ImplicitNullChecks::canDependenceHoistingClobberLiveIns(
     // branched to NullSucc directly.
     if (AnyAliasLiveIn(TRI, NullSucc, DependenceMO.getReg()))
       return true;
-
   }
 
   // The dependence does not clobber live-ins in NullSucc block.
@@ -611,8 +602,7 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
     //
     // we must ensure that there are no instructions between the 'test' and
     // conditional jump that modify %rax.
-    assert(MBP.ConditionDef->getParent() ==  &MBB &&
-           "Should be in basic block");
+    assert(MBP.ConditionDef->getParent() == &MBB && "Should be in basic block");
 
     for (auto I = MBB.rbegin(); MBP.ConditionDef != &*I; ++I)
       if (I->modifiesRegister(PointerReg, TRI))
@@ -807,8 +797,8 @@ char ImplicitNullChecks::ID = 0;
 
 char &llvm::ImplicitNullChecksID = ImplicitNullChecks::ID;
 
-INITIALIZE_PASS_BEGIN(ImplicitNullChecks, DEBUG_TYPE,
-                      "Implicit null checks", false, false)
+INITIALIZE_PASS_BEGIN(ImplicitNullChecks, DEBUG_TYPE, "Implicit null checks",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(ImplicitNullChecks, DEBUG_TYPE,
-                    "Implicit null checks", false, false)
+INITIALIZE_PASS_END(ImplicitNullChecks, DEBUG_TYPE, "Implicit null checks",
+                    false, false)

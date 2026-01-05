@@ -300,10 +300,17 @@ bool RISCVMergeBaseOffsetOpt::foldShiftedOffset(MachineInstr &Hi,
 
   unsigned ShAmt;
   switch (TailShXAdd.getOpcode()) {
-  default: llvm_unreachable("Unexpected opcode");
-  case RISCV::SH1ADD: ShAmt = 1; break;
-  case RISCV::SH2ADD: ShAmt = 2; break;
-  case RISCV::SH3ADD: ShAmt = 3; break;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case RISCV::SH1ADD:
+    ShAmt = 1;
+    break;
+  case RISCV::SH2ADD:
+    ShAmt = 2;
+    break;
+  case RISCV::SH3ADD:
+    ShAmt = 3;
+    break;
   }
 
   Offset = (uint64_t)Offset << ShAmt;

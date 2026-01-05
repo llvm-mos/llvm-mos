@@ -24,42 +24,37 @@ namespace llvm {
 /// ImutKeyValueInfo -Traits class used by ImmutableMap.  While both the first
 /// and second elements in a pair are used to generate profile information,
 /// only the first element (the key) is used by isEqual and isLess.
-template <typename T, typename S>
-struct ImutKeyValueInfo {
-  using value_type = const std::pair<T,S>;
-  using value_type_ref = const value_type&;
+template <typename T, typename S> struct ImutKeyValueInfo {
+  using value_type = const std::pair<T, S>;
+  using value_type_ref = const value_type &;
   using key_type = const T;
-  using key_type_ref = const T&;
+  using key_type_ref = const T &;
   using data_type = const S;
-  using data_type_ref = const S&;
+  using data_type_ref = const S &;
 
-  static inline key_type_ref KeyOfValue(value_type_ref V) {
-    return V.first;
-  }
+  static inline key_type_ref KeyOfValue(value_type_ref V) { return V.first; }
 
-  static inline data_type_ref DataOfValue(value_type_ref V) {
-    return V.second;
-  }
+  static inline data_type_ref DataOfValue(value_type_ref V) { return V.second; }
 
   static inline bool isEqual(key_type_ref L, key_type_ref R) {
-    return ImutContainerInfo<T>::isEqual(L,R);
+    return ImutContainerInfo<T>::isEqual(L, R);
   }
   static inline bool isLess(key_type_ref L, key_type_ref R) {
-    return ImutContainerInfo<T>::isLess(L,R);
+    return ImutContainerInfo<T>::isLess(L, R);
   }
 
   static inline bool isDataEqual(data_type_ref L, data_type_ref R) {
-    return ImutContainerInfo<S>::isEqual(L,R);
+    return ImutContainerInfo<S>::isEqual(L, R);
   }
 
-  static inline void Profile(FoldingSetNodeID& ID, value_type_ref V) {
+  static inline void Profile(FoldingSetNodeID &ID, value_type_ref V) {
     ImutContainerInfo<T>::Profile(ID, V.first);
     ImutContainerInfo<S>::Profile(ID, V.second);
   }
 };
 
 template <typename KeyT, typename ValT,
-          typename ValInfo = ImutKeyValueInfo<KeyT,ValT>>
+          typename ValInfo = ImutKeyValueInfo<KeyT, ValT>>
 class ImmutableMap {
 public:
   using value_type = typename ValInfo::value_type;
@@ -98,12 +93,12 @@ public:
     [[nodiscard]] ImmutableMap add(ImmutableMap Old, key_type_ref K,
                                    data_type_ref D) {
       TreeTy *T = F.add(Old.Root.get(), std::pair<key_type, data_type>(K, D));
-      return ImmutableMap(Canonicalize ? F.getCanonicalTree(T): T);
+      return ImmutableMap(Canonicalize ? F.getCanonicalTree(T) : T);
     }
 
     [[nodiscard]] ImmutableMap remove(ImmutableMap Old, key_type_ref K) {
       TreeTy *T = F.remove(Old.Root.get(), K);
-      return ImmutableMap(Canonicalize ? F.getCanonicalTree(T): T);
+      return ImmutableMap(Canonicalize ? F.getCanonicalTree(T) : T);
     }
 
     typename TreeTy::Factory *getTreeFactory() const {
@@ -125,18 +120,22 @@ public:
   }
 
   [[nodiscard]] TreeTy *getRoot() const {
-    if (Root) { Root->retain(); }
+    if (Root) {
+      Root->retain();
+    }
     return Root.get();
   }
 
   [[nodiscard]] TreeTy *getRootWithoutRetain() const { return Root.get(); }
 
   void manualRetain() {
-    if (Root) Root->retain();
+    if (Root)
+      Root->retain();
   }
 
   void manualRelease() {
-    if (Root) Root->release();
+    if (Root)
+      Root->release();
   }
 
   [[nodiscard]] bool isEmpty() const { return !Root; }
@@ -146,7 +145,10 @@ public:
   // For testing.
   //===--------------------------------------------------===//
 
-  void verify() const { if (Root) Root->verify(); }
+  void verify() const {
+    if (Root)
+      Root->verify();
+  }
 
   //===--------------------------------------------------===//
   // Iterators.
@@ -168,8 +170,9 @@ public:
 
   [[nodiscard]] data_type *lookup(key_type_ref K) const {
     if (Root) {
-      TreeTy* T = Root->find(K);
-      if (T) return &T->getValue().second;
+      TreeTy *T = Root->find(K);
+      if (T)
+        return &T->getValue().second;
     }
 
     return nullptr;
@@ -190,18 +193,17 @@ public:
     return Root ? Root->getHeight() : 0;
   }
 
-  static inline void Profile(FoldingSetNodeID& ID, const ImmutableMap& M) {
+  static inline void Profile(FoldingSetNodeID &ID, const ImmutableMap &M) {
     ID.AddPointer(M.Root.get());
   }
 
-  inline void Profile(FoldingSetNodeID& ID) const {
-    return Profile(ID,*this);
-  }
+  inline void Profile(FoldingSetNodeID &ID) const { return Profile(ID, *this); }
 };
 
-// NOTE: This will possibly become the new implementation of ImmutableMap some day.
+// NOTE: This will possibly become the new implementation of ImmutableMap some
+// day.
 template <typename KeyT, typename ValT,
-typename ValInfo = ImutKeyValueInfo<KeyT,ValT>>
+          typename ValInfo = ImutKeyValueInfo<KeyT, ValT>>
 class ImmutableMapRef {
 public:
   using value_type = typename ValInfo::value_type;
@@ -234,11 +236,13 @@ public:
   }
 
   void manualRetain() {
-    if (Root) Root->retain();
+    if (Root)
+      Root->retain();
   }
 
   void manualRelease() {
-    if (Root) Root->release();
+    if (Root)
+      Root->release();
   }
 
   ImmutableMapRef add(key_type_ref K, data_type_ref D) const {
@@ -300,8 +304,9 @@ public:
 
   [[nodiscard]] data_type *lookup(key_type_ref K) const {
     if (Root) {
-      TreeTy* T = Root->find(K);
-      if (T) return &T->getValue().second;
+      TreeTy *T = Root->find(K);
+      if (T)
+        return &T->getValue().second;
     }
 
     return nullptr;

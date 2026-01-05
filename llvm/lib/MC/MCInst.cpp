@@ -63,8 +63,7 @@ bool MCOperand::evaluateAsConstantImm(int64_t &Imm) const {
 }
 
 bool MCOperand::isBareSymbolRef() const {
-  assert(isExpr() &&
-         "isBareSymbolRef expects only expressions");
+  assert(isExpr() && "isBareSymbolRef expects only expressions");
   const MCExpr *Expr = getExpr();
   MCExpr::ExprKind Kind = getExpr()->getKind();
   return Kind == MCExpr::SymbolRef &&

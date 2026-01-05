@@ -101,8 +101,8 @@ void XCOFFDumper::printFileHeaders() {
 
     char FormattedTime[80] = {};
 
-    size_t BytesFormatted =
-      strftime(FormattedTime, sizeof(FormattedTime), "%F %T", gmtime(&TimeDate));
+    size_t BytesFormatted = strftime(FormattedTime, sizeof(FormattedTime),
+                                     "%F %T", gmtime(&TimeDate));
     if (BytesFormatted)
       W.printHex("TimeStamp", FormattedTime, TimeStamp);
     else
@@ -206,8 +206,7 @@ void XCOFFDumper::printLoaderSectionHeader(uintptr_t LoaderSectionAddr) {
 }
 
 const EnumEntry<XCOFF::StorageClass> SymStorageClass[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+#define ECase(X) {#X, XCOFF::X}
     ECase(C_NULL),  ECase(C_AUTO),    ECase(C_EXT),     ECase(C_STAT),
     ECase(C_REG),   ECase(C_EXTDEF),  ECase(C_LABEL),   ECase(C_ULABEL),
     ECase(C_MOS),   ECase(C_ARG),     ECase(C_STRTAG),  ECase(C_MOU),
@@ -275,8 +274,7 @@ void XCOFFDumper::printLoaderSectionSymbols(uintptr_t LoaderSectionAddr) {
 }
 
 const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+#define ECase(X) {#X, XCOFF::X}
     ECase(R_POS),    ECase(R_RL),     ECase(R_RLA),    ECase(R_NEG),
     ECase(R_REL),    ECase(R_TOC),    ECase(R_TRL),    ECase(R_TRLA),
     ECase(R_GL),     ECase(R_TCL),    ECase(R_REF),    ECase(R_BA),
@@ -494,7 +492,8 @@ void XCOFFDumper::printRelocations(ArrayRef<Shdr> Sections) {
     if (Sec.Flags != XCOFF::STYP_TEXT && Sec.Flags != XCOFF::STYP_DATA &&
         Sec.Flags != XCOFF::STYP_TDATA && Sec.Flags != XCOFF::STYP_DWARF)
       continue;
-    Expected<ArrayRef<RelTy>> ErrOrRelocations = Obj.relocations<Shdr, RelTy>(Sec);
+    Expected<ArrayRef<RelTy>> ErrOrRelocations =
+        Obj.relocations<Shdr, RelTy>(Sec);
     if (Error E = ErrOrRelocations.takeError()) {
       reportUniqueWarning(std::move(E));
       continue;
@@ -517,15 +516,13 @@ void XCOFFDumper::printRelocations(ArrayRef<Shdr> Sections) {
 }
 
 const EnumEntry<XCOFF::CFileStringType> FileStringType[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+#define ECase(X) {#X, XCOFF::X}
     ECase(XFT_FN), ECase(XFT_CT), ECase(XFT_CV), ECase(XFT_CD)
 #undef ECase
 };
 
 const EnumEntry<XCOFF::SymbolAuxType> SymAuxType[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+#define ECase(X) {#X, XCOFF::X}
     ECase(AUX_EXCEPT), ECase(AUX_FCN), ECase(AUX_SYM), ECase(AUX_FILE),
     ECase(AUX_CSECT),  ECase(AUX_SECT)
 #undef ECase
@@ -550,8 +547,7 @@ void XCOFFDumper::printFileAuxEnt(const XCOFFFileAuxEnt *AuxEntPtr) {
 
 static const EnumEntry<XCOFF::StorageMappingClass> CsectStorageMappingClass[] =
     {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+#define ECase(X) {#X, XCOFF::X}
         ECase(XMC_PR), ECase(XMC_RO), ECase(XMC_DB),   ECase(XMC_GL),
         ECase(XMC_XO), ECase(XMC_SV), ECase(XMC_SV64), ECase(XMC_SV3264),
         ECase(XMC_TI), ECase(XMC_TB), ECase(XMC_RW),   ECase(XMC_TC0),
@@ -562,8 +558,7 @@ static const EnumEntry<XCOFF::StorageMappingClass> CsectStorageMappingClass[] =
 };
 
 const EnumEntry<XCOFF::SymbolType> CsectSymbolTypeClass[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+#define ECase(X) {#X, XCOFF::X}
     ECase(XTY_ER), ECase(XTY_SD), ECase(XTY_LD), ECase(XTY_CM)
 #undef ECase
 };
@@ -718,15 +713,13 @@ static StringRef GetSymbolValueName(XCOFF::StorageClass SC) {
 }
 
 const EnumEntry<XCOFF::CFileLangId> CFileLangIdClass[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+#define ECase(X) {#X, XCOFF::X}
     ECase(TB_C), ECase(TB_Fortran), ECase(TB_CPLUSPLUS)
 #undef ECase
 };
 
 const EnumEntry<XCOFF::CFileCpuId> CFileCpuIdClass[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+#define ECase(X) {#X, XCOFF::X}
     ECase(TCPU_INVALID), ECase(TCPU_PPC),  ECase(TCPU_PPC64), ECase(TCPU_COM),
     ECase(TCPU_PWR),     ECase(TCPU_ANY),  ECase(TCPU_601),   ECase(TCPU_603),
     ECase(TCPU_604),     ECase(TCPU_620),  ECase(TCPU_A35),   ECase(TCPU_970),
@@ -974,7 +967,7 @@ void XCOFFDumper::printNeededLibraries() {
   // archive_member_name. The first entry is a default LIBPATH value and other
   // entries have no path_name. We just dump the base_name and
   // archive_member_name here.
-  OS << left_justify("BASE", BaseWidth)  << " MEMBER\n";
+  OS << left_justify("BASE", BaseWidth) << " MEMBER\n";
   CurrentStr = ImportFileTable.data();
   for (size_t StrIndex = 0; CurrentStr < TableEnd;
        ++StrIndex, CurrentStr += strlen(CurrentStr) + 1) {
@@ -988,8 +981,7 @@ void XCOFFDumper::printNeededLibraries() {
 }
 
 const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+#define ECase(X) {#X, XCOFF::X}
     ECase(STYP_PAD),    ECase(STYP_DWARF), ECase(STYP_TEXT),
     ECase(STYP_DATA),   ECase(STYP_BSS),   ECase(STYP_EXCEPT),
     ECase(STYP_INFO),   ECase(STYP_TDATA), ECase(STYP_TBSS),
@@ -1000,8 +992,7 @@ const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {
 
 const EnumEntry<XCOFF::DwarfSectionSubtypeFlags>
     DWARFSectionSubtypeFlagsNames[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+#define ECase(X) {#X, XCOFF::X}
         ECase(SSUBTYP_DWINFO),  ECase(SSUBTYP_DWLINE),  ECase(SSUBTYP_DWPBNMS),
         ECase(SSUBTYP_DWPBTYP), ECase(SSUBTYP_DWARNGE), ECase(SSUBTYP_DWABREV),
         ECase(SSUBTYP_DWSTR),   ECase(SSUBTYP_DWRNGES), ECase(SSUBTYP_DWLOC),

@@ -41,14 +41,12 @@ public:
   Pass *createPrinterPass(raw_ostream &OS,
                           const std::string &Banner) const override;
 
-  using llvm::Pass::doInitialization;
   using llvm::Pass::doFinalization;
+  using llvm::Pass::doInitialization;
 
   /// doInitialization - This method is called before the SCC's of the program
   /// has been processed, allowing the pass to do initialization as necessary.
-  virtual bool doInitialization(CallGraph &CG) {
-    return false;
-  }
+  virtual bool doInitialization(CallGraph &CG) { return false; }
 
   /// runOnSCC - This method should be implemented by the subclass to perform
   /// whatever action is necessary for the specified SCC.  Note that
@@ -61,9 +59,7 @@ public:
 
   /// doFinalization - This method is called after the SCC's of the program has
   /// been processed, allowing the pass to do final cleanup as necessary.
-  virtual bool doFinalization(CallGraph &CG) {
-    return false;
-  }
+  virtual bool doFinalization(CallGraph &CG) { return false; }
 
   /// Assign pass manager to manager this pass
   void assignPassManager(PMStack &PMS, PassManagerType PMT) override;
@@ -82,7 +78,7 @@ public:
 /// CallGraphSCC - This is a single SCC that a CallGraphSCCPass is run on.
 class CallGraphSCC {
   const CallGraph &CG; // The call graph for this SCC.
-  void *Context; // The CGPassManager object that is vending this.
+  void *Context;       // The CGPassManager object that is vending this.
   std::vector<CallGraphNode *> Nodes;
 
 public:

@@ -47,7 +47,6 @@ class DWARFDebugAddrTable {
                          uint64_t EndOffset);
 
 public:
-
   /// Extract the entire table, including all addresses.
   Error extract(const DWARFDataExtractor &Data, uint64_t *OffsetPtr,
                 uint16_t CUVersion, uint8_t CUAddrSize,

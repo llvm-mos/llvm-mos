@@ -65,23 +65,12 @@ FPClassTest llvm::unknown_sign(FPClassTest Mask) {
 // Bits are consumed as printed. Each field should only be represented in one
 // printed field.
 static constexpr std::pair<FPClassTest, StringLiteral> NoFPClassName[] = {
-  {fcAllFlags, "all"},
-  {fcNan, "nan"},
-  {fcSNan, "snan"},
-  {fcQNan, "qnan"},
-  {fcInf, "inf"},
-  {fcNegInf, "ninf"},
-  {fcPosInf, "pinf"},
-  {fcZero, "zero"},
-  {fcNegZero, "nzero"},
-  {fcPosZero, "pzero"},
-  {fcSubnormal, "sub"},
-  {fcNegSubnormal, "nsub"},
-  {fcPosSubnormal, "psub"},
-  {fcNormal, "norm"},
-  {fcNegNormal, "nnorm"},
-  {fcPosNormal, "pnorm"}
-};
+    {fcAllFlags, "all"},      {fcNan, "nan"},       {fcSNan, "snan"},
+    {fcQNan, "qnan"},         {fcInf, "inf"},       {fcNegInf, "ninf"},
+    {fcPosInf, "pinf"},       {fcZero, "zero"},     {fcNegZero, "nzero"},
+    {fcPosZero, "pzero"},     {fcSubnormal, "sub"}, {fcNegSubnormal, "nsub"},
+    {fcPosSubnormal, "psub"}, {fcNormal, "norm"},   {fcNegNormal, "nnorm"},
+    {fcPosNormal, "pnorm"}};
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, FPClassTest Mask) {
   OS << '(';

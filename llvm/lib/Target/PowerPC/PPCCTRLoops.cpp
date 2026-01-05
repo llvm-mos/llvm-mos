@@ -223,8 +223,7 @@ bool PPCCTRLoops::processLoop(MachineLoop *ML) {
   if (InvalidCTRLoop) {
     expandNormalLoops(ML, Start, Dec);
     ++NumNormalLoops;
-  }
-  else {
+  } else {
     expandCTRLoops(ML, Start, Dec);
     ++NumCTRLoops;
   }
@@ -241,8 +240,7 @@ void PPCCTRLoops::expandNormalLoops(MachineLoop *ML, MachineInstr *Start,
   assert((Preheader && Exiting) &&
          "Preheader and exiting should exist for CTR loop!");
 
-  assert(Dec->getOperand(1).getImm() == 1 &&
-         "Loop decrement stride must be 1");
+  assert(Dec->getOperand(1).getImm() == 1 && "Loop decrement stride must be 1");
 
   unsigned ADDIOpcode = Is64Bit ? PPC::ADDI8 : PPC::ADDI;
   unsigned CMPOpcode = Is64Bit ? PPC::CMPLDI : PPC::CMPLWI;
@@ -331,7 +329,7 @@ void PPCCTRLoops::expandCTRLoops(MachineLoop *ML, MachineInstr *Start,
   switch (BrInstr->getOpcode()) {
   case PPC::BC:
     Opcode = BDNZOpcode;
-    (void) ML;
+    (void)ML;
     assert(ML->contains(BrInstr->getOperand(1).getMBB()) &&
            "Invalid ctr loop!");
     break;

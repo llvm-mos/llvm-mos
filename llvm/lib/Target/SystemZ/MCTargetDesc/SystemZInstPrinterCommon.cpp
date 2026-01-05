@@ -252,7 +252,7 @@ void SystemZInstPrinterCommon::printBDVAddrOperand(const MCInst *MI, int OpNum,
 }
 
 void SystemZInstPrinterCommon::printLXAAddrOperand(const MCInst *MI, int OpNum,
-                                             raw_ostream &O) {
+                                                   raw_ostream &O) {
   printAddress(&MAI, MI->getOperand(OpNum).getReg(), MI->getOperand(OpNum + 1),
                MI->getOperand(OpNum + 2).getReg(), O);
 }

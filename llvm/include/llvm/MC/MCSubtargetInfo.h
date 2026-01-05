@@ -34,15 +34,13 @@ class MCInst;
 
 /// Used to provide key value pairs for feature and CPU bit flags.
 struct SubtargetFeatureKV {
-  const char *Key;                      ///< K-V key string
-  const char *Desc;                     ///< Help descriptor
-  unsigned Value;                       ///< K-V integer value
-  FeatureBitArray Implies;              ///< K-V bit mask
+  const char *Key;         ///< K-V key string
+  const char *Desc;        ///< Help descriptor
+  unsigned Value;          ///< K-V integer value
+  FeatureBitArray Implies; ///< K-V bit mask
 
   /// Compare routine for std::lower_bound
-  bool operator<(StringRef S) const {
-    return StringRef(Key) < S;
-  }
+  bool operator<(StringRef S) const { return StringRef(Key) < S; }
 
   /// Compare routine for std::is_sorted.
   bool operator<(const SubtargetFeatureKV &Other) const {
@@ -54,15 +52,13 @@ struct SubtargetFeatureKV {
 
 /// Used to provide key value pairs for feature and CPU bit flags.
 struct SubtargetSubTypeKV {
-  const char *Key;                      ///< K-V key string
-  FeatureBitArray Implies;              ///< K-V bit mask
-  FeatureBitArray TuneImplies;          ///< K-V bit mask
+  const char *Key;             ///< K-V key string
+  FeatureBitArray Implies;     ///< K-V bit mask
+  FeatureBitArray TuneImplies; ///< K-V bit mask
   const MCSchedModel *SchedModel;
 
   /// Compare routine for std::lower_bound
-  bool operator<(StringRef S) const {
-    return StringRef(Key) < S;
-  }
+  bool operator<(StringRef S) const { return StringRef(Key) < S; }
 
   /// Compare routine for std::is_sorted.
   bool operator<(const SubtargetSubTypeKV &Other) const {
@@ -76,11 +72,11 @@ struct SubtargetSubTypeKV {
 ///
 class LLVM_ABI MCSubtargetInfo {
   Triple TargetTriple;
-  std::string CPU; // CPU being targeted.
-  std::string TuneCPU; // CPU being tuned for.
+  std::string CPU;               // CPU being targeted.
+  std::string TuneCPU;           // CPU being tuned for.
   ArrayRef<StringRef> ProcNames; // Processor list, including aliases
-  ArrayRef<SubtargetFeatureKV> ProcFeatures;  // Processor feature list
-  ArrayRef<SubtargetSubTypeKV> ProcDesc;  // Processor descriptions
+  ArrayRef<SubtargetFeatureKV> ProcFeatures; // Processor feature list
+  ArrayRef<SubtargetSubTypeKV> ProcDesc;     // Processor descriptions
 
   // Scheduler machine model
   const MCWriteProcResEntry *WriteProcResTable;
@@ -88,11 +84,11 @@ class LLVM_ABI MCSubtargetInfo {
   const MCReadAdvanceEntry *ReadAdvanceTable;
   const MCSchedModel *CPUSchedModel;
 
-  const InstrStage *Stages;            // Instruction itinerary stages
-  const unsigned *OperandCycles;       // Itinerary operand cycles
+  const InstrStage *Stages;      // Instruction itinerary stages
+  const unsigned *OperandCycles; // Itinerary operand cycles
   const unsigned *ForwardingPaths;
-  FeatureBitset FeatureBits;           // Feature bits for current CPU + FS
-  std::string FeatureString;           // Feature string
+  FeatureBitset FeatureBits; // Feature bits for current CPU + FS
+  std::string FeatureString; // Feature string
 
 public:
   MCSubtargetInfo(const MCSubtargetInfo &) = default;
@@ -112,16 +108,14 @@ public:
   StringRef getCPU() const { return CPU; }
   StringRef getTuneCPU() const { return TuneCPU; }
 
-  const FeatureBitset& getFeatureBits() const { return FeatureBits; }
+  const FeatureBitset &getFeatureBits() const { return FeatureBits; }
   void setFeatureBits(const FeatureBitset &FeatureBits_) {
     FeatureBits = FeatureBits_;
   }
 
   StringRef getFeatureString() const { return FeatureString; }
 
-  bool hasFeature(unsigned Feature) const {
-    return FeatureBits[Feature];
-  }
+  bool hasFeature(unsigned Feature) const { return FeatureBits[Feature]; }
 
 protected:
   /// Initialize the scheduling model and feature bits.
@@ -141,7 +135,7 @@ public:
 
   /// Toggle a feature and return the re-computed feature bits.
   /// This version does not change the implied bits.
-  FeatureBitset ToggleFeature(const FeatureBitset& FB);
+  FeatureBitset ToggleFeature(const FeatureBitset &FB);
 
   /// Toggle a set of features and return the re-computed feature bits.
   /// This version will also change all implied bits.
@@ -152,7 +146,7 @@ public:
   FeatureBitset ApplyFeatureFlag(StringRef FS);
 
   /// Set/clear additional feature bits, including all other bits they imply.
-  FeatureBitset SetFeatureBitsTransitively(const FeatureBitset& FB);
+  FeatureBitset SetFeatureBitsTransitively(const FeatureBitset &FB);
   FeatureBitset ClearFeatureBitsTransitively(const FeatureBitset &FB);
 
   /// Check whether the subtarget features are enabled/disabled as per
@@ -167,12 +161,12 @@ public:
 
   /// Return an iterator at the first process resource consumed by the given
   /// scheduling class.
-  const MCWriteProcResEntry *getWriteProcResBegin(
-    const MCSchedClassDesc *SC) const {
+  const MCWriteProcResEntry *
+  getWriteProcResBegin(const MCSchedClassDesc *SC) const {
     return &WriteProcResTable[SC->WriteProcResIdx];
   }
-  const MCWriteProcResEntry *getWriteProcResEnd(
-    const MCSchedClassDesc *SC) const {
+  const MCWriteProcResEntry *
+  getWriteProcResEnd(const MCSchedClassDesc *SC) const {
     return getWriteProcResBegin(SC) + SC->NumWriteProcResEntries;
   }
 
@@ -190,7 +184,8 @@ public:
     // (~50). Consider compressing the WriteID into a dense ID of those that are
     // used by ReadAdvance and representing them as a bitset.
     for (const MCReadAdvanceEntry *I = &ReadAdvanceTable[SC->ReadAdvanceIdx],
-           *E = I + SC->NumReadAdvanceEntries; I != E; ++I) {
+                                  *E = I + SC->NumReadAdvanceEntries;
+         I != E; ++I) {
       if (I->UseIdx < UseIdx)
         continue;
       if (I->UseIdx > UseIdx)

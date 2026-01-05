@@ -37,14 +37,10 @@ static bool shouldKeepDebugNamedMetadata(NamedMDNode &MD) {
 // Named metadata with simple list-like behavior, so that it's valid to remove
 // operands individually.
 static constexpr StringLiteral ListNamedMetadata[] = {
-  "llvm.module.flags",
-  "llvm.ident",
-  "opencl.spir.version",
-  "opencl.ocl.version",
-  "opencl.used.extensions",
-  "opencl.used.optional.core.features",
-  "opencl.compiler.options"
-};
+    "llvm.module.flags",      "llvm.ident",
+    "opencl.spir.version",    "opencl.ocl.version",
+    "opencl.used.extensions", "opencl.used.optional.core.features",
+    "opencl.compiler.options"};
 
 /// Remove unneeded arguments to named metadata.
 void llvm::reduceNamedMetadataDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {

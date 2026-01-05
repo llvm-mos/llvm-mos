@@ -28,7 +28,8 @@ INITIALIZE_PASS(AMDGPUAAWrapperPass, "amdgpu-aa",
                 "AMDGPU Address space based Alias Analysis", false, true)
 
 INITIALIZE_PASS(AMDGPUExternalAAWrapper, "amdgpu-aa-wrapper",
-                "AMDGPU Address space based Alias Analysis Wrapper", false, true)
+                "AMDGPU Address space based Alias Analysis Wrapper", false,
+                true)
 
 ImmutablePass *llvm::createAMDGPUAAWrapperPass() {
   return new AMDGPUAAWrapperPass();

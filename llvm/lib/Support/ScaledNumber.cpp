@@ -320,6 +320,6 @@ raw_ostream &ScaledNumberBase::print(raw_ostream &OS, uint64_t D, int16_t E,
 }
 
 void ScaledNumberBase::dump(uint64_t D, int16_t E, int Width) {
-  print(dbgs(), D, E, Width, 0) << "[" << Width << ":" << D << "*2^" << E
-                                << "]";
+  print(dbgs(), D, E, Width, 0)
+      << "[" << Width << ":" << D << "*2^" << E << "]";
 }

@@ -370,29 +370,29 @@ static void processSTIPredicate(STIPredicateFunction &Fn,
 
   // Sort OpcodeMappings elements based on their CPU and predicate masks.
   // As a last resort, order elements by opcode identifier.
-  llvm::sort(
-      OpcodeMappings, [&](const OpcodeMapPair &Lhs, const OpcodeMapPair &Rhs) {
-        unsigned LhsIdx = Opcode2Index[Lhs.first];
-        unsigned RhsIdx = Opcode2Index[Rhs.first];
-        const std::pair<APInt, APInt> &LhsMasks = OpcodeMasks[LhsIdx];
-        const std::pair<APInt, APInt> &RhsMasks = OpcodeMasks[RhsIdx];
+  llvm::sort(OpcodeMappings,
+             [&](const OpcodeMapPair &Lhs, const OpcodeMapPair &Rhs) {
+               unsigned LhsIdx = Opcode2Index[Lhs.first];
+               unsigned RhsIdx = Opcode2Index[Rhs.first];
+               const std::pair<APInt, APInt> &LhsMasks = OpcodeMasks[LhsIdx];
+               const std::pair<APInt, APInt> &RhsMasks = OpcodeMasks[RhsIdx];
 
-        auto PopulationCountAndLeftBit =
-            [](const APInt &Other) -> std::pair<int, int> {
-          return {Other.popcount(), -Other.countl_zero()};
-        };
-        auto lhsmask_first = PopulationCountAndLeftBit(LhsMasks.first);
-        auto rhsmask_first = PopulationCountAndLeftBit(RhsMasks.first);
-        if (lhsmask_first != rhsmask_first)
-          return lhsmask_first < rhsmask_first;
+               auto PopulationCountAndLeftBit =
+                   [](const APInt &Other) -> std::pair<int, int> {
+                 return {Other.popcount(), -Other.countl_zero()};
+               };
+               auto lhsmask_first = PopulationCountAndLeftBit(LhsMasks.first);
+               auto rhsmask_first = PopulationCountAndLeftBit(RhsMasks.first);
+               if (lhsmask_first != rhsmask_first)
+                 return lhsmask_first < rhsmask_first;
 
-        auto lhsmask_second = PopulationCountAndLeftBit(LhsMasks.second);
-        auto rhsmask_second = PopulationCountAndLeftBit(RhsMasks.second);
-        if (lhsmask_second != rhsmask_second)
-          return lhsmask_second < rhsmask_second;
+               auto lhsmask_second = PopulationCountAndLeftBit(LhsMasks.second);
+               auto rhsmask_second = PopulationCountAndLeftBit(RhsMasks.second);
+               if (lhsmask_second != rhsmask_second)
+                 return lhsmask_second < rhsmask_second;
 
-        return LhsIdx < RhsIdx;
-      });
+               return LhsIdx < RhsIdx;
+             });
 
   // Now construct opcode groups. Groups are used by the SubtargetEmitter when
   // expanding the body of a STIPredicate function. In particular, each opcode
@@ -684,8 +684,8 @@ void CodeGenSchedModels::collectSchedRW() {
         dbgs() << RIdx << ": ";
         SchedReads[RIdx].dump();
         dbgs() << '\n';
-      } for (const Record *RWDef
-             : Records.getAllDerivedDefinitions("SchedReadWrite")) {
+      } for (const Record *RWDef : Records
+                 .getAllDerivedDefinitions("SchedReadWrite")) {
         if (!getSchedRWIdx(RWDef, RWDef->isSubClassOf("SchedRead"))) {
           StringRef Name = RWDef->getName();
           if (Name != "NoWrite" && Name != "ReadDefault")
@@ -1887,15 +1887,14 @@ void CodeGenSchedModels::collectProcResources() {
     llvm::sort(PM.ReadAdvanceDefs, LessRecord());
     llvm::sort(PM.ProcResourceDefs, LessRecord());
     LLVM_DEBUG(
-        PM.dump(); dbgs() << "WriteResDefs: "; for (auto WriteResDef
-                                                    : PM.WriteResDefs) {
+        PM.dump();
+        dbgs() << "WriteResDefs: "; for (auto WriteResDef : PM.WriteResDefs) {
           if (WriteResDef->isSubClassOf("WriteRes"))
             dbgs() << WriteResDef->getValueAsDef("WriteType")->getName() << " ";
           else
             dbgs() << WriteResDef->getName() << " ";
         } dbgs() << "\nReadAdvanceDefs: ";
-        for (const Record *ReadAdvanceDef
-             : PM.ReadAdvanceDefs) {
+        for (const Record *ReadAdvanceDef : PM.ReadAdvanceDefs) {
           if (ReadAdvanceDef->isSubClassOf("ReadAdvance"))
             dbgs() << ReadAdvanceDef->getValueAsDef("ReadType")->getName()
                    << " ";
@@ -1903,8 +1902,7 @@ void CodeGenSchedModels::collectProcResources() {
             dbgs() << ReadAdvanceDef->getName() << " ";
         } dbgs()
         << "\nProcResourceDefs: ";
-        for (const Record *ProcResourceDef
-             : PM.ProcResourceDefs) {
+        for (const Record *ProcResourceDef : PM.ProcResourceDefs) {
           dbgs() << ProcResourceDef->getName() << " ";
         } dbgs()
         << '\n');

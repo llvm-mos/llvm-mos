@@ -13,8 +13,8 @@
 #ifndef LLVM_COV_SOURCECOVERAGEVIEW_H
 #define LLVM_COV_SOURCECOVERAGEVIEW_H
 
-#include "CoverageViewOptions.h"
 #include "CoverageSummaryInfo.h"
+#include "CoverageViewOptions.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <vector>

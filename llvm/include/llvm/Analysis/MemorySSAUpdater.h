@@ -56,8 +56,9 @@ class MemorySSAUpdater {
 private:
   MemorySSA *MSSA;
 
-  /// We use WeakVH rather than a costly deletion to deal with dangling pointers.
-  /// MemoryPhis are created eagerly and sometimes get zapped shortly afterwards.
+  /// We use WeakVH rather than a costly deletion to deal with dangling
+  /// pointers. MemoryPhis are created eagerly and sometimes get zapped shortly
+  /// afterwards.
   SmallVector<WeakVH, 16> InsertedPHIs;
 
   SmallPtrSet<BasicBlock *, 8> VisitedBlocks;
@@ -240,7 +241,7 @@ public:
   LLVM_ABI void changeToUnreachable(const Instruction *I);
 
   /// Get handle on MemorySSA.
-  MemorySSA* getMemorySSA() const { return MSSA; }
+  MemorySSA *getMemorySSA() const { return MSSA; }
 
 private:
   // Move What before Where in the MemorySSA IR.

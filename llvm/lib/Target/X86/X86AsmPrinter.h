@@ -15,7 +15,7 @@
 
 // Implemented in X86MCInstLower.cpp
 namespace {
-  class X86MCInstLower;
+class X86MCInstLower;
 }
 
 namespace llvm {
@@ -66,9 +66,7 @@ private:
   // few instruction bytes to cover the shadow are NOPs used for padding.
   class StackMapShadowTracker {
   public:
-    void startFunction(MachineFunction &MF) {
-      this->MF = &MF;
-    }
+    void startFunction(MachineFunction &MF) { this->MF = &MF; }
     void count(const MCInst &Inst, const MCSubtargetInfo &STI,
                MCCodeEmitter *CodeEmitter);
 
@@ -82,6 +80,7 @@ private:
     // Called before every stackmap/patchpoint, and at the end of basic blocks,
     // to emit any necessary padding-NOPs.
     void emitShadowPadding(MCStreamer &OutStreamer, const MCSubtargetInfo &STI);
+
   private:
     const MachineFunction *MF = nullptr;
     bool InShadow = false;
@@ -160,9 +159,7 @@ private:
 public:
   X86AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
 
-  StringRef getPassName() const override {
-    return "X86 Assembly Printer";
-  }
+  StringRef getPassName() const override { return "X86 Assembly Printer"; }
 
   const X86Subtarget &getSubtarget() const { return *Subtarget; }
 

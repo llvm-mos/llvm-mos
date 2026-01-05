@@ -18,6 +18,6 @@ Target &llvm::getTheVETarget() {
 }
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETargetInfo() {
-  RegisterTarget<Triple::ve, /*HasJIT=*/false> X(getTheVETarget(), "ve",
-                                                 "VE", "VE");
+  RegisterTarget<Triple::ve, /*HasJIT=*/false> X(getTheVETarget(), "ve", "VE",
+                                                 "VE");
 }

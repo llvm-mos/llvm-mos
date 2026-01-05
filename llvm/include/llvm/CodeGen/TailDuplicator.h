@@ -68,10 +68,9 @@ public:
   /// @param TailDupSize - Maxmimum size of blocks to tail-duplicate. Zero
   ///     default implies using the command line value TailDupSize.
   void initMF(MachineFunction &MF, bool PreRegAlloc,
-              const MachineBranchProbabilityInfo *MBPI,
-              MBFIWrapper *MBFI,
-              ProfileSummaryInfo *PSI,
-              bool LayoutMode, unsigned TailDupSize = 0);
+              const MachineBranchProbabilityInfo *MBPI, MBFIWrapper *MBFI,
+              ProfileSummaryInfo *PSI, bool LayoutMode,
+              unsigned TailDupSize = 0);
 
   bool tailDuplicateBlocks();
   static bool isSimpleBB(MachineBasicBlock *TailBB);
@@ -90,7 +89,7 @@ public:
   bool tailDuplicateAndUpdate(
       bool IsSimple, MachineBasicBlock *MBB,
       MachineBasicBlock *ForcedLayoutPred,
-      SmallVectorImpl<MachineBasicBlock*> *DuplicatedPreds = nullptr,
+      SmallVectorImpl<MachineBasicBlock *> *DuplicatedPreds = nullptr,
       function_ref<void(MachineBasicBlock *)> *RemovalCallback = nullptr,
       SmallVectorImpl<MachineBasicBlock *> *CandidatePtr = nullptr);
 
@@ -115,15 +114,15 @@ private:
   bool duplicateSimpleBB(MachineBasicBlock *TailBB,
                          SmallVectorImpl<MachineBasicBlock *> &TDBBs,
                          const DenseSet<Register> &RegsUsedByPhi);
-  bool tailDuplicate(bool IsSimple,
-                     MachineBasicBlock *TailBB,
+  bool tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
                      MachineBasicBlock *ForcedLayoutPred,
                      SmallVectorImpl<MachineBasicBlock *> &TDBBs,
                      SmallVectorImpl<MachineInstr *> &Copies,
                      SmallVectorImpl<MachineBasicBlock *> *CandidatePtr);
-  void appendCopies(MachineBasicBlock *MBB,
-                 SmallVectorImpl<std::pair<Register, RegSubRegPair>> &CopyInfos,
-                 SmallVectorImpl<MachineInstr *> &Copies);
+  void
+  appendCopies(MachineBasicBlock *MBB,
+               SmallVectorImpl<std::pair<Register, RegSubRegPair>> &CopyInfos,
+               SmallVectorImpl<MachineInstr *> &Copies);
 
   void removeDeadBlock(
       MachineBasicBlock *MBB,

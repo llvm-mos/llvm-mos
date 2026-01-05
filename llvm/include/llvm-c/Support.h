@@ -32,7 +32,7 @@ LLVM_C_EXTERN_C_BEGIN
  * It is safe to call this function multiple times for the same library.
  *
  * @see sys::DynamicLibrary::LoadLibraryPermanently()
-  */
+ */
 LLVM_C_ABI LLVMBool LLVMLoadLibraryPermanently(const char *Filename);
 
 /**

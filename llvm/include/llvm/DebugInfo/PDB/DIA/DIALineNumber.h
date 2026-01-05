@@ -34,6 +34,6 @@ public:
 private:
   CComPtr<IDiaLineNumber> LineNumber;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 #endif

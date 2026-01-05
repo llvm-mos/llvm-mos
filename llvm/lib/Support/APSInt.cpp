@@ -37,7 +37,7 @@ APSInt::APSInt(StringRef Str) {
   *this = APSInt(Tmp, /*isUnsigned=*/true);
 }
 
-void APSInt::Profile(FoldingSetNodeID& ID) const {
-  ID.AddInteger((unsigned) (IsUnsigned ? 1 : 0));
+void APSInt::Profile(FoldingSetNodeID &ID) const {
+  ID.AddInteger((unsigned)(IsUnsigned ? 1 : 0));
   APInt::Profile(ID);
 }

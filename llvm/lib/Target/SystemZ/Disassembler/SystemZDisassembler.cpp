@@ -31,7 +31,7 @@ namespace {
 class SystemZDisassembler : public MCDisassembler {
 public:
   SystemZDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
-    : MCDisassembler(STI, Ctx) {}
+      : MCDisassembler(STI, Ctx) {}
   ~SystemZDisassembler() override = default;
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
@@ -181,7 +181,7 @@ static DecodeStatus DecodeCR64BitRegisterClass(MCInst &Inst, uint64_t RegNo,
   return decodeRegisterClass(Inst, RegNo, SystemZMC::CR64Regs, 16);
 }
 
-template<unsigned N>
+template <unsigned N>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm) {
   if (!isUInt<N>(Imm))
     return MCDisassembler::Fail;
@@ -189,7 +189,7 @@ static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm) {
   return MCDisassembler::Success;
 }
 
-template<unsigned N>
+template <unsigned N>
 static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm) {
   if (!isUInt<N>(Imm))
     return MCDisassembler::Fail;

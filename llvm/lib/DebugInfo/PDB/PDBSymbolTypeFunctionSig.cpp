@@ -59,7 +59,7 @@ private:
   const IPDBSession &Session;
   std::unique_ptr<ArgEnumeratorType> Enumerator;
 };
-}
+} // namespace
 
 std::unique_ptr<IPDBEnumSymbols>
 PDBSymbolTypeFunctionSig::getArguments() const {

@@ -61,7 +61,8 @@ void SanitizerStatReport::create(IRBuilder<> &B, SanitizerStatKind SK) {
   auto InitAddr = ConstantExpr::getGetElementPtr(
       EmptyModuleStatsTy, ModuleStatsGV,
       ArrayRef<Constant *>{
-          ConstantInt::get(IntPtrTy, 0), ConstantInt::get(B.getInt32Ty(), 2),
+          ConstantInt::get(IntPtrTy, 0),
+          ConstantInt::get(B.getInt32Ty(), 2),
           ConstantInt::get(IntPtrTy, Inits.size() - 1),
       });
   B.CreateCall(StatReport, InitAddr);

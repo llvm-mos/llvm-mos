@@ -68,9 +68,9 @@ STATISTIC(NumColdOutlinePartialInlined, "Number of times functions with "
                                         "cold outlined regions were partially "
                                         "inlined into its caller(s).");
 STATISTIC(NumColdRegionsFound,
-           "Number of cold single entry/exit regions found.");
+          "Number of cold single entry/exit regions found.");
 STATISTIC(NumColdRegionsOutlined,
-           "Number of cold single entry/exit regions outlined.");
+          "Number of cold single entry/exit regions outlined.");
 
 // Command line option to disable partial-inlining. The default is false:
 static cl::opt<bool>
@@ -86,7 +86,7 @@ static cl::opt<bool> DisableMultiRegionPartialInline(
 // The default is false:
 static cl::opt<bool>
     ForceLiveExit("pi-force-live-exit-outline", cl::init(false), cl::Hidden,
-               cl::desc("Force outline regions with live exits"));
+                  cl::desc("Force outline regions with live exits"));
 
 // Command line option to enable marking outline functions with Cold Calling
 // Convention. The default is false:
@@ -675,8 +675,7 @@ BranchProbability PartialInlinerImpl::getOutliningCallBBRelativeFreq(
   BasicBlock *OutliningCallBB = Cloner.OutlinedFunctions.back().second;
   auto EntryFreq =
       Cloner.ClonedFuncBFI->getBlockFreq(&Cloner.ClonedFunc->getEntryBlock());
-  auto OutliningCallFreq =
-      Cloner.ClonedFuncBFI->getBlockFreq(OutliningCallBB);
+  auto OutliningCallFreq = Cloner.ClonedFuncBFI->getBlockFreq(OutliningCallBB);
   // FIXME Hackery needed because ClonedFuncBFI is based on the function BEFORE
   // we outlined any regions, so we may encounter situations where the
   // OutliningCallFreq is *slightly* bigger than the EntryFreq.
@@ -861,7 +860,7 @@ PartialInlinerImpl::computeOutliningCosts(FunctionCloner &Cloner) const {
   InstructionCost OutliningFuncCallCost = 0, OutlinedFunctionCost = 0;
   for (auto FuncBBPair : Cloner.OutlinedFunctions) {
     Function *OutlinedFunc = FuncBBPair.first;
-    BasicBlock* OutliningCallBB = FuncBBPair.second;
+    BasicBlock *OutliningCallBB = FuncBBPair.second;
     // Now compute the cost of the call sequence to the outlined function
     // 'OutlinedFunction' in BB 'OutliningCallBB':
     auto *OutlinedFuncTTI = &GetTTI(*OutlinedFunc);
@@ -901,18 +900,18 @@ void PartialInlinerImpl::computeCallsiteToProfCountMap(
   std::unique_ptr<BlockFrequencyInfo> TempBFI;
   BlockFrequencyInfo *CurrentCallerBFI = nullptr;
 
-  auto ComputeCurrBFI = [&,this](Function *Caller) {
-      // For the old pass manager:
-      if (!GetBFI) {
-        DominatorTree DT(*Caller);
-        LoopInfo LI(DT);
-        BranchProbabilityInfo BPI(*Caller, LI);
-        TempBFI.reset(new BlockFrequencyInfo(*Caller, BPI, LI));
-        CurrentCallerBFI = TempBFI.get();
-      } else {
-        // New pass manager:
-        CurrentCallerBFI = &(GetBFI(*Caller));
-      }
+  auto ComputeCurrBFI = [&, this](Function *Caller) {
+    // For the old pass manager:
+    if (!GetBFI) {
+      DominatorTree DT(*Caller);
+      LoopInfo LI(DT);
+      BranchProbabilityInfo BPI(*Caller, LI);
+      TempBFI.reset(new BlockFrequencyInfo(*Caller, BPI, LI));
+      CurrentCallerBFI = TempBFI.get();
+    } else {
+      // New pass manager:
+      CurrentCallerBFI = &(GetBFI(*Caller));
+    }
   };
 
   for (User *User : Users) {
@@ -1075,7 +1074,7 @@ bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
   auto ComputeRegionCost =
       [&](SmallVectorImpl<BasicBlock *> &Region) -> InstructionCost {
     InstructionCost Cost = 0;
-    for (BasicBlock* BB : Region)
+    for (BasicBlock *BB : Region)
       Cost += computeBBInlineCost(BB, &GetTTI(*BB->getParent()));
     return Cost;
   };
@@ -1127,7 +1126,8 @@ bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
       CallBase *OCS = PartialInlinerImpl::getOneCallSiteTo(*OutlinedFunc);
       BasicBlock *OutliningCallBB = OCS->getParent();
       assert(OutliningCallBB->getParent() == ClonedFunc);
-      OutlinedFunctions.push_back(std::make_pair(OutlinedFunc,OutliningCallBB));
+      OutlinedFunctions.push_back(
+          std::make_pair(OutlinedFunc, OutliningCallBB));
       NumColdRegionsOutlined++;
       OutlinedRegionCost += CurrentOutlinedRegionCost;
 

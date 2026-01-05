@@ -140,7 +140,7 @@ LegalityPredicate LegalityPredicates::smallerThan(unsigned TypeIdx0,
 }
 
 LegalityPredicate LegalityPredicates::largerThan(unsigned TypeIdx0,
-                                                  unsigned TypeIdx1) {
+                                                 unsigned TypeIdx1) {
   return [=](const LegalityQuery &Query) {
     return Query.Types[TypeIdx0].getSizeInBits() >
            Query.Types[TypeIdx1].getSizeInBits();

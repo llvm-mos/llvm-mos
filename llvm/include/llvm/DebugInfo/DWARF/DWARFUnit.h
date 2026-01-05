@@ -126,7 +126,8 @@ bool isCompileUnit(const std::unique_ptr<DWARFUnit> &U);
 
 /// Describe a collection of units. Intended to hold all units either from
 /// .debug_info and .debug_types, or from .debug_info.dwo and .debug_types.dwo.
-class DWARFUnitVector final : public SmallVector<std::unique_ptr<DWARFUnit>, 1> {
+class DWARFUnitVector final
+    : public SmallVector<std::unique_ptr<DWARFUnit>, 1> {
   std::function<std::unique_ptr<DWARFUnit>(uint64_t, DWARFSectionKind,
                                            const DWARFSection *,
                                            const DWARFUnitIndex::Entry *)>
@@ -138,8 +139,8 @@ public:
   using iterator = UnitVector::iterator;
   using iterator_range = llvm::iterator_range<UnitVector::iterator>;
 
-  using compile_unit_range =
-      decltype(make_filter_range(std::declval<iterator_range>(), isCompileUnit));
+  using compile_unit_range = decltype(make_filter_range(
+      std::declval<iterator_range>(), isCompileUnit));
 
   LLVM_ABI DWARFUnit *getUnitForOffset(uint64_t Offset) const;
   /// Returns the Unit from the .debug_info or .debug_types section by the index
@@ -323,7 +324,7 @@ public:
 
   bool isLittleEndian() const { return IsLittleEndian; }
   bool isDWOUnit() const { return IsDWO; }
-  DWARFContext& getContext() const { return Context; }
+  DWARFContext &getContext() const { return Context; }
   const DWARFSection &getInfoSection() const { return InfoSection; }
   uint64_t getOffset() const { return Header.getOffset(); }
   const dwarf::FormParams &getFormParams() const {
@@ -384,9 +385,7 @@ public:
     RangeSectionBase = Base;
   }
 
-  uint64_t getLocSectionBase() const {
-    return LocSectionBase;
-  }
+  uint64_t getLocSectionBase() const { return LocSectionBase; }
 
   std::optional<object::SectionedAddress>
   getAddrOffsetSectionItem(uint32_t Index) const;

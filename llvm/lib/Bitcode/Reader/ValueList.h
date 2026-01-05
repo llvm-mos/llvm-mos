@@ -46,16 +46,12 @@ public:
 
   // vector compatibility methods
   unsigned size() const { return ValuePtrs.size(); }
-  void resize(unsigned N) {
-    ValuePtrs.resize(N);
-  }
+  void resize(unsigned N) { ValuePtrs.resize(N); }
   void push_back(Value *V, unsigned TypeID) {
     ValuePtrs.emplace_back(V, TypeID);
   }
 
-  void clear() {
-    ValuePtrs.clear();
-  }
+  void clear() { ValuePtrs.clear(); }
 
   Value *operator[](unsigned i) const {
     assert(i < ValuePtrs.size());
@@ -68,9 +64,7 @@ public:
   }
 
   Value *back() const { return ValuePtrs.back().first; }
-  void pop_back() {
-    ValuePtrs.pop_back();
-  }
+  void pop_back() { ValuePtrs.pop_back(); }
   bool empty() const { return ValuePtrs.empty(); }
 
   void shrinkTo(unsigned N) {

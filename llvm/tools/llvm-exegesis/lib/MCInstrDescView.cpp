@@ -318,13 +318,13 @@ const Instruction &InstructionsCache::getInstr(unsigned Opcode) const {
   return *Found;
 }
 
-bool RegisterOperandAssignment::
-operator==(const RegisterOperandAssignment &Other) const {
+bool RegisterOperandAssignment::operator==(
+    const RegisterOperandAssignment &Other) const {
   return std::tie(Op, Reg) == std::tie(Other.Op, Other.Reg);
 }
 
-bool AliasingRegisterOperands::
-operator==(const AliasingRegisterOperands &Other) const {
+bool AliasingRegisterOperands::operator==(
+    const AliasingRegisterOperands &Other) const {
   return std::tie(Defs, Uses) == std::tie(Other.Defs, Other.Uses);
 }
 

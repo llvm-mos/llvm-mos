@@ -373,7 +373,7 @@ void SpillPlacement::iterate() {
   // Update the network energy starting at this new frontier.
   // The call to ::update will add the nodes that changed into the todolist.
   unsigned Limit = bundles->getNumBundles() * 10;
-  while(Limit-- > 0 && !TodoList.empty()) {
+  while (Limit-- > 0 && !TodoList.empty()) {
     unsigned n = TodoList.pop_back_val();
     if (!update(n))
       continue;
@@ -391,8 +391,7 @@ void SpillPlacement::prepare(BitVector &RegBundles) {
   ActiveNodes->resize(bundles->getNumBundles());
 }
 
-bool
-SpillPlacement::finish() {
+bool SpillPlacement::finish() {
   assert(ActiveNodes && "Call prepare() first");
 
   // Write preferences back to ActiveNodes.
@@ -408,20 +407,23 @@ SpillPlacement::finish() {
 
 void SpillPlacement::BlockConstraint::print(raw_ostream &OS) const {
   auto toString = [](BorderConstraint C) -> StringRef {
-    switch(C) {
-    case DontCare: return "DontCare";
-    case PrefReg: return "PrefReg";
-    case PrefSpill: return "PrefSpill";
-    case PrefBoth: return "PrefBoth";
-    case MustSpill: return "MustSpill";
+    switch (C) {
+    case DontCare:
+      return "DontCare";
+    case PrefReg:
+      return "PrefReg";
+    case PrefSpill:
+      return "PrefSpill";
+    case PrefBoth:
+      return "PrefBoth";
+    case MustSpill:
+      return "MustSpill";
     };
     llvm_unreachable("uncovered switch");
   };
 
-  dbgs() << "{" << Number << ", "
-         << toString(Entry) << ", "
-         << toString(Exit) << ", "
-         << (ChangesValue ? "changes" : "no change") << "}";
+  dbgs() << "{" << Number << ", " << toString(Entry) << ", " << toString(Exit)
+         << ", " << (ChangesValue ? "changes" : "no change") << "}";
 }
 
 void SpillPlacement::BlockConstraint::dump() const {

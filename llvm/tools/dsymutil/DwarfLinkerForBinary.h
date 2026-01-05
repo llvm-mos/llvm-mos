@@ -100,7 +100,6 @@ public:
   };
 
 private:
-
   /// Keeps track of relocations.
   class AddressManager : public dwarf_linker::AddressesMap {
 

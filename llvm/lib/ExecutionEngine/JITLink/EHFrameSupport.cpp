@@ -313,9 +313,9 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
 
     auto CIEEdgeItr = BlockEdges.TargetMap.find(CIEDeltaFieldOffset);
 
-    orc::ExecutorAddr CIEAddress =
-        RecordAddress + orc::ExecutorAddrDiff(CIEDeltaFieldOffset) -
-        orc::ExecutorAddrDiff(CIEDelta);
+    orc::ExecutorAddr CIEAddress = RecordAddress +
+                                   orc::ExecutorAddrDiff(CIEDeltaFieldOffset) -
+                                   orc::ExecutorAddrDiff(CIEDelta);
     if (CIEEdgeItr == BlockEdges.TargetMap.end()) {
       LLVM_DEBUG({
         dbgs() << "        Adding edge at "

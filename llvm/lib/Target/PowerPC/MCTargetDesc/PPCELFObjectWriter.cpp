@@ -20,22 +20,22 @@
 using namespace llvm;
 
 namespace {
-  class PPCELFObjectWriter : public MCELFObjectTargetWriter {
-  public:
-    PPCELFObjectWriter(bool Is64Bit, uint8_t OSABI);
+class PPCELFObjectWriter : public MCELFObjectTargetWriter {
+public:
+  PPCELFObjectWriter(bool Is64Bit, uint8_t OSABI);
 
-  protected:
-    unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
-                          bool IsPCRel) const override;
+protected:
+  unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
+                        bool IsPCRel) const override;
 
-    bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
-  };
-}
+  bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
+};
+} // namespace
 
 PPCELFObjectWriter::PPCELFObjectWriter(bool Is64Bit, uint8_t OSABI)
-  : MCELFObjectTargetWriter(Is64Bit, OSABI,
-                            Is64Bit ?  ELF::EM_PPC64 : ELF::EM_PPC,
-                            /*HasRelocationAddend*/ true) {}
+    : MCELFObjectTargetWriter(Is64Bit, OSABI,
+                              Is64Bit ? ELF::EM_PPC64 : ELF::EM_PPC,
+                              /*HasRelocationAddend*/ true) {}
 
 unsigned PPCELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                           const MCValue &Target,
@@ -489,29 +489,29 @@ unsigned PPCELFObjectWriter::getRelocType(const MCFixup &Fixup,
 bool PPCELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
                                                  unsigned Type) const {
   switch (Type) {
-    default:
-      return false;
+  default:
+    return false;
 
-    case ELF::R_PPC_REL24:
-    case ELF::R_PPC64_REL24_NOTOC: {
-      // If the target symbol has a local entry point, we must keep the
-      // target symbol to preserve that information for the linker.
-      // The "other" values are stored in the last 6 bits of the second byte.
-      // The traditional defines for STO values assume the full byte and thus
-      // the shift to pack it.
-      unsigned Other =
-          static_cast<const MCSymbolELF *>(V.getAddSym())->getOther() << 2;
-      return (Other & ELF::STO_PPC64_LOCAL_MASK) != 0;
-    }
+  case ELF::R_PPC_REL24:
+  case ELF::R_PPC64_REL24_NOTOC: {
+    // If the target symbol has a local entry point, we must keep the
+    // target symbol to preserve that information for the linker.
+    // The "other" values are stored in the last 6 bits of the second byte.
+    // The traditional defines for STO values assume the full byte and thus
+    // the shift to pack it.
+    unsigned Other = static_cast<const MCSymbolELF *>(V.getAddSym())->getOther()
+                     << 2;
+    return (Other & ELF::STO_PPC64_LOCAL_MASK) != 0;
+  }
 
-    case ELF::R_PPC64_GOT16:
-    case ELF::R_PPC64_GOT16_DS:
-    case ELF::R_PPC64_GOT16_LO:
-    case ELF::R_PPC64_GOT16_LO_DS:
-    case ELF::R_PPC64_GOT16_HI:
-    case ELF::R_PPC64_GOT16_HA:
-      return true;
-    }
+  case ELF::R_PPC64_GOT16:
+  case ELF::R_PPC64_GOT16_DS:
+  case ELF::R_PPC64_GOT16_LO:
+  case ELF::R_PPC64_GOT16_LO_DS:
+  case ELF::R_PPC64_GOT16_HI:
+  case ELF::R_PPC64_GOT16_HA:
+    return true;
+  }
 }
 
 std::unique_ptr<MCObjectTargetWriter>

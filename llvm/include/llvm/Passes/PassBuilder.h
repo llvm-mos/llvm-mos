@@ -154,10 +154,10 @@ public:
 
   /// Registers all available CGSCC analysis passes.
   ///
-  /// This is an interface that can be used to populate a \c CGSCCAnalysisManager
-  /// with all registered CGSCC analyses. Callers can still manually register any
-  /// additional analyses. Callers can also pre-register analyses and this will
-  /// not override those.
+  /// This is an interface that can be used to populate a \c
+  /// CGSCCAnalysisManager with all registered CGSCC analyses. Callers can still
+  /// manually register any additional analyses. Callers can also pre-register
+  /// analyses and this will not override those.
   LLVM_ABI void registerCGSCCAnalyses(CGSCCAnalysisManager &CGAM);
 
   /// Registers all available function analysis passes.
@@ -996,6 +996,6 @@ public:
 
 /// Common option used by multiple tools to print pipeline passes
 LLVM_ABI extern cl::opt<bool> PrintPipelinePasses;
-}
+} // namespace llvm
 
 #endif

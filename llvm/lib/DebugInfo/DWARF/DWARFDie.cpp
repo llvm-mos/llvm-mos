@@ -804,7 +804,7 @@ DWARFDie::attribute_iterator &DWARFDie::attribute_iterator::operator++() {
 }
 
 bool DWARFAttribute::mayHaveLocationList(dwarf::Attribute Attr) {
-  switch(Attr) {
+  switch (Attr) {
   case DW_AT_location:
   case DW_AT_string_length:
   case DW_AT_return_addr:

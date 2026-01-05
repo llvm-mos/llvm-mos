@@ -24,11 +24,11 @@ class raw_ostream;
 
 struct HWAddressSanitizerOptions {
   HWAddressSanitizerOptions()
-      : HWAddressSanitizerOptions(false, false, false){};
+      : HWAddressSanitizerOptions(false, false, false) {};
   HWAddressSanitizerOptions(bool CompileKernel, bool Recover,
                             bool DisableOptimization)
       : CompileKernel(CompileKernel), Recover(Recover),
-        DisableOptimization(DisableOptimization){};
+        DisableOptimization(DisableOptimization) {};
   bool CompileKernel;
   bool Recover;
   bool DisableOptimization;
@@ -40,7 +40,7 @@ struct HWAddressSanitizerOptions {
 class HWAddressSanitizerPass : public PassInfoMixin<HWAddressSanitizerPass> {
 public:
   explicit HWAddressSanitizerPass(HWAddressSanitizerOptions Options)
-      : Options(Options){};
+      : Options(Options) {};
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
   static bool isRequired() { return true; }
   LLVM_ABI void

@@ -16,8 +16,7 @@
 using namespace llvm;
 using namespace llvm::ARMBuildAttrs;
 
-#define ATTRIBUTE_HANDLER(attr)                                                \
-  { ARMBuildAttrs::attr, &ARMAttributeParser::attr }
+#define ATTRIBUTE_HANDLER(attr) {ARMBuildAttrs::attr, &ARMAttributeParser::attr}
 
 const ARMAttributeParser::DisplayHandler ARMAttributeParser::displayRoutines[] =
     {
@@ -117,12 +116,24 @@ Error ARMAttributeParser::CPU_arch_profile(AttrType tag) {
 
   StringRef profile;
   switch (value) {
-  default: profile = "Unknown"; break;
-  case 'A': profile = "Application"; break;
-  case 'R': profile = "Real-time"; break;
-  case 'M': profile = "Microcontroller"; break;
-  case 'S': profile = "Classic"; break;
-  case 0: profile = "None"; break;
+  default:
+    profile = "Unknown";
+    break;
+  case 'A':
+    profile = "Application";
+    break;
+  case 'R':
+    profile = "Real-time";
+    break;
+  case 'M':
+    profile = "Microcontroller";
+    break;
+  case 'S':
+    profile = "Classic";
+    break;
+  case 0:
+    profile = "None";
+    break;
   }
 
   printAttribute(tag, value, profile);

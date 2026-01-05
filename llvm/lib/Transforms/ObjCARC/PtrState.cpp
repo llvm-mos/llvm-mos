@@ -254,7 +254,7 @@ void BottomUpPtrState::HandlePotentialUse(BasicBlock *BB, Instruction *Inst,
                                           const Value *Ptr,
                                           ProvenanceAnalysis &PA,
                                           ARCInstKind Class) {
-  auto SetSeqAndInsertReverseInsertPt = [&](Sequence NewSeq){
+  auto SetSeqAndInsertReverseInsertPt = [&](Sequence NewSeq) {
     assert(!HasReverseInsertPts());
     SetSeq(NewSeq);
     // If this is an invoke instruction, we're scanning it as part of

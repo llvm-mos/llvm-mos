@@ -10,7 +10,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_CODEGEN_TARGETPASSCONFIG_H
 #define LLVM_CODEGEN_TARGETPASSCONFIG_H
 
@@ -77,7 +76,6 @@ public:
   }
 };
 
-
 /// Target-Independent Code Generator Pass Configuration Options.
 ///
 /// This is an ImmutablePass solely for the purpose of exposing CodeGen options
@@ -122,7 +120,7 @@ private:
 protected:
   TargetMachine *TM;
   PassConfigImpl *Impl = nullptr; // Internal data structures
-  bool Initialized = false; // Flagged after all passes are configured.
+  bool Initialized = false;       // Flagged after all passes are configured.
 
   // Target Pass Options
   // Targets provide a default setting, user flags override.
@@ -157,9 +155,7 @@ public:
   static char ID;
 
   /// Get the right type of TargetMachine for this target.
-  template<typename TMC> TMC &getTM() const {
-    return *static_cast<TMC*>(TM);
-  }
+  template <typename TMC> TMC &getTM() const { return *static_cast<TMC *>(TM); }
 
   //
   void setInitialized() { Initialized = true; }
@@ -261,9 +257,7 @@ public:
 
   /// addInstSelector - This method should install an instruction selector pass,
   /// which converts from LLVM code to machine instructions.
-  virtual bool addInstSelector() {
-    return true;
-  }
+  virtual bool addInstSelector() { return true; }
 
   /// This method should install an IR translator pass, which converts from
   /// LLVM code to machine instructions with possibly generic opcodes.
@@ -365,9 +359,7 @@ protected:
 
   /// addPreISelPasses - This method should add any "last minute" LLVM->LLVM
   /// passes (which are run just before instruction selector).
-  virtual bool addPreISel() {
-    return true;
-  }
+  virtual bool addPreISel() { return true; }
 
   /// addMachineSSAOptimization - Add standard passes that optimize machine
   /// instructions in SSA form.
@@ -379,13 +371,11 @@ protected:
   ///
   /// All passes added here should preserve the MachineDominatorTree,
   /// MachineLoopInfo, and MachineTraceMetrics analyses.
-  virtual bool addILPOpts() {
-    return false;
-  }
+  virtual bool addILPOpts() { return false; }
 
   /// This method may be implemented by targets that want to run passes
   /// immediately before register allocation.
-  virtual void addPreRegAlloc() { }
+  virtual void addPreRegAlloc() {}
 
   /// createTargetRegisterAllocator - Create the register allocator pass for
   /// this target at the current optimization level.
@@ -412,9 +402,7 @@ protected:
   /// Note if the target overloads addRegAssignAndRewriteOptimized, this may not
   /// be honored. This is also not generally used for the fast variant,
   /// where the allocation and rewriting are done in one pass.
-  virtual bool addPreRewrite() {
-    return false;
-  }
+  virtual bool addPreRewrite() { return false; }
 
   /// addPostFastRegAllocRewrite - Add passes to the optimized register
   /// allocation pipeline after fast register allocation is complete.
@@ -422,20 +410,20 @@ protected:
 
   /// Add passes to be run immediately after virtual registers are rewritten
   /// to physical registers.
-  virtual void addPostRewrite() { }
+  virtual void addPostRewrite() {}
 
   /// This method may be implemented by targets that want to run passes after
   /// register allocation pass pipeline but before prolog-epilog insertion.
-  virtual void addPostRegAlloc() { }
+  virtual void addPostRegAlloc() {}
 
-  virtual void addPrePEI() { }
+  virtual void addPrePEI() {}
 
   /// Add passes that optimize machine instructions after register allocation.
   virtual void addMachineLateOptimization();
 
   /// This method may be implemented by targets that want to run passes after
   /// prolog-epilog insertion and before the second instruction scheduling pass.
-  virtual void addPreSched2() { }
+  virtual void addPreSched2() {}
 
   /// addGCPasses - Add late codegen passes that analyze code for garbage
   /// collection. This should return true if GC info should be printed after
@@ -447,7 +435,7 @@ protected:
 
   /// This pass may be implemented by targets that want to run passes
   /// immediately before machine code is emitted.
-  virtual void addPreEmitPass() { }
+  virtual void addPreEmitPass() {}
 
   /// This pass may be implemented by targets that want to run passes
   /// immediately after basic block sections are assigned.

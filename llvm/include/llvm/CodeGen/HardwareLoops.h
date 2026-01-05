@@ -50,9 +50,7 @@ struct HardwareLoopOptions {
     ForceGuard = Force;
     return *this;
   }
-  bool getForcePhi() const {
-    return ForcePhi.has_value() && ForcePhi.value();
-  }
+  bool getForcePhi() const { return ForcePhi.has_value() && ForcePhi.value(); }
   bool getForceNested() const {
     return ForceNested.has_value() && ForceNested.value();
   }
@@ -65,8 +63,7 @@ class HardwareLoopsPass : public PassInfoMixin<HardwareLoopsPass> {
   HardwareLoopOptions Opts;
 
 public:
-  explicit HardwareLoopsPass(HardwareLoopOptions Opts = {})
-    : Opts(Opts) { }
+  explicit HardwareLoopsPass(HardwareLoopOptions Opts = {}) : Opts(Opts) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

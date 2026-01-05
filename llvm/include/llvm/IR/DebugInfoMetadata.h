@@ -2550,9 +2550,7 @@ public:
   void replaceRawLinkageName(MDString *LinkageName) {
     replaceOperandWith(3, LinkageName);
   }
-  void replaceRetainedNodes(DINodeArray N) {
-    replaceOperandWith(7, N.get());
-  }
+  void replaceRetainedNodes(DINodeArray N) { replaceOperandWith(7, N.get()); }
 
   /// For the given retained node of DISubprogram, applies one of the
   /// given functions depending on the type of the node.

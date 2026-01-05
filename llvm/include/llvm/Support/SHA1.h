@@ -78,6 +78,6 @@ private:
   void final(std::array<uint32_t, HASH_LENGTH / 4> &HashResult);
 };
 
-} // end llvm namespace
+} // namespace llvm
 
 #endif

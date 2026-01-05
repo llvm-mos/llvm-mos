@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
@@ -33,69 +32,64 @@ using namespace llvm;
 STATISTIC(NumBBsPadded, "Number of basic blocks padded");
 
 namespace {
-  struct VisitedBBInfo {
-    // HasReturn - Whether the BB contains a return instruction
-    bool HasReturn = false;
+struct VisitedBBInfo {
+  // HasReturn - Whether the BB contains a return instruction
+  bool HasReturn = false;
 
-    // Cycles - Number of cycles until return if HasReturn is true, otherwise
-    // number of cycles until end of the BB
-    unsigned int Cycles = 0;
+  // Cycles - Number of cycles until return if HasReturn is true, otherwise
+  // number of cycles until end of the BB
+  unsigned int Cycles = 0;
 
-    VisitedBBInfo() = default;
-    VisitedBBInfo(bool HasReturn, unsigned int Cycles)
+  VisitedBBInfo() = default;
+  VisitedBBInfo(bool HasReturn, unsigned int Cycles)
       : HasReturn(HasReturn), Cycles(Cycles) {}
-  };
+};
 
-  struct PadShortFunc : public MachineFunctionPass {
-    static char ID;
-    PadShortFunc() : MachineFunctionPass(ID) {}
+struct PadShortFunc : public MachineFunctionPass {
+  static char ID;
+  PadShortFunc() : MachineFunctionPass(ID) {}
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<ProfileSummaryInfoWrapperPass>();
-      AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
-      AU.addPreserved<LazyMachineBlockFrequencyInfoPass>();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
+    AU.addPreserved<LazyMachineBlockFrequencyInfoPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
-    }
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
 
-    StringRef getPassName() const override {
-      return "X86 Atom pad short functions";
-    }
+  StringRef getPassName() const override {
+    return "X86 Atom pad short functions";
+  }
 
-  private:
-    void findReturns(MachineBasicBlock *MBB,
-                     unsigned int Cycles = 0);
+private:
+  void findReturns(MachineBasicBlock *MBB, unsigned int Cycles = 0);
 
-    bool cyclesUntilReturn(MachineBasicBlock *MBB,
-                           unsigned int &Cycles);
+  bool cyclesUntilReturn(MachineBasicBlock *MBB, unsigned int &Cycles);
 
-    void addPadding(MachineBasicBlock *MBB,
-                    MachineBasicBlock::iterator &MBBI,
-                    unsigned int NOOPsToAdd);
+  void addPadding(MachineBasicBlock *MBB, MachineBasicBlock::iterator &MBBI,
+                  unsigned int NOOPsToAdd);
 
-    const unsigned int Threshold = 4;
+  const unsigned int Threshold = 4;
 
-    // ReturnBBs - Maps basic blocks that return to the minimum number of
-    // cycles until the return, starting from the entry block.
-    DenseMap<MachineBasicBlock*, unsigned int> ReturnBBs;
+  // ReturnBBs - Maps basic blocks that return to the minimum number of
+  // cycles until the return, starting from the entry block.
+  DenseMap<MachineBasicBlock *, unsigned int> ReturnBBs;
 
-    // VisitedBBs - Cache of previously visited BBs.
-    DenseMap<MachineBasicBlock*, VisitedBBInfo> VisitedBBs;
+  // VisitedBBs - Cache of previously visited BBs.
+  DenseMap<MachineBasicBlock *, VisitedBBInfo> VisitedBBs;
 
-    TargetSchedModel TSM;
-  };
+  TargetSchedModel TSM;
+};
 
-  char PadShortFunc::ID = 0;
-}
+char PadShortFunc::ID = 0;
+} // namespace
 
-FunctionPass *llvm::createX86PadShortFunctions() {
-  return new PadShortFunc();
-}
+FunctionPass *llvm::createX86PadShortFunctions() { return new PadShortFunc(); }
 
 /// runOnMachineFunction - Loop over all of the basic blocks, inserting
 /// NOOP instructions before early exits.
@@ -112,11 +106,10 @@ bool PadShortFunc::runOnMachineFunction(MachineFunction &MF) {
 
   TSM.init(&MF.getSubtarget());
 
-  auto *PSI =
-      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  auto *MBFI = (PSI && PSI->hasProfileSummary()) ?
-               &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
-               nullptr;
+  auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  auto *MBFI = (PSI && PSI->hasProfileSummary())
+                   ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
+                   : nullptr;
 
   // Search through basic blocks and mark the ones that have early returns
   ReturnBBs.clear();

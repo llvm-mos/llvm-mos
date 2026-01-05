@@ -473,7 +473,8 @@ public:
            SE->getSymbol().getName().equals_insensitive("y")) &&
           BE->getOpcode() == MCBinaryExpr::Add) {
         Operands.push_back(MOSOperand::createImm(getSTI(), LHS, S, E));
-        Operands.push_back(MOSOperand::createToken(getSTI(), "+", BE->getLoc()));
+        Operands.push_back(
+            MOSOperand::createToken(getSTI(), "+", BE->getLoc()));
         Operands.push_back(MOSOperand::createToken(
             getSTI(), SE->getSymbol().getName(), SE->getLoc()));
         return false;
@@ -801,7 +802,8 @@ public:
         eatThatToken(Operands);
         if (!tryParseExpr(
                 Operands, ExprTypeImmediate,
-(getSTI().hasFeature(MOS::FeatureW65816) || getSTI().hasFeature(MOS::Feature65EL02))
+                (getSTI().hasFeature(MOS::FeatureW65816) ||
+                 getSTI().hasFeature(MOS::Feature65EL02))
                     ? "immediate operand must be an expression evaluating "
                       "to a value between 0 and 65535 inclusive"
                     : "immediate operand must be an expression evaluating "

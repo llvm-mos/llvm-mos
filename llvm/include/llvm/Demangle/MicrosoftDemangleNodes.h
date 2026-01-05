@@ -23,7 +23,7 @@ namespace llvm {
 namespace itanium_demangle {
 class OutputBuffer;
 }
-}
+} // namespace llvm
 
 using llvm::itanium_demangle::OutputBuffer;
 

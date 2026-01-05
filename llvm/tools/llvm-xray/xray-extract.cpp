@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "func-id-helper.h"
 #include "xray-registry.h"
 #include "llvm/Object/ObjectFile.h"

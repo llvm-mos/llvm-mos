@@ -47,9 +47,7 @@ public:
 
   void writeOutput(StringRef Message);
 
-  bool inputIsBitcode() const {
-    return InputIsBitcode;
-  }
+  bool inputIsBitcode() const { return InputIsBitcode; }
 
 private:
   StringRef TestName;

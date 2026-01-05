@@ -131,9 +131,8 @@ createAMDGPUAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
   return new AMDGPUTargetAsmStreamer(S, OS);
 }
 
-static MCTargetStreamer * createAMDGPUObjectTargetStreamer(
-                                                   MCStreamer &S,
-                                                   const MCSubtargetInfo &STI) {
+static MCTargetStreamer *
+createAMDGPUObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   return new AMDGPUTargetELFStreamer(S, STI);
 }
 
@@ -183,7 +182,8 @@ static MCInstrAnalysis *createAMDGPUMCInstrAnalysis(const MCInstrInfo *Info) {
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAMDGPUTargetMC() {
 
-  TargetRegistry::RegisterMCInstrInfo(getTheGCNTarget(), createAMDGPUMCInstrInfo);
+  TargetRegistry::RegisterMCInstrInfo(getTheGCNTarget(),
+                                      createAMDGPUMCInstrInfo);
   TargetRegistry::RegisterMCInstrInfo(getTheR600Target(),
                                       createR600MCInstrInfo);
   for (Target *T : {&getTheR600Target(), &getTheGCNTarget()}) {

@@ -32,21 +32,18 @@ public:
 
   /// emitFunctionAnnot - This may be implemented to emit a string right before
   /// the start of a function.
-  virtual void emitFunctionAnnot(const Function *,
-                                 formatted_raw_ostream &) {}
+  virtual void emitFunctionAnnot(const Function *, formatted_raw_ostream &) {}
 
   /// emitBasicBlockStartAnnot - This may be implemented to emit a string right
   /// after the basic block label, but before the first instruction in the
   /// block.
   virtual void emitBasicBlockStartAnnot(const BasicBlock *,
-                                        formatted_raw_ostream &) {
-  }
+                                        formatted_raw_ostream &) {}
 
   /// emitBasicBlockEndAnnot - This may be implemented to emit a string right
   /// after the basic block.
   virtual void emitBasicBlockEndAnnot(const BasicBlock *,
-                                      formatted_raw_ostream &) {
-  }
+                                      formatted_raw_ostream &) {}
 
   /// emitInstructionAnnot - This may be implemented to emit a string right
   /// before an instruction is emitted.
@@ -58,6 +55,6 @@ public:
   virtual void printInfoComment(const Value &, formatted_raw_ostream &) {}
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

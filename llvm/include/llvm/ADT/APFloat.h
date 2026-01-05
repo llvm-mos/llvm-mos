@@ -331,23 +331,18 @@ public:
   /// @}
 
   /// IEEE-754R 5.11: Floating Point Comparison Relations.
-  enum cmpResult {
-    cmpLessThan,
-    cmpEqual,
-    cmpGreaterThan,
-    cmpUnordered
-  };
+  enum cmpResult { cmpLessThan, cmpEqual, cmpGreaterThan, cmpUnordered };
 
   /// IEEE-754R 4.3: Rounding-direction attributes.
   using roundingMode = llvm::RoundingMode;
 
   static constexpr roundingMode rmNearestTiesToEven =
-                                                RoundingMode::NearestTiesToEven;
+      RoundingMode::NearestTiesToEven;
   static constexpr roundingMode rmTowardPositive = RoundingMode::TowardPositive;
   static constexpr roundingMode rmTowardNegative = RoundingMode::TowardNegative;
-  static constexpr roundingMode rmTowardZero     = RoundingMode::TowardZero;
+  static constexpr roundingMode rmTowardZero = RoundingMode::TowardZero;
   static constexpr roundingMode rmNearestTiesToAway =
-                                                RoundingMode::NearestTiesToAway;
+      RoundingMode::NearestTiesToAway;
 
   /// IEEE-754R 7: Default exception handling.
   ///
@@ -367,17 +362,10 @@ public:
   };
 
   /// Category of internally-represented number.
-  enum fltCategory {
-    fcInfinity,
-    fcNaN,
-    fcNormal,
-    fcZero
-  };
+  enum fltCategory { fcInfinity, fcNaN, fcNormal, fcZero };
 
   /// Convenience enum used to construct an uninitialized APFloat.
-  enum uninitializedTag {
-    uninitialized
-  };
+  enum uninitializedTag { uninitialized };
 
   /// Enumeration of \c ilogb error results.
   enum IlogbErrorKinds {
@@ -537,7 +525,8 @@ public:
   /// This applies to zeros and NaNs as well.
   bool isNegative() const { return sign; }
 
-  /// IEEE-754R isNormal: Returns true if and only if the current value is normal.
+  /// IEEE-754R isNormal: Returns true if and only if the current value is
+  /// normal.
   ///
   /// This implies that the current value of the float is not zero, subnormal,
   /// infinite, or NaN following the definition of normality from IEEE-754R.
@@ -688,7 +677,7 @@ private:
                                                  bool subtract);
   lostFraction multiplySignificand(const IEEEFloat &, IEEEFloat,
                                    bool ignoreAddend = false);
-  lostFraction multiplySignificand(const IEEEFloat&);
+  lostFraction multiplySignificand(const IEEEFloat &);
   lostFraction divideSignificand(const IEEEFloat &);
   void incrementSignificand();
   void initialize(const fltSemantics *);
@@ -714,7 +703,7 @@ private:
   opStatus divideSpecials(const IEEEFloat &);
   opStatus multiplySpecials(const IEEEFloat &);
   opStatus modSpecials(const IEEEFloat &);
-  opStatus remainderSpecials(const IEEEFloat&);
+  opStatus remainderSpecials(const IEEEFloat &);
 
   /// @}
 
@@ -933,7 +922,7 @@ LLVM_ABI DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp,
                               roundingMode RM);
 LLVM_ABI DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, roundingMode);
 
-} // End detail namespace
+} // namespace detail
 
 // This is a interface class that is currently forwarding functionalities from
 // detail::IEEEFloat.
@@ -955,7 +944,7 @@ class APFloat : public APFloatBase {
     }
 
     template <typename... ArgTypes>
-    Storage(const fltSemantics &Semantics, ArgTypes &&... Args) {
+    Storage(const fltSemantics &Semantics, ArgTypes &&...Args) {
       if (usesLayout<IEEEFloat>(Semantics)) {
         new (&IEEE) IEEEFloat(Semantics, std::forward<ArgTypes>(Args)...);
         return;

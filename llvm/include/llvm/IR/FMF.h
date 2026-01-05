@@ -33,14 +33,14 @@ public:
   // WARNING: We're out of space. SubclassOptionalData only has 7 bits. New
   // functionality will require a change in how this information is stored.
   enum {
-    AllowReassoc    = (1 << 0),
-    NoNaNs          = (1 << 1),
-    NoInfs          = (1 << 2),
-    NoSignedZeros   = (1 << 3),
+    AllowReassoc = (1 << 0),
+    NoNaNs = (1 << 1),
+    NoInfs = (1 << 2),
+    NoSignedZeros = (1 << 3),
     AllowReciprocal = (1 << 4),
-    AllowContract   = (1 << 5),
-    ApproxFunc      = (1 << 6),
-    FlagEnd         = (1 << 7)
+    AllowContract = (1 << 5),
+    ApproxFunc = (1 << 6),
+    FlagEnd = (1 << 7)
   };
 
   constexpr static unsigned AllFlagsMask = FlagEnd - 1;
@@ -61,26 +61,22 @@ public:
   void set() { Flags = AllFlagsMask; }
 
   /// Flag queries
-  bool allowReassoc() const    { return 0 != (Flags & AllowReassoc); }
-  bool noNaNs() const          { return 0 != (Flags & NoNaNs); }
-  bool noInfs() const          { return 0 != (Flags & NoInfs); }
-  bool noSignedZeros() const   { return 0 != (Flags & NoSignedZeros); }
+  bool allowReassoc() const { return 0 != (Flags & AllowReassoc); }
+  bool noNaNs() const { return 0 != (Flags & NoNaNs); }
+  bool noInfs() const { return 0 != (Flags & NoInfs); }
+  bool noSignedZeros() const { return 0 != (Flags & NoSignedZeros); }
   bool allowReciprocal() const { return 0 != (Flags & AllowReciprocal); }
-  bool allowContract() const   { return 0 != (Flags & AllowContract); }
-  bool approxFunc() const      { return 0 != (Flags & ApproxFunc); }
+  bool allowContract() const { return 0 != (Flags & AllowContract); }
+  bool approxFunc() const { return 0 != (Flags & ApproxFunc); }
   /// 'Fast' means all bits are set.
-  bool isFast() const          { return all(); }
+  bool isFast() const { return all(); }
 
   /// Flag setters
   void setAllowReassoc(bool B = true) {
     Flags = (Flags & ~AllowReassoc) | B * AllowReassoc;
   }
-  void setNoNaNs(bool B = true) {
-    Flags = (Flags & ~NoNaNs) | B * NoNaNs;
-  }
-  void setNoInfs(bool B = true) {
-    Flags = (Flags & ~NoInfs) | B * NoInfs;
-  }
+  void setNoNaNs(bool B = true) { Flags = (Flags & ~NoNaNs) | B * NoNaNs; }
+  void setNoInfs(bool B = true) { Flags = (Flags & ~NoInfs) | B * NoInfs; }
   void setNoSignedZeros(bool B = true) {
     Flags = (Flags & ~NoSignedZeros) | B * NoSignedZeros;
   }

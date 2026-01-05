@@ -106,14 +106,16 @@
 //     G(X) = guardStart + X u< guardLimit
 //
 //   For the ult latch comparison case M is:
-//     forall X . guardStart + X u< guardLimit && latchStart + X <u latchLimit =>
+//     forall X . guardStart + X u< guardLimit && latchStart + X <u latchLimit
+//     =>
 //        guardStart + X + 1 u< guardLimit
 //
 //   The only way the antecedent can be true and the consequent can be false is
 //   if
 //     X == guardLimit - 1 - guardStart
 //   (and guardLimit is non-zero, but we won't use this latter fact).
-//   If X == guardLimit - 1 - guardStart then the second half of the antecedent is
+//   If X == guardLimit - 1 - guardStart then the second half of the antecedent
+//   is
 //     latchStart + guardLimit - 1 - guardStart u< latchLimit
 //   and its negation is
 //     latchStart + guardLimit - 1 - guardStart u>= latchLimit
@@ -121,8 +123,8 @@
 //   In other words, if
 //     latchLimit u<= latchStart + guardLimit - 1 - guardStart
 //   then:
-//   (the ranges below are written in ConstantRange notation, where [A, B) is the
-//   set for (I = A; I != B; I++ /*maywrap*/) yield(I);)
+//   (the ranges below are written in ConstantRange notation, where [A, B) is
+//   the set for (I = A; I != B; I++ /*maywrap*/) yield(I);)
 //
 //      forall X . guardStart + X u< guardLimit &&
 //                 latchStart + X u< latchLimit =>
@@ -131,7 +133,8 @@
 //                 latchStart + X u< latchStart + guardLimit - 1 - guardStart =>
 //        guardStart + X + 1 u< guardLimit
 //   == forall X . (guardStart + X) in [0, guardLimit) &&
-//                 (latchStart + X) in [0, latchStart + guardLimit - 1 - guardStart) =>
+//                 (latchStart + X) in [0, latchStart + guardLimit - 1 -
+//                 guardStart) =>
 //        (guardStart + X + 1) in [0, guardLimit)
 //   == forall X . X in [-guardStart, guardLimit - guardStart) &&
 //                 X in [-latchStart, guardLimit - 1 - guardStart) =>
@@ -161,7 +164,8 @@
 //   For the ugt latch comparison case M is:
 //     forall X. X-1 u< guardLimit and X u> latchLimit => X-2 u< guardLimit
 //
-//   The only way the antecedent can be true and the consequent can be false is if
+//   The only way the antecedent can be true and the consequent can be false is
+//   if
 //     X == 1.
 //   If X == 1 then the second half of the antecedent is
 //     1 u> latchLimit, and its negation is latchLimit u>= 1.
@@ -212,8 +216,9 @@ using namespace llvm;
 static cl::opt<bool> EnableIVTruncation("loop-predication-enable-iv-truncation",
                                         cl::Hidden, cl::init(true));
 
-static cl::opt<bool> EnableCountDownLoop("loop-predication-enable-count-down-loop",
-                                        cl::Hidden, cl::init(true));
+static cl::opt<bool>
+    EnableCountDownLoop("loop-predication-enable-count-down-loop", cl::Hidden,
+                        cl::init(true));
 
 static cl::opt<bool>
     SkipProfitabilityChecks("loop-predication-skip-profitability-checks",
@@ -250,7 +255,7 @@ struct LoopICmp {
   const SCEV *Limit;
   LoopICmp(ICmpInst::Predicate Pred, const SCEVAddRecExpr *IV,
            const SCEV *Limit)
-    : Pred(Pred), IV(IV), Limit(Limit) {}
+      : Pred(Pred), IV(IV), Limit(Limit) {}
   LoopICmp() = default;
   void dump() {
     dbgs() << "LoopICmp Pred = " << Pred << ", IV = " << *IV
@@ -270,7 +275,7 @@ class LoopPredication {
   BasicBlock *Preheader;
   LoopICmp LatchCheck;
 
-  bool isSupportedStep(const SCEV* Step);
+  bool isSupportedStep(const SCEV *Step);
   std::optional<LoopICmp> parseLoopICmp(ICmpInst *ICI);
   std::optional<LoopICmp> parseLoopLatchICmp();
 
@@ -278,7 +283,7 @@ class LoopPredication {
   /// instruction whose only user will be 'User' which has operands 'Ops'.  A
   /// trivial result would be the at the User itself, but we try to return a
   /// loop invariant location if possible.
-  Instruction *findInsertPt(Instruction *User, ArrayRef<Value*> Ops);
+  Instruction *findInsertPt(Instruction *User, ArrayRef<Value *> Ops);
   /// Same as above, *except* that this uses the SCEV definition of invariant
   /// which is that an expression *can be made* invariant via SCEVExpander.
   /// Thus, this version is only suitable for finding an insert point to be
@@ -289,7 +294,7 @@ class LoopPredication {
   /// Return true if the value is known to produce a single fixed value across
   /// all iterations on which it executes.  Note that this does not imply
   /// speculation safety.  That must be established separately.
-  bool isLoopInvariantValue(const SCEV* S);
+  bool isLoopInvariantValue(const SCEV *S);
 
   Value *expandCheck(SCEVExpander &Expander, Instruction *Guard,
                      ICmpInst::Predicate Pred, const SCEV *LHS,
@@ -310,7 +315,8 @@ class LoopPredication {
                    SmallVectorImpl<Value *> &WidenedChecks,
                    SCEVExpander &Expander, Instruction *Guard);
   bool widenGuardConditions(IntrinsicInst *II, SCEVExpander &Expander);
-  bool widenWidenableBranchGuardConditions(BranchInst *Guard, SCEVExpander &Expander);
+  bool widenWidenableBranchGuardConditions(BranchInst *Guard,
+                                           SCEVExpander &Expander);
   // If the loop always exits through another block in the loop, we should not
   // predicate based on the latch check. For example, the latch check can be a
   // very coarse grained check and there can be more fine grained exit checks
@@ -322,7 +328,7 @@ class LoopPredication {
 public:
   LoopPredication(AliasAnalysis *AA, DominatorTree *DT, ScalarEvolution *SE,
                   LoopInfo *LI, MemorySSAUpdater *MSSAU)
-      : AA(AA), DT(DT), SE(SE), LI(LI), MSSAU(MSSAU){};
+      : AA(AA), DT(DT), SE(SE), LI(LI), MSSAU(MSSAU) {};
   bool runOnLoop(Loop *L);
 };
 
@@ -371,8 +377,7 @@ std::optional<LoopICmp> LoopPredication::parseLoopICmp(ICmpInst *ICI) {
   return LoopICmp(Pred, AR, RHSS);
 }
 
-Value *LoopPredication::expandCheck(SCEVExpander &Expander,
-                                    Instruction *Guard,
+Value *LoopPredication::expandCheck(SCEVExpander &Expander, Instruction *Guard,
                                     ICmpInst::Predicate Pred, const SCEV *LHS,
                                     const SCEV *RHS) {
   Type *Ty = LHS->getType();
@@ -440,7 +445,6 @@ static bool isSafeToTruncateWideIVType(const DataLayout &DL,
          Limit->getAPInt().getActiveBits() < RangeCheckTypeBitSize;
 }
 
-
 // Return an LoopICmp describing a latch check equivlent to LatchCheck but with
 // the requested type if safe to do so.  May involve the use of a new IV.
 static std::optional<LoopICmp> generateLoopLatchCheck(const DataLayout &DL,
@@ -474,12 +478,12 @@ static std::optional<LoopICmp> generateLoopLatchCheck(const DataLayout &DL,
   return NewLatchCheck;
 }
 
-bool LoopPredication::isSupportedStep(const SCEV* Step) {
+bool LoopPredication::isSupportedStep(const SCEV *Step) {
   return Step->isOne() || (Step->isAllOnesValue() && EnableCountDownLoop);
 }
 
 Instruction *LoopPredication::findInsertPt(Instruction *Use,
-                                           ArrayRef<Value*> Ops) {
+                                           ArrayRef<Value *> Ops) {
   for (Value *Op : Ops)
     if (!L->isLoopInvariant(Op))
       return Use;
@@ -499,7 +503,7 @@ Instruction *LoopPredication::findInsertPt(const SCEVExpander &Expander,
   return Preheader->getTerminator();
 }
 
-bool LoopPredication::isLoopInvariantValue(const SCEV* S) {
+bool LoopPredication::isLoopInvariantValue(const SCEV *S) {
   // Handling expressions which produce invariant results, but *haven't* yet
   // been removed from the loop serves two important purposes.
   // 1) Most importantly, it resolves a pass ordering cycle which would
@@ -553,10 +557,8 @@ std::optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
   // Subtlety: We need all the values to be *invariant* across all iterations,
   // but we only need to check expansion safety for those which *aren't*
   // already guaranteed to dominate the guard.
-  if (!isLoopInvariantValue(GuardStart) ||
-      !isLoopInvariantValue(GuardLimit) ||
-      !isLoopInvariantValue(LatchStart) ||
-      !isLoopInvariantValue(LatchLimit)) {
+  if (!isLoopInvariantValue(GuardStart) || !isLoopInvariantValue(GuardLimit) ||
+      !isLoopInvariantValue(LatchStart) || !isLoopInvariantValue(LatchLimit)) {
     LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
     return std::nullopt;
   }
@@ -579,8 +581,8 @@ std::optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
 
   auto *LimitCheck =
       expandCheck(Expander, Guard, LimitCheckPred, LatchLimit, RHS);
-  auto *FirstIterationCheck = expandCheck(Expander, Guard, RangeCheck.Pred,
-                                          GuardStart, GuardLimit);
+  auto *FirstIterationCheck =
+      expandCheck(Expander, Guard, RangeCheck.Pred, GuardStart, GuardLimit);
   IRBuilder<> Builder(findInsertPt(Guard, {FirstIterationCheck, LimitCheck}));
   return Builder.CreateFreeze(
       Builder.CreateAnd(FirstIterationCheck, LimitCheck));
@@ -597,10 +599,8 @@ std::optional<Value *> LoopPredication::widenICmpRangeCheckDecrementingLoop(
   // Subtlety: We need all the values to be *invariant* across all iterations,
   // but we only need to check expansion safety for those which *aren't*
   // already guaranteed to dominate the guard.
-  if (!isLoopInvariantValue(GuardStart) ||
-      !isLoopInvariantValue(GuardLimit) ||
-      !isLoopInvariantValue(LatchStart) ||
-      !isLoopInvariantValue(LatchLimit)) {
+  if (!isLoopInvariantValue(GuardStart) || !isLoopInvariantValue(GuardLimit) ||
+      !isLoopInvariantValue(LatchStart) || !isLoopInvariantValue(LatchLimit)) {
     LLVM_DEBUG(dbgs() << "Can't expand limit check!\n");
     return std::nullopt;
   }
@@ -625,25 +625,22 @@ std::optional<Value *> LoopPredication::widenICmpRangeCheckDecrementingLoop(
   // See the header comment for reasoning of the checks.
   auto LimitCheckPred =
       ICmpInst::getFlippedStrictnessPredicate(LatchCheck.Pred);
-  auto *FirstIterationCheck = expandCheck(Expander, Guard,
-                                          ICmpInst::ICMP_ULT,
-                                          GuardStart, GuardLimit);
-  auto *LimitCheck = expandCheck(Expander, Guard, LimitCheckPred, LatchLimit,
-                                 SE->getOne(Ty));
+  auto *FirstIterationCheck =
+      expandCheck(Expander, Guard, ICmpInst::ICMP_ULT, GuardStart, GuardLimit);
+  auto *LimitCheck =
+      expandCheck(Expander, Guard, LimitCheckPred, LatchLimit, SE->getOne(Ty));
   IRBuilder<> Builder(findInsertPt(Guard, {FirstIterationCheck, LimitCheck}));
   return Builder.CreateFreeze(
       Builder.CreateAnd(FirstIterationCheck, LimitCheck));
 }
 
-static void normalizePredicate(ScalarEvolution *SE, Loop *L,
-                               LoopICmp& RC) {
+static void normalizePredicate(ScalarEvolution *SE, Loop *L, LoopICmp &RC) {
   // LFTR canonicalizes checks to the ICMP_NE/EQ form; normalize back to the
   // ULT/UGE form for ease of handling by our caller.
-  if (ICmpInst::isEquality(RC.Pred) &&
-      RC.IV->getStepRecurrence(*SE)->isOne() &&
+  if (ICmpInst::isEquality(RC.Pred) && RC.IV->getStepRecurrence(*SE)->isOne() &&
       SE->isKnownPredicate(ICmpInst::ICMP_ULE, RC.IV->getStart(), RC.Limit))
-    RC.Pred = RC.Pred == ICmpInst::ICMP_NE ?
-      ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE;
+    RC.Pred =
+        RC.Pred == ICmpInst::ICMP_NE ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE;
 }
 
 /// If ICI can be widened to a loop invariant condition emits the loop
@@ -1104,8 +1101,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // analyzeable, but we can at least avoid the obvious cases.
   const SCEV *MinEC = getMinAnalyzeableBackedgeTakenCount(*SE, *DT, L);
   if (isa<SCEVCouldNotCompute>(MinEC) || MinEC->getType()->isPointerTy() ||
-      !SE->isLoopInvariant(MinEC, L) ||
-      !Rewriter.isSafeToExpandAt(MinEC, IP))
+      !SE->isLoopInvariant(MinEC, L) || !Rewriter.isSafeToExpandAt(MinEC, IP))
     return ChangedLoop;
 
   Rewriter.setInsertPoint(IP);

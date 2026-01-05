@@ -361,8 +361,7 @@ NativeSession::getSectionContribs() const {
   return nullptr;
 }
 
-std::unique_ptr<IPDBEnumFrameData>
-NativeSession::getFrameData() const {
+std::unique_ptr<IPDBEnumFrameData> NativeSession::getFrameData() const {
   return nullptr;
 }
 

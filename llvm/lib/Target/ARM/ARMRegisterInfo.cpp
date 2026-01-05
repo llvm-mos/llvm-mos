@@ -13,6 +13,6 @@
 #include "ARMRegisterInfo.h"
 using namespace llvm;
 
-void ARMRegisterInfo::anchor() { }
+void ARMRegisterInfo::anchor() {}
 
 ARMRegisterInfo::ARMRegisterInfo() = default;

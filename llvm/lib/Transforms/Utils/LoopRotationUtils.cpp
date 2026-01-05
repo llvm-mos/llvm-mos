@@ -92,11 +92,10 @@ static void InsertNewValueIntoMap(ValueToValueMapTy &VM, Value *K, Value *V) {
 /// old header into the preheader.  If there were uses of the values produced by
 /// these instruction that were outside of the loop, we have to insert PHI nodes
 /// to merge the two values.  Do this now.
-static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
-                                            BasicBlock *OrigPreheader,
-                                            ValueToValueMapTy &ValueMap,
-                                            ScalarEvolution *SE,
-                                SmallVectorImpl<PHINode*> *InsertedPHIs) {
+static void RewriteUsesOfClonedInstructions(
+    BasicBlock *OrigHeader, BasicBlock *OrigPreheader,
+    ValueToValueMapTy &ValueMap, ScalarEvolution *SE,
+    SmallVectorImpl<PHINode *> *InsertedPHIs) {
   // Remove PHI node entries that are no longer live.
   BasicBlock::iterator I, E = OrigHeader->end();
   for (I = OrigHeader->begin(); PHINode *PN = dyn_cast<PHINode>(I); ++I)
@@ -858,10 +857,9 @@ static bool shouldSpeculateInstrs(BasicBlock::iterator Begin,
     case Instruction::Shl:
     case Instruction::LShr:
     case Instruction::AShr: {
-      Value *IVOpnd =
-          !isa<Constant>(I->getOperand(0))
-              ? I->getOperand(0)
-              : !isa<Constant>(I->getOperand(1)) ? I->getOperand(1) : nullptr;
+      Value *IVOpnd = !isa<Constant>(I->getOperand(0))   ? I->getOperand(0)
+                      : !isa<Constant>(I->getOperand(1)) ? I->getOperand(1)
+                                                         : nullptr;
       if (!IVOpnd)
         return false;
 
@@ -925,10 +923,11 @@ bool LoopRotate::simplifyLoopLatch(Loop *L) {
   MergeBlockIntoPredecessor(Latch, &DTU, LI, MSSAU, nullptr,
                             /*PredecessorWithTwoSuccessors=*/true);
 
-    if (SE) {
-      // Merging blocks may remove blocks reference in the block disposition cache. Clear the cache.
-      SE->forgetBlockAndLoopDispositions();
-    }
+  if (SE) {
+    // Merging blocks may remove blocks reference in the block disposition
+    // cache. Clear the cache.
+    SE->forgetBlockAndLoopDispositions();
+  }
 
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
@@ -960,7 +959,6 @@ bool LoopRotate::processLoop(Loop *L) {
 
   return MadeChange || SimplifiedLatch;
 }
-
 
 /// The utility to convert a loop into a loop with bottom test.
 bool llvm::LoopRotation(Loop *L, LoopInfo *LI, const TargetTransformInfo *TTI,

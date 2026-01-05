@@ -27,7 +27,7 @@ namespace {
 template <typename Base> class MappedBlockStreamImpl : public Base {
 public:
   template <typename... Args>
-  MappedBlockStreamImpl(Args &&... Params)
+  MappedBlockStreamImpl(Args &&...Params)
       : Base(std::forward<Args>(Params)...) {}
 };
 

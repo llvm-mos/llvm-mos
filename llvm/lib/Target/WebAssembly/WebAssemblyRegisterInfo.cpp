@@ -95,8 +95,8 @@ bool WebAssemblyRegisterInfo::eliminateFrameIndex(
         // TODO: For now we just opportunistically do this in the case where
         // the CONST_I32/64 happens to have exactly one def and one use. We
         // should generalize this to optimize in more cases.
-        if (Def && Def->getOpcode() ==
-              WebAssemblyFrameLowering::getOpcConst(MF) &&
+        if (Def &&
+            Def->getOpcode() == WebAssemblyFrameLowering::getOpcConst(MF) &&
             MRI.hasOneNonDBGUse(Def->getOperand(0).getReg())) {
           MachineOperand &ImmMO = Def->getOperand(1);
           if (ImmMO.isImm()) {
@@ -120,13 +120,11 @@ bool WebAssemblyRegisterInfo::eliminateFrameIndex(
         MRI.getTargetRegisterInfo()->getPointerRegClass();
     Register OffsetOp = MRI.createVirtualRegister(PtrRC);
     BuildMI(MBB, *II, II->getDebugLoc(),
-            TII->get(WebAssemblyFrameLowering::getOpcConst(MF)),
-            OffsetOp)
+            TII->get(WebAssemblyFrameLowering::getOpcConst(MF)), OffsetOp)
         .addImm(FrameOffset);
     FIRegOperand = MRI.createVirtualRegister(PtrRC);
     BuildMI(MBB, *II, II->getDebugLoc(),
-            TII->get(WebAssemblyFrameLowering::getOpcAdd(MF)),
-            FIRegOperand)
+            TII->get(WebAssemblyFrameLowering::getOpcAdd(MF)), FIRegOperand)
         .addReg(FrameRegister)
         .addReg(OffsetOp);
   }

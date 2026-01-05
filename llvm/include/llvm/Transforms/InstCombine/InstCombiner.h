@@ -205,18 +205,18 @@ public:
   /// If the inversion will consume instructions, `DoesConsume` will be set to
   /// true. Otherwise it will be false.
   Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
-                                      BuilderTy *Builder, bool &DoesConsume,
-                                      unsigned Depth);
+                               BuilderTy *Builder, bool &DoesConsume,
+                               unsigned Depth);
 
-  Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
-                                  BuilderTy *Builder, bool &DoesConsume) {
+  Value *getFreelyInverted(Value *V, bool WillInvertAllUses, BuilderTy *Builder,
+                           bool &DoesConsume) {
     DoesConsume = false;
     return getFreelyInvertedImpl(V, WillInvertAllUses, Builder, DoesConsume,
                                  /*Depth*/ 0);
   }
 
   Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
-                                  BuilderTy *Builder) {
+                           BuilderTy *Builder) {
     bool Unused;
     return getFreelyInverted(V, WillInvertAllUses, Builder, Unused);
   }
@@ -227,8 +227,7 @@ public:
   /// uses of V and only keep uses of ~V.
   ///
   /// See also: canFreelyInvertAllUsersOf()
-  bool isFreeToInvert(Value *V, bool WillInvertAllUses,
-                             bool &DoesConsume) {
+  bool isFreeToInvert(Value *V, bool WillInvertAllUses, bool &DoesConsume) {
     return getFreelyInverted(V, WillInvertAllUses, /*Builder*/ nullptr,
                              DoesConsume) != nullptr;
   }
@@ -390,7 +389,8 @@ public:
   Instruction *replaceInstUsesWith(Instruction &I, Value *V) {
     // If there are no uses to replace, then we return nullptr to indicate that
     // no changes were made to the program.
-    if (I.use_empty()) return nullptr;
+    if (I.use_empty())
+      return nullptr;
 
     Worklist.pushUsersToWorkList(I); // Add all modified instrs to worklist.
 

@@ -206,8 +206,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   // to zero and arithmetic shifts are clamped to (BitWidth - 1).
   if (IsImm) {
     assert(AmtVT->isIntegerTy(32) && "Unexpected shift-by-immediate type");
-    KnownBits KnownAmtBits =
-        llvm::computeKnownBits(Amt, II.getDataLayout());
+    KnownBits KnownAmtBits = llvm::computeKnownBits(Amt, II.getDataLayout());
     if (KnownAmtBits.getMaxValue().ult(BitWidth)) {
       Amt = Builder.CreateZExtOrTrunc(Amt, SVT);
       Amt = Builder.CreateVectorSplat(VWidth, Amt);
@@ -230,10 +229,10 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
     unsigned NumAmtElts = cast<FixedVectorType>(AmtVT)->getNumElements();
     APInt DemandedLower = APInt::getOneBitSet(NumAmtElts, 0);
     APInt DemandedUpper = APInt::getBitsSet(NumAmtElts, 1, NumAmtElts / 2);
-    KnownBits KnownLowerBits = llvm::computeKnownBits(
-        Amt, DemandedLower, II.getDataLayout());
-    KnownBits KnownUpperBits = llvm::computeKnownBits(
-        Amt, DemandedUpper, II.getDataLayout());
+    KnownBits KnownLowerBits =
+        llvm::computeKnownBits(Amt, DemandedLower, II.getDataLayout());
+    KnownBits KnownUpperBits =
+        llvm::computeKnownBits(Amt, DemandedUpper, II.getDataLayout());
     if (KnownLowerBits.getMaxValue().ult(BitWidth) &&
         (DemandedUpper.isZero() || KnownUpperBits.isZero())) {
       SmallVector<int, 16> ZeroSplat(VWidth, 0);
@@ -350,8 +349,7 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
 
   // If the shift amount is guaranteed to be in-range we can replace it with a
   // generic shift.
-  KnownBits KnownAmt =
-      llvm::computeKnownBits(Amt, II.getDataLayout());
+  KnownBits KnownAmt = llvm::computeKnownBits(Amt, II.getDataLayout());
   if (KnownAmt.getMaxValue().ult(BitWidth)) {
     return (LogicalShift ? (ShiftLeft ? Builder.CreateShl(Vec, Amt)
                                       : Builder.CreateLShr(Vec, Amt))
@@ -2902,8 +2900,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       // Bail if the shuffle was irregular or contains undefs.
       int NumElts = cast<FixedVectorType>(MaskSrc->getType())->getNumElements();
       if (NumElts < (int)ShuffleMask.size() || !isPowerOf2_32(NumElts) ||
-          any_of(ShuffleMask,
-                 [NumElts](int M) { return M < 0 || M >= NumElts; }))
+          any_of(
+              ShuffleMask, [NumElts](int M) { return M < 0 || M >= NumElts; }))
         break;
       Mask = InstCombiner::peekThroughBitcast(MaskSrc);
     }

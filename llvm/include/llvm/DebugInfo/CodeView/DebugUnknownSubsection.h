@@ -25,7 +25,7 @@ public:
 private:
   BinaryStreamRef Data;
 };
-}
-}
+} // namespace codeview
+} // namespace llvm
 
 #endif

@@ -176,9 +176,8 @@ MCOperand const &getNewValueOperand2(MCInstrInfo const &MCII,
 unsigned getType(MCInstrInfo const &MCII, MCInst const &MCI);
 
 /// Return the resources used by this instruction
-unsigned getCVIResources(MCInstrInfo const &MCII,
-                                      MCSubtargetInfo const &STI,
-                                      MCInst const &MCI);
+unsigned getCVIResources(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
+                         MCInst const &MCI);
 
 /// Return the slots used by the insn.
 unsigned getUnits(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
@@ -313,7 +312,6 @@ bool mustNotExtend(MCExpr const &Expr);
 
 // Returns true if this instruction requires a slot to execute.
 bool requiresSlot(MCSubtargetInfo const &STI, MCInst const &MCI);
-
 
 // Returns true if \a MCB would require endloop padding.
 bool LoopNeedsPadding(MCInst const &MCB);

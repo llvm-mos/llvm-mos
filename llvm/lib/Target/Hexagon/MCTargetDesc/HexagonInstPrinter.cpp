@@ -69,7 +69,7 @@ void HexagonInstPrinter::printOperand(MCInst const *MI, unsigned OpNo,
 void HexagonInstPrinter::printBrtarget(MCInst const *MI, unsigned OpNo,
                                        raw_ostream &O) const {
   MCOperand const &MO = MI->getOperand(OpNo);
-  assert (MO.isExpr());
+  assert(MO.isExpr());
   MCExpr const &Expr = *MO.getExpr();
   int64_t Value;
   if (Expr.evaluateAsAbsolute(Value))

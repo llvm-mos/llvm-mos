@@ -61,7 +61,8 @@ static bool runPass(Function &F) {
   // safe if block is well-formed: it always have terminator, otherwise
   // we'll get and assertion.
   BasicBlock::iterator I = BBEntry->begin();
-  while (isa<AllocaInst>(I)) ++I;
+  while (isa<AllocaInst>(I))
+    ++I;
 
   CastInst *AllocaInsertionPoint = new BitCastInst(
       Constant::getNullValue(Type::getInt32Ty(F.getContext())),
@@ -69,7 +70,7 @@ static bool runPass(Function &F) {
 
   // Find the escaped instructions. But don't create stack slots for
   // allocas in entry block.
-  std::list<Instruction*> WorkList;
+  std::list<Instruction *> WorkList;
   for (Instruction &I : instructions(F))
     if (!(isa<AllocaInst>(I) && I.getParent() == BBEntry) && valueEscapes(I))
       WorkList.push_front(&I);

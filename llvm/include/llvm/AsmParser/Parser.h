@@ -211,6 +211,6 @@ parseDIExpressionBodyAtBeginning(StringRef Asm, unsigned &Read,
                                  SMDiagnostic &Err, const Module &M,
                                  const SlotMapping *Slots);
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

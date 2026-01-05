@@ -157,8 +157,8 @@ void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
       break;
     }
     case MachineOperand::MO_MachineBasicBlock: {
-      MCExpr const *Expr = MCSymbolRefExpr::create(MO.getMBB()->getSymbol(),
-                                                   AP.OutContext);
+      MCExpr const *Expr =
+          MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), AP.OutContext);
       Expr = HexagonMCExpr::create(Expr, AP.OutContext);
       HexagonMCInstrInfo::setMustExtend(*Expr, MustExtend);
       MCO = MCOperand::createExpr(Expr);
@@ -168,8 +168,8 @@ void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
       MCO = GetSymbolRef(MO, AP.getSymbol(MO.getGlobal()), AP, MustExtend);
       break;
     case MachineOperand::MO_ExternalSymbol:
-      MCO = GetSymbolRef(MO, AP.GetExternalSymbolSymbol(MO.getSymbolName()),
-                         AP, MustExtend);
+      MCO = GetSymbolRef(MO, AP.GetExternalSymbolSymbol(MO.getSymbolName()), AP,
+                         MustExtend);
       break;
     case MachineOperand::MO_JumpTableIndex:
       MCO = GetSymbolRef(MO, AP.GetJTISymbol(MO.getIndex()), AP, MustExtend);

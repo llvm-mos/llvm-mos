@@ -53,8 +53,8 @@ public:
                               const TargetRegisterInfo *TRI) const override;
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
-  void processFunctionBeforeFrameFinalized(MachineFunction &MF,
-                                     RegScavenger *RS = nullptr) const override;
+  void processFunctionBeforeFrameFinalized(
+      MachineFunction &MF, RegScavenger *RS = nullptr) const override;
 
   /// Wraps up getting a CFI index and building a MachineInstr for it.
   void BuildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
@@ -66,6 +66,6 @@ public:
                                  const DebugLoc &DL, bool IsPrologue) const;
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

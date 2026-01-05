@@ -128,7 +128,7 @@ private:
 
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
 };
-}
+} // namespace
 
 void RISCVAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
                                     const MachineInstr &MI) {

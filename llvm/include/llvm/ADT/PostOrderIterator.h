@@ -55,8 +55,7 @@ namespace llvm {
 // on to the next node.
 
 /// Default po_iterator_storage implementation with an internal set object.
-template<class SetType, bool External>
-class po_iterator_storage {
+template <class SetType, bool External> class po_iterator_storage {
   SetType Visited;
 
 public:
@@ -71,8 +70,7 @@ public:
 };
 
 /// Specialization of po_iterator_storage that references an external set.
-template<class SetType>
-class po_iterator_storage<SetType, true> {
+template <class SetType> class po_iterator_storage<SetType, true> {
   SetType &Visited;
 
 public:
@@ -189,10 +187,12 @@ public:
 
 // Provide global constructors that automatically figure out correct types...
 //
-template <class T>
-po_iterator<T> po_begin(const T &G) { return po_iterator<T>::begin(G); }
-template <class T>
-po_iterator<T> po_end  (const T &G) { return po_iterator<T>::end(G); }
+template <class T> po_iterator<T> po_begin(const T &G) {
+  return po_iterator<T>::begin(G);
+}
+template <class T> po_iterator<T> po_end(const T &G) {
+  return po_iterator<T>::end(G);
+}
 
 template <class T> iterator_range<po_iterator<T>> post_order(const T &G) {
   return make_range(po_begin(G), po_end(G));
@@ -201,22 +201,23 @@ template <class T> iterator_range<po_iterator<T>> post_order(const T &G) {
 // Provide global definitions of external postorder iterators...
 template <class T, class SetType = std::set<typename GraphTraits<T>::NodeRef>>
 struct po_ext_iterator : po_iterator<T, SetType, true> {
-  po_ext_iterator(const po_iterator<T, SetType, true> &V) :
-  po_iterator<T, SetType, true>(V) {}
+  po_ext_iterator(const po_iterator<T, SetType, true> &V)
+      : po_iterator<T, SetType, true>(V) {}
 };
 
-template<class T, class SetType>
+template <class T, class SetType>
 po_ext_iterator<T, SetType> po_ext_begin(T G, SetType &S) {
   return po_ext_iterator<T, SetType>::begin(G, S);
 }
 
-template<class T, class SetType>
+template <class T, class SetType>
 po_ext_iterator<T, SetType> po_ext_end(T G, SetType &S) {
   return po_ext_iterator<T, SetType>::end(G, S);
 }
 
 template <class T, class SetType>
-iterator_range<po_ext_iterator<T, SetType>> post_order_ext(const T &G, SetType &S) {
+iterator_range<po_ext_iterator<T, SetType>> post_order_ext(const T &G,
+                                                           SetType &S) {
   return make_range(po_ext_begin(G, S), po_ext_end(G, S));
 }
 
@@ -224,17 +225,15 @@ iterator_range<po_ext_iterator<T, SetType>> post_order_ext(const T &G, SetType &
 template <class T, class SetType = std::set<typename GraphTraits<T>::NodeRef>,
           bool External = false>
 struct ipo_iterator : po_iterator<Inverse<T>, SetType, External> {
-  ipo_iterator(const po_iterator<Inverse<T>, SetType, External> &V) :
-     po_iterator<Inverse<T>, SetType, External> (V) {}
+  ipo_iterator(const po_iterator<Inverse<T>, SetType, External> &V)
+      : po_iterator<Inverse<T>, SetType, External>(V) {}
 };
 
-template <class T>
-ipo_iterator<T> ipo_begin(const T &G) {
+template <class T> ipo_iterator<T> ipo_begin(const T &G) {
   return ipo_iterator<T>::begin(G);
 }
 
-template <class T>
-ipo_iterator<T> ipo_end(const T &G){
+template <class T> ipo_iterator<T> ipo_end(const T &G) {
   return ipo_iterator<T>::end(G);
 }
 
@@ -246,10 +245,10 @@ iterator_range<ipo_iterator<T>> inverse_post_order(const T &G) {
 // Provide global definitions of external inverse postorder iterators...
 template <class T, class SetType = std::set<typename GraphTraits<T>::NodeRef>>
 struct ipo_ext_iterator : ipo_iterator<T, SetType, true> {
-  ipo_ext_iterator(const ipo_iterator<T, SetType, true> &V) :
-    ipo_iterator<T, SetType, true>(V) {}
-  ipo_ext_iterator(const po_iterator<Inverse<T>, SetType, true> &V) :
-    ipo_iterator<T, SetType, true>(V) {}
+  ipo_ext_iterator(const ipo_iterator<T, SetType, true> &V)
+      : ipo_iterator<T, SetType, true>(V) {}
+  ipo_ext_iterator(const po_iterator<Inverse<T>, SetType, true> &V)
+      : ipo_iterator<T, SetType, true>(V) {}
 };
 
 template <class T, class SetType>
@@ -295,7 +294,7 @@ inverse_post_order_ext(const T &G, SetType &S) {
 // }
 //
 
-template<class GraphT, class GT = GraphTraits<GraphT>>
+template <class GraphT, class GT = GraphTraits<GraphT>>
 class ReversePostOrderTraversal {
   using NodeRef = typename GT::NodeRef;
 

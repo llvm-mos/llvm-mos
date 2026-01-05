@@ -269,9 +269,9 @@ bool MemOPSizeOpt::perform(MemOp MO) {
 
   LLVM_DEBUG(dbgs() << "Read one memory intrinsic profile with count "
                     << ActualCount << "\n");
-  LLVM_DEBUG(
-      for (auto &VD
-           : VDs) { dbgs() << "  (" << VD.Value << "," << VD.Count << ")\n"; });
+  LLVM_DEBUG(for (auto &VD : VDs) {
+    dbgs() << "  (" << VD.Value << "," << VD.Count << ")\n";
+  });
 
   if (ActualCount < MemOPCountThreshold)
     return false;

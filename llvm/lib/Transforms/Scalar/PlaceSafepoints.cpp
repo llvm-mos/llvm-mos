@@ -461,7 +461,7 @@ static bool mustBeFiniteCountedLoop(Loop *L, ScalarEvolution *SE,
     if (!isa<SCEVCouldNotCompute>(MaxExec) &&
         SE->getUnsignedRange(MaxExec).getUnsignedMax().isIntN(
             CountedLoopTripWidth))
-        return true;
+      return true;
   }
 
   return /* not finite */ false;
@@ -631,7 +631,7 @@ InsertSafepointPoll(BasicBlock::iterator InsertBefore,
   auto *F = M->getFunction(GCSafepointPollName);
   assert(F && "gc.safepoint_poll function is missing");
   assert(F->getValueType() ==
-         FunctionType::get(Type::getVoidTy(M->getContext()), false) &&
+             FunctionType::get(Type::getVoidTy(M->getContext()), false) &&
          "gc.safepoint_poll declared with wrong type");
   assert(!F->empty() && "gc.safepoint_poll must be a non-empty function");
   CallInst *PollCall = CallInst::Create(F, "", InsertBefore);
@@ -665,8 +665,7 @@ InsertSafepointPoll(BasicBlock::iterator InsertBefore,
 
   // If your poll function includes an unreachable at the end, that's not
   // valid.  Bugpoint likes to create this, so check for it.
-  assert(isPotentiallyReachable(&*Start, &*After) &&
-         "malformed poll function");
+  assert(isPotentiallyReachable(&*Start, &*After) && "malformed poll function");
 
   scanInlinedCode(&*Start, &*After, Calls, BBs);
   assert(!Calls.empty() && "slow path not found for safepoint poll");

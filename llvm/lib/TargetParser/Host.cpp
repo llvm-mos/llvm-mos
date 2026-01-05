@@ -183,8 +183,9 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
   };
 
   if (Implementer == "0x41") { // ARM Ltd.
-    // MSM8992/8994 may give cpu part for the core that the kernel is running on,
-    // which is undeterministic and wrong. Always return cortex-a53 for these SoC.
+    // MSM8992/8994 may give cpu part for the core that the kernel is running
+    // on, which is undeterministic and wrong. Always return cortex-a53 for
+    // these SoC.
     if (Hardware.ends_with("MSM8994") || Hardware.ends_with("MSM8996"))
       return "cortex-a53";
 
@@ -267,13 +268,13 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
 
   if (Implementer == "0x42" || Implementer == "0x43") { // Broadcom | Cavium.
     return StringSwitch<const char *>(Part)
-      .Case("0x516", "thunderx2t99")
-      .Case("0x0516", "thunderx2t99")
-      .Case("0xaf", "thunderx2t99")
-      .Case("0x0af", "thunderx2t99")
-      .Case("0xa1", "thunderxt88")
-      .Case("0x0a1", "thunderxt88")
-      .Default("generic");
+        .Case("0x516", "thunderx2t99")
+        .Case("0x0516", "thunderx2t99")
+        .Case("0xaf", "thunderx2t99")
+        .Case("0x0af", "thunderx2t99")
+        .Case("0xa1", "thunderxt88")
+        .Case("0x0a1", "thunderxt88")
+        .Default("generic");
   }
 
   if (Implementer == "0x46") { // Fujitsu Ltd.
@@ -296,8 +297,8 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
     // values correspond to the "Part number" in the CP15/c0 register. The
     // contents are specified in the various processor manuals.
     return StringSwitch<const char *>(Part)
-      .Case("0xd01", "tsv110")
-      .Default("generic");
+        .Case("0xd01", "tsv110")
+        .Default("generic");
 
   if (Implementer == "0x51") // Qualcomm Technologies, Inc.
     // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
@@ -466,38 +467,38 @@ StringRef sys::detail::getHostCPUNameForARM(uint64_t PrimaryCpuInfo,
 namespace {
 StringRef getCPUNameFromS390Model(unsigned int Id, bool HaveVectorSupport) {
   switch (Id) {
-    case 2064:  // z900 not supported by LLVM
-    case 2066:
-    case 2084:  // z990 not supported by LLVM
-    case 2086:
-    case 2094:  // z9-109 not supported by LLVM
-    case 2096:
-      return "generic";
-    case 2097:
-    case 2098:
-      return "z10";
-    case 2817:
-    case 2818:
-      return "z196";
-    case 2827:
-    case 2828:
-      return "zEC12";
-    case 2964:
-    case 2965:
-      return HaveVectorSupport? "z13" : "zEC12";
-    case 3906:
-    case 3907:
-      return HaveVectorSupport? "z14" : "zEC12";
-    case 8561:
-    case 8562:
-      return HaveVectorSupport? "z15" : "zEC12";
-    case 3931:
-    case 3932:
-      return HaveVectorSupport? "z16" : "zEC12";
-    case 9175:
-    case 9176:
-    default:
-      return HaveVectorSupport? "z17" : "zEC12";
+  case 2064: // z900 not supported by LLVM
+  case 2066:
+  case 2084: // z990 not supported by LLVM
+  case 2086:
+  case 2094: // z9-109 not supported by LLVM
+  case 2096:
+    return "generic";
+  case 2097:
+  case 2098:
+    return "z10";
+  case 2817:
+  case 2818:
+    return "z196";
+  case 2827:
+  case 2828:
+    return "zEC12";
+  case 2964:
+  case 2965:
+    return HaveVectorSupport ? "z13" : "zEC12";
+  case 3906:
+  case 3907:
+    return HaveVectorSupport ? "z14" : "zEC12";
+  case 8561:
+  case 8562:
+    return HaveVectorSupport ? "z15" : "zEC12";
+  case 3931:
+  case 3932:
+    return HaveVectorSupport ? "z16" : "zEC12";
+  case 9175:
+  case 9176:
+  default:
+    return HaveVectorSupport ? "z17" : "zEC12";
   }
 }
 } // end anonymous namespace
@@ -568,29 +569,29 @@ StringRef sys::detail::getHostCPUNameForBPF() {
 #if !defined(__linux__) || !defined(__x86_64__)
   return "generic";
 #else
-  uint8_t v3_insns[40] __attribute__ ((aligned (8))) =
+  uint8_t v3_insns[40] __attribute__((aligned(8))) =
       /* BPF_MOV64_IMM(BPF_REG_0, 0) */
-    { 0xb7, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-      /* BPF_MOV64_IMM(BPF_REG_2, 1) */
-      0xb7, 0x2, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
-      /* BPF_JMP32_REG(BPF_JLT, BPF_REG_0, BPF_REG_2, 1) */
-      0xae, 0x20, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0,
-      /* BPF_MOV64_IMM(BPF_REG_0, 1) */
-      0xb7, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
-      /* BPF_EXIT_INSN() */
-      0x95, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
+      {0xb7, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+       /* BPF_MOV64_IMM(BPF_REG_2, 1) */
+       0xb7, 0x2, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
+       /* BPF_JMP32_REG(BPF_JLT, BPF_REG_0, BPF_REG_2, 1) */
+       0xae, 0x20, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0,
+       /* BPF_MOV64_IMM(BPF_REG_0, 1) */
+       0xb7, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
+       /* BPF_EXIT_INSN() */
+       0x95, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 
-  uint8_t v2_insns[40] __attribute__ ((aligned (8))) =
+  uint8_t v2_insns[40] __attribute__((aligned(8))) =
       /* BPF_MOV64_IMM(BPF_REG_0, 0) */
-    { 0xb7, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-      /* BPF_MOV64_IMM(BPF_REG_2, 1) */
-      0xb7, 0x2, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
-      /* BPF_JMP_REG(BPF_JLT, BPF_REG_0, BPF_REG_2, 1) */
-      0xad, 0x20, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0,
-      /* BPF_MOV64_IMM(BPF_REG_0, 1) */
-      0xb7, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
-      /* BPF_EXIT_INSN() */
-      0x95, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
+      {0xb7, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+       /* BPF_MOV64_IMM(BPF_REG_2, 1) */
+       0xb7, 0x2, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
+       /* BPF_JMP_REG(BPF_JLT, BPF_REG_0, BPF_REG_2, 1) */
+       0xad, 0x20, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0,
+       /* BPF_MOV64_IMM(BPF_REG_0, 1) */
+       0xb7, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
+       /* BPF_EXIT_INSN() */
+       0x95, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 
   struct bpf_prog_load_attr {
     uint32_t prog_type;
@@ -608,8 +609,8 @@ StringRef sys::detail::getHostCPUNameForBPF() {
   attr.insns = (uint64_t)v3_insns;
   attr.license = (uint64_t)"DUMMY";
 
-  int fd = syscall(321 /* __NR_bpf */, 5 /* BPF_PROG_LOAD */, &attr,
-                   sizeof(attr));
+  int fd =
+      syscall(321 /* __NR_bpf */, 5 /* BPF_PROG_LOAD */, &attr, sizeof(attr));
   if (fd >= 0) {
     close(fd);
     return "v3";
@@ -795,7 +796,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     case 0x1e: // Intel(R) Core(TM) i7 CPU         870  @ 2.93GHz.
                // As found in a Summer 2010 model iMac.
     case 0x1f:
-    case 0x2e:              // Nehalem EX
+    case 0x2e: // Nehalem EX
       CPU = "nehalem";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_NEHALEM;
@@ -816,7 +817,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       *Subtype = X86::INTEL_COREI7_SANDYBRIDGE;
       break;
     case 0x3a:
-    case 0x3e:              // Ivy Bridge EP
+    case 0x3e: // Ivy Bridge EP
       CPU = "ivybridge";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_IVYBRIDGE;
@@ -843,12 +844,12 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
 
     // Skylake:
-    case 0x4e:              // Skylake mobile
-    case 0x5e:              // Skylake desktop
-    case 0x8e:              // Kaby Lake mobile
-    case 0x9e:              // Kaby Lake desktop
-    case 0xa5:              // Comet Lake-H/S
-    case 0xa6:              // Comet Lake-U
+    case 0x4e: // Skylake mobile
+    case 0x5e: // Skylake desktop
+    case 0x8e: // Kaby Lake mobile
+    case 0x9e: // Kaby Lake desktop
+    case 0xa5: // Comet Lake-H/S
+    case 0xa6: // Comet Lake-U
       CPU = "skylake";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_SKYLAKE;
@@ -1350,9 +1351,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
                                  unsigned *Features) {
   unsigned EAX, EBX;
 
-  auto setFeature = [&](unsigned F) {
-    Features[F / 32] |= 1U << (F % 32);
-  };
+  auto setFeature = [&](unsigned F) { Features[F / 32] |= 1U << (F % 32); };
 
   if ((EDX >> 15) & 1)
     setFeature(X86::FEATURE_CMOV);
@@ -1504,8 +1503,8 @@ StringRef sys::getHostCPUName() {
     CPU = getIntelProcessorTypeAndSubtype(Family, Model, Features, &Type,
                                           &Subtype);
   } else if (Vendor == VendorSignatures::AUTHENTIC_AMD) {
-    CPU = getAMDProcessorTypeAndSubtype(Family, Model, Features, &Type,
-                                        &Subtype);
+    CPU =
+        getAMDProcessorTypeAndSubtype(Family, Model, Features, &Type, &Subtype);
   }
 
   if (!CPU.empty())
@@ -1590,8 +1589,7 @@ StringRef sys::getHostCPUName() {
 
   infoCount = HOST_BASIC_INFO_COUNT;
   mach_port_t hostPort = mach_host_self();
-  host_info(hostPort, HOST_BASIC_INFO, (host_info_t)&hostInfo,
-            &infoCount);
+  host_info(hostPort, HOST_BASIC_INFO, (host_info_t)&hostInfo, &infoCount);
   mach_port_deallocate(mach_task_self(), hostPort);
 
   if (hostInfo.cpu_type != CPU_TYPE_POWERPC)
@@ -2000,24 +1998,24 @@ StringMap<bool> sys::getHostCPUFeatures() {
 
   getX86CpuIDAndInfo(1, &EAX, &EBX, &ECX, &EDX);
 
-  Features["cx8"]    = (EDX >>  8) & 1;
-  Features["cmov"]   = (EDX >> 15) & 1;
-  Features["mmx"]    = (EDX >> 23) & 1;
-  Features["fxsr"]   = (EDX >> 24) & 1;
-  Features["sse"]    = (EDX >> 25) & 1;
-  Features["sse2"]   = (EDX >> 26) & 1;
+  Features["cx8"] = (EDX >> 8) & 1;
+  Features["cmov"] = (EDX >> 15) & 1;
+  Features["mmx"] = (EDX >> 23) & 1;
+  Features["fxsr"] = (EDX >> 24) & 1;
+  Features["sse"] = (EDX >> 25) & 1;
+  Features["sse2"] = (EDX >> 26) & 1;
 
-  Features["sse3"]   = (ECX >>  0) & 1;
-  Features["pclmul"] = (ECX >>  1) & 1;
-  Features["ssse3"]  = (ECX >>  9) & 1;
-  Features["cx16"]   = (ECX >> 13) & 1;
+  Features["sse3"] = (ECX >> 0) & 1;
+  Features["pclmul"] = (ECX >> 1) & 1;
+  Features["ssse3"] = (ECX >> 9) & 1;
+  Features["cx16"] = (ECX >> 13) & 1;
   Features["sse4.1"] = (ECX >> 19) & 1;
   Features["sse4.2"] = (ECX >> 20) & 1;
-  Features["crc32"]  = Features["sse4.2"];
-  Features["movbe"]  = (ECX >> 22) & 1;
+  Features["crc32"] = Features["sse4.2"];
+  Features["movbe"] = (ECX >> 22) & 1;
   Features["popcnt"] = (ECX >> 23) & 1;
-  Features["aes"]    = (ECX >> 25) & 1;
-  Features["rdrnd"]  = (ECX >> 30) & 1;
+  Features["aes"] = (ECX >> 25) & 1;
+  Features["rdrnd"] = (ECX >> 30) & 1;
 
   // If CPUID indicates support for XSAVE, XRESTORE and AVX, and XGETBV
   // indicates that the AVX registers will be saved and restored on context
@@ -2037,35 +2035,35 @@ StringMap<bool> sys::getHostCPUFeatures() {
   const unsigned AMXBits = (1 << 17) | (1 << 18);
   bool HasAMXSave = HasXSave && ((EAX & AMXBits) == AMXBits);
 
-  Features["avx"]   = HasAVXSave;
-  Features["fma"]   = ((ECX >> 12) & 1) && HasAVXSave;
+  Features["avx"] = HasAVXSave;
+  Features["fma"] = ((ECX >> 12) & 1) && HasAVXSave;
   // Only enable XSAVE if OS has enabled support for saving YMM state.
   Features["xsave"] = ((ECX >> 26) & 1) && HasAVXSave;
-  Features["f16c"]  = ((ECX >> 29) & 1) && HasAVXSave;
+  Features["f16c"] = ((ECX >> 29) & 1) && HasAVXSave;
 
   unsigned MaxExtLevel;
   getX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);
 
   bool HasExtLeaf1 = MaxExtLevel >= 0x80000001 &&
                      !getX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
-  Features["sahf"]   = HasExtLeaf1 && ((ECX >>  0) & 1);
-  Features["lzcnt"]  = HasExtLeaf1 && ((ECX >>  5) & 1);
-  Features["sse4a"]  = HasExtLeaf1 && ((ECX >>  6) & 1);
-  Features["prfchw"] = HasExtLeaf1 && ((ECX >>  8) & 1);
-  Features["xop"]    = HasExtLeaf1 && ((ECX >> 11) & 1) && HasAVXSave;
-  Features["lwp"]    = HasExtLeaf1 && ((ECX >> 15) & 1);
-  Features["fma4"]   = HasExtLeaf1 && ((ECX >> 16) & 1) && HasAVXSave;
-  Features["tbm"]    = HasExtLeaf1 && ((ECX >> 21) & 1);
+  Features["sahf"] = HasExtLeaf1 && ((ECX >> 0) & 1);
+  Features["lzcnt"] = HasExtLeaf1 && ((ECX >> 5) & 1);
+  Features["sse4a"] = HasExtLeaf1 && ((ECX >> 6) & 1);
+  Features["prfchw"] = HasExtLeaf1 && ((ECX >> 8) & 1);
+  Features["xop"] = HasExtLeaf1 && ((ECX >> 11) & 1) && HasAVXSave;
+  Features["lwp"] = HasExtLeaf1 && ((ECX >> 15) & 1);
+  Features["fma4"] = HasExtLeaf1 && ((ECX >> 16) & 1) && HasAVXSave;
+  Features["tbm"] = HasExtLeaf1 && ((ECX >> 21) & 1);
   Features["mwaitx"] = HasExtLeaf1 && ((ECX >> 29) & 1);
 
-  Features["64bit"]  = HasExtLeaf1 && ((EDX >> 29) & 1);
+  Features["64bit"] = HasExtLeaf1 && ((EDX >> 29) & 1);
 
   // Miscellaneous memory related features, detected by
   // using the 0x80000008 leaf of the CPUID instruction
   bool HasExtLeaf8 = MaxExtLevel >= 0x80000008 &&
                      !getX86CpuIDAndInfo(0x80000008, &EAX, &EBX, &ECX, &EDX);
-  Features["clzero"]   = HasExtLeaf8 && ((EBX >> 0) & 1);
-  Features["rdpru"]    = HasExtLeaf8 && ((EBX >> 4) & 1);
+  Features["clzero"] = HasExtLeaf8 && ((EBX >> 0) & 1);
+  Features["rdpru"] = HasExtLeaf8 && ((EBX >> 4) & 1);
   Features["wbnoinvd"] = HasExtLeaf8 && ((EBX >> 9) & 1);
 
   bool HasExtLeaf21 = MaxExtLevel >= 0x80000021 &&
@@ -2076,54 +2074,54 @@ StringMap<bool> sys::getHostCPUFeatures() {
   bool HasLeaf7 =
       MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
 
-  Features["fsgsbase"]   = HasLeaf7 && ((EBX >>  0) & 1);
-  Features["sgx"]        = HasLeaf7 && ((EBX >>  2) & 1);
-  Features["bmi"]        = HasLeaf7 && ((EBX >>  3) & 1);
+  Features["fsgsbase"] = HasLeaf7 && ((EBX >> 0) & 1);
+  Features["sgx"] = HasLeaf7 && ((EBX >> 2) & 1);
+  Features["bmi"] = HasLeaf7 && ((EBX >> 3) & 1);
   // AVX2 is only supported if we have the OS save support from AVX.
-  Features["avx2"]       = HasLeaf7 && ((EBX >>  5) & 1) && HasAVXSave;
-  Features["bmi2"]       = HasLeaf7 && ((EBX >>  8) & 1);
-  Features["invpcid"]    = HasLeaf7 && ((EBX >> 10) & 1);
-  Features["rtm"]        = HasLeaf7 && ((EBX >> 11) & 1);
+  Features["avx2"] = HasLeaf7 && ((EBX >> 5) & 1) && HasAVXSave;
+  Features["bmi2"] = HasLeaf7 && ((EBX >> 8) & 1);
+  Features["invpcid"] = HasLeaf7 && ((EBX >> 10) & 1);
+  Features["rtm"] = HasLeaf7 && ((EBX >> 11) & 1);
   // AVX512 is only supported if the OS supports the context save for it.
-  Features["avx512f"]    = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
-  Features["avx512dq"]   = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
-  Features["rdseed"]     = HasLeaf7 && ((EBX >> 18) & 1);
-  Features["adx"]        = HasLeaf7 && ((EBX >> 19) & 1);
+  Features["avx512f"] = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
+  Features["avx512dq"] = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
+  Features["rdseed"] = HasLeaf7 && ((EBX >> 18) & 1);
+  Features["adx"] = HasLeaf7 && ((EBX >> 19) & 1);
   Features["avx512ifma"] = HasLeaf7 && ((EBX >> 21) & 1) && HasAVX512Save;
   Features["clflushopt"] = HasLeaf7 && ((EBX >> 23) & 1);
-  Features["clwb"]       = HasLeaf7 && ((EBX >> 24) & 1);
-  Features["avx512cd"]   = HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save;
-  Features["sha"]        = HasLeaf7 && ((EBX >> 29) & 1);
-  Features["avx512bw"]   = HasLeaf7 && ((EBX >> 30) & 1) && HasAVX512Save;
-  Features["avx512vl"]   = HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save;
+  Features["clwb"] = HasLeaf7 && ((EBX >> 24) & 1);
+  Features["avx512cd"] = HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save;
+  Features["sha"] = HasLeaf7 && ((EBX >> 29) & 1);
+  Features["avx512bw"] = HasLeaf7 && ((EBX >> 30) & 1) && HasAVX512Save;
+  Features["avx512vl"] = HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save;
 
-  Features["avx512vbmi"]      = HasLeaf7 && ((ECX >>  1) & 1) && HasAVX512Save;
-  Features["pku"]             = HasLeaf7 && ((ECX >>  4) & 1);
-  Features["waitpkg"]         = HasLeaf7 && ((ECX >>  5) & 1);
-  Features["avx512vbmi2"]     = HasLeaf7 && ((ECX >>  6) & 1) && HasAVX512Save;
-  Features["shstk"]           = HasLeaf7 && ((ECX >>  7) & 1);
-  Features["gfni"]            = HasLeaf7 && ((ECX >>  8) & 1);
-  Features["vaes"]            = HasLeaf7 && ((ECX >>  9) & 1) && HasAVXSave;
-  Features["vpclmulqdq"]      = HasLeaf7 && ((ECX >> 10) & 1) && HasAVXSave;
-  Features["avx512vnni"]      = HasLeaf7 && ((ECX >> 11) & 1) && HasAVX512Save;
-  Features["avx512bitalg"]    = HasLeaf7 && ((ECX >> 12) & 1) && HasAVX512Save;
+  Features["avx512vbmi"] = HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save;
+  Features["pku"] = HasLeaf7 && ((ECX >> 4) & 1);
+  Features["waitpkg"] = HasLeaf7 && ((ECX >> 5) & 1);
+  Features["avx512vbmi2"] = HasLeaf7 && ((ECX >> 6) & 1) && HasAVX512Save;
+  Features["shstk"] = HasLeaf7 && ((ECX >> 7) & 1);
+  Features["gfni"] = HasLeaf7 && ((ECX >> 8) & 1);
+  Features["vaes"] = HasLeaf7 && ((ECX >> 9) & 1) && HasAVXSave;
+  Features["vpclmulqdq"] = HasLeaf7 && ((ECX >> 10) & 1) && HasAVXSave;
+  Features["avx512vnni"] = HasLeaf7 && ((ECX >> 11) & 1) && HasAVX512Save;
+  Features["avx512bitalg"] = HasLeaf7 && ((ECX >> 12) & 1) && HasAVX512Save;
   Features["avx512vpopcntdq"] = HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save;
-  Features["rdpid"]           = HasLeaf7 && ((ECX >> 22) & 1);
-  Features["kl"]              = HasLeaf7 && ((ECX >> 23) & 1); // key locker
-  Features["cldemote"]        = HasLeaf7 && ((ECX >> 25) & 1);
-  Features["movdiri"]         = HasLeaf7 && ((ECX >> 27) & 1);
-  Features["movdir64b"]       = HasLeaf7 && ((ECX >> 28) & 1);
-  Features["enqcmd"]          = HasLeaf7 && ((ECX >> 29) & 1);
+  Features["rdpid"] = HasLeaf7 && ((ECX >> 22) & 1);
+  Features["kl"] = HasLeaf7 && ((ECX >> 23) & 1); // key locker
+  Features["cldemote"] = HasLeaf7 && ((ECX >> 25) & 1);
+  Features["movdiri"] = HasLeaf7 && ((ECX >> 27) & 1);
+  Features["movdir64b"] = HasLeaf7 && ((ECX >> 28) & 1);
+  Features["enqcmd"] = HasLeaf7 && ((ECX >> 29) & 1);
 
-  Features["uintr"]           = HasLeaf7 && ((EDX >> 5) & 1);
+  Features["uintr"] = HasLeaf7 && ((EDX >> 5) & 1);
   Features["avx512vp2intersect"] =
       HasLeaf7 && ((EDX >> 8) & 1) && HasAVX512Save;
-  Features["serialize"]       = HasLeaf7 && ((EDX >> 14) & 1);
-  Features["tsxldtrk"]        = HasLeaf7 && ((EDX >> 16) & 1);
+  Features["serialize"] = HasLeaf7 && ((EDX >> 14) & 1);
+  Features["tsxldtrk"] = HasLeaf7 && ((EDX >> 16) & 1);
   // There are two CPUID leafs which information associated with the pconfig
   // instruction:
-  // EAX=0x7, ECX=0x0 indicates the availability of the instruction (via the 18th
-  // bit of EDX), while the EAX=0x1b leaf returns information on the
+  // EAX=0x7, ECX=0x0 indicates the availability of the instruction (via the
+  // 18th bit of EDX), while the EAX=0x1b leaf returns information on the
   // availability of specific pconfig leafs.
   // The target feature here only refers to the the first of these two.
   // Users might need to check for the availability of specific pconfig
@@ -2131,32 +2129,34 @@ StringMap<bool> sys::getHostCPUFeatures() {
   // detecting features using the "-march=native" flag.
   // For more info, see X86 ISA docs.
   Features["pconfig"] = HasLeaf7 && ((EDX >> 18) & 1);
-  Features["amx-bf16"]   = HasLeaf7 && ((EDX >> 22) & 1) && HasAMXSave;
+  Features["amx-bf16"] = HasLeaf7 && ((EDX >> 22) & 1) && HasAMXSave;
   Features["avx512fp16"] = HasLeaf7 && ((EDX >> 23) & 1) && HasAVX512Save;
-  Features["amx-tile"]   = HasLeaf7 && ((EDX >> 24) & 1) && HasAMXSave;
-  Features["amx-int8"]   = HasLeaf7 && ((EDX >> 25) & 1) && HasAMXSave;
+  Features["amx-tile"] = HasLeaf7 && ((EDX >> 24) & 1) && HasAMXSave;
+  Features["amx-int8"] = HasLeaf7 && ((EDX >> 25) & 1) && HasAMXSave;
   // EAX from subleaf 0 is the maximum subleaf supported. Some CPUs don't
   // return all 0s for invalid subleaves so check the limit.
   bool HasLeaf7Subleaf1 =
       HasLeaf7 && EAX >= 1 &&
       !getX86CpuIDAndInfoEx(0x7, 0x1, &EAX, &EBX, &ECX, &EDX);
-  Features["sha512"]     = HasLeaf7Subleaf1 && ((EAX >> 0) & 1);
-  Features["sm3"]        = HasLeaf7Subleaf1 && ((EAX >> 1) & 1);
-  Features["sm4"]        = HasLeaf7Subleaf1 && ((EAX >> 2) & 1);
-  Features["raoint"]     = HasLeaf7Subleaf1 && ((EAX >> 3) & 1);
-  Features["avxvnni"]    = HasLeaf7Subleaf1 && ((EAX >> 4) & 1) && HasAVXSave;
-  Features["avx512bf16"] = HasLeaf7Subleaf1 && ((EAX >> 5) & 1) && HasAVX512Save;
-  Features["amx-fp16"]   = HasLeaf7Subleaf1 && ((EAX >> 21) & 1) && HasAMXSave;
-  Features["cmpccxadd"]  = HasLeaf7Subleaf1 && ((EAX >> 7) & 1);
-  Features["hreset"]     = HasLeaf7Subleaf1 && ((EAX >> 22) & 1);
-  Features["avxifma"]    = HasLeaf7Subleaf1 && ((EAX >> 23) & 1) && HasAVXSave;
+  Features["sha512"] = HasLeaf7Subleaf1 && ((EAX >> 0) & 1);
+  Features["sm3"] = HasLeaf7Subleaf1 && ((EAX >> 1) & 1);
+  Features["sm4"] = HasLeaf7Subleaf1 && ((EAX >> 2) & 1);
+  Features["raoint"] = HasLeaf7Subleaf1 && ((EAX >> 3) & 1);
+  Features["avxvnni"] = HasLeaf7Subleaf1 && ((EAX >> 4) & 1) && HasAVXSave;
+  Features["avx512bf16"] =
+      HasLeaf7Subleaf1 && ((EAX >> 5) & 1) && HasAVX512Save;
+  Features["amx-fp16"] = HasLeaf7Subleaf1 && ((EAX >> 21) & 1) && HasAMXSave;
+  Features["cmpccxadd"] = HasLeaf7Subleaf1 && ((EAX >> 7) & 1);
+  Features["hreset"] = HasLeaf7Subleaf1 && ((EAX >> 22) & 1);
+  Features["avxifma"] = HasLeaf7Subleaf1 && ((EAX >> 23) & 1) && HasAVXSave;
   Features["movrs"] = HasLeaf7Subleaf1 && ((EAX >> 31) & 1);
   Features["avxvnniint8"] = HasLeaf7Subleaf1 && ((EDX >> 4) & 1) && HasAVXSave;
   Features["avxneconvert"] = HasLeaf7Subleaf1 && ((EDX >> 5) & 1) && HasAVXSave;
   Features["amx-complex"] = HasLeaf7Subleaf1 && ((EDX >> 8) & 1) && HasAMXSave;
-  Features["avxvnniint16"] = HasLeaf7Subleaf1 && ((EDX >> 10) & 1) && HasAVXSave;
+  Features["avxvnniint16"] =
+      HasLeaf7Subleaf1 && ((EDX >> 10) & 1) && HasAVXSave;
   Features["prefetchi"] |= HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
-  Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
+  Features["usermsr"] = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
   bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
   bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1);
   Features["egpr"] = HasAPXF;
@@ -2173,11 +2173,11 @@ StringMap<bool> sys::getHostCPUFeatures() {
 
   // Only enable XSAVE if OS has enabled support for saving YMM state.
   Features["xsaveopt"] = HasLeafD && ((EAX >> 0) & 1) && HasAVXSave;
-  Features["xsavec"]   = HasLeafD && ((EAX >> 1) & 1) && HasAVXSave;
-  Features["xsaves"]   = HasLeafD && ((EAX >> 3) & 1) && HasAVXSave;
+  Features["xsavec"] = HasLeafD && ((EAX >> 1) & 1) && HasAVXSave;
+  Features["xsaves"] = HasLeafD && ((EAX >> 3) & 1) && HasAVXSave;
 
   bool HasLeaf14 = MaxLevel >= 0x14 &&
-                  !getX86CpuIDAndInfoEx(0x14, 0x0, &EAX, &EBX, &ECX, &EDX);
+                   !getX86CpuIDAndInfoEx(0x14, 0x0, &EAX, &EBX, &ECX, &EDX);
 
   Features["ptwrite"] = HasLeaf14 && ((EBX >> 4) & 1);
 
@@ -2389,7 +2389,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["zacas"] = ExtMask & (1ULL << 34);   // RISCV_HWPROBE_EXT_ZACAS
   Features["zicond"] = ExtMask & (1ULL << 35);  // RISCV_HWPROBE_EXT_ZICOND
   Features["zihintpause"] =
-      ExtMask & (1ULL << 36); // RISCV_HWPROBE_EXT_ZIHINTPAUSE
+      ExtMask & (1ULL << 36);                  // RISCV_HWPROBE_EXT_ZIHINTPAUSE
   Features["zve32x"] = ExtMask & (1ULL << 37); // RISCV_HWPROBE_EXT_ZVE32X
   Features["zve32f"] = ExtMask & (1ULL << 38); // RISCV_HWPROBE_EXT_ZVE32F
   Features["zve64x"] = ExtMask & (1ULL << 39); // RISCV_HWPROBE_EXT_ZVE64X
@@ -2442,7 +2442,7 @@ static Triple withHostArch(Triple T) {
   T.setArch(Triple::ppc);
   T.setArchName("powerpc");
 #else
-#  error "Unimplemented host arch fixup"
+#error "Unimplemented host arch fixup"
 #endif
   return T;
 }

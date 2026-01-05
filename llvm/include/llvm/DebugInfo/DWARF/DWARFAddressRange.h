@@ -76,12 +76,14 @@ struct DWARFAddressRange {
 
 inline bool operator<(const DWARFAddressRange &LHS,
                       const DWARFAddressRange &RHS) {
-  return std::tie(LHS.SectionIndex, LHS.LowPC, LHS.HighPC) < std::tie(RHS.SectionIndex, RHS.LowPC, RHS.HighPC);
+  return std::tie(LHS.SectionIndex, LHS.LowPC, LHS.HighPC) <
+         std::tie(RHS.SectionIndex, RHS.LowPC, RHS.HighPC);
 }
 
 inline bool operator==(const DWARFAddressRange &LHS,
                        const DWARFAddressRange &RHS) {
-  return std::tie(LHS.SectionIndex, LHS.LowPC, LHS.HighPC) == std::tie(RHS.SectionIndex, RHS.LowPC, RHS.HighPC);
+  return std::tie(LHS.SectionIndex, LHS.LowPC, LHS.HighPC) ==
+         std::tie(RHS.SectionIndex, RHS.LowPC, RHS.HighPC);
 }
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DWARFAddressRange &R);

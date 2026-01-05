@@ -281,7 +281,8 @@ private:
   /// - Each hashdata offset is valid
   /// - Each DIE is valid
   ///
-  /// \param AccelSection pointer to the section containing the acceleration table
+  /// \param AccelSection pointer to the section containing the acceleration
+  /// table
   /// \param StrData pointer to the string section
   /// \param SectionName the name of the table we're verifying
   ///

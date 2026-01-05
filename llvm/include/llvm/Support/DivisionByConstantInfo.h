@@ -30,10 +30,10 @@ struct UnsignedDivisionByConstantInfo {
   LLVM_ABI static UnsignedDivisionByConstantInfo
   get(const APInt &D, unsigned LeadingZeros = 0,
       bool AllowEvenDivisorOptimization = true);
-  APInt Magic;          ///< magic number
-  bool IsAdd;           ///< add indicator
-  unsigned PostShift;   ///< post-shift amount
-  unsigned PreShift;    ///< pre-shift amount
+  APInt Magic;        ///< magic number
+  bool IsAdd;         ///< add indicator
+  unsigned PostShift; ///< post-shift amount
+  unsigned PreShift;  ///< pre-shift amount
 };
 
 } // namespace llvm

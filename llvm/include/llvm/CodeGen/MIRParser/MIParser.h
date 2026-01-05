@@ -151,8 +151,7 @@ public:
 
   bool getVRegFlagValue(StringRef FlagName, uint8_t &FlagValue) const;
 
-  PerTargetMIParsingState(const TargetSubtargetInfo &STI)
-    : Subtarget(STI) {
+  PerTargetMIParsingState(const TargetSubtargetInfo &STI) : Subtarget(STI) {
     initNames2RegClasses();
     initNames2RegBanks();
   }
@@ -220,13 +219,11 @@ bool parseMachineBasicBlockDefinitions(PerFunctionMIParsingState &PFS,
 bool parseMachineInstructions(PerFunctionMIParsingState &PFS, StringRef Src,
                               SMDiagnostic &Error);
 
-bool parseMBBReference(PerFunctionMIParsingState &PFS,
-                       MachineBasicBlock *&MBB, StringRef Src,
-                       SMDiagnostic &Error);
+bool parseMBBReference(PerFunctionMIParsingState &PFS, MachineBasicBlock *&MBB,
+                       StringRef Src, SMDiagnostic &Error);
 
-bool parseRegisterReference(PerFunctionMIParsingState &PFS,
-                            Register &Reg, StringRef Src,
-                            SMDiagnostic &Error);
+bool parseRegisterReference(PerFunctionMIParsingState &PFS, Register &Reg,
+                            StringRef Src, SMDiagnostic &Error);
 
 bool parseNamedRegisterReference(PerFunctionMIParsingState &PFS, Register &Reg,
                                  StringRef Src, SMDiagnostic &Error);

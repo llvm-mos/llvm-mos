@@ -38,7 +38,7 @@ private:
   std::vector<StringRef> Names;
   ArrayRef<ArrayRef<uint8_t>> Records;
 };
-}
-}
+} // namespace codeview
+} // namespace llvm
 
 #endif

@@ -15,12 +15,12 @@
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Pass.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 
 #include <map>
@@ -32,32 +32,30 @@ static cl::opt<unsigned> VExtractThreshold(
     cl::desc("Threshold for triggering vextract replacement"));
 
 namespace {
-  class HexagonVExtract : public MachineFunctionPass {
-  public:
-    static char ID;
-    HexagonVExtract() : MachineFunctionPass(ID) {}
+class HexagonVExtract : public MachineFunctionPass {
+public:
+  static char ID;
+  HexagonVExtract() : MachineFunctionPass(ID) {}
 
-    StringRef getPassName() const override {
-      return "Hexagon optimize vextract";
-    }
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
-    bool runOnMachineFunction(MachineFunction &MF) override;
+  StringRef getPassName() const override { return "Hexagon optimize vextract"; }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-  private:
-    const HexagonSubtarget *HST = nullptr;
-    const HexagonInstrInfo *HII = nullptr;
+private:
+  const HexagonSubtarget *HST = nullptr;
+  const HexagonInstrInfo *HII = nullptr;
 
-    unsigned genElemLoad(MachineInstr *ExtI, unsigned BaseR,
-                         MachineRegisterInfo &MRI);
-  };
+  unsigned genElemLoad(MachineInstr *ExtI, unsigned BaseR,
+                       MachineRegisterInfo &MRI);
+};
 
-  char HexagonVExtract::ID = 0;
-}
+char HexagonVExtract::ID = 0;
+} // namespace
 
 INITIALIZE_PASS(HexagonVExtract, "hexagon-vextract",
-  "Hexagon optimize vextract", false, false)
+                "Hexagon optimize vextract", false, false)
 
 unsigned HexagonVExtract::genElemLoad(MachineInstr *ExtI, unsigned BaseR,
                                       MachineRegisterInfo &MRI) {
@@ -73,23 +71,23 @@ unsigned HexagonVExtract::genElemLoad(MachineInstr *ExtI, unsigned BaseR,
     MachineInstr *DI = MRI.getVRegDef(ExtIdxR);
     if (DI->getOpcode() == Hexagon::A2_tfrsi) {
       unsigned V = DI->getOperand(1).getImm();
-      V &= (HST->getVectorLength()-1) & -4u;
+      V &= (HST->getVectorLength() - 1) & -4u;
 
       BuildMI(ExtB, ExtI, DL, HII->get(Hexagon::L2_loadri_io), ElemR)
-        .addReg(BaseR)
-        .addImm(V);
+          .addReg(BaseR)
+          .addImm(V);
       return ElemR;
     }
   }
 
   Register IdxR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
   BuildMI(ExtB, ExtI, DL, HII->get(Hexagon::A2_andir), IdxR)
-    .add(ExtI->getOperand(2))
-    .addImm(-4);
+      .add(ExtI->getOperand(2))
+      .addImm(-4);
   BuildMI(ExtB, ExtI, DL, HII->get(Hexagon::L4_loadri_rr), ElemR)
-    .addReg(BaseR)
-    .addReg(IdxR)
-    .addImm(0);
+      .addReg(BaseR)
+      .addReg(IdxR)
+      .addImm(0);
   return ElemR;
 }
 
@@ -114,8 +112,8 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  auto EmitAddr = [&] (MachineBasicBlock &BB, MachineBasicBlock::iterator At,
-                       DebugLoc dl, int FI, unsigned Offset) {
+  auto EmitAddr = [&](MachineBasicBlock &BB, MachineBasicBlock::iterator At,
+                      DebugLoc dl, int FI, unsigned Offset) {
     Register AddrR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
     unsigned FiOpc = AR != 0 ? Hexagon::PS_fia : Hexagon::PS_fi;
     auto MIB = BuildMI(BB, At, dl, HII->get(FiOpc), AddrR);
@@ -145,13 +143,13 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
     MachineBasicBlock::iterator At = std::next(DefI->getIterator());
     MachineBasicBlock &DefB = *DefI->getParent();
     unsigned StoreOpc = VecRC.getID() == Hexagon::HvxVRRegClassID
-                          ? Hexagon::V6_vS32b_ai
-                          : Hexagon::PS_vstorerw_ai;
+                            ? Hexagon::V6_vS32b_ai
+                            : Hexagon::PS_vstorerw_ai;
     Register AddrR = EmitAddr(DefB, At, DefI->getDebugLoc(), FI, 0);
     BuildMI(DefB, At, DefI->getDebugLoc(), HII->get(StoreOpc))
-      .addReg(AddrR)
-      .addImm(0)
-      .addReg(VecR);
+        .addReg(AddrR)
+        .addImm(0)
+        .addReg(VecR);
 
     unsigned VecSize = HRI.getRegSizeInBits(VecRC) / 8;
 
@@ -162,7 +160,7 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
 
       MachineBasicBlock &ExtB = *ExtI->getParent();
       Register BaseR = EmitAddr(ExtB, ExtI, ExtI->getDebugLoc(), FI,
-                                SR == 0 ? 0 : VecSize/2);
+                                SR == 0 ? 0 : VecSize / 2);
 
       unsigned ElemR = genElemLoad(ExtI, BaseR, MRI);
       Register ExtR = ExtI->getOperand(0).getReg();
@@ -184,6 +182,4 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-FunctionPass *llvm::createHexagonVExtract() {
-  return new HexagonVExtract();
-}
+FunctionPass *llvm::createHexagonVExtract() { return new HexagonVExtract(); }

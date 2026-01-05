@@ -67,10 +67,9 @@ struct MachinePointerInfo {
         StackID(0) {}
 
   explicit MachinePointerInfo(
-    PointerUnion<const Value *, const PseudoSourceValue *> v,
-    int64_t offset = 0,
-    uint8_t ID = 0)
-    : V(v), Offset(offset), StackID(ID) {
+      PointerUnion<const Value *, const PseudoSourceValue *> v,
+      int64_t offset = 0, uint8_t ID = 0)
+      : V(v), Offset(offset), StackID(ID) {
     if (V) {
       if (const auto *ValPtr = dyn_cast_if_present<const Value *>(V))
         AddrSpace = ValPtr->getType()->getPointerAddressSpace();
@@ -118,7 +117,6 @@ struct MachinePointerInfo {
   LLVM_ABI static MachinePointerInfo getUnknownStack(MachineFunction &MF);
 };
 
-
 //===----------------------------------------------------------------------===//
 /// A description of a memory reference used in the backend.
 /// Instead of holding a StoreInst or LoadInst, this class holds the address
@@ -162,10 +160,10 @@ private:
   /// Atomic information for this memory operation.
   struct MachineAtomicInfo {
     /// Synchronization scope ID for this memory operation.
-    unsigned SSID : 8;            // SyncScope::ID
+    unsigned SSID : 8; // SyncScope::ID
     /// Atomic ordering requirements for this memory operation. For cmpxchg
     /// atomic operations, atomic ordering requirements when store occurs.
-    unsigned Ordering : 4;        // enum AtomicOrdering
+    unsigned Ordering : 4; // enum AtomicOrdering
     /// For cmpxchg atomic operations, atomic ordering requirements when store
     /// does not occur.
     unsigned FailureOrdering : 4; // enum AtomicOrdering
@@ -253,9 +251,7 @@ public:
                : LocationSize::beforeOrAfterPointer();
   }
 
-  LLT getType() const {
-    return MemoryType;
-  }
+  LLT getType() const { return MemoryType; }
 
   /// Return the minimum known alignment in bytes of the actual memory
   /// reference.
@@ -331,9 +327,7 @@ public:
   void setOffset(int64_t NewOffset) { PtrInfo.Offset = NewOffset; }
 
   /// Reset the tracked memory type.
-  void setType(LLT NewTy) {
-    MemoryType = NewTy;
-  }
+  void setType(LLT NewTy) { MemoryType = NewTy; }
 
   /// Unset the tracked range metadata.
   void clearRanges() { Ranges = nullptr; }
@@ -365,6 +359,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

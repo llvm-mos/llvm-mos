@@ -313,8 +313,7 @@ Error SimpleRemoteEPC::setup(Setup S) {
 
   // Prepare a handler for the setup packet.
   PendingCallWrapperResults[0] =
-    RunInPlace()(
-      [&](shared::WrapperFunctionResult SetupMsgBytes) {
+      RunInPlace()([&](shared::WrapperFunctionResult SetupMsgBytes) {
         if (const char *ErrMsg = SetupMsgBytes.getOutOfBandError()) {
           EIP.set_value(
               make_error<StringError>(ErrMsg, inconvertibleErrorCode()));

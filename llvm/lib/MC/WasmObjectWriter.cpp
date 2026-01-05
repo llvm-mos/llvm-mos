@@ -623,7 +623,8 @@ WasmObjectWriter::getProvisionalValue(const MCAssembler &Asm,
   if ((RelEntry.Type == wasm::R_WASM_GLOBAL_INDEX_LEB ||
        RelEntry.Type == wasm::R_WASM_GLOBAL_INDEX_I32) &&
       !RelEntry.Symbol->isGlobal()) {
-    assert(GOTIndices.count(RelEntry.Symbol) > 0 && "symbol not found in GOT index space");
+    assert(GOTIndices.count(RelEntry.Symbol) > 0 &&
+           "symbol not found in GOT index space");
     return GOTIndices[RelEntry.Symbol];
   }
 
@@ -654,7 +655,8 @@ WasmObjectWriter::getProvisionalValue(const MCAssembler &Asm,
   case wasm::R_WASM_TAG_INDEX_LEB:
   case wasm::R_WASM_TABLE_NUMBER_LEB:
     // Provisional value is function/global/tag Wasm index
-    assert(WasmIndices.count(RelEntry.Symbol) > 0 && "symbol not found in wasm index space");
+    assert(WasmIndices.count(RelEntry.Symbol) > 0 &&
+           "symbol not found in wasm index space");
     return WasmIndices[RelEntry.Symbol];
   case wasm::R_WASM_FUNCTION_OFFSET_I32:
   case wasm::R_WASM_FUNCTION_OFFSET_I64:
@@ -1333,8 +1335,8 @@ void WasmObjectWriter::prepareImports(
   MemImport.Module = "env";
   MemImport.Field = "__linear_memory";
   MemImport.Kind = wasm::WASM_EXTERNAL_MEMORY;
-  MemImport.Memory.Flags = is64Bit() ? wasm::WASM_LIMITS_FLAG_IS_64
-                                     : wasm::WASM_LIMITS_FLAG_NONE;
+  MemImport.Memory.Flags =
+      is64Bit() ? wasm::WASM_LIMITS_FLAG_IS_64 : wasm::WASM_LIMITS_FLAG_NONE;
   Imports.push_back(MemImport);
 
   // Populate SignatureIndices, and Imports and WasmIndices for undefined
@@ -1443,8 +1445,7 @@ uint64_t WasmObjectWriter::writeObject() {
   }
 }
 
-uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
-                                          DwoMode Mode) {
+uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm, DwoMode Mode) {
   uint64_t StartOffset = W->OS.tell();
   SectionCount = 0;
   CustomSections.clear();

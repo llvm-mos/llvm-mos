@@ -266,9 +266,7 @@ public:
   }
 
   /// Get the kind of the given option.
-  unsigned getOptionKind(OptSpecifier id) const {
-    return getInfo(id).Kind;
-  }
+  unsigned getOptionKind(OptSpecifier id) const { return getInfo(id).Kind; }
 
   /// Get the group id for the given option.
   unsigned getOptionGroupID(OptSpecifier id) const {
@@ -450,7 +448,8 @@ public:
   /// \param OS - The stream to write the help text to.
   /// \param Usage - USAGE: Usage
   /// \param Title - OVERVIEW: Title
-  /// \param VisibilityMask - Only in                 Visibility VisibilityMask,clude options with any of these
+  /// \param VisibilityMask - Only in                 Visibility
+  /// VisibilityMask,clude options with any of these
   ///                         visibility flags set.
   /// \param ShowHidden     - If true, display options marked as HelpHidden
   /// \param ShowAllAliases - If true, display all options including aliases

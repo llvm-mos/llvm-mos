@@ -139,7 +139,7 @@ const MCSpecifierExpr *createUpper8_15(const MCExpr *Expr, MCContext &Ctx);
 const MCSpecifierExpr *createUpper0_7(const MCExpr *Expr, MCContext &Ctx);
 const MCSpecifierExpr *createLower8_15(const MCExpr *Expr, MCContext &Ctx);
 const MCSpecifierExpr *createLower0_7(const MCExpr *Expr, MCContext &Ctx);
-}
+} // namespace ARM
 
 } // namespace llvm
 

@@ -51,6 +51,6 @@ private:
   StructType *makeModuleStatsTy();
 };
 
-}
+} // namespace llvm
 
 #endif

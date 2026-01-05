@@ -37,10 +37,10 @@ enum CodePage {
 };
 
 struct WriterParams {
-  std::vector<std::string> Include;   // Additional folders to search for files.
-  bool NoInclude;                     // Ignore the INCLUDE variable.
-  StringRef InputFilePath;            // The full path of the input file.
-  int CodePage = CpAcp;               // The codepage for interpreting characters.
+  std::vector<std::string> Include; // Additional folders to search for files.
+  bool NoInclude;                   // Ignore the INCLUDE variable.
+  StringRef InputFilePath;          // The full path of the input file.
+  int CodePage = CpAcp;             // The codepage for interpreting characters.
 };
 
 class ResourceFileWriter : public Visitor {

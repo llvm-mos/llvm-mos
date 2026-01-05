@@ -84,7 +84,7 @@ NVPTXRegisterInfo::NVPTXRegisterInfo()
 /// NVPTX Callee Saved Registers
 const MCPhysReg *
 NVPTXRegisterInfo::getCalleeSavedRegs(const MachineFunction *) const {
-  static const MCPhysReg CalleeSavedRegs[] = { 0 };
+  static const MCPhysReg CalleeSavedRegs[] = {0};
   return CalleeSavedRegs;
 }
 

@@ -71,7 +71,7 @@ public:
   unsigned getAddressSpace() const { return AddressSpace; }
 
   unsigned getTargetCustom() const {
-    return (Kind >= TargetCustom) ? ((Kind+1) - TargetCustom) : 0;
+    return (Kind >= TargetCustom) ? ((Kind + 1) - TargetCustom) : 0;
   }
 
   /// Test whether the memory pointed to by this PseudoSourceValue has a

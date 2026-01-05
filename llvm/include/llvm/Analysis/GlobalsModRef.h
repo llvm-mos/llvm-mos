@@ -165,6 +165,6 @@ public:
 // global values that do not have their addresses taken.
 //
 LLVM_ABI ModulePass *createGlobalsAAWrapperPass();
-}
+} // namespace llvm
 
 #endif

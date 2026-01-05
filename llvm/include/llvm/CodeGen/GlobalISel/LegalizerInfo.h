@@ -150,8 +150,7 @@ struct LegalizeActionStep {
   /// If describing an action, the new type for TypeIdx. Otherwise LLT{}.
   LLT NewType;
 
-  LegalizeActionStep(LegalizeAction Action, unsigned TypeIdx,
-                     const LLT NewType)
+  LegalizeActionStep(LegalizeAction Action, unsigned TypeIdx, const LLT NewType)
       : Action(Action), TypeIdx(TypeIdx), NewType(NewType) {}
 
   LegalizeActionStep(LegacyLegalizeActionStep Step)
@@ -195,11 +194,11 @@ struct LegalizeActionStep {
 
   bool operator==(const LegalizeActionStep &RHS) const {
     return std::tie(Action, TypeIdx, NewType) ==
-        std::tie(RHS.Action, RHS.TypeIdx, RHS.NewType);
+           std::tie(RHS.Action, RHS.TypeIdx, RHS.NewType);
   }
 };
 
-using LegalityPredicate = std::function<bool (const LegalityQuery &)>;
+using LegalityPredicate = std::function<bool(const LegalityQuery &)>;
 using LegalizeMutation =
     std::function<std::pair<unsigned, LLT>(const LegalityQuery &)>;
 
@@ -232,27 +231,21 @@ template <typename Predicate> Predicate predNot(Predicate P) {
 }
 
 /// True iff P0 and P1 are true.
-template<typename Predicate>
-Predicate all(Predicate P0, Predicate P1) {
-  return [=](const LegalityQuery &Query) {
-    return P0(Query) && P1(Query);
-  };
+template <typename Predicate> Predicate all(Predicate P0, Predicate P1) {
+  return [=](const LegalityQuery &Query) { return P0(Query) && P1(Query); };
 }
 /// True iff all given predicates are true.
-template<typename Predicate, typename... Args>
+template <typename Predicate, typename... Args>
 Predicate all(Predicate P0, Predicate P1, Args... args) {
   return all(all(P0, P1), args...);
 }
 
 /// True iff P0 or P1 are true.
-template<typename Predicate>
-Predicate any(Predicate P0, Predicate P1) {
-  return [=](const LegalityQuery &Query) {
-    return P0(Query) || P1(Query);
-  };
+template <typename Predicate> Predicate any(Predicate P0, Predicate P1) {
+  return [=](const LegalityQuery &Query) { return P0(Query) || P1(Query); };
 }
 /// True iff any given predicates are true.
-template<typename Predicate, typename... Args>
+template <typename Predicate, typename... Args>
 Predicate any(Predicate P0, Predicate P1, Args... args) {
   return any(any(P0, P1), args...);
 }
@@ -265,9 +258,8 @@ LLVM_ABI LegalityPredicate typeInSet(unsigned TypeIdx,
 
 /// True iff the given type index is not the specified type.
 inline LegalityPredicate typeIsNot(unsigned TypeIdx, LLT Type) {
-  return [=](const LegalityQuery &Query) {
-           return Query.Types[TypeIdx] != Type;
-         };
+  return
+      [=](const LegalityQuery &Query) { return Query.Types[TypeIdx] != Type; };
 }
 
 /// True iff the given types for the given pair of type indexes is one of the
@@ -425,9 +417,7 @@ public:
       : Predicate(Predicate), Action(Action), Mutation(Mutation) {}
 
   /// Test whether the LegalityQuery matches.
-  bool match(const LegalityQuery &Query) const {
-    return Predicate(Query);
-  }
+  bool match(const LegalityQuery &Query) const { return Predicate(Query); }
 
   LegalizeAction getAction() const { return Action; }
 
@@ -551,8 +541,9 @@ class LegalizeRuleSet {
     return actionIf(Action, typeInSet(typeIdx(0), Types));
   }
 
-  LegalizeRuleSet &actionForTypeWithAnyImm(
-    LegalizeAction Action, std::initializer_list<std::pair<LLT, LLT>> Types) {
+  LegalizeRuleSet &
+  actionForTypeWithAnyImm(LegalizeAction Action,
+                          std::initializer_list<std::pair<LLT, LLT>> Types) {
     using namespace LegalityPredicates;
     immIdx(0); // Inform verifier imm idx 0 is handled.
     return actionIf(Action, typePairInSet(typeIdx(0), typeIdx(1), Types));
@@ -655,8 +646,8 @@ public:
     return actionForTypeWithAnyImm(LegalizeAction::Legal, Types);
   }
 
-  LegalizeRuleSet &legalForTypeWithAnyImm(
-    std::initializer_list<std::pair<LLT, LLT>> Types) {
+  LegalizeRuleSet &
+  legalForTypeWithAnyImm(std::initializer_list<std::pair<LLT, LLT>> Types) {
     markAllIdxsAsCovered();
     return actionForTypeWithAnyImm(LegalizeAction::Legal, Types);
   }
@@ -950,9 +941,7 @@ public:
   }
 
   /// Unconditionally custom lower.
-  LegalizeRuleSet &custom() {
-    return customIf(always);
-  }
+  LegalizeRuleSet &custom() { return customIf(always); }
 
   /// Widen the scalar to the next power of two that is at least MinSize.
   /// No effect if the type is a power of two, except if the type is smaller
@@ -1171,12 +1160,13 @@ public:
   /// SameSizeIdx.
   LegalizeRuleSet &scalarSameSizeAs(unsigned TypeIdx, unsigned SameSizeIdx) {
     return minScalarSameAs(TypeIdx, SameSizeIdx)
-          .maxScalarSameAs(TypeIdx, SameSizeIdx);
+        .maxScalarSameAs(TypeIdx, SameSizeIdx);
   }
 
   /// Conditionally widen the scalar or elt to match the size of another.
   LegalizeRuleSet &minScalarEltSameAsIf(LegalityPredicate Predicate,
-                                   unsigned TypeIdx, unsigned LargeTypeIdx) {
+                                        unsigned TypeIdx,
+                                        unsigned LargeTypeIdx) {
     typeIdx(TypeIdx);
     return widenScalarIf(
         [=](const LegalityQuery &Query) {

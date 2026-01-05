@@ -108,12 +108,11 @@ Argument::Argument(Type *Ty, const Twine &Name, Function *Par, unsigned ArgNo)
   setName(Name);
 }
 
-void Argument::setParent(Function *parent) {
-  Parent = parent;
-}
+void Argument::setParent(Function *parent) { Parent = parent; }
 
 bool Argument::hasNonNullAttr(bool AllowUndefOrPoison) const {
-  if (!getType()->isPointerTy()) return false;
+  if (!getType()->isPointerTy())
+    return false;
   if (getParent()->hasParamAttribute(getArgNo(), Attribute::NonNull) &&
       (AllowUndefOrPoison ||
        getParent()->hasParamAttribute(getArgNo(), Attribute::NoUndef)))
@@ -126,7 +125,8 @@ bool Argument::hasNonNullAttr(bool AllowUndefOrPoison) const {
 }
 
 bool Argument::hasByValAttr() const {
-  if (!getType()->isPointerTy()) return false;
+  if (!getType()->isPointerTy())
+    return false;
   return hasAttribute(Attribute::ByVal);
 }
 
@@ -151,7 +151,8 @@ bool Argument::hasSwiftErrorAttr() const {
 }
 
 bool Argument::hasInAllocaAttr() const {
-  if (!getType()->isPointerTy()) return false;
+  if (!getType()->isPointerTy())
+    return false;
   return hasAttribute(Attribute::InAlloca);
 }
 
@@ -162,7 +163,8 @@ bool Argument::hasPreallocatedAttr() const {
 }
 
 bool Argument::hasPassPointeeByValueCopyAttr() const {
-  if (!getType()->isPointerTy()) return false;
+  if (!getType()->isPointerTy())
+    return false;
   AttributeList Attrs = getParent()->getAttributes();
   return Attrs.hasParamAttr(getArgNo(), Attribute::ByVal) ||
          Attrs.hasParamAttr(getArgNo(), Attribute::InAlloca) ||
@@ -266,45 +268,44 @@ std::optional<ConstantRange> Argument::getRange() const {
 }
 
 bool Argument::hasNestAttr() const {
-  if (!getType()->isPointerTy()) return false;
+  if (!getType()->isPointerTy())
+    return false;
   return hasAttribute(Attribute::Nest);
 }
 
 bool Argument::hasNoAliasAttr() const {
-  if (!getType()->isPointerTy()) return false;
+  if (!getType()->isPointerTy())
+    return false;
   return hasAttribute(Attribute::NoAlias);
 }
 
 bool Argument::hasNoCaptureAttr() const {
-  if (!getType()->isPointerTy()) return false;
+  if (!getType()->isPointerTy())
+    return false;
   return capturesNothing(getAttributes().getCaptureInfo());
 }
 
 bool Argument::hasNoFreeAttr() const {
-  if (!getType()->isPointerTy()) return false;
+  if (!getType()->isPointerTy())
+    return false;
   return hasAttribute(Attribute::NoFree);
 }
 
 bool Argument::hasStructRetAttr() const {
-  if (!getType()->isPointerTy()) return false;
+  if (!getType()->isPointerTy())
+    return false;
   return hasAttribute(Attribute::StructRet);
 }
 
-bool Argument::hasInRegAttr() const {
-  return hasAttribute(Attribute::InReg);
-}
+bool Argument::hasInRegAttr() const { return hasAttribute(Attribute::InReg); }
 
 bool Argument::hasReturnedAttr() const {
   return hasAttribute(Attribute::Returned);
 }
 
-bool Argument::hasZExtAttr() const {
-  return hasAttribute(Attribute::ZExt);
-}
+bool Argument::hasZExtAttr() const { return hasAttribute(Attribute::ZExt); }
 
-bool Argument::hasSExtAttr() const {
-  return hasAttribute(Attribute::SExt);
-}
+bool Argument::hasSExtAttr() const { return hasAttribute(Attribute::SExt); }
 
 bool Argument::onlyReadsMemory() const {
   AttributeList Attrs = getParent()->getAttributes();
@@ -356,9 +357,7 @@ AttributeSet Argument::getAttributes() const {
 // Helper Methods in Function
 //===----------------------------------------------------------------------===//
 
-LLVMContext &Function::getContext() const {
-  return getType()->getContext();
-}
+LLVMContext &Function::getContext() const { return getType()->getContext(); }
 
 const DataLayout &Function::getDataLayout() const {
   return getParent()->getDataLayout();
@@ -496,7 +495,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
 
   // If the function has arguments, mark them as lazily built.
   if (Ty->getNumParams())
-    setValueSubclassData(1);   // Set the "has lazy arguments" bit.
+    setValueSubclassData(1); // Set the "has lazy arguments" bit.
 
   if (ParentModule) {
     ParentModule->getFunctionList().push_back(this);
@@ -520,7 +519,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
 Function::~Function() {
   validateBlockNumbers();
 
-  dropAllReferences();    // After this it is safe to delete instructions.
+  dropAllReferences(); // After this it is safe to delete instructions.
 
   // Delete all of the method arguments and unlink from symbol table...
   if (Arguments)
@@ -545,7 +544,7 @@ void Function::BuildLazyArguments() const {
   // Clear the lazy arguments bit.
   unsigned SDC = getSubclassDataFromValue();
   SDC &= ~(1 << 0);
-  const_cast<Function*>(this)->setValueSubclassData(SDC);
+  const_cast<Function *>(this)->setValueSubclassData(SDC);
   assert(!hasLazyArguments());
 }
 
@@ -1071,7 +1070,7 @@ void Function::allocHungoffUselist() {
   if (getNumOperands())
     return;
 
-  allocHungoffUses(3, /*IsPhi=*/ false);
+  allocHungoffUses(3, /*IsPhi=*/false);
   setNumHungOffUseOperands(3);
 
   // Initialize the uselist with placeholder operands to allow traversal.
@@ -1081,8 +1080,7 @@ void Function::allocHungoffUselist() {
   Op<2>().set(CPN);
 }
 
-template <int Idx>
-void Function::setHungoffOperand(Constant *C) {
+template <int Idx> void Function::setHungoffOperand(Constant *C) {
   if (C) {
     allocHungoffUselist();
     Op<Idx>().set(C);

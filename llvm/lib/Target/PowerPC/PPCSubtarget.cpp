@@ -91,7 +91,8 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   }
 
   // Determine the CPU to schedule for.
-  if (TuneCPU.empty()) TuneCPU = CPUName;
+  if (TuneCPU.empty())
+    TuneCPU = CPUName;
 
   // Initialize scheduling itinerary for the specified CPU.
   InstrItins = getInstrItineraryForCPU(CPUName);
@@ -108,7 +109,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     IsSecurePlt = true;
 
   if (HasSPE && IsPPC64)
-    report_fatal_error( "SPE is only supported for 32-bit targets.\n", false);
+    report_fatal_error("SPE is only supported for 32-bit targets.\n", false);
   if (HasSPE && (HasAltivec || HasVSX || HasFPU))
     report_fatal_error(
         "SPE and traditional floating point cannot both be enabled.\n", false);
@@ -157,14 +158,15 @@ bool PPCSubtarget::useDFAforSMS() const { return false; }
 // This overrides the PostRAScheduler bit in the SchedModel for each CPU.
 bool PPCSubtarget::enablePostRAScheduler() const { return true; }
 
-PPCGenSubtargetInfo::AntiDepBreakMode PPCSubtarget::getAntiDepBreakMode() const {
+PPCGenSubtargetInfo::AntiDepBreakMode
+PPCSubtarget::getAntiDepBreakMode() const {
   return TargetSubtargetInfo::ANTIDEP_ALL;
 }
 
 void PPCSubtarget::getCriticalPathRCs(RegClassVector &CriticalPathRCs) const {
   CriticalPathRCs.clear();
-  CriticalPathRCs.push_back(isPPC64() ?
-                            &PPC::G8RCRegClass : &PPC::GPRCRegClass);
+  CriticalPathRCs.push_back(isPPC64() ? &PPC::G8RCRegClass
+                                      : &PPC::GPRCRegClass);
 }
 
 void PPCSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
@@ -180,9 +182,7 @@ void PPCSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   Policy.ShouldTrackPressure = true;
 }
 
-bool PPCSubtarget::useAA() const {
-  return true;
-}
+bool PPCSubtarget::useAA() const { return true; }
 
 bool PPCSubtarget::enableSubRegLiveness() const { return true; }
 

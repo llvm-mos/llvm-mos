@@ -22,24 +22,24 @@
 namespace llvm {
 
 namespace Hexagon {
-  // Generic (pseudo) subreg indices for use with getHexagonSubRegIndex.
-  enum { ps_sub_lo = 0, ps_sub_hi = 1 };
-}
+// Generic (pseudo) subreg indices for use with getHexagonSubRegIndex.
+enum { ps_sub_lo = 0, ps_sub_hi = 1 };
+} // namespace Hexagon
 
 class HexagonRegisterInfo : public HexagonGenRegisterInfo {
 public:
   HexagonRegisterInfo(unsigned HwMode);
 
   /// Code Generation virtual methods...
-  const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF)
-        const override;
+  const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
-        CallingConv::ID) const override;
+                                       CallingConv::ID) const override;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
   bool eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
-        unsigned FIOperandNum, RegScavenger *RS = nullptr) const override;
+                           unsigned FIOperandNum,
+                           RegScavenger *RS = nullptr) const override;
 
   /// Returns true since we may need scavenging for a temporary register
   /// when generating hardware loop instructions.
@@ -57,8 +57,9 @@ public:
   bool useFPForScavengingIndex(const MachineFunction &MF) const override;
 
   bool shouldCoalesce(MachineInstr *MI, const TargetRegisterClass *SrcRC,
-        unsigned SubReg, const TargetRegisterClass *DstRC, unsigned DstSubReg,
-        const TargetRegisterClass *NewRC, LiveIntervals &LIS) const override;
+                      unsigned SubReg, const TargetRegisterClass *DstRC,
+                      unsigned DstSubReg, const TargetRegisterClass *NewRC,
+                      LiveIntervals &LIS) const override;
 
   // Debug information queries.
   Register getFrameRegister(const MachineFunction &MF) const override;
@@ -66,10 +67,10 @@ public:
   Register getStackRegister() const;
 
   unsigned getHexagonSubRegIndex(const TargetRegisterClass &RC,
-        unsigned GenIdx) const;
+                                 unsigned GenIdx) const;
 
   const MCPhysReg *getCallerSavedRegs(const MachineFunction *MF,
-        const TargetRegisterClass *RC) const;
+                                      const TargetRegisterClass *RC) const;
 
   const TargetRegisterClass *
   getPointerRegClass(unsigned Kind = 0) const override;

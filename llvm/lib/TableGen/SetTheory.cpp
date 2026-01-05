@@ -49,7 +49,7 @@ struct SubOp : public SetTheory::Operator {
              ArrayRef<SMLoc> Loc) override {
     if (Expr->arg_size() < 2)
       PrintFatalError(Loc, "Set difference needs at least two arguments: " +
-        Expr->getAsString());
+                               Expr->getAsString());
     RecSet Add, Sub;
     ST.evaluate(*Expr->arg_begin(), Add, Loc);
     ST.evaluate(Expr->arg_begin() + 1, Expr->arg_end(), Sub, Loc);
@@ -65,7 +65,7 @@ struct AndOp : public SetTheory::Operator {
              ArrayRef<SMLoc> Loc) override {
     if (Expr->arg_size() != 2)
       PrintFatalError(Loc, "Set intersection requires two arguments: " +
-        Expr->getAsString());
+                               Expr->getAsString());
     RecSet S1, S2;
     ST.evaluate(Expr->arg_begin()[0], S1, Loc);
     ST.evaluate(Expr->arg_begin()[1], S2, Loc);
@@ -84,13 +84,13 @@ struct SetIntBinOp : public SetTheory::Operator {
              ArrayRef<SMLoc> Loc) override {
     if (Expr->arg_size() != 2)
       PrintFatalError(Loc, "Operator requires (Op Set, Int) arguments: " +
-        Expr->getAsString());
+                               Expr->getAsString());
     RecSet Set;
     ST.evaluate(Expr->arg_begin()[0], Set, Loc);
     const auto *II = dyn_cast<IntInit>(Expr->arg_begin()[1]);
     if (!II)
       PrintFatalError(Loc, "Second argument must be an integer: " +
-        Expr->getAsString());
+                               Expr->getAsString());
     apply2(ST, Expr, Set, II->getValue(), Elts, Loc);
   }
 };
@@ -100,8 +100,7 @@ struct ShlOp : public SetIntBinOp {
   void apply2(SetTheory &ST, const DagInit *Expr, RecSet &Set, int64_t N,
               RecSet &Elts, ArrayRef<SMLoc> Loc) override {
     if (N < 0)
-      PrintFatalError(Loc, "Positive shift required: " +
-        Expr->getAsString());
+      PrintFatalError(Loc, "Positive shift required: " + Expr->getAsString());
     if (unsigned(N) < Set.size())
       Elts.insert(Set.begin() + N, Set.end());
   }
@@ -112,8 +111,7 @@ struct TruncOp : public SetIntBinOp {
   void apply2(SetTheory &ST, const DagInit *Expr, RecSet &Set, int64_t N,
               RecSet &Elts, ArrayRef<SMLoc> Loc) override {
     if (N < 0)
-      PrintFatalError(Loc, "Positive length required: " +
-        Expr->getAsString());
+      PrintFatalError(Loc, "Positive length required: " + Expr->getAsString());
     if (unsigned(N) > Set.size())
       N = Set.size();
     Elts.insert(Set.begin(), Set.begin() + N);
@@ -147,8 +145,7 @@ struct DecimateOp : public SetIntBinOp {
   void apply2(SetTheory &ST, const DagInit *Expr, RecSet &Set, int64_t N,
               RecSet &Elts, ArrayRef<SMLoc> Loc) override {
     if (N <= 0)
-      PrintFatalError(Loc, "Positive stride required: " +
-        Expr->getAsString());
+      PrintFatalError(Loc, "Positive stride required: " + Expr->getAsString());
     for (unsigned I = 0; I < Set.size(); I += N)
       Elts.insert(Set[I]);
   }
@@ -180,20 +177,20 @@ struct SequenceOp : public SetTheory::Operator {
     int Step = 1;
     if (Expr->arg_size() > 4)
       PrintFatalError(Loc, "Bad args to (sequence \"Format\", From, To): " +
-        Expr->getAsString());
+                               Expr->getAsString());
     if (Expr->arg_size() == 4) {
       if (const auto *II = dyn_cast<IntInit>(Expr->arg_begin()[3]))
         Step = II->getValue();
       else
-        PrintFatalError(Loc, "Stride must be an integer: " +
-          Expr->getAsString());
+        PrintFatalError(Loc,
+                        "Stride must be an integer: " + Expr->getAsString());
     }
 
     std::string Format;
     if (const auto *SI = dyn_cast<StringInit>(Expr->arg_begin()[0]))
       Format = SI->getValue().str();
     else
-      PrintFatalError(Loc,  "Format must be a string: " + Expr->getAsString());
+      PrintFatalError(Loc, "Format must be a string: " + Expr->getAsString());
 
     int64_t From, To;
     if (const auto *II = dyn_cast<IntInit>(Expr->arg_begin()[1]))
@@ -224,8 +221,8 @@ struct SequenceOp : public SetTheory::Operator {
       OS << format(Format.c_str(), unsigned(From));
       const Record *Rec = Records.getDef(Name);
       if (!Rec)
-        PrintFatalError(Loc, "No def named '" + Name + "': " +
-          Expr->getAsString());
+        PrintFatalError(Loc,
+                        "No def named '" + Name + "': " + Expr->getAsString());
       // Try to reevaluate Rec in case it is a set.
       if (const RecVec *Result = ST.expand(Rec))
         Elts.insert_range(*Result);

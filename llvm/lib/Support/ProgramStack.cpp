@@ -11,15 +11,15 @@
 #include "llvm/Support/Compiler.h"
 
 #ifdef LLVM_ON_UNIX
-# include <sys/resource.h> // for getrlimit
+#include <sys/resource.h> // for getrlimit
 #endif
 
 #ifdef _MSC_VER
-# include <intrin.h>  // for _AddressOfReturnAddress
+#include <intrin.h> // for _AddressOfReturnAddress
 #endif
 
 #ifndef LLVM_HAS_SPLIT_STACKS
-# include "llvm/Support/thread.h"
+#include "llvm/Support/thread.h"
 #endif
 
 using namespace llvm;
@@ -65,38 +65,34 @@ void runOnNewStackImpl(void *Stack, void (*Fn)(void *), void *Ctx) __asm__(
 //
 // When adding new platforms it may be better to move to a .S file with macros
 // for dealing with platform differences.
-__asm__ (
-    ".globl  _ZN4llvm17runOnNewStackImplEPvPFvS0_ES0_\n\t"
-    ".p2align  2\n\t"
-    "_ZN4llvm17runOnNewStackImplEPvPFvS0_ES0_:\n\t"
-    ".cfi_startproc\n\t"
-    "mov       x16, sp\n\t"
-    "sub       x0, x0, #0x20\n\t"            // subtract space from stack
-    "stp       xzr, x16, [x0, #0x00]\n\t"    // save old sp
-    "stp       x29, x30, [x0, #0x10]\n\t"    // save fp, lr
-    "mov       sp, x0\n\t"                   // switch to new stack
-    "add       x29, x0, #0x10\n\t"           // switch to new frame
-    ".cfi_def_cfa w29, 16\n\t"
-    ".cfi_offset w30, -8\n\t"                // lr
-    ".cfi_offset w29, -16\n\t"               // fp
+__asm__(".globl  _ZN4llvm17runOnNewStackImplEPvPFvS0_ES0_\n\t"
+        ".p2align  2\n\t"
+        "_ZN4llvm17runOnNewStackImplEPvPFvS0_ES0_:\n\t"
+        ".cfi_startproc\n\t"
+        "mov       x16, sp\n\t"
+        "sub       x0, x0, #0x20\n\t"         // subtract space from stack
+        "stp       xzr, x16, [x0, #0x00]\n\t" // save old sp
+        "stp       x29, x30, [x0, #0x10]\n\t" // save fp, lr
+        "mov       sp, x0\n\t"                // switch to new stack
+        "add       x29, x0, #0x10\n\t"        // switch to new frame
+        ".cfi_def_cfa w29, 16\n\t"
+        ".cfi_offset w30, -8\n\t"  // lr
+        ".cfi_offset w29, -16\n\t" // fp
 
-    "mov       x0, x2\n\t"                   // Ctx is the only argument
-    "blr       x1\n\t"                       // call Fn
+        "mov       x0, x2\n\t" // Ctx is the only argument
+        "blr       x1\n\t"     // call Fn
 
-    "ldp       x29, x30, [sp, #0x10]\n\t"    // restore fp, lr
-    "ldp       xzr, x16, [sp, #0x00]\n\t"    // load old sp
-    "mov       sp, x16\n\t"
-    "ret\n\t"
-    ".cfi_endproc"
-);
+        "ldp       x29, x30, [sp, #0x10]\n\t" // restore fp, lr
+        "ldp       xzr, x16, [sp, #0x00]\n\t" // load old sp
+        "mov       sp, x16\n\t"
+        "ret\n\t"
+        ".cfi_endproc");
 #endif
 } // namespace llvm
 
 namespace {
 #ifdef LLVM_HAS_SPLIT_STACKS
-void callback(void *Ctx) {
-  (*reinterpret_cast<function_ref<void()> *>(Ctx))();
-}
+void callback(void *Ctx) { (*reinterpret_cast<function_ref<void()> *>(Ctx))(); }
 #endif
 } // namespace
 

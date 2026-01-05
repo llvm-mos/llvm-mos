@@ -72,6 +72,6 @@ public:
   const std::string &outputFilename() { return Installer.Filename; }
 };
 
-} // end llvm namespace
+} // namespace llvm
 
 #endif

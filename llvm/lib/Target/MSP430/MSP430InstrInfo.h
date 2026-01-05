@@ -26,6 +26,7 @@ class MSP430Subtarget;
 class MSP430InstrInfo : public MSP430GenInstrInfo {
   const MSP430RegisterInfo RI;
   virtual void anchor();
+
 public:
   explicit MSP430InstrInfo(const MSP430Subtarget &STI);
 
@@ -73,6 +74,6 @@ public:
   }
 };
 
-}
+} // namespace llvm
 
 #endif

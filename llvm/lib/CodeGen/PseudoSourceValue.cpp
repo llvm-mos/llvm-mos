@@ -20,9 +20,13 @@
 
 using namespace llvm;
 
-static const char *const PSVNames[] = {
-    "Stack", "GOT", "JumpTable", "ConstantPool", "FixedStack",
-    "GlobalValueCallEntry", "ExternalSymbolCallEntry"};
+static const char *const PSVNames[] = {"Stack",
+                                       "GOT",
+                                       "JumpTable",
+                                       "ConstantPool",
+                                       "FixedStack",
+                                       "GlobalValueCallEntry",
+                                       "ExternalSymbolCallEntry"};
 
 PseudoSourceValue::PseudoSourceValue(unsigned Kind, const TargetMachine &TM)
     : Kind(Kind) {
@@ -121,8 +125,7 @@ const PseudoSourceValue *PseudoSourceValueManager::getJumpTable() {
   return &JumpTablePSV;
 }
 
-const PseudoSourceValue *
-PseudoSourceValueManager::getFixedStack(int FI) {
+const PseudoSourceValue *PseudoSourceValueManager::getFixedStack(int FI) {
   // Frame index is often continuously positive, but can be negative. Use
   // zig-zag encoding for dense index into FSValues vector.
   unsigned Idx = (2 * unsigned(FI)) ^ (FI >> (sizeof(FI) * 8 - 1));

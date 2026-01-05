@@ -40,8 +40,7 @@ class VEMCCodeEmitter : public MCCodeEmitter {
   MCContext &Ctx;
 
 public:
-  VEMCCodeEmitter(const MCInstrInfo &, MCContext &ctx)
-      : Ctx(ctx) {}
+  VEMCCodeEmitter(const MCInstrInfo &, MCContext &ctx) : Ctx(ctx) {}
   VEMCCodeEmitter(const VEMCCodeEmitter &) = delete;
   VEMCCodeEmitter &operator=(const VEMCCodeEmitter &) = delete;
   ~VEMCCodeEmitter() override = default;

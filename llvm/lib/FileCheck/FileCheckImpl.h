@@ -80,11 +80,11 @@ public:
   StringRef toString() const;
 
   ExpressionFormat() = default;
-  explicit ExpressionFormat(Kind Value) : Value(Value), Precision(0){};
+  explicit ExpressionFormat(Kind Value) : Value(Value), Precision(0) {};
   explicit ExpressionFormat(Kind Value, unsigned Precision)
-      : Value(Value), Precision(Precision){};
+      : Value(Value), Precision(Precision) {};
   explicit ExpressionFormat(Kind Value, unsigned Precision, bool AlternateForm)
-      : Value(Value), Precision(Precision), AlternateForm(AlternateForm){};
+      : Value(Value), Precision(Precision), AlternateForm(AlternateForm) {};
 
   /// \returns a wildcard regular expression string that matches any value in
   /// the format represented by this instance and no other value, or an error

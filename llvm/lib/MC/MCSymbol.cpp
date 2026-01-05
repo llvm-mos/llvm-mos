@@ -42,7 +42,7 @@ void *MCSymbol::operator new(size_t s, const MCSymbolTableEntry *Name,
   static_assert((unsigned)alignof(MCSymbol) <= alignof(NameEntryStorageTy),
                 "Bad alignment of MCSymbol");
   void *Storage = Ctx.allocate(Size, alignof(NameEntryStorageTy));
-  NameEntryStorageTy *Start = static_cast<NameEntryStorageTy*>(Storage);
+  NameEntryStorageTy *Start = static_cast<NameEntryStorageTy *>(Storage);
   NameEntryStorageTy *End = Start + (Name ? 1 : 0);
   return End;
 }
@@ -84,7 +84,5 @@ void MCSymbol::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MCSymbol::dump() const {
-  dbgs() << *this;
-}
+LLVM_DUMP_METHOD void MCSymbol::dump() const { dbgs() << *this; }
 #endif

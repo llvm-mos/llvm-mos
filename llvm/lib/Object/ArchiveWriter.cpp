@@ -239,7 +239,8 @@ printGNUSmallMemberHeader(raw_ostream &Out, StringRef Name,
 static void
 printBSDMemberHeader(raw_ostream &Out, uint64_t Pos, StringRef Name,
                      const sys::TimePoint<std::chrono::seconds> &ModTime,
-                     unsigned UID, unsigned GID, unsigned Perms, uint64_t Size) {
+                     unsigned UID, unsigned GID, unsigned Perms,
+                     uint64_t Size) {
   uint64_t PosAfterHeader = Pos + 60 + Name.size();
   // Pad so that even 64 bit object files are aligned.
   unsigned Pad = offsetToAlignment(PosAfterHeader, Align(8));
@@ -260,15 +261,15 @@ printBigArchiveMemberHeader(raw_ostream &Out, StringRef Name,
                             uint64_t NextOffset) {
   unsigned NameLen = Name.size();
 
-  printWithSpacePadding(Out, Size, 20);           // File member size
-  printWithSpacePadding(Out, NextOffset, 20);     // Next member header offset
+  printWithSpacePadding(Out, Size, 20);       // File member size
+  printWithSpacePadding(Out, NextOffset, 20); // Next member header offset
   printWithSpacePadding(Out, PrevOffset, 20); // Previous member header offset
   printWithSpacePadding(Out, sys::toTimeT(ModTime), 12); // File member date
   // The big archive format has 12 chars for uid and gid.
-  printWithSpacePadding(Out, UID % 1000000000000, 12);   // UID
-  printWithSpacePadding(Out, GID % 1000000000000, 12);   // GID
-  printWithSpacePadding(Out, format("%o", Perms), 12);   // Permission
-  printWithSpacePadding(Out, NameLen, 4);                // Name length
+  printWithSpacePadding(Out, UID % 1000000000000, 12); // UID
+  printWithSpacePadding(Out, GID % 1000000000000, 12); // GID
+  printWithSpacePadding(Out, format("%o", Perms), 12); // Permission
+  printWithSpacePadding(Out, NameLen, 4);              // Name length
   if (NameLen) {
     printWithSpacePadding(Out, Name, NameLen); // Name
     if (NameLen % 2)
@@ -1088,9 +1089,9 @@ Error writeArchiveToStream(raw_ostream &Out,
     // members. As a big archive can have both 32-bit and 64-bit file members,
     // we need to know the number of symbols in each symbol table individually.
     if (isAIXBigArchive(Kind) && ShouldWriteSymtab) {
-        if (!is64BitSymbolicFile(M.SymFile.get()))
-          NumSyms32 += M.Symbols.size();
-      }
+      if (!is64BitSymbolicFile(M.SymFile.get()))
+        NumSyms32 += M.Symbols.size();
+    }
   }
 
   std::optional<uint64_t> HeadersSize;

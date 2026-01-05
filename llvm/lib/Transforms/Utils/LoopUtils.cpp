@@ -474,13 +474,14 @@ bool llvm::isAlmostDeadIV(PHINode *PN, BasicBlock *LatchBlock, Value *Cond) {
   Value *IncV = PN->getIncomingValue(LatchIdx);
 
   for (User *U : PN->users())
-    if (U != Cond && U != IncV) return false;
+    if (U != Cond && U != IncV)
+      return false;
 
   for (User *U : IncV->users())
-    if (U != Cond && U != PN) return false;
+    if (U != Cond && U != PN)
+      return false;
   return true;
 }
-
 
 void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
                           LoopInfo *LI, MemorySSA *MSSA) {
@@ -750,8 +751,8 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
         auto *NewBI = Builder.CreateBr(ExitBB);
         // Transfer the metadata to the new branch instruction (minus the
         // loop info since this is no longer a loop)
-        NewBI->copyMetadata(*BI, {LLVMContext::MD_dbg,
-                                  LLVMContext::MD_annotation});
+        NewBI->copyMetadata(*BI,
+                            {LLVMContext::MD_dbg, LLVMContext::MD_annotation});
 
         BI->eraseFromParent();
         DTU.applyUpdates({{DominatorTree::Delete, Latch, Header}});
@@ -783,7 +784,6 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   if (OutermostLoop != L)
     formLCSSARecursively(*OutermostLoop, DT, &LI, &SE);
 }
-
 
 /// Checks if \p L has an exiting latch branch.  There may also be other
 /// exiting blocks.  Returns branch instruction terminating the loop
@@ -1232,9 +1232,9 @@ CmpInst::Predicate llvm::getMinMaxReductionPredicate(RecurKind RK) {
     return CmpInst::FCMP_OLT;
   case RecurKind::FMax:
     return CmpInst::FCMP_OGT;
-  // We do not add FMinimum/FMaximum recurrence kind here since there is no
-  // equivalent predicate which compares signed zeroes according to the
-  // semantics of the intrinsics (llvm.minimum/maximum).
+    // We do not add FMinimum/FMaximum recurrence kind here since there is no
+    // equivalent predicate which compares signed zeroes according to the
+    // semantics of the intrinsics (llvm.minimum/maximum).
   }
 }
 
@@ -1566,23 +1566,21 @@ bool llvm::isKnownNonPositiveInLoop(const SCEV *S, const Loop *L,
 bool llvm::cannotBeMinInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE,
                              bool Signed) {
   unsigned BitWidth = cast<IntegerType>(S->getType())->getBitWidth();
-  APInt Min = Signed ? APInt::getSignedMinValue(BitWidth) :
-    APInt::getMinValue(BitWidth);
+  APInt Min = Signed ? APInt::getSignedMinValue(BitWidth)
+                     : APInt::getMinValue(BitWidth);
   auto Predicate = Signed ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
   return SE.isAvailableAtLoopEntry(S, L) &&
-         SE.isLoopEntryGuardedByCond(L, Predicate, S,
-                                     SE.getConstant(Min));
+         SE.isLoopEntryGuardedByCond(L, Predicate, S, SE.getConstant(Min));
 }
 
 bool llvm::cannotBeMaxInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE,
                              bool Signed) {
   unsigned BitWidth = cast<IntegerType>(S->getType())->getBitWidth();
-  APInt Max = Signed ? APInt::getSignedMaxValue(BitWidth) :
-    APInt::getMaxValue(BitWidth);
+  APInt Max = Signed ? APInt::getSignedMaxValue(BitWidth)
+                     : APInt::getMaxValue(BitWidth);
   auto Predicate = Signed ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
   return SE.isAvailableAtLoopEntry(S, L) &&
-         SE.isLoopEntryGuardedByCond(L, Predicate, S,
-                                     SE.getConstant(Max));
+         SE.isLoopEntryGuardedByCond(L, Predicate, S, SE.getConstant(Max));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1631,7 +1629,8 @@ struct RewritePhi {
 // Check whether it is possible to delete the loop after rewriting exit
 // value. If it is possible, ignore ReplaceExitValue and do rewriting
 // aggressively.
-static bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet) {
+static bool canLoopBeDeleted(Loop *L,
+                             SmallVector<RewritePhi, 8> &RewritePhiSet) {
   BasicBlock *Preheader = L->getLoopPreheader();
   // If there is no preheader, the loop will not be deleted.
   if (!Preheader)
@@ -1674,9 +1673,8 @@ static bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet)
   }
 
   for (auto *BB : L->blocks())
-    if (llvm::any_of(*BB, [](Instruction &I) {
-          return I.mayHaveSideEffects();
-        }))
+    if (llvm::any_of(*BB,
+                     [](Instruction &I) { return I.mayHaveSideEffects(); }))
       return false;
 
   return true;
@@ -1706,7 +1704,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
   assert(L->isRecursivelyLCSSAForm(*DT, *LI) &&
          "Indvars did not preserve LCSSA!");
 
-  SmallVector<BasicBlock*, 8> ExitBlocks;
+  SmallVector<BasicBlock *, 8> ExitBlocks;
   L->getUniqueExitBlocks(ExitBlocks);
 
   SmallVector<RewritePhi, 8> RewritePhiSet;
@@ -1717,7 +1715,8 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
     // If there are no PHI nodes in this exit block, then no values defined
     // inside the loop are used on this path, skip it.
     PHINode *PN = dyn_cast<PHINode>(ExitBB->begin());
-    if (!PN) continue;
+    if (!PN)
+      continue;
 
     unsigned NumPreds = PN->getNumIncomingValues();
 
@@ -1834,8 +1833,9 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 
         // Collect all the candidate PHINodes to be rewritten.
         Instruction *InsertPt =
-          (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst)) ?
-          &*Inst->getParent()->getFirstInsertionPt() : Inst;
+            (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst))
+                ? &*Inst->getParent()->getFirstInsertionPt()
+                : Inst;
         RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost);
       }
     }
@@ -1953,8 +1953,8 @@ void llvm::appendLoopsToWorklist(LoopInfo &LI,
   appendReversedLoopsToWorklist(LI, Worklist);
 }
 
-Loop *llvm::cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM,
-                      LoopInfo *LI, LPPassManager *LPM) {
+Loop *llvm::cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM, LoopInfo *LI,
+                      LPPassManager *LPM) {
   Loop &New = *LI->AllocateLoop();
   if (PL)
     PL->addChildLoop(&New);
@@ -2080,8 +2080,10 @@ Value *llvm::addRuntimeChecks(
     Instruction *Loc, Loop *TheLoop,
     const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
     SCEVExpander &Exp, bool HoistRuntimeChecks) {
-  // TODO: Move noalias annotation code from LoopVersioning here and share with LV if possible.
-  // TODO: Pass  RtPtrChecking instead of PointerChecks and SE separately, if possible
+  // TODO: Move noalias annotation code from LoopVersioning here and share with
+  // LV if possible.
+  // TODO: Pass  RtPtrChecking instead of PointerChecks and SE separately, if
+  // possible
   auto ExpandedChecks =
       expandBounds(PointerChecks, TheLoop, Loc, Exp, HoistRuntimeChecks);
 

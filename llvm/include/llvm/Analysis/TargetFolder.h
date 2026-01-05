@@ -37,9 +37,7 @@ class LLVM_ABI TargetFolder final : public IRBuilderFolder {
   const DataLayout &DL;
 
   /// Fold - Fold the constant using target specific information.
-  Constant *Fold(Constant *C) const {
-    return ConstantFoldConstant(C, DL);
-  }
+  Constant *Fold(Constant *C) const { return ConstantFoldConstant(C, DL); }
 
   LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
@@ -110,7 +108,7 @@ public:
   }
 
   Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
-                      FastMathFlags FMF) const override {
+                     FastMathFlags FMF) const override {
     if (Constant *C = dyn_cast<Constant>(V))
       return ConstantFoldUnaryOpOperand(Opc, C, DL);
     return nullptr;
@@ -216,6 +214,6 @@ public:
     return Fold(ConstantExpr::getPointerBitCastOrAddrSpaceCast(C, DestTy));
   }
 };
-}
+} // namespace llvm
 
 #endif

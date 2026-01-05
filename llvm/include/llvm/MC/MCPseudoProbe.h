@@ -91,7 +91,7 @@ struct MCPseudoProbeFuncDesc {
   StringRef FuncName;
 
   MCPseudoProbeFuncDesc(uint64_t GUID, uint64_t Hash, StringRef Name)
-      : FuncGUID(GUID), FuncHash(Hash), FuncName(Name){};
+      : FuncGUID(GUID), FuncHash(Hash), FuncName(Name) {};
 
   LLVM_ABI void print(raw_ostream &OS);
 };
@@ -194,7 +194,7 @@ public:
   MCDecodedPseudoProbe(uint64_t Ad, uint32_t I, PseudoProbeType K, uint8_t At,
                        uint32_t D, MCDecodedPseudoProbeInlineTree *Tree)
       : MCPseudoProbeBase(I, At, static_cast<uint8_t>(K), D), Address(Ad),
-        InlineTree(Tree){};
+        InlineTree(Tree) {};
   LLVM_ABI uint64_t getGuid() const;
 
   uint64_t getAddress() const { return Address; }
@@ -349,7 +349,8 @@ public:
 
   // The addresses of MCPseudoProbeInlineTree are used by the tree structure and
   // need to be stable.
-  using MCProbeDivisionMap = std::unordered_map<MCSymbol *, MCPseudoProbeInlineTree>;
+  using MCProbeDivisionMap =
+      std::unordered_map<MCSymbol *, MCPseudoProbeInlineTree>;
 
 private:
   // A collection of MCPseudoProbe for each function. The MCPseudoProbes are

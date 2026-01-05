@@ -47,7 +47,8 @@ using namespace llvm;
 Thumb1FrameLowering::Thumb1FrameLowering(const ARMSubtarget &sti)
     : ARMFrameLowering(sti) {}
 
-bool Thumb1FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const{
+bool Thumb1FrameLowering::hasReservedCallFrame(
+    const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned CFSize = MFI.getMaxCallFrameSize();
   // It's not always a good idea to include the call frame as part of the
@@ -60,12 +61,13 @@ bool Thumb1FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const{
   return !MFI.hasVarSizedObjects();
 }
 
-static void
-emitPrologueEpilogueSPUpdate(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator &MBBI,
-                             const TargetInstrInfo &TII, const DebugLoc &dl,
-                             const ThumbRegisterInfo &MRI, int NumBytes,
-                             unsigned ScratchReg, unsigned MIFlags) {
+static void emitPrologueEpilogueSPUpdate(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator &MBBI,
+                                         const TargetInstrInfo &TII,
+                                         const DebugLoc &dl,
+                                         const ThumbRegisterInfo &MRI,
+                                         int NumBytes, unsigned ScratchReg,
+                                         unsigned MIFlags) {
   // If it would take more than three instructions to adjust the stack pointer
   // using tADDspi/tSUBspi, load an immediate instead.
   if (std::abs(NumBytes) > 508 * 3) {
@@ -80,7 +82,8 @@ emitPrologueEpilogueSPUpdate(MachineBasicBlock &MBB,
     if (ST.genExecuteOnly()) {
       unsigned XOInstr = ST.useMovt() ? ARM::t2MOVi32imm : ARM::tMOVi32imm;
       BuildMI(MBB, MBBI, dl, TII.get(XOInstr), ScratchReg)
-          .addImm(NumBytes).setMIFlags(MIFlags);
+          .addImm(NumBytes)
+          .setMIFlags(MIFlags);
     } else {
       MRI.emitLoadConstPool(MBB, MBBI, dl, ScratchReg, 0, NumBytes, ARMCC::AL,
                             0, MIFlags);
@@ -94,9 +97,8 @@ emitPrologueEpilogueSPUpdate(MachineBasicBlock &MBB,
   }
   // FIXME: This is assuming the heuristics in emitThumbRegPlusImmediate
   // won't change.
-  emitThumbRegPlusImmediate(MBB, MBBI, dl, ARM::SP, ARM::SP, NumBytes, TII,
-                            MRI, MIFlags);
-
+  emitThumbRegPlusImmediate(MBB, MBBI, dl, ARM::SP, ARM::SP, NumBytes, TII, MRI,
+                            MIFlags);
 }
 
 static void emitCallSPUpdate(MachineBasicBlock &MBB,
@@ -104,14 +106,13 @@ static void emitCallSPUpdate(MachineBasicBlock &MBB,
                              const TargetInstrInfo &TII, const DebugLoc &dl,
                              const ThumbRegisterInfo &MRI, int NumBytes,
                              unsigned MIFlags = MachineInstr::NoFlags) {
-  emitThumbRegPlusImmediate(MBB, MBBI, dl, ARM::SP, ARM::SP, NumBytes, TII,
-                            MRI, MIFlags);
+  emitThumbRegPlusImmediate(MBB, MBBI, dl, ARM::SP, ARM::SP, NumBytes, TII, MRI,
+                            MIFlags);
 }
 
-
-MachineBasicBlock::iterator Thumb1FrameLowering::
-eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator I) const {
+MachineBasicBlock::iterator Thumb1FrameLowering::eliminateCallFramePseudoInstr(
+    MachineFunction &MF, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator I) const {
   const Thumb1InstrInfo &TII =
       *static_cast<const Thumb1InstrInfo *>(STI.getInstrInfo());
   const ThumbRegisterInfo *RegInfo =
@@ -427,24 +428,24 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     // lsls r4, r4, #NrBitsToZero
     // mov  sp, r4
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::R4)
-      .addReg(ARM::SP, RegState::Kill)
-      .add(predOps(ARMCC::AL));
+        .addReg(ARM::SP, RegState::Kill)
+        .add(predOps(ARMCC::AL));
 
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tLSRri), ARM::R4)
-      .addDef(ARM::CPSR)
-      .addReg(ARM::R4, RegState::Kill)
-      .addImm(NrBitsToZero)
-      .add(predOps(ARMCC::AL));
+        .addDef(ARM::CPSR)
+        .addReg(ARM::R4, RegState::Kill)
+        .addImm(NrBitsToZero)
+        .add(predOps(ARMCC::AL));
 
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tLSLri), ARM::R4)
-      .addDef(ARM::CPSR)
-      .addReg(ARM::R4, RegState::Kill)
-      .addImm(NrBitsToZero)
-      .add(predOps(ARMCC::AL));
+        .addDef(ARM::CPSR)
+        .addReg(ARM::R4, RegState::Kill)
+        .addImm(NrBitsToZero)
+        .add(predOps(ARMCC::AL));
 
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::SP)
-      .addReg(ARM::R4, RegState::Kill)
-      .add(predOps(ARMCC::AL));
+        .addReg(ARM::R4, RegState::Kill)
+        .add(predOps(ARMCC::AL));
 
     AFI->setShouldRestoreSPFromFP(true);
   }
@@ -470,7 +471,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
 }
 
 void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
-                                   MachineBasicBlock &MBB) const {
+                                       MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
   DebugLoc dl = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -527,8 +528,9 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
       if (NumBytes) {
         assert(ScratchRegister != ARM::NoRegister &&
                "No scratch register to restore SP from FP!");
-        emitThumbRegPlusImmediate(MBB, MBBI, dl, ScratchRegister, FramePtr, -NumBytes,
-                                  TII, *RegInfo, MachineInstr::FrameDestroy);
+        emitThumbRegPlusImmediate(MBB, MBBI, dl, ScratchRegister, FramePtr,
+                                  -NumBytes, TII, *RegInfo,
+                                  MachineInstr::FrameDestroy);
         BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::SP)
             .addReg(ScratchRegister)
             .add(predOps(ARMCC::AL))
@@ -544,10 +546,12 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
         MachineBasicBlock::iterator PMBBI = std::prev(MBBI);
         if (!tryFoldSPUpdateIntoPushPop(STI, MF, &*PMBBI, NumBytes))
           emitPrologueEpilogueSPUpdate(MBB, PMBBI, TII, dl, *RegInfo, NumBytes,
-                                       ScratchRegister, MachineInstr::FrameDestroy);
+                                       ScratchRegister,
+                                       MachineInstr::FrameDestroy);
       } else if (!tryFoldSPUpdateIntoPushPop(STI, MF, &*MBBI, NumBytes))
         emitPrologueEpilogueSPUpdate(MBB, MBBI, TII, dl, *RegInfo, NumBytes,
-                                     ScratchRegister, MachineInstr::FrameDestroy);
+                                     ScratchRegister,
+                                     MachineInstr::FrameDestroy);
     }
   }
 
@@ -642,7 +646,7 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
             .add(predOps(ARMCC::AL))
             .setMIFlag(MachineInstr::FrameDestroy);
     // Copy implicit ops and popped registers, if any.
-    for (auto MO: MBBI->operands())
+    for (auto MO : MBBI->operands())
       if (MO.isReg() && (MO.isImplicit() || MO.isDef()))
         MIB.add(MO);
     MIB.addReg(ARM::PC, RegState::Define);
@@ -720,17 +724,17 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
     assert(PopReg && "Do not know how to get LR");
     // Load the LR via LDR tmp, [SP, #off]
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tLDRspi))
-      .addReg(PopReg, RegState::Define)
-      .addReg(ARM::SP)
-      .addImm(MBBI->getNumExplicitOperands() - 2)
-      .add(predOps(ARMCC::AL))
-      .setMIFlag(MachineInstr::FrameDestroy);
+        .addReg(PopReg, RegState::Define)
+        .addReg(ARM::SP)
+        .addImm(MBBI->getNumExplicitOperands() - 2)
+        .add(predOps(ARMCC::AL))
+        .setMIFlag(MachineInstr::FrameDestroy);
     // Move from the temporary register to the LR.
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr))
-      .addReg(ARM::LR, RegState::Define)
-      .addReg(PopReg, RegState::Kill)
-      .add(predOps(ARMCC::AL))
-      .setMIFlag(MachineInstr::FrameDestroy);
+        .addReg(ARM::LR, RegState::Define)
+        .addReg(PopReg, RegState::Kill)
+        .add(predOps(ARMCC::AL))
+        .setMIFlag(MachineInstr::FrameDestroy);
     // Advance past the pop instruction.
     MBBI++;
     // Increment the SP.
@@ -758,7 +762,7 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
             .add(predOps(ARMCC::AL))
             .setMIFlag(MachineInstr::FrameDestroy);
     bool Popped = false;
-    for (auto MO: MBBI->operands())
+    for (auto MO : MBBI->operands())
       if (MO.isReg() && (MO.isImplicit() || MO.isDef()) &&
           MO.getReg() != ARM::PC) {
         MIB.add(MO);
@@ -870,14 +874,12 @@ static void pushRegsToStack(MachineBasicBlock &MBB,
   // matches the unwind info. They need to be swicthed back to ascending order
   // before adding to the PUSH instruction.
   auto HiRegToSave = getNextOrderedReg(OrderedHighRegs.rbegin(),
-                                       OrderedHighRegs.rend(),
-                                       HighRegs);
+                                       OrderedHighRegs.rend(), HighRegs);
 
   while (HiRegToSave != OrderedHighRegs.rend()) {
     // Find the first low register to use.
     auto CopyRegIt = getNextOrderedReg(OrderedCopyRegs.rbegin(),
-                                       OrderedCopyRegs.rend(),
-                                       CopyRegs);
+                                       OrderedCopyRegs.rend(), CopyRegs);
 
     // Create the PUSH, but don't insert it yet (the MOVs need to come first).
     MachineInstrBuilder PushMIB = BuildMI(MF, DL, TII.get(ARM::tPUSH))
@@ -905,11 +907,9 @@ static void pushRegsToStack(MachineBasicBlock &MBB,
         RegsToPush.push_back(*CopyRegIt);
 
         CopyRegIt = getNextOrderedReg(std::next(CopyRegIt),
-                                      OrderedCopyRegs.rend(),
-                                      CopyRegs);
+                                      OrderedCopyRegs.rend(), CopyRegs);
         HiRegToSave = getNextOrderedReg(std::next(HiRegToSave),
-                                        OrderedHighRegs.rend(),
-                                        HighRegs);
+                                        OrderedHighRegs.rend(), HighRegs);
       }
     }
 
@@ -946,8 +946,7 @@ static void popRegsFromStack(MachineBasicBlock &MBB,
 
   // Find the first register to restore.
   auto HiRegToRestore = getNextOrderedReg(OrderedHighRegs.begin(),
-                                          OrderedHighRegs.end(),
-                                          HighRegs);
+                                          OrderedHighRegs.end(), HighRegs);
 
   std::set<Register> CopyRegs = AvailableCopyRegs;
   Register LowScratchReg;
@@ -967,8 +966,7 @@ static void popRegsFromStack(MachineBasicBlock &MBB,
     assert(!CopyRegs.empty());
     // Find the first low register to use.
     auto CopyReg = getNextOrderedReg(OrderedCopyRegs.begin(),
-                                     OrderedCopyRegs.end(),
-                                     CopyRegs);
+                                     OrderedCopyRegs.end(), CopyRegs);
 
     // Create the POP instruction.
     MachineInstrBuilder PopMIB = BuildMI(MBB, MI, DL, TII.get(ARM::tPOP))
@@ -987,12 +985,10 @@ static void popRegsFromStack(MachineBasicBlock &MBB,
           .add(predOps(ARMCC::AL))
           .setMIFlag(MachineInstr::FrameDestroy);
 
-      CopyReg = getNextOrderedReg(std::next(CopyReg),
-                                  OrderedCopyRegs.end(),
+      CopyReg = getNextOrderedReg(std::next(CopyReg), OrderedCopyRegs.end(),
                                   CopyRegs);
       HiRegToRestore = getNextOrderedReg(std::next(HiRegToRestore),
-                                         OrderedHighRegs.end(),
-                                         HighRegs);
+                                         OrderedHighRegs.end(), HighRegs);
     }
   }
 

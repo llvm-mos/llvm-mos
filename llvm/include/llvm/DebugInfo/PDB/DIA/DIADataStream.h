@@ -27,7 +27,7 @@ public:
 private:
   CComPtr<IDiaEnumDebugStreamData> StreamData;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

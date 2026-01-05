@@ -32,7 +32,8 @@ private:
   /// legalized from a smaller type VT. Need to match pre-legalized type because
   /// the generic legalization inserts the add/sub between the select and
   /// compare.
-  SDValue getFFBX_U32(SelectionDAG &DAG, SDValue Op, const SDLoc &DL, unsigned Opc) const;
+  SDValue getFFBX_U32(SelectionDAG &DAG, SDValue Op, const SDLoc &DL,
+                      unsigned Opc) const;
 
 public:
   /// \returns The minimum number of bits needed to store the value of \Op as an
@@ -121,7 +122,7 @@ protected:
   SDValue performMulhsCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulhuCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performCtlz_CttzCombine(const SDLoc &SL, SDValue Cond, SDValue LHS,
-                             SDValue RHS, DAGCombinerInfo &DCI) const;
+                                  SDValue RHS, DAGCombinerInfo &DCI) const;
 
   SDValue foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
                                SDValue N) const;
@@ -173,11 +174,10 @@ protected:
   SDValue LowerUDIVREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDIVREM24(SDValue Op, SelectionDAG &DAG, bool sign) const;
   void LowerUDIVREM64(SDValue Op, SelectionDAG &DAG,
-                                    SmallVectorImpl<SDValue> &Results) const;
+                      SmallVectorImpl<SDValue> &Results) const;
 
   void analyzeFormalArgumentsCompute(
-    CCState &State,
-    const SmallVectorImpl<ISD::InputArg> &Ins) const;
+      CCState &State, const SmallVectorImpl<ISD::InputArg> &Ins) const;
 
 public:
   AMDGPUTargetLowering(const TargetMachine &TM, const AMDGPUSubtarget &STI);
@@ -224,8 +224,7 @@ public:
   bool isLoadBitCastBeneficial(EVT, EVT, const SelectionDAG &DAG,
                                const MachineMemOperand &MMO) const final;
 
-  bool storeOfVectorConstantIsCheap(bool IsZero, EVT MemVT,
-                                    unsigned NumElem,
+  bool storeOfVectorConstantIsCheap(bool IsZero, EVT MemVT, unsigned NumElem,
                                     unsigned AS) const override;
   bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override;
   bool isCheapToSpeculateCttz(Type *Ty) const override;
@@ -254,10 +253,8 @@ public:
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
-  SDValue addTokenForArgument(SDValue Chain,
-                              SelectionDAG &DAG,
-                              MachineFrameInfo &MFI,
-                              int ClobberedFI) const;
+  SDValue addTokenForArgument(SDValue Chain, SelectionDAG &DAG,
+                              MachineFrameInfo &MFI, int ClobberedFI) const;
 
   SDValue lowerUnhandledCall(CallLoweringInfo &CLI,
                              SmallVectorImpl<SDValue> &InVals,
@@ -268,8 +265,7 @@ public:
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
-  void ReplaceNodeResults(SDNode * N,
-                          SmallVectorImpl<SDValue> &Results,
+  void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
 
   SDValue combineFMinMaxLegacyImpl(const SDLoc &DL, EVT VT, SDValue LHS,
@@ -294,8 +290,8 @@ public:
     return true;
   }
   SDValue getSqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
-                           int &RefinementSteps, bool &UseOneConstNR,
-                           bool Reciprocal) const override;
+                          int &RefinementSteps, bool &UseOneConstNR,
+                          bool Reciprocal) const override;
   SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                            int &RefinementSteps) const override;
 
@@ -305,13 +301,13 @@ public:
   /// Determine which of the bits specified in \p Mask are known to be
   /// either zero or one and return them in the \p KnownZero and \p KnownOne
   /// bitsets.
-  void computeKnownBitsForTargetNode(const SDValue Op,
-                                     KnownBits &Known,
+  void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;
 
-  unsigned ComputeNumSignBitsForTargetNode(SDValue Op, const APInt &DemandedElts,
+  unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
+                                           const APInt &DemandedElts,
                                            const SelectionDAG &DAG,
                                            unsigned Depth = 0) const override;
 
@@ -339,39 +335,32 @@ public:
   ///
   /// \returns a RegisterSDNode representing Reg if \p RawReg is true, otherwise
   /// a copy from the register.
-  SDValue CreateLiveInRegister(SelectionDAG &DAG,
-                               const TargetRegisterClass *RC,
-                               Register Reg, EVT VT,
-                               const SDLoc &SL,
+  SDValue CreateLiveInRegister(SelectionDAG &DAG, const TargetRegisterClass *RC,
+                               Register Reg, EVT VT, const SDLoc &SL,
                                bool RawReg = false) const;
-  SDValue CreateLiveInRegister(SelectionDAG &DAG,
-                               const TargetRegisterClass *RC,
+  SDValue CreateLiveInRegister(SelectionDAG &DAG, const TargetRegisterClass *RC,
                                Register Reg, EVT VT) const {
     return CreateLiveInRegister(DAG, RC, Reg, VT, SDLoc(DAG.getEntryNode()));
   }
 
   // Returns the raw live in register rather than a copy from it.
   SDValue CreateLiveInRegisterRaw(SelectionDAG &DAG,
-                                  const TargetRegisterClass *RC,
-                                  Register Reg, EVT VT) const {
-    return CreateLiveInRegister(DAG, RC, Reg, VT, SDLoc(DAG.getEntryNode()), true);
+                                  const TargetRegisterClass *RC, Register Reg,
+                                  EVT VT) const {
+    return CreateLiveInRegister(DAG, RC, Reg, VT, SDLoc(DAG.getEntryNode()),
+                                true);
   }
 
   /// Similar to CreateLiveInRegister, except value maybe loaded from a stack
   /// slot rather than passed in a register.
-  SDValue loadStackInputValue(SelectionDAG &DAG,
-                              EVT VT,
-                              const SDLoc &SL,
+  SDValue loadStackInputValue(SelectionDAG &DAG, EVT VT, const SDLoc &SL,
                               int64_t Offset) const;
 
-  SDValue storeStackInputValue(SelectionDAG &DAG,
-                               const SDLoc &SL,
-                               SDValue Chain,
-                               SDValue ArgVal,
+  SDValue storeStackInputValue(SelectionDAG &DAG, const SDLoc &SL,
+                               SDValue Chain, SDValue ArgVal,
                                int64_t Offset) const;
 
-  SDValue loadInputValue(SelectionDAG &DAG,
-                         const TargetRegisterClass *RC,
+  SDValue loadInputValue(SelectionDAG &DAG, const TargetRegisterClass *RC,
                          EVT VT, const SDLoc &SL,
                          const ArgDescriptor &Arg) const;
 

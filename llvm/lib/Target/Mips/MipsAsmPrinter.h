@@ -131,7 +131,7 @@ public:
 
   void emitConstantPool() override {
     bool UsingConstantPools =
-      (Subtarget->inMips16Mode() && Subtarget->useConstantIslands());
+        (Subtarget->inMips16Mode() && Subtarget->useConstantIslands());
     if (!UsingConstantPools)
       AsmPrinter::emitConstantPool();
     // we emit constant pools customly!

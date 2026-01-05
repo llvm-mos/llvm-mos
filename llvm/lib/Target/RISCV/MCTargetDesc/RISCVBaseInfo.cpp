@@ -131,8 +131,7 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
     reportFatalUsageError("RV64 target requires an RV64 CPU");
   if (!TT.isArch64Bit() && !FeatureBits[RISCV::Feature32Bit])
     reportFatalUsageError("RV32 target requires an RV32 CPU");
-  if (FeatureBits[RISCV::Feature32Bit] &&
-      FeatureBits[RISCV::Feature64Bit])
+  if (FeatureBits[RISCV::Feature32Bit] && FeatureBits[RISCV::Feature64Bit])
     reportFatalUsageError("RV32 and RV64 can't be combined");
 }
 

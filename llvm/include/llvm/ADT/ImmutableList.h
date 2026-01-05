@@ -24,33 +24,30 @@ namespace llvm {
 
 template <typename T> class ImmutableListFactory;
 
-template <typename T>
-class ImmutableListImpl : public FoldingSetNode {
+template <typename T> class ImmutableListImpl : public FoldingSetNode {
   friend class ImmutableListFactory<T>;
 
   T Head;
-  const ImmutableListImpl* Tail;
+  const ImmutableListImpl *Tail;
 
   template <typename ElemT>
   ImmutableListImpl(ElemT &&head, const ImmutableListImpl *tail = nullptr)
-    : Head(std::forward<ElemT>(head)), Tail(tail) {}
+      : Head(std::forward<ElemT>(head)), Tail(tail) {}
 
 public:
   ImmutableListImpl(const ImmutableListImpl &) = delete;
   ImmutableListImpl &operator=(const ImmutableListImpl &) = delete;
 
-  const T& getHead() const { return Head; }
-  const ImmutableListImpl* getTail() const { return Tail; }
+  const T &getHead() const { return Head; }
+  const ImmutableListImpl *getTail() const { return Tail; }
 
-  static inline void Profile(FoldingSetNodeID& ID, const T& H,
-                             const ImmutableListImpl* L){
+  static inline void Profile(FoldingSetNodeID &ID, const T &H,
+                             const ImmutableListImpl *L) {
     ID.AddPointer(L);
     ID.Add(H);
   }
 
-  void Profile(FoldingSetNodeID& ID) {
-    Profile(ID, Head, Tail);
-  }
+  void Profile(FoldingSetNodeID &ID) { Profile(ID, Head, Tail); }
 };
 
 /// ImmutableList - This class represents an immutable (functional) list.
@@ -61,8 +58,7 @@ public:
 ///  be created by ImmutableListFactory objects that manage the lifetime
 ///  of a group of lists.  When the factory object is reclaimed, all lists
 ///  created by that factory are released as well.
-template <typename T>
-class ImmutableList {
+template <typename T> class ImmutableList {
 public:
   using value_type = T;
   using Factory = ImmutableListFactory<T>;
@@ -71,29 +67,30 @@ public:
                 "T must be trivially destructible!");
 
 private:
-  const ImmutableListImpl<T>* X;
+  const ImmutableListImpl<T> *X;
 
 public:
   // This constructor should normally only be called by ImmutableListFactory<T>.
   // There may be cases, however, when one needs to extract the internal pointer
   // and reconstruct a list object from that pointer.
-  ImmutableList(const ImmutableListImpl<T>* x = nullptr) : X(x) {}
+  ImmutableList(const ImmutableListImpl<T> *x = nullptr) : X(x) {}
 
-  const ImmutableListImpl<T>* getInternalPointer() const {
-    return X;
-  }
+  const ImmutableListImpl<T> *getInternalPointer() const { return X; }
 
   class iterator {
-    const ImmutableListImpl<T>* L = nullptr;
+    const ImmutableListImpl<T> *L = nullptr;
 
   public:
     iterator() = default;
     iterator(ImmutableList l) : L(l.getInternalPointer()) {}
 
-    iterator& operator++() { L = L->getTail(); return *this; }
-    bool operator==(const iterator& I) const { return L == I.L; }
-    bool operator!=(const iterator& I) const { return L != I.L; }
-    const value_type& operator*() const { return L->getHead(); }
+    iterator &operator++() {
+      L = L->getTail();
+      return *this;
+    }
+    bool operator==(const iterator &I) const { return L == I.L; }
+    bool operator!=(const iterator &I) const { return L != I.L; }
+    const value_type &operator*() const { return L->getHead(); }
     const std::remove_reference_t<value_type> *operator->() const {
       return &L->getHead();
     }
@@ -112,7 +109,7 @@ public:
   /// isEmpty - Returns true if the list is empty.
   bool isEmpty() const { return !X; }
 
-  bool contains(const T& V) const {
+  bool contains(const T &V) const {
     for (iterator I = begin(), E = end(); I != E; ++I) {
       if (*I == V)
         return true;
@@ -125,68 +122,62 @@ public:
   ///  because it the contents of the list do not need to be compared.  Note
   ///  that you should only compare two lists created from the same
   ///  ImmutableListFactory.
-  bool isEqual(const ImmutableList& L) const { return X == L.X; }
+  bool isEqual(const ImmutableList &L) const { return X == L.X; }
 
-  bool operator==(const ImmutableList& L) const { return isEqual(L); }
+  bool operator==(const ImmutableList &L) const { return isEqual(L); }
 
   /// getHead - Returns the head of the list.
-  const T& getHead() const {
+  const T &getHead() const {
     assert(!isEmpty() && "Cannot get the head of an empty list.");
     return X->getHead();
   }
 
   /// getTail - Returns the tail of the list, which is another (possibly empty)
   ///  ImmutableList.
-  ImmutableList getTail() const {
-    return X ? X->getTail() : nullptr;
-  }
+  ImmutableList getTail() const { return X ? X->getTail() : nullptr; }
 
-  void Profile(FoldingSetNodeID& ID) const {
-    ID.AddPointer(X);
-  }
+  void Profile(FoldingSetNodeID &ID) const { ID.AddPointer(X); }
 };
 
-template <typename T>
-class ImmutableListFactory {
+template <typename T> class ImmutableListFactory {
   using ListTy = ImmutableListImpl<T>;
   using CacheTy = FoldingSet<ListTy>;
 
   CacheTy Cache;
   uintptr_t Allocator;
 
-  bool ownsAllocator() const {
-    return (Allocator & 0x1) == 0;
-  }
+  bool ownsAllocator() const { return (Allocator & 0x1) == 0; }
 
-  BumpPtrAllocator& getAllocator() const {
-    return *reinterpret_cast<BumpPtrAllocator*>(Allocator & ~0x1);
+  BumpPtrAllocator &getAllocator() const {
+    return *reinterpret_cast<BumpPtrAllocator *>(Allocator & ~0x1);
   }
 
 public:
   ImmutableListFactory()
-    : Allocator(reinterpret_cast<uintptr_t>(new BumpPtrAllocator())) {}
+      : Allocator(reinterpret_cast<uintptr_t>(new BumpPtrAllocator())) {}
 
-  ImmutableListFactory(BumpPtrAllocator& Alloc)
-  : Allocator(reinterpret_cast<uintptr_t>(&Alloc) | 0x1) {}
+  ImmutableListFactory(BumpPtrAllocator &Alloc)
+      : Allocator(reinterpret_cast<uintptr_t>(&Alloc) | 0x1) {}
 
   ~ImmutableListFactory() {
-    if (ownsAllocator()) delete &getAllocator();
+    if (ownsAllocator())
+      delete &getAllocator();
   }
 
   template <typename ElemT>
   [[nodiscard]] ImmutableList<T> concat(ElemT &&Head, ImmutableList<T> Tail) {
     // Profile the new list to see if it already exists in our cache.
     FoldingSetNodeID ID;
-    void* InsertPos;
+    void *InsertPos;
 
-    const ListTy* TailImpl = Tail.getInternalPointer();
+    const ListTy *TailImpl = Tail.getInternalPointer();
     ListTy::Profile(ID, Head, TailImpl);
-    ListTy* L = Cache.FindNodeOrInsertPos(ID, InsertPos);
+    ListTy *L = Cache.FindNodeOrInsertPos(ID, InsertPos);
 
     if (!L) {
       // The list does not exist in our cache.  Create it.
-      BumpPtrAllocator& A = getAllocator();
-      L = (ListTy*) A.Allocate<ListTy>();
+      BumpPtrAllocator &A = getAllocator();
+      L = (ListTy *)A.Allocate<ListTy>();
       new (L) ListTy(std::forward<ElemT>(Head), TailImpl);
 
       // Insert the new list into the cache.
@@ -207,12 +198,9 @@ public:
     return concat(T(std::forward<CtorArgs>(Args)...), Tail);
   }
 
-  ImmutableList<T> getEmptyList() const {
-    return ImmutableList<T>(nullptr);
-  }
+  ImmutableList<T> getEmptyList() const { return ImmutableList<T>(nullptr); }
 
-  template <typename ElemT>
-  ImmutableList<T> create(ElemT &&Data) {
+  template <typename ElemT> ImmutableList<T> create(ElemT &&Data) {
     return concat(std::forward<ElemT>(Data), getEmptyList());
   }
 };
@@ -223,11 +211,11 @@ public:
 
 template <typename T> struct DenseMapInfo<ImmutableList<T>, void> {
   static inline ImmutableList<T> getEmptyKey() {
-    return reinterpret_cast<ImmutableListImpl<T>*>(-1);
+    return reinterpret_cast<ImmutableListImpl<T> *>(-1);
   }
 
   static inline ImmutableList<T> getTombstoneKey() {
-    return reinterpret_cast<ImmutableListImpl<T>*>(-2);
+    return reinterpret_cast<ImmutableListImpl<T> *>(-2);
   }
 
   static unsigned getHashValue(ImmutableList<T> X) {

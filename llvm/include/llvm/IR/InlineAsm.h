@@ -34,10 +34,7 @@ template <class ConstantClass> class ConstantUniqueMap;
 
 class InlineAsm final : public Value {
 public:
-  enum AsmDialect {
-    AD_ATT,
-    AD_Intel
-  };
+  enum AsmDialect { AD_ATT, AD_Intel };
 
 private:
   friend struct InlineAsmKeyType;
@@ -78,7 +75,7 @@ public:
   /// getType - InlineAsm's are always pointers.
   ///
   PointerType *getType() const {
-    return reinterpret_cast<PointerType*>(Value::getType());
+    return reinterpret_cast<PointerType *>(Value::getType());
   }
 
   /// getFunctionType - InlineAsm's are always pointers to functions.
@@ -95,10 +92,10 @@ public:
 
   // Constraint String Parsing
   enum ConstraintPrefix {
-    isInput,            // 'x'
-    isOutput,           // '=x'
-    isClobber,          // '~x'
-    isLabel,            // '!x'
+    isInput,   // 'x'
+    isOutput,  // '=x'
+    isClobber, // '~x'
+    isLabel,   // '!x'
   };
 
   using ConstraintCodeVector = std::vector<std::string>;
@@ -308,13 +305,15 @@ public:
     using KindField = Bitfield::Element<Kind, 0, 3, Kind::Func>;
     using NumOperands = Bitfield::Element<unsigned, 3, 13>;
     using MatchedOperandNo = Bitfield::Element<unsigned, 16, 15>;
-    using MemConstraintCode = Bitfield::Element<ConstraintCode, 16, 15, ConstraintCode::Max>;
+    using MemConstraintCode =
+        Bitfield::Element<ConstraintCode, 16, 15, ConstraintCode::Max>;
     using RegClass = Bitfield::Element<unsigned, 16, 14>;
     using RegMayBeFolded = Bitfield::Element<bool, 30, 1>;
     using IsMatched = Bitfield::Element<bool, 31, 1>;
 
-
-    unsigned getMatchedOperandNo() const { return Bitfield::get<MatchedOperandNo>(Storage); }
+    unsigned getMatchedOperandNo() const {
+      return Bitfield::get<MatchedOperandNo>(Storage);
+    }
     unsigned getRegClass() const { return Bitfield::get<RegClass>(Storage); }
     bool isMatched() const { return Bitfield::get<IsMatched>(Storage); }
 
@@ -411,7 +410,8 @@ public:
     /// setMemConstraint - Augment an existing flag with the constraint code for
     /// a memory constraint.
     void setMemConstraint(ConstraintCode C) {
-      assert(getMemoryConstraintID() == ConstraintCode::Unknown && "Mem constraint already set");
+      assert(getMemoryConstraintID() == ConstraintCode::Unknown &&
+             "Mem constraint already set");
       Bitfield::set<MemConstraintCode>(Storage, C);
     }
     /// clearMemConstraint - Similar to setMemConstraint(0), but without the

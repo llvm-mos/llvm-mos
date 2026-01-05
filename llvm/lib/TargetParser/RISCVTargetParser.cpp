@@ -88,8 +88,8 @@ bool parseTuneCPU(StringRef TuneCPU, bool IsRV64) {
   std::optional<CPUKind> Kind =
       llvm::StringSwitch<std::optional<CPUKind>>(TuneCPU)
 #define TUNE_PROC(ENUM, NAME) .Case(NAME, CK_##ENUM)
-  #include "llvm/TargetParser/RISCVTargetParserDef.inc"
-      .Default(std::nullopt);
+#include "llvm/TargetParser/RISCVTargetParserDef.inc"
+          .Default(std::nullopt);
 
   if (Kind.has_value())
     return true;

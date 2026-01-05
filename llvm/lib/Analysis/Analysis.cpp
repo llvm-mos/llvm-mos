@@ -100,9 +100,9 @@ LLVMBool LLVMVerifyModule(LLVMModuleRef M, LLVMVerifierFailureAction Action,
 }
 
 LLVMBool LLVMVerifyFunction(LLVMValueRef Fn, LLVMVerifierFailureAction Action) {
-  LLVMBool Result = verifyFunction(
-      *unwrap<Function>(Fn), Action != LLVMReturnStatusAction ? &errs()
-                                                              : nullptr);
+  LLVMBool Result =
+      verifyFunction(*unwrap<Function>(Fn),
+                     Action != LLVMReturnStatusAction ? &errs() : nullptr);
 
   if (Action == LLVMAbortProcessAction && Result)
     report_fatal_error("Broken function found, compilation aborted!");

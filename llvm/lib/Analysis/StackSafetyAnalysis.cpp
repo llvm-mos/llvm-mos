@@ -53,10 +53,12 @@ STATISTIC(NumCombinedParamAccessesAfter,
           "Number of total param accesses after generateParamAccessSummary.");
 STATISTIC(NumCombinedDataFlowNodes,
           "Number of total nodes in combined index for dataflow processing.");
-STATISTIC(NumIndexCalleeUnhandled, "Number of index callee which are unhandled.");
-STATISTIC(NumIndexCalleeMultipleWeak, "Number of index callee non-unique weak.");
-STATISTIC(NumIndexCalleeMultipleExternal, "Number of index callee non-unique external.");
-
+STATISTIC(NumIndexCalleeUnhandled,
+          "Number of index callee which are unhandled.");
+STATISTIC(NumIndexCalleeMultipleWeak,
+          "Number of index callee non-unique weak.");
+STATISTIC(NumIndexCalleeMultipleExternal,
+          "Number of index callee non-unique external.");
 
 static cl::opt<int> StackSafetyMaxIterations("stack-safety-max-iterations",
                                              cl::init(20), cl::Hidden);
@@ -260,7 +262,6 @@ class StackSafetyLocalAnalysis {
   void analyzeAllUses(Value *Ptr, UseInfo<GlobalValue> &AS,
                       const StackLifetime &SL);
 
-
   bool isSafeAccess(const Use &U, AllocaInst *AI, const SCEV *AccessSize);
   bool isSafeAccess(const Use &U, AllocaInst *AI, Value *V);
   bool isSafeAccess(const Use &U, AllocaInst *AI, TypeSize AccessSize);
@@ -429,7 +430,7 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
 
       assert(V == UI.get());
 
-      auto RecordStore = [&](const Value* StoredVal) {
+      auto RecordStore = [&](const Value *StoredVal) {
         if (V == StoredVal) {
           // Stored the pointer - conservatively assume it may be unsafe.
           US.addRange(I, UnknownRange, /*IsSafe=*/false);
@@ -723,8 +724,8 @@ FunctionSummary *findCalleeFunctionSummary(ValueInfo VI, StringRef ModuleId) {
   if (!VI)
     return nullptr;
   auto SummaryList = VI.getSummaryList();
-  GlobalValueSummary* S = nullptr;
-  for (const auto& GVS : SummaryList) {
+  GlobalValueSummary *S = nullptr;
+  for (const auto &GVS : SummaryList) {
     if (!GVS->isLive())
       continue;
     if (const AliasSummary *AS = dyn_cast<AliasSummary>(GVS.get()))
@@ -815,9 +816,9 @@ void resolveAllCalls(UseInfo<GlobalValue> &Use,
 
     if (!Index)
       return Use.updateRange(FullSet);
-    FunctionSummary *FS =
-        findCalleeFunctionSummary(Index->getValueInfo(C.first.Callee->getGUID()),
-                                  C.first.Callee->getParent()->getModuleIdentifier());
+    FunctionSummary *FS = findCalleeFunctionSummary(
+        Index->getValueInfo(C.first.Callee->getGUID()),
+        C.first.Callee->getParent()->getModuleIdentifier());
     ++NumModuleCalleeLookupTotal;
     if (!FS) {
       ++NumModuleCalleeLookupFailed;

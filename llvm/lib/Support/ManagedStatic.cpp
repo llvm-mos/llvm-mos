@@ -25,7 +25,7 @@ static std::recursive_mutex *getManagedStaticMutex() {
 }
 
 void ManagedStaticBase::RegisterManagedStatic(void *(*Creator)(),
-                                              void (*Deleter)(void*)) const {
+                                              void (*Deleter)(void *)) const {
   assert(Creator);
   if (llvm_is_multithreaded()) {
     std::lock_guard<std::recursive_mutex> Lock(*getManagedStaticMutex());

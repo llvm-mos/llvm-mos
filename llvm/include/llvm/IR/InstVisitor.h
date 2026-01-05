@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_IR_INSTVISITOR_H
 #define LLVM_IR_INSTVISITOR_H
 
@@ -21,13 +20,12 @@ namespace llvm {
 // We operate on opaque instruction classes, so forward declare all instruction
 // types now...
 //
-#define HANDLE_INST(NUM, OPCODE, CLASS)   class CLASS;
+#define HANDLE_INST(NUM, OPCODE, CLASS) class CLASS;
 #include "llvm/IR/Instruction.def"
 
-#define DELEGATE(CLASS_TO_VISIT) \
-  return static_cast<SubClass*>(this)-> \
-               visit##CLASS_TO_VISIT(static_cast<CLASS_TO_VISIT&>(I))
-
+#define DELEGATE(CLASS_TO_VISIT)                                               \
+  return static_cast<SubClass *>(this)->visit##CLASS_TO_VISIT(                 \
+      static_cast<CLASS_TO_VISIT &>(I))
 
 /// Base class for instruction visitors
 ///
@@ -74,8 +72,7 @@ namespace llvm {
 /// virtual function call overhead.  Defining and using an InstVisitor is just
 /// as efficient as having your own switch statement over the instruction
 /// opcode.
-template<typename SubClass, typename RetTy=void>
-class InstVisitor {
+template <typename SubClass, typename RetTy = void> class InstVisitor {
   //===--------------------------------------------------------------------===//
   // Interface code - This is the public interface of the InstVisitor that you
   // use to visit instructions...
@@ -83,32 +80,31 @@ class InstVisitor {
 
 public:
   // Generic visit method - Allow visitation to all instructions in a range
-  template<class Iterator>
-  void visit(Iterator Start, Iterator End) {
+  template <class Iterator> void visit(Iterator Start, Iterator End) {
     while (Start != End)
-      static_cast<SubClass*>(this)->visit(*Start++);
+      static_cast<SubClass *>(this)->visit(*Start++);
   }
 
   // Define visitors for functions and basic blocks...
   //
   void visit(Module &M) {
-    static_cast<SubClass*>(this)->visitModule(M);
+    static_cast<SubClass *>(this)->visitModule(M);
     visit(M.begin(), M.end());
   }
   void visit(Function &F) {
-    static_cast<SubClass*>(this)->visitFunction(F);
+    static_cast<SubClass *>(this)->visitFunction(F);
     visit(F.begin(), F.end());
   }
   void visit(BasicBlock &BB) {
-    static_cast<SubClass*>(this)->visitBasicBlock(BB);
+    static_cast<SubClass *>(this)->visitBasicBlock(BB);
     visit(BB.begin(), BB.end());
   }
 
   // Forwarding functions so that the user can visit with pointers AND refs.
-  void visit(Module       *M)  { visit(*M); }
-  void visit(Function     *F)  { visit(*F); }
-  void visit(BasicBlock   *BB) { visit(*BB); }
-  RetTy visit(Instruction *I)  { return visit(*I); }
+  void visit(Module *M) { visit(*M); }
+  void visit(Function *F) { visit(*F); }
+  void visit(BasicBlock *BB) { visit(*BB); }
+  RetTy visit(Instruction *I) { return visit(*I); }
 
   // visit - Finally, code to visit an instruction...
   //
@@ -117,12 +113,13 @@ public:
                   "Must pass the derived type to this template!");
 
     switch (I.getOpcode()) {
-    default: llvm_unreachable("Unknown instruction type encountered!");
+    default:
+      llvm_unreachable("Unknown instruction type encountered!");
       // Build the switch statement using the Instruction.def file...
-#define HANDLE_INST(NUM, OPCODE, CLASS) \
-    case Instruction::OPCODE: return \
-           static_cast<SubClass*>(this)-> \
-                      visit##OPCODE(static_cast<CLASS&>(I));
+#define HANDLE_INST(NUM, OPCODE, CLASS)                                        \
+  case Instruction::OPCODE:                                                    \
+    return static_cast<SubClass *>(this)->visit##OPCODE(                       \
+        static_cast<CLASS &>(I));
 #include "llvm/IR/Instruction.def"
     }
   }
@@ -138,8 +135,8 @@ public:
   // When visiting a module, function or basic block directly, these methods get
   // called to indicate when transitioning into a new unit.
   //
-  void visitModule    (Module &M) {}
-  void visitFunction  (Function &F) {}
+  void visitModule(Module &M) {}
+  void visitFunction(Function &F) {}
   void visitBasicBlock(BasicBlock &BB) {}
 
   // Define instruction specific visitor functions that can be overridden to
@@ -151,70 +148,74 @@ public:
   // instruction have multiple more specific Instruction subclasses. The Call
   // instruction currently supports this. We implement that by redirecting that
   // instruction to a special delegation helper.
-#define HANDLE_INST(NUM, OPCODE, CLASS) \
-    RetTy visit##OPCODE(CLASS &I) { \
-      if (NUM == Instruction::Call) \
-        return delegateCallInst(I); \
-      else \
-        DELEGATE(CLASS); \
-    }
+#define HANDLE_INST(NUM, OPCODE, CLASS)                                        \
+  RetTy visit##OPCODE(CLASS &I) {                                              \
+    if (NUM == Instruction::Call)                                              \
+      return delegateCallInst(I);                                              \
+    else                                                                       \
+      DELEGATE(CLASS);                                                         \
+  }
 #include "llvm/IR/Instruction.def"
 
   // Specific Instruction type classes... note that all of the casts are
   // necessary because we use the instruction classes as opaque types...
   //
-  RetTy visitICmpInst(ICmpInst &I)                { DELEGATE(CmpInst);}
-  RetTy visitFCmpInst(FCmpInst &I)                { DELEGATE(CmpInst);}
-  RetTy visitAllocaInst(AllocaInst &I)            { DELEGATE(UnaryInstruction);}
-  RetTy visitLoadInst(LoadInst     &I)            { DELEGATE(UnaryInstruction);}
-  RetTy visitStoreInst(StoreInst   &I)            { DELEGATE(Instruction);}
-  RetTy visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) { DELEGATE(Instruction);}
-  RetTy visitAtomicRMWInst(AtomicRMWInst &I)      { DELEGATE(Instruction);}
-  RetTy visitFenceInst(FenceInst   &I)            { DELEGATE(Instruction);}
-  RetTy visitGetElementPtrInst(GetElementPtrInst &I){ DELEGATE(Instruction);}
-  RetTy visitPHINode(PHINode       &I)            { DELEGATE(Instruction);}
-  RetTy visitTruncInst(TruncInst &I)              { DELEGATE(CastInst);}
-  RetTy visitZExtInst(ZExtInst &I)                { DELEGATE(CastInst);}
-  RetTy visitSExtInst(SExtInst &I)                { DELEGATE(CastInst);}
-  RetTy visitFPTruncInst(FPTruncInst &I)          { DELEGATE(CastInst);}
-  RetTy visitFPExtInst(FPExtInst &I)              { DELEGATE(CastInst);}
-  RetTy visitFPToUIInst(FPToUIInst &I)            { DELEGATE(CastInst);}
-  RetTy visitFPToSIInst(FPToSIInst &I)            { DELEGATE(CastInst);}
-  RetTy visitUIToFPInst(UIToFPInst &I)            { DELEGATE(CastInst);}
-  RetTy visitSIToFPInst(SIToFPInst &I)            { DELEGATE(CastInst);}
-  RetTy visitPtrToIntInst(PtrToIntInst &I)        { DELEGATE(CastInst);}
-  RetTy visitPtrToAddrInst(PtrToAddrInst &I)      { DELEGATE(CastInst);}
-  RetTy visitIntToPtrInst(IntToPtrInst &I)        { DELEGATE(CastInst);}
-  RetTy visitBitCastInst(BitCastInst &I)          { DELEGATE(CastInst);}
-  RetTy visitAddrSpaceCastInst(AddrSpaceCastInst &I) { DELEGATE(CastInst);}
-  RetTy visitSelectInst(SelectInst &I)            { DELEGATE(Instruction);}
-  RetTy visitVAArgInst(VAArgInst   &I)            { DELEGATE(UnaryInstruction);}
-  RetTy visitExtractElementInst(ExtractElementInst &I) { DELEGATE(Instruction);}
-  RetTy visitInsertElementInst(InsertElementInst &I) { DELEGATE(Instruction);}
-  RetTy visitShuffleVectorInst(ShuffleVectorInst &I) { DELEGATE(Instruction);}
-  RetTy visitExtractValueInst(ExtractValueInst &I){ DELEGATE(UnaryInstruction);}
-  RetTy visitInsertValueInst(InsertValueInst &I)  { DELEGATE(Instruction); }
-  RetTy visitLandingPadInst(LandingPadInst &I)    { DELEGATE(Instruction); }
+  RetTy visitICmpInst(ICmpInst &I) { DELEGATE(CmpInst); }
+  RetTy visitFCmpInst(FCmpInst &I) { DELEGATE(CmpInst); }
+  RetTy visitAllocaInst(AllocaInst &I) { DELEGATE(UnaryInstruction); }
+  RetTy visitLoadInst(LoadInst &I) { DELEGATE(UnaryInstruction); }
+  RetTy visitStoreInst(StoreInst &I) { DELEGATE(Instruction); }
+  RetTy visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) { DELEGATE(Instruction); }
+  RetTy visitAtomicRMWInst(AtomicRMWInst &I) { DELEGATE(Instruction); }
+  RetTy visitFenceInst(FenceInst &I) { DELEGATE(Instruction); }
+  RetTy visitGetElementPtrInst(GetElementPtrInst &I) { DELEGATE(Instruction); }
+  RetTy visitPHINode(PHINode &I) { DELEGATE(Instruction); }
+  RetTy visitTruncInst(TruncInst &I) { DELEGATE(CastInst); }
+  RetTy visitZExtInst(ZExtInst &I) { DELEGATE(CastInst); }
+  RetTy visitSExtInst(SExtInst &I) { DELEGATE(CastInst); }
+  RetTy visitFPTruncInst(FPTruncInst &I) { DELEGATE(CastInst); }
+  RetTy visitFPExtInst(FPExtInst &I) { DELEGATE(CastInst); }
+  RetTy visitFPToUIInst(FPToUIInst &I) { DELEGATE(CastInst); }
+  RetTy visitFPToSIInst(FPToSIInst &I) { DELEGATE(CastInst); }
+  RetTy visitUIToFPInst(UIToFPInst &I) { DELEGATE(CastInst); }
+  RetTy visitSIToFPInst(SIToFPInst &I) { DELEGATE(CastInst); }
+  RetTy visitPtrToIntInst(PtrToIntInst &I) { DELEGATE(CastInst); }
+  RetTy visitPtrToAddrInst(PtrToAddrInst &I) { DELEGATE(CastInst); }
+  RetTy visitIntToPtrInst(IntToPtrInst &I) { DELEGATE(CastInst); }
+  RetTy visitBitCastInst(BitCastInst &I) { DELEGATE(CastInst); }
+  RetTy visitAddrSpaceCastInst(AddrSpaceCastInst &I) { DELEGATE(CastInst); }
+  RetTy visitSelectInst(SelectInst &I) { DELEGATE(Instruction); }
+  RetTy visitVAArgInst(VAArgInst &I) { DELEGATE(UnaryInstruction); }
+  RetTy visitExtractElementInst(ExtractElementInst &I) {
+    DELEGATE(Instruction);
+  }
+  RetTy visitInsertElementInst(InsertElementInst &I) { DELEGATE(Instruction); }
+  RetTy visitShuffleVectorInst(ShuffleVectorInst &I) { DELEGATE(Instruction); }
+  RetTy visitExtractValueInst(ExtractValueInst &I) {
+    DELEGATE(UnaryInstruction);
+  }
+  RetTy visitInsertValueInst(InsertValueInst &I) { DELEGATE(Instruction); }
+  RetTy visitLandingPadInst(LandingPadInst &I) { DELEGATE(Instruction); }
   RetTy visitFuncletPadInst(FuncletPadInst &I) { DELEGATE(Instruction); }
   RetTy visitCleanupPadInst(CleanupPadInst &I) { DELEGATE(FuncletPadInst); }
-  RetTy visitCatchPadInst(CatchPadInst &I)     { DELEGATE(FuncletPadInst); }
-  RetTy visitFreezeInst(FreezeInst &I)         { DELEGATE(Instruction); }
+  RetTy visitCatchPadInst(CatchPadInst &I) { DELEGATE(FuncletPadInst); }
+  RetTy visitFreezeInst(FreezeInst &I) { DELEGATE(Instruction); }
 
-  RetTy visitMemSetInst(MemSetInst &I)            { DELEGATE(MemIntrinsic); }
+  RetTy visitMemSetInst(MemSetInst &I) { DELEGATE(MemIntrinsic); }
   RetTy visitMemSetPatternInst(MemSetPatternInst &I) {
     DELEGATE(IntrinsicInst);
   }
-  RetTy visitMemCpyInst(MemCpyInst &I)            { DELEGATE(MemTransferInst); }
-  RetTy visitMemMoveInst(MemMoveInst &I)          { DELEGATE(MemTransferInst); }
-  RetTy visitMemTransferInst(MemTransferInst &I)  { DELEGATE(MemIntrinsic); }
-  RetTy visitMemIntrinsic(MemIntrinsic &I)        { DELEGATE(IntrinsicInst); }
-  RetTy visitVAStartInst(VAStartInst &I)          { DELEGATE(IntrinsicInst); }
-  RetTy visitVAEndInst(VAEndInst &I)              { DELEGATE(IntrinsicInst); }
-  RetTy visitVACopyInst(VACopyInst &I)            { DELEGATE(IntrinsicInst); }
-  RetTy visitIntrinsicInst(IntrinsicInst &I)      { DELEGATE(CallInst); }
-  RetTy visitCallInst(CallInst &I)                { DELEGATE(CallBase); }
-  RetTy visitInvokeInst(InvokeInst &I)            { DELEGATE(CallBase); }
-  RetTy visitCallBrInst(CallBrInst &I)            { DELEGATE(CallBase); }
+  RetTy visitMemCpyInst(MemCpyInst &I) { DELEGATE(MemTransferInst); }
+  RetTy visitMemMoveInst(MemMoveInst &I) { DELEGATE(MemTransferInst); }
+  RetTy visitMemTransferInst(MemTransferInst &I) { DELEGATE(MemIntrinsic); }
+  RetTy visitMemIntrinsic(MemIntrinsic &I) { DELEGATE(IntrinsicInst); }
+  RetTy visitVAStartInst(VAStartInst &I) { DELEGATE(IntrinsicInst); }
+  RetTy visitVAEndInst(VAEndInst &I) { DELEGATE(IntrinsicInst); }
+  RetTy visitVACopyInst(VACopyInst &I) { DELEGATE(IntrinsicInst); }
+  RetTy visitIntrinsicInst(IntrinsicInst &I) { DELEGATE(CallInst); }
+  RetTy visitCallInst(CallInst &I) { DELEGATE(CallBase); }
+  RetTy visitInvokeInst(InvokeInst &I) { DELEGATE(CallBase); }
+  RetTy visitCallBrInst(CallBrInst &I) { DELEGATE(CallBase); }
 
   // While terminators don't have a distinct type modeling them, we support
   // intercepting them with dedicated a visitor callback.
@@ -245,17 +246,17 @@ public:
   RetTy visitCatchSwitchInst(CatchSwitchInst &I) {
     return static_cast<SubClass *>(this)->visitTerminator(I);
   }
-  RetTy visitTerminator(Instruction &I)    { DELEGATE(Instruction);}
+  RetTy visitTerminator(Instruction &I) { DELEGATE(Instruction); }
 
   // Next level propagators: If the user does not overload a specific
   // instruction type, they can overload one of these to get the whole class
   // of instructions...
   //
-  RetTy visitCastInst(CastInst &I)                { DELEGATE(UnaryInstruction);}
-  RetTy visitUnaryOperator(UnaryOperator &I)      { DELEGATE(UnaryInstruction);}
-  RetTy visitBinaryOperator(BinaryOperator &I)    { DELEGATE(Instruction);}
-  RetTy visitCmpInst(CmpInst &I)                  { DELEGATE(Instruction);}
-  RetTy visitUnaryInstruction(UnaryInstruction &I){ DELEGATE(Instruction);}
+  RetTy visitCastInst(CastInst &I) { DELEGATE(UnaryInstruction); }
+  RetTy visitUnaryOperator(UnaryOperator &I) { DELEGATE(UnaryInstruction); }
+  RetTy visitBinaryOperator(BinaryOperator &I) { DELEGATE(Instruction); }
+  RetTy visitCmpInst(CmpInst &I) { DELEGATE(Instruction); }
+  RetTy visitUnaryInstruction(UnaryInstruction &I) { DELEGATE(Instruction); }
 
   // The next level delegation for `CallBase` is slightly more complex in order
   // to support visiting cases where the call is also a terminator.
@@ -272,27 +273,33 @@ public:
   //
   // Note that you MUST override this function if your return type is not void.
   //
-  void visitInstruction(Instruction &I) {}  // Ignore unhandled instructions
+  void visitInstruction(Instruction &I) {} // Ignore unhandled instructions
 
 private:
   // Special helper function to delegate to CallInst subclass visitors.
   RetTy delegateCallInst(CallInst &I) {
     if (const Function *F = I.getCalledFunction()) {
       switch (F->getIntrinsicID()) {
-      default:                     DELEGATE(IntrinsicInst);
+      default:
+        DELEGATE(IntrinsicInst);
       case Intrinsic::memcpy:
       case Intrinsic::memcpy_inline:
         DELEGATE(MemCpyInst);
-      case Intrinsic::memmove:     DELEGATE(MemMoveInst);
+      case Intrinsic::memmove:
+        DELEGATE(MemMoveInst);
       case Intrinsic::memset:
       case Intrinsic::memset_inline:
         DELEGATE(MemSetInst);
       case Intrinsic::experimental_memset_pattern:
         DELEGATE(MemSetPatternInst);
-      case Intrinsic::vastart:     DELEGATE(VAStartInst);
-      case Intrinsic::vaend:       DELEGATE(VAEndInst);
-      case Intrinsic::vacopy:      DELEGATE(VACopyInst);
-      case Intrinsic::not_intrinsic: break;
+      case Intrinsic::vastart:
+        DELEGATE(VAStartInst);
+      case Intrinsic::vaend:
+        DELEGATE(VAEndInst);
+      case Intrinsic::vacopy:
+        DELEGATE(VACopyInst);
+      case Intrinsic::not_intrinsic:
+        break;
       }
     }
     DELEGATE(CallInst);
@@ -307,6 +314,6 @@ private:
 
 #undef DELEGATE
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

@@ -140,8 +140,7 @@ public:
 
   unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TrueBlock,
                         MachineBasicBlock *FalseBlock,
-                        ArrayRef<MachineOperand> Condition,
-                        const DebugLoc &DL,
+                        ArrayRef<MachineOperand> Condition, const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
 };
 

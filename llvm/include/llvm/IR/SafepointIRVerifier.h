@@ -43,6 +43,6 @@ public:
 
   static bool isRequired() { return true; }
 };
-}
+} // namespace llvm
 
 #endif // LLVM_IR_SAFEPOINTIRVERIFIER_H

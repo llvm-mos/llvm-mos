@@ -19,18 +19,18 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-  class BinaryOperator;
+class BinaryOperator;
 }
 
 namespace llvm {
 
-  /// Generate code to calculate the remainder of two integers, replacing Rem
-  /// with the generated code. This currently generates code using the udiv
-  /// expansion, but future work includes generating more specialized code,
-  /// e.g. when more information about the operands are known. Implements both
-  /// 32bit and 64bit scalar division.
-  ///
-  /// Replace Rem with generated code.
+/// Generate code to calculate the remainder of two integers, replacing Rem
+/// with the generated code. This currently generates code using the udiv
+/// expansion, but future work includes generating more specialized code,
+/// e.g. when more information about the operands are known. Implements both
+/// 32bit and 64bit scalar division.
+///
+/// Replace Rem with generated code.
 LLVM_ABI bool expandRemainder(BinaryOperator *Rem);
 
 /// Generate code to divide two integers, replacing Div with the generated
@@ -69,6 +69,6 @@ LLVM_ABI bool expandDivisionUpTo32Bits(BinaryOperator *Div);
 /// Replace Rem with generated code.
 LLVM_ABI bool expandDivisionUpTo64Bits(BinaryOperator *Div);
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

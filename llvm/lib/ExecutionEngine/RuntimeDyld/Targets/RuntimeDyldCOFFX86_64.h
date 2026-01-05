@@ -128,15 +128,19 @@ public:
     }
 
     case COFF::IMAGE_REL_AMD64_SECREL: {
-      assert(static_cast<int64_t>(RE.Addend) <= INT32_MAX && "Relocation overflow");
-      assert(static_cast<int64_t>(RE.Addend) >= INT32_MIN && "Relocation underflow");
+      assert(static_cast<int64_t>(RE.Addend) <= INT32_MAX &&
+             "Relocation overflow");
+      assert(static_cast<int64_t>(RE.Addend) >= INT32_MIN &&
+             "Relocation underflow");
       writeBytesUnaligned(RE.Addend, Target, 4);
       break;
     }
 
     case COFF::IMAGE_REL_AMD64_SECTION: {
-      assert(static_cast<int16_t>(RE.SectionID) <= INT16_MAX && "Relocation overflow");
-      assert(static_cast<int16_t>(RE.SectionID) >= INT16_MIN && "Relocation underflow");
+      assert(static_cast<int16_t>(RE.SectionID) <= INT16_MAX &&
+             "Relocation overflow");
+      assert(static_cast<int16_t>(RE.SectionID) >= INT16_MIN &&
+             "Relocation underflow");
       writeBytesUnaligned(RE.SectionID, Target, 2);
       break;
     }
@@ -194,8 +198,7 @@ public:
   }
 
   Expected<object::relocation_iterator>
-  processRelocationRef(unsigned SectionID,
-                       object::relocation_iterator RelI,
+  processRelocationRef(unsigned SectionID, object::relocation_iterator RelI,
                        const object::ObjectFile &Obj,
                        ObjSectionToIDMap &ObjSectionToID,
                        StubMap &Stubs) override {
@@ -255,7 +258,7 @@ public:
 
       if (IsExtern)
         std::tie(Offset, RelType, Addend) = generateRelocationStub(
-          SectionID, TargetName, Offset, RelType, Addend, Stubs);
+            SectionID, TargetName, Offset, RelType, Addend, Stubs);
 
       break;
     }

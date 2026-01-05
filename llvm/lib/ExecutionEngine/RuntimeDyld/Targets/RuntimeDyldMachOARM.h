@@ -21,12 +21,11 @@ private:
   typedef RuntimeDyldMachOCRTPBase<RuntimeDyldMachOARM> ParentT;
 
 public:
-
   typedef uint32_t TargetPtrT;
 
   RuntimeDyldMachOARM(RuntimeDyld::MemoryManager &MM,
                       JITSymbolResolver &Resolver)
-    : RuntimeDyldMachOCRTPBase(MM, Resolver) {}
+      : RuntimeDyldMachOCRTPBase(MM, Resolver) {}
 
   unsigned getMaxStubSize() const override { return 8; }
 
@@ -64,45 +63,42 @@ public:
     uint8_t *LocalAddress = Section.getAddressWithOffset(RE.Offset);
 
     switch (RE.RelType) {
-      default:
-        return memcpyAddend(RE);
-      case MachO::ARM_RELOC_BR24: {
-        uint32_t Temp = readBytesUnaligned(LocalAddress, 4);
-        Temp &= 0x00ffffff; // Mask out the opcode.
-        // Now we've got the shifted immediate, shift by 2, sign extend and ret.
-        return SignExtend32<26>(Temp << 2);
-      }
+    default:
+      return memcpyAddend(RE);
+    case MachO::ARM_RELOC_BR24: {
+      uint32_t Temp = readBytesUnaligned(LocalAddress, 4);
+      Temp &= 0x00ffffff; // Mask out the opcode.
+      // Now we've got the shifted immediate, shift by 2, sign extend and ret.
+      return SignExtend32<26>(Temp << 2);
+    }
 
-      case MachO::ARM_THUMB_RELOC_BR22: {
-        // This is a pair of instructions whose operands combine to provide 22
-        // bits of displacement:
-        // Encoding for high bits 1111 0XXX XXXX XXXX
-        // Encoding for low bits  1111 1XXX XXXX XXXX
-        uint16_t HighInsn = readBytesUnaligned(LocalAddress, 2);
-        if ((HighInsn & 0xf800) != 0xf000)
-          return make_error<StringError>("Unrecognized thumb branch encoding "
-                                         "(BR22 high bits)",
-                                         inconvertibleErrorCode());
+    case MachO::ARM_THUMB_RELOC_BR22: {
+      // This is a pair of instructions whose operands combine to provide 22
+      // bits of displacement:
+      // Encoding for high bits 1111 0XXX XXXX XXXX
+      // Encoding for low bits  1111 1XXX XXXX XXXX
+      uint16_t HighInsn = readBytesUnaligned(LocalAddress, 2);
+      if ((HighInsn & 0xf800) != 0xf000)
+        return make_error<StringError>("Unrecognized thumb branch encoding "
+                                       "(BR22 high bits)",
+                                       inconvertibleErrorCode());
 
-        uint16_t LowInsn = readBytesUnaligned(LocalAddress + 2, 2);
-        if ((LowInsn & 0xf800) != 0xf800)
-          return make_error<StringError>("Unrecognized thumb branch encoding "
-                                         "(BR22 low bits)",
-                                         inconvertibleErrorCode());
+      uint16_t LowInsn = readBytesUnaligned(LocalAddress + 2, 2);
+      if ((LowInsn & 0xf800) != 0xf800)
+        return make_error<StringError>("Unrecognized thumb branch encoding "
+                                       "(BR22 low bits)",
+                                       inconvertibleErrorCode());
 
-        return SignExtend64<23>(((HighInsn & 0x7ff) << 12) |
-                                ((LowInsn & 0x7ff) << 1));
-      }
+      return SignExtend64<23>(((HighInsn & 0x7ff) << 12) |
+                              ((LowInsn & 0x7ff) << 1));
+    }
     }
   }
 
-  Expected<relocation_iterator>
-  processRelocationRef(unsigned SectionID, relocation_iterator RelI,
-                       const ObjectFile &BaseObjT,
-                       ObjSectionToIDMap &ObjSectionToID,
-                       StubMap &Stubs) override {
-    const MachOObjectFile &Obj =
-        static_cast<const MachOObjectFile &>(BaseObjT);
+  Expected<relocation_iterator> processRelocationRef(
+      unsigned SectionID, relocation_iterator RelI, const ObjectFile &BaseObjT,
+      ObjSectionToIDMap &ObjSectionToID, StubMap &Stubs) override {
+    const MachOObjectFile &Obj = static_cast<const MachOObjectFile &>(BaseObjT);
     MachO::any_relocation_info RelInfo =
         Obj.getRelocation(RelI->getRawDataRefImpl());
     uint32_t RelType = Obj.getAnyRelocationType(RelInfo);
@@ -120,12 +116,12 @@ public:
 
       // If the target is external but the value doesn't have a name then we've
       // converted the value to a section/offset pair, but we still need to set
-      // the IsTargetThumbFunc bit, so look the value up in the globla symbol table.
+      // the IsTargetThumbFunc bit, so look the value up in the globla symbol
+      // table.
       auto EntryItr = GlobalSymbolTable.find(TargetName);
       if (EntryItr != GlobalSymbolTable.end()) {
-        TargetIsLocalThumbFunc =
-          EntryItr->second.getFlags().getTargetFlags() &
-          ARMJITSymbolFlags::Thumb;
+        TargetIsLocalThumbFunc = EntryItr->second.getFlags().getTargetFlags() &
+                                 ARMJITSymbolFlags::Thumb;
       }
     }
 
@@ -142,17 +138,17 @@ public:
 
     // Validate the relocation type.
     switch (RelType) {
-    UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_PAIR);
-    UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_SECTDIFF);
-    UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_LOCAL_SECTDIFF);
-    UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_PB_LA_PTR);
-    UNIMPLEMENTED_RELOC(MachO::ARM_THUMB_32BIT_BRANCH);
-    UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_HALF);
+      UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_PAIR);
+      UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_SECTDIFF);
+      UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_LOCAL_SECTDIFF);
+      UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_PB_LA_PTR);
+      UNIMPLEMENTED_RELOC(MachO::ARM_THUMB_32BIT_BRANCH);
+      UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_HALF);
     default:
       if (RelType > MachO::ARM_RELOC_HALF_SECTDIFF)
-        return make_error<RuntimeDyldError>(("MachO ARM relocation type " +
-                                             Twine(RelType) +
-                                             " is out of range").str());
+        return make_error<RuntimeDyldError>(
+            ("MachO ARM relocation type " + Twine(RelType) + " is out of range")
+                .str());
       break;
     }
 
@@ -286,7 +282,7 @@ public:
   }
 
   Error finalizeSection(const ObjectFile &Obj, unsigned SectionID,
-                       const SectionRef &Section) {
+                        const SectionRef &Section) {
     StringRef Name;
     if (Expected<StringRef> NameOrErr = Section.getName())
       Name = *NameOrErr;
@@ -300,7 +296,6 @@ public:
   }
 
 private:
-
   void processBranchRelocation(const RelocationEntry &RE,
                                const RelocationValueRef &Value,
                                StubMap &Stubs) {
@@ -335,8 +330,8 @@ private:
         addRelocationForSection(StubRE, Value.SectionID);
       Section.advanceStubOffset(getMaxStubSize());
     }
-    RelocationEntry TargetRE(RE.SectionID, RE.Offset, RE.RelType, 0,
-                             RE.IsPCRel, RE.Size);
+    RelocationEntry TargetRE(RE.SectionID, RE.Offset, RE.RelType, 0, RE.IsPCRel,
+                             RE.Size);
     resolveRelocation(TargetRE, (uint64_t)Addr);
   }
 
@@ -345,7 +340,7 @@ private:
                                 const ObjectFile &BaseTObj,
                                 ObjSectionToIDMap &ObjSectionToID) {
     const MachOObjectFile &MachO =
-        static_cast<const MachOObjectFile&>(BaseTObj);
+        static_cast<const MachOObjectFile &>(BaseTObj);
     MachO::any_relocation_info RE =
         MachO.getRelocation(RelI->getRawDataRefImpl());
 
@@ -361,19 +356,19 @@ private:
     bool IsPCRel = MachO.getAnyRelocationPCRel(RE);
     uint64_t Offset = RelI->getOffset();
     uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
-    int64_t Immediate = readBytesUnaligned(LocalAddress, 4); // Copy the whole instruction out.
+    int64_t Immediate =
+        readBytesUnaligned(LocalAddress, 4); // Copy the whole instruction out.
 
     if (IsThumb)
-      Immediate = ((Immediate & 0x0000000f) << 12) |
-                  ((Immediate & 0x00000400) << 1) |
-                  ((Immediate & 0x70000000) >> 20) |
-                  ((Immediate & 0x00ff0000) >> 16);
+      Immediate =
+          ((Immediate & 0x0000000f) << 12) | ((Immediate & 0x00000400) << 1) |
+          ((Immediate & 0x70000000) >> 20) | ((Immediate & 0x00ff0000) >> 16);
     else
       Immediate = ((Immediate >> 4) & 0xf000) | (Immediate & 0xfff);
 
     ++RelI;
     MachO::any_relocation_info RE2 =
-      MachO.getRelocation(RelI->getRawDataRefImpl());
+        MachO.getRelocation(RelI->getRawDataRefImpl());
     uint32_t AddrA = MachO.getScatteredRelocationValue(RE);
     section_iterator SAI = getSectionByAddress(MachO, AddrA);
     assert(SAI != MachO.section_end() && "Can't find section for address A");
@@ -383,7 +378,7 @@ private:
     bool IsCode = SectionA.isText();
     uint32_t SectionAID = ~0U;
     if (auto SectionAIDOrErr =
-          findOrEmitSection(MachO, SectionA, IsCode, ObjSectionToID))
+            findOrEmitSection(MachO, SectionA, IsCode, ObjSectionToID))
       SectionAID = *SectionAIDOrErr;
     else
       return SectionAIDOrErr.takeError();
@@ -396,7 +391,7 @@ private:
     SectionRef SectionB = *SBI;
     uint32_t SectionBID = ~0U;
     if (auto SectionBIDOrErr =
-          findOrEmitSection(MachO, SectionB, IsCode, ObjSectionToID))
+            findOrEmitSection(MachO, SectionB, IsCode, ObjSectionToID))
       SectionBID = *SectionBIDOrErr;
     else
       return SectionBIDOrErr.takeError();
@@ -422,9 +417,8 @@ private:
 
     return ++RelI;
   }
-
 };
-}
+} // namespace llvm
 
 #undef DEBUG_TYPE
 

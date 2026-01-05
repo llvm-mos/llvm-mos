@@ -57,8 +57,7 @@ private:
 
   /// Delta - Minimize a set of \p Changes which has been partitioned into
   /// smaller sets, by attempting to remove individual subsets.
-  changeset_ty Delta(const changeset_ty &Changes,
-                     const changesetlist_ty &Sets);
+  changeset_ty Delta(const changeset_ty &Changes, const changesetlist_ty &Sets);
 
   /// Search - Search for a subset (or subsets) in \p Sets which can be
   /// removed from \p Changes while still satisfying the predicate.
@@ -77,7 +76,7 @@ protected:
   /// ExecuteOneTest - Execute a single test predicate on the change set \p S.
   virtual bool ExecuteOneTest(const changeset_ty &S) = 0;
 
-  DeltaAlgorithm& operator=(const DeltaAlgorithm&) = default;
+  DeltaAlgorithm &operator=(const DeltaAlgorithm &) = default;
 
 public:
   virtual ~DeltaAlgorithm();

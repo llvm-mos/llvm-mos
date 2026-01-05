@@ -29,8 +29,8 @@ void DeltaAlgorithm::Split(const changeset_ty &S, changesetlist_ty &Res) {
   // FIXME: This is really slow.
   changeset_ty LHS, RHS;
   unsigned idx = 0, N = S.size() / 2;
-  for (changeset_ty::const_iterator it = S.begin(),
-         ie = S.end(); it != ie; ++it, ++idx)
+  for (changeset_ty::const_iterator it = S.begin(), ie = S.end(); it != ie;
+       ++it, ++idx)
     ((idx < N) ? LHS : RHS).insert(*it);
   if (!LHS.empty())
     Res.push_back(LHS);
@@ -64,11 +64,10 @@ DeltaAlgorithm::Delta(const changeset_ty &Changes,
 }
 
 bool DeltaAlgorithm::Search(const changeset_ty &Changes,
-                            const changesetlist_ty &Sets,
-                            changeset_ty &Res) {
+                            const changesetlist_ty &Sets, changeset_ty &Res) {
   // FIXME: Parallelize.
-  for (changesetlist_ty::const_iterator it = Sets.begin(),
-         ie = Sets.end(); it != ie; ++it) {
+  for (changesetlist_ty::const_iterator it = Sets.begin(), ie = Sets.end();
+       it != ie; ++it) {
     // If the test passes on this subset alone, recurse.
     if (GetTestResult(*it)) {
       changesetlist_ty Sets;

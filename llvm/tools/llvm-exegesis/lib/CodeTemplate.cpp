@@ -29,13 +29,13 @@ InstructionTemplate::InstructionTemplate(const Instruction *Instr)
 
 InstructionTemplate::InstructionTemplate(InstructionTemplate &&) = default;
 
-InstructionTemplate &InstructionTemplate::
-operator=(InstructionTemplate &&) = default;
+InstructionTemplate &
+InstructionTemplate::operator=(InstructionTemplate &&) = default;
 
 InstructionTemplate::InstructionTemplate(const InstructionTemplate &) = default;
 
-InstructionTemplate &InstructionTemplate::
-operator=(const InstructionTemplate &) = default;
+InstructionTemplate &
+InstructionTemplate::operator=(const InstructionTemplate &) = default;
 
 unsigned InstructionTemplate::getOpcode() const {
   return Instr->Description.getOpcode();

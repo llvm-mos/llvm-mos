@@ -117,9 +117,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   void emitARM64WinCFIClearUnwoundToCall() override {
     OS << "\t.seh_clear_unwound_to_call\n";
   }
-  void emitARM64WinCFIPACSignLR() override {
-    OS << "\t.seh_pac_sign_lr\n";
-  }
+  void emitARM64WinCFIPACSignLR() override { OS << "\t.seh_pac_sign_lr\n"; }
 
   void emitARM64WinCFISaveAnyRegI(unsigned Reg, int Offset) override {
     OS << "\t.seh_save_any_reg\tx" << Reg << ", " << Offset << "\n";
@@ -278,7 +276,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     // Keep the data structure consistent with the case of ELF emission
     // (important for llvm-mc asm parsing)
     AArch64TargetStreamer::emitAttributesSubsection(SubsectionName, Optional,
-                                                   ParameterType);
+                                                    ParameterType);
     OS << "\n";
   }
 
@@ -390,17 +388,13 @@ public:
   }
 
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
-                                  SMLoc Loc) override {
+                SMLoc Loc) override {
     emitDataMappingSymbol();
     MCObjectStreamer::emitFill(NumBytes, FillValue, Loc);
   }
 
 private:
-  enum ElfMappingSymbol {
-    EMS_None,
-    EMS_A64,
-    EMS_Data
-  };
+  enum ElfMappingSymbol { EMS_None, EMS_A64, EMS_Data };
 
   void emitDataMappingSymbol() {
     if (LastEMS == EMS_Data)
@@ -437,7 +431,7 @@ void AArch64TargetELFStreamer::emitAttributesSubsection(
     StringRef VendorName, AArch64BuildAttributes::SubsectionOptional IsOptional,
     AArch64BuildAttributes::SubsectionType ParameterType) {
   AArch64TargetStreamer::emitAttributesSubsection(VendorName, IsOptional,
-                                                 ParameterType);
+                                                  ParameterType);
 }
 
 void AArch64TargetELFStreamer::emitAttribute(StringRef VendorName, unsigned Tag,

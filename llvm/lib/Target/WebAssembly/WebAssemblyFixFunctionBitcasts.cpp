@@ -216,8 +216,7 @@ static bool shouldFixMainFunction(FunctionType *FuncTy, FunctionType *MainTy) {
   // the standard cases will work as expected, and users will see signature
   // mismatches from the linker for non-standard cases.
   return FuncTy->getReturnType() == MainTy->getReturnType() &&
-         FuncTy->getNumParams() == 0 &&
-         !FuncTy->isVarArg();
+         FuncTy->getNumParams() == 0 && !FuncTy->isVarArg();
 }
 
 bool FixFunctionBitcasts::runOnModule(Module &M) {

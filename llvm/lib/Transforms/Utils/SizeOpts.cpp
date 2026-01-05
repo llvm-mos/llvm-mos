@@ -77,13 +77,11 @@ struct BasicBlockBFIAdapter {
                                                      BlockFrequencyInfo &BFI) {
     return PSI->isFunctionColdInCallGraphNthPercentile(CutOff, F, BFI);
   }
-  static bool isColdBlock(const BasicBlock *BB,
-                          ProfileSummaryInfo *PSI,
+  static bool isColdBlock(const BasicBlock *BB, ProfileSummaryInfo *PSI,
                           BlockFrequencyInfo *BFI) {
     return PSI->isColdBlock(BB, BFI);
   }
-  static bool isHotBlockNthPercentile(int CutOff,
-                                      const BasicBlock *BB,
+  static bool isHotBlockNthPercentile(int CutOff, const BasicBlock *BB,
                                       ProfileSummaryInfo *PSI,
                                       BlockFrequencyInfo *BFI) {
     return PSI->isHotBlockNthPercentile(CutOff, BB, BFI);

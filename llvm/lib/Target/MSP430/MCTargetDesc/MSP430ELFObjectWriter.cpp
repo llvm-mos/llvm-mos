@@ -21,8 +21,8 @@ namespace {
 class MSP430ELFObjectWriter : public MCELFObjectTargetWriter {
 public:
   MSP430ELFObjectWriter(uint8_t OSABI)
-    : MCELFObjectTargetWriter(false, OSABI, ELF::EM_MSP430,
-                              /*HasRelocationAddend*/ true) {}
+      : MCELFObjectTargetWriter(false, OSABI, ELF::EM_MSP430,
+                                /*HasRelocationAddend*/ true) {}
 
   ~MSP430ELFObjectWriter() override = default;
 
@@ -31,19 +31,32 @@ protected:
                         bool IsPCRel) const override {
     // Translate fixup kind to ELF relocation type.
     switch (Fixup.getKind()) {
-    case FK_Data_1:                   return ELF::R_MSP430_8;
-    case FK_Data_2:                   return ELF::R_MSP430_16_BYTE;
-    case FK_Data_4:                   return ELF::R_MSP430_32;
-    case MSP430::fixup_32:            return ELF::R_MSP430_32;
-    case MSP430::fixup_10_pcrel:      return ELF::R_MSP430_10_PCREL;
-    case MSP430::fixup_16:            return ELF::R_MSP430_16;
-    case MSP430::fixup_16_pcrel:      return ELF::R_MSP430_16_PCREL;
-    case MSP430::fixup_16_byte:       return ELF::R_MSP430_16_BYTE;
-    case MSP430::fixup_16_pcrel_byte: return ELF::R_MSP430_16_PCREL_BYTE;
-    case MSP430::fixup_2x_pcrel:      return ELF::R_MSP430_2X_PCREL;
-    case MSP430::fixup_rl_pcrel:      return ELF::R_MSP430_RL_PCREL;
-    case MSP430::fixup_8:             return ELF::R_MSP430_8;
-    case MSP430::fixup_sym_diff:      return ELF::R_MSP430_SYM_DIFF;
+    case FK_Data_1:
+      return ELF::R_MSP430_8;
+    case FK_Data_2:
+      return ELF::R_MSP430_16_BYTE;
+    case FK_Data_4:
+      return ELF::R_MSP430_32;
+    case MSP430::fixup_32:
+      return ELF::R_MSP430_32;
+    case MSP430::fixup_10_pcrel:
+      return ELF::R_MSP430_10_PCREL;
+    case MSP430::fixup_16:
+      return ELF::R_MSP430_16;
+    case MSP430::fixup_16_pcrel:
+      return ELF::R_MSP430_16_PCREL;
+    case MSP430::fixup_16_byte:
+      return ELF::R_MSP430_16_BYTE;
+    case MSP430::fixup_16_pcrel_byte:
+      return ELF::R_MSP430_16_PCREL_BYTE;
+    case MSP430::fixup_2x_pcrel:
+      return ELF::R_MSP430_2X_PCREL;
+    case MSP430::fixup_rl_pcrel:
+      return ELF::R_MSP430_RL_PCREL;
+    case MSP430::fixup_8:
+      return ELF::R_MSP430_8;
+    case MSP430::fixup_sym_diff:
+      return ELF::R_MSP430_SYM_DIFF;
     default:
       llvm_unreachable("Invalid fixup kind");
     }

@@ -30,8 +30,7 @@ namespace exegesis {
 // A helper class to analyze benchmark results for a target.
 class Analysis {
 public:
-  Analysis(const LLVMState &State,
-           const BenchmarkClustering &Clustering,
+  Analysis(const LLVMState &State, const BenchmarkClustering &Clustering,
            double AnalysisInconsistencyEpsilon,
            bool AnalysisDisplayUnstableOpcodes);
 
@@ -48,14 +47,11 @@ private:
   // Represents the intersection of a sched class and a cluster.
   class SchedClassCluster {
   public:
-    const BenchmarkClustering::ClusterId &id() const {
-      return ClusterId;
-    }
+    const BenchmarkClustering::ClusterId &id() const { return ClusterId; }
 
     const std::vector<size_t> &getPointIds() const { return PointIds; }
 
-    void addPoint(size_t PointId,
-                  const BenchmarkClustering &Clustering);
+    void addPoint(size_t PointId, const BenchmarkClustering &Clustering);
 
     // Return the cluster centroid.
     const SchedClassClusterCentroid &getCentroid() const { return Centroid; }

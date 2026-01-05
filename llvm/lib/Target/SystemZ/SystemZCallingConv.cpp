@@ -11,19 +11,15 @@
 using namespace llvm;
 
 const MCPhysReg SystemZ::ELFArgGPRs[SystemZ::ELFNumArgGPRs] = {
-  SystemZ::R2D, SystemZ::R3D, SystemZ::R4D, SystemZ::R5D, SystemZ::R6D
-};
+    SystemZ::R2D, SystemZ::R3D, SystemZ::R4D, SystemZ::R5D, SystemZ::R6D};
 
 const MCPhysReg SystemZ::ELFArgFPRs[SystemZ::ELFNumArgFPRs] = {
-  SystemZ::F0D, SystemZ::F2D, SystemZ::F4D, SystemZ::F6D
-};
+    SystemZ::F0D, SystemZ::F2D, SystemZ::F4D, SystemZ::F6D};
 
 // The XPLINK64 ABI-defined param passing general purpose registers
 const MCPhysReg SystemZ::XPLINK64ArgGPRs[SystemZ::XPLINK64NumArgGPRs] = {
-    SystemZ::R1D, SystemZ::R2D, SystemZ::R3D
-};
+    SystemZ::R1D, SystemZ::R2D, SystemZ::R3D};
 
 // The XPLINK64 ABI-defined param passing floating point registers
 const MCPhysReg SystemZ::XPLINK64ArgFPRs[SystemZ::XPLINK64NumArgFPRs] = {
-    SystemZ::F0D, SystemZ::F2D, SystemZ::F4D, SystemZ::F6D
-};
+    SystemZ::F0D, SystemZ::F2D, SystemZ::F4D, SystemZ::F6D};

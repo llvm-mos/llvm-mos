@@ -35,9 +35,9 @@ public:
   virtual ~ScheduleHazardRecognizer();
 
   enum HazardType {
-    NoHazard,      // This instruction can be emitted at this cycle.
-    Hazard,        // This instruction can't be emitted at this cycle.
-    NoopHazard     // This instruction can't be emitted, and needs noops.
+    NoHazard,  // This instruction can be emitted at this cycle.
+    Hazard,    // This instruction can't be emitted at this cycle.
+    NoopHazard // This instruction can't be emitted, and needs noops.
   };
 
   unsigned getMaxLookAhead() const { return MaxLookAhead; }
@@ -57,9 +57,7 @@ public:
   ///     other instruction is available, issue it first.
   ///  * NoopHazard: issuing this instruction would break the program.  If
   ///     some other instruction can be issued, do so, otherwise issue a noop.
-  virtual HazardType getHazardType(SUnit *, int Stalls = 0) {
-    return NoHazard;
-  }
+  virtual HazardType getHazardType(SUnit *, int Stalls = 0) { return NoHazard; }
 
   /// Reset - This callback is invoked when a new block of
   /// instructions is about to be schedule. The hazard state should be
@@ -79,22 +77,17 @@ public:
   /// instruction.
   /// Note: This is only used during PostRA scheduling. EmitNoop is not called
   /// for these noops.
-  virtual unsigned PreEmitNoops(SUnit *) {
-    return 0;
-  }
+  virtual unsigned PreEmitNoops(SUnit *) { return 0; }
 
   /// This overload will be used when the hazard recognizer is being used
   /// by a non-scheduling pass, which does not use SUnits.
-  virtual unsigned PreEmitNoops(MachineInstr *) {
-    return 0;
-  }
+  virtual unsigned PreEmitNoops(MachineInstr *) { return 0; }
 
   /// ShouldPreferAnother - This callback may be invoked if getHazardType
-  /// returns NoHazard. If, even though there is no hazard, it would be better to
-  /// schedule another available instruction, this callback should return true.
-  virtual bool ShouldPreferAnother(SUnit *) {
-    return false;
-  }
+  /// returns NoHazard. If, even though there is no hazard, it would be better
+  /// to schedule another available instruction, this callback should return
+  /// true.
+  virtual bool ShouldPreferAnother(SUnit *) { return false; }
 
   /// AdvanceCycle - This callback is invoked whenever the next top-down
   /// instruction to be scheduled cannot issue in the current cycle, either

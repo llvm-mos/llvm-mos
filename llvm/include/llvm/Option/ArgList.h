@@ -38,8 +38,7 @@ class raw_ostream;
 namespace opt {
 
 /// arg_iterator - Iterates through arguments stored inside an ArgList.
-template<typename BaseIter, unsigned NumOptSpecifiers = 0>
-class arg_iterator {
+template <typename BaseIter, unsigned NumOptSpecifiers = 0> class arg_iterator {
   /// The current argument and the end of the sequence we're iterating.
   BaseIter Current, End;
 
@@ -124,9 +123,10 @@ public:
   using const_reverse_iterator =
       arg_iterator<arglist_type::const_reverse_iterator>;
 
-  template<unsigned N> using filtered_iterator =
-      arg_iterator<arglist_type::const_iterator, N>;
-  template<unsigned N> using filtered_reverse_iterator =
+  template <unsigned N>
+  using filtered_iterator = arg_iterator<arglist_type::const_iterator, N>;
+  template <unsigned N>
+  using filtered_reverse_iterator =
       arg_iterator<arglist_type::const_reverse_iterator, N>;
 
 private:
@@ -202,9 +202,9 @@ public:
   const_reverse_iterator rbegin() const { return {Args.rbegin(), Args.rend()}; }
   const_reverse_iterator rend() const { return {Args.rend(), Args.rend()}; }
 
-  template<typename ...OptSpecifiers>
+  template <typename... OptSpecifiers>
   iterator_range<filtered_iterator<sizeof...(OptSpecifiers)>>
-  filtered(OptSpecifiers ...Ids) const {
+  filtered(OptSpecifiers... Ids) const {
     OptRange Range = getRange({toOptSpecifier(Ids)...});
     auto B = Args.begin() + Range.first;
     auto E = Args.begin() + Range.second;
@@ -213,9 +213,9 @@ public:
                       Iterator(E, E, {toOptSpecifier(Ids)...}));
   }
 
-  template<typename ...OptSpecifiers>
+  template <typename... OptSpecifiers>
   iterator_range<filtered_reverse_iterator<sizeof...(OptSpecifiers)>>
-  filtered_reverse(OptSpecifiers ...Ids) const {
+  filtered_reverse(OptSpecifiers... Ids) const {
     OptRange Range = getRange({toOptSpecifier(Ids)...});
     auto B = Args.rend() - Range.second;
     auto E = Args.rend() - Range.first;
@@ -238,12 +238,11 @@ public:
   /// hasArg - Does the arg list contain any option matching \p Id.
   ///
   /// \p Claim Whether the argument should be claimed, if it exists.
-  template<typename ...OptSpecifiers>
-  bool hasArgNoClaim(OptSpecifiers ...Ids) const {
+  template <typename... OptSpecifiers>
+  bool hasArgNoClaim(OptSpecifiers... Ids) const {
     return getLastArgNoClaim(Ids...) != nullptr;
   }
-  template<typename ...OptSpecifiers>
-  bool hasArg(OptSpecifiers ...Ids) const {
+  template <typename... OptSpecifiers> bool hasArg(OptSpecifiers... Ids) const {
     return getLastArg(Ids...) != nullptr;
   }
 
@@ -438,7 +437,7 @@ private:
 public:
   InputArgList() : NumInputArgStrings(0) {}
 
-  InputArgList(const char* const *ArgBegin, const char* const *ArgEnd);
+  InputArgList(const char *const *ArgBegin, const char *const *ArgEnd);
 
   InputArgList(InputArgList &&RHS)
       : ArgList(std::move(RHS)), ArgStrings(std::move(RHS.ArgStrings)),
@@ -466,9 +465,7 @@ public:
     ArgStrings[Index] = MakeArgString(S);
   }
 
-  unsigned getNumInputArgStrings() const override {
-    return NumInputArgStrings;
-  }
+  unsigned getNumInputArgStrings() const override { return NumInputArgStrings; }
 
   /// @name Arg Synthesis
   /// @{
@@ -504,9 +501,7 @@ public:
     return BaseArgs.getNumInputArgStrings();
   }
 
-  const InputArgList &getBaseArgs() const {
-    return BaseArgs;
-  }
+  const InputArgList &getBaseArgs() const { return BaseArgs; }
 
   /// @name Arg Synthesis
   /// @{
@@ -527,23 +522,20 @@ public:
   /// AddPositionalArg - Construct a new Positional arg for the given option
   /// \p Id, with the provided \p Value and append it to the argument
   /// list.
-  void AddPositionalArg(const Arg *BaseArg, const Option Opt,
-                        StringRef Value) {
+  void AddPositionalArg(const Arg *BaseArg, const Option Opt, StringRef Value) {
     append(MakePositionalArg(BaseArg, Opt, Value));
   }
 
   /// AddSeparateArg - Construct a new Positional arg for the given option
   /// \p Id, with the provided \p Value and append it to the argument
   /// list.
-  void AddSeparateArg(const Arg *BaseArg, const Option Opt,
-                      StringRef Value) {
+  void AddSeparateArg(const Arg *BaseArg, const Option Opt, StringRef Value) {
     append(MakeSeparateArg(BaseArg, Opt, Value));
   }
 
   /// AddJoinedArg - Construct a new Positional arg for the given option
   /// \p Id, with the provided \p Value and append it to the argument list.
-  void AddJoinedArg(const Arg *BaseArg, const Option Opt,
-                    StringRef Value) {
+  void AddJoinedArg(const Arg *BaseArg, const Option Opt, StringRef Value) {
     append(MakeJoinedArg(BaseArg, Opt, Value));
   }
 
@@ -553,17 +545,17 @@ public:
   /// MakePositionalArg - Construct a new Positional arg for the
   /// given option \p Id, with the provided \p Value.
   Arg *MakePositionalArg(const Arg *BaseArg, const Option Opt,
-                          StringRef Value) const;
+                         StringRef Value) const;
 
   /// MakeSeparateArg - Construct a new Positional arg for the
   /// given option \p Id, with the provided \p Value.
   Arg *MakeSeparateArg(const Arg *BaseArg, const Option Opt,
-                        StringRef Value) const;
+                       StringRef Value) const;
 
   /// MakeJoinedArg - Construct a new Positional arg for the
   /// given option \p Id, with the provided \p Value.
   Arg *MakeJoinedArg(const Arg *BaseArg, const Option Opt,
-                      StringRef Value) const;
+                     StringRef Value) const;
 
   /// @}
 };

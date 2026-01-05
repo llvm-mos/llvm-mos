@@ -101,8 +101,12 @@ protected:
   // This specialization ensures that 'AdjustedParam<V<T>&>' or
   // 'AdjustedParam<V<T>&&>' does not trigger a compile-time error when 'T' is
   // an incomplete type and V a templated type.
-  template <typename T> struct AdjustedParamTBase<T &> { using type = T &; };
-  template <typename T> struct AdjustedParamTBase<T &&> { using type = T &; };
+  template <typename T> struct AdjustedParamTBase<T &> {
+    using type = T &;
+  };
+  template <typename T> struct AdjustedParamTBase<T &&> {
+    using type = T &;
+  };
 
   template <typename T>
   using AdjustedParamT = typename AdjustedParamTBase<T>::type;

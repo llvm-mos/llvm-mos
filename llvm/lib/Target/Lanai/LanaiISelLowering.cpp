@@ -203,9 +203,9 @@ SDValue LanaiTargetLowering::LowerOperation(SDValue Op,
 //                       Lanai Inline Assembly Support
 //===----------------------------------------------------------------------===//
 
-Register LanaiTargetLowering::getRegisterByName(
-  const char *RegName, LLT /*VT*/,
-  const MachineFunction & /*MF*/) const {
+Register
+LanaiTargetLowering::getRegisterByName(const char *RegName, LLT /*VT*/,
+                                       const MachineFunction & /*MF*/) const {
   // Only unallocatable registers should be matched here.
   Register Reg = StringSwitch<Register>(RegName)
                      .Case("pc", Lanai::PC)

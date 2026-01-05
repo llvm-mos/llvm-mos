@@ -65,7 +65,7 @@ public:
 
   BlockInfo &getOrCreateBlockInfo(unsigned BlockID) {
     if (const BlockInfo *BI = getBlockInfo(BlockID))
-      return *const_cast<BlockInfo*>(BI);
+      return *const_cast<BlockInfo *>(BI);
 
     // Otherwise, add a new record.
     BlockInfoRecords.emplace_back();
@@ -116,7 +116,7 @@ public:
 
   /// Return the bit # of the bit we are reading.
   uint64_t GetCurrentBitNo() const {
-    return uint64_t(NextChar)*CHAR_BIT - BitsInCurWord;
+    return uint64_t(NextChar) * CHAR_BIT - BitsInCurWord;
   }
 
   // Return the byte # of the current bit.
@@ -126,8 +126,8 @@ public:
 
   /// Reset the stream to the specified bit number.
   Error JumpToBit(uint64_t BitNo) {
-    size_t ByteNo = size_t(BitNo/8) & ~(sizeof(word_t)-1);
-    unsigned WordBitNo = unsigned(BitNo & (sizeof(word_t)*8-1));
+    size_t ByteNo = size_t(BitNo / 8) & ~(sizeof(word_t) - 1);
+    unsigned WordBitNo = unsigned(BitNo & (sizeof(word_t) * 8 - 1));
     assert(canSkipToPos(ByteNo) && "Invalid location");
 
     // Move the cursor to the right word.
@@ -247,7 +247,7 @@ public:
       if ((Piece & Mask) == 0)
         return Result;
 
-      NextBit += NumBits-1;
+      NextBit += NumBits - 1;
       if (NextBit >= 32)
         return createStringError(std::errc::illegal_byte_sequence,
                                  "Unterminated VBR");
@@ -281,7 +281,7 @@ public:
       if ((Piece & Mask) == 0)
         return Result;
 
-      NextBit += NumBits-1;
+      NextBit += NumBits - 1;
       if (NextBit >= 64)
         return createStringError(std::errc::illegal_byte_sequence,
                                  "Unterminated VBR");
@@ -296,9 +296,8 @@ public:
   void SkipToFourByteBoundary() {
     // If word_t is 64-bits and if we've read less than 32 bits, just dump
     // the bits we have up to the next 32-bit boundary.
-    if (sizeof(word_t) > 4 &&
-        BitsInCurWord >= 32) {
-      CurWord >>= BitsInCurWord-32;
+    if (sizeof(word_t) > 4 && BitsInCurWord >= 32) {
+      CurWord >>= BitsInCurWord - 32;
       BitsInCurWord = 32;
       return;
     }
@@ -334,19 +333,29 @@ struct BitstreamEntry {
   unsigned ID;
 
   static BitstreamEntry getError() {
-    BitstreamEntry E; E.Kind = Error; return E;
+    BitstreamEntry E;
+    E.Kind = Error;
+    return E;
   }
 
   static BitstreamEntry getEndBlock() {
-    BitstreamEntry E; E.Kind = EndBlock; return E;
+    BitstreamEntry E;
+    E.Kind = EndBlock;
+    return E;
   }
 
   static BitstreamEntry getSubBlock(unsigned ID) {
-    BitstreamEntry E; E.Kind = SubBlock; E.ID = ID; return E;
+    BitstreamEntry E;
+    E.Kind = SubBlock;
+    E.ID = ID;
+    return E;
   }
 
   static BitstreamEntry getRecord(unsigned AbbrevID) {
-    BitstreamEntry E; E.Kind = Record; E.ID = AbbrevID; return E;
+    BitstreamEntry E;
+    E.Kind = Record;
+    E.ID = AbbrevID;
+    return E;
   }
 };
 
@@ -439,8 +448,7 @@ public:
           return MaybeSubBlock.takeError();
       }
 
-      if (Code == bitc::DEFINE_ABBREV &&
-          !(Flags & AF_DontAutoprocessAbbrevs)) {
+      if (Code == bitc::DEFINE_ABBREV && !(Flags & AF_DontAutoprocessAbbrevs)) {
         // We read and accumulate abbrev's, the client can't do anything with
         // them anyway.
         if (Error Err = ReadAbbrevRecord())
@@ -516,7 +524,8 @@ public:
   LLVM_ABI Error EnterSubBlock(unsigned BlockID, unsigned *NumWordsP = nullptr);
 
   bool ReadBlockEnd() {
-    if (BlockScope.empty()) return true;
+    if (BlockScope.empty())
+      return true;
 
     // Block tail:
     //    [END_BLOCK, <align4bytes>]
@@ -543,8 +552,8 @@ public:
   Expected<const BitCodeAbbrev *> getAbbrev(unsigned AbbrevID) {
     unsigned AbbrevNo = AbbrevID - bitc::FIRST_APPLICATION_ABBREV;
     if (AbbrevNo >= CurAbbrevs.size())
-      return createStringError(
-          std::errc::illegal_byte_sequence, "Invalid abbrev number");
+      return createStringError(std::errc::illegal_byte_sequence,
+                               "Invalid abbrev number");
     return CurAbbrevs[AbbrevNo].get();
   }
 
@@ -573,6 +582,6 @@ public:
   void setBlockInfo(BitstreamBlockInfo *BI) { BlockInfo = BI; }
 };
 
-} // end llvm namespace
+} // namespace llvm
 
 #endif // LLVM_BITSTREAM_BITSTREAMREADER_H

@@ -99,7 +99,7 @@ unsigned MOSMCCodeEmitter::encodeImm(const MCInst &MI, unsigned OpNo,
 unsigned MOSMCCodeEmitter::getExprOpValue(const MCExpr *Expr,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI,
-                                          unsigned int Offset ) const {
+                                          unsigned int Offset) const {
 
   MCExpr::ExprKind Kind = Expr->getKind();
 
@@ -123,7 +123,6 @@ unsigned MOSMCCodeEmitter::getExprOpValue(const MCExpr *Expr,
   assert(Kind == MCExpr::SymbolRef);
   return 0;
 }
-
 
 unsigned MOSMCCodeEmitter::getMachineOpValue(const MCInst &MI,
                                              const MCOperand &MO,

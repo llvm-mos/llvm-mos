@@ -230,8 +230,7 @@ private:
   BasicBlock *Block;
 };
 
-template <>
-struct ilist_alloc_traits<MemoryAccess> {
+template <> struct ilist_alloc_traits<MemoryAccess> {
   static void deleteNode(MemoryAccess *MA) { MA->deleteValue(); }
 };
 
@@ -338,13 +337,9 @@ public:
     return getDefiningAccess() && OptimizedID == getDefiningAccess()->getID();
   }
 
-  MemoryAccess *getOptimized() const {
-    return getDefiningAccess();
-  }
+  MemoryAccess *getOptimized() const { return getDefiningAccess(); }
 
-  void resetOptimized() {
-    OptimizedID = INVALID_MEMORYACCESS_ID;
-  }
+  void resetOptimized() { OptimizedID = INVALID_MEMORYACCESS_ID; }
 
 protected:
   friend class MemorySSA;
@@ -422,8 +417,7 @@ template <>
 struct OperandTraits<MemoryDef> : public FixedNumOperandTraits<MemoryDef, 2> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryDef, MemoryAccess)
 
-template <>
-struct OperandTraits<MemoryUseOrDef> {
+template <> struct OperandTraits<MemoryUseOrDef> {
   static Use *op_begin(MemoryUseOrDef *MUD) {
     if (auto *MU = dyn_cast<MemoryUse>(MUD))
       return OperandTraits<MemoryUse>::op_begin(MU);
@@ -1275,9 +1269,9 @@ private:
     CurrentPair.first = *DefIterator;
     CurrentPair.second = Location;
     if (WalkingPhi && Location.Ptr) {
-      PHITransAddr Translator(
-          const_cast<Value *>(Location.Ptr),
-          OriginalAccess->getBlock()->getDataLayout(), nullptr);
+      PHITransAddr Translator(const_cast<Value *>(Location.Ptr),
+                              OriginalAccess->getBlock()->getDataLayout(),
+                              nullptr);
 
       if (Value *Addr =
               Translator.translateValue(OriginalAccess->getBlock(),
@@ -1304,8 +1298,8 @@ private:
   bool WalkingPhi = false;
 };
 
-inline upward_defs_iterator
-upward_defs_begin(const MemoryAccessPair &Pair, DominatorTree &DT) {
+inline upward_defs_iterator upward_defs_begin(const MemoryAccessPair &Pair,
+                                              DominatorTree &DT) {
   return upward_defs_iterator(Pair, &DT);
 }
 

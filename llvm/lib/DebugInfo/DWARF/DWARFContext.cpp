@@ -68,7 +68,6 @@ using DWARFLineTable = DWARFDebugLine::LineTable;
 using FileLineInfoKind = DILineInfoSpecifier::FileLineInfoKind;
 using FunctionNameKind = DILineInfoSpecifier::FunctionNameKind;
 
-
 void fixupIndexV4(DWARFContext &C, DWARFUnitIndex &Index) {
   using EntryType = DWARFUnitIndex::Entry::SectionContribution;
   using EntryMap = DenseMap<uint32_t, EntryType>;
@@ -201,7 +200,6 @@ static T &getAccelTable(std::unique_ptr<T> &Cache, const DWARFObject &Obj,
   return *Cache;
 }
 
-
 std::unique_ptr<DWARFDebugMacro>
 DWARFContext::DWARFContextState::parseMacroOrMacinfo(MacroSecType SectionType) {
   auto Macro = std::make_unique<DWARFDebugMacro>();
@@ -281,9 +279,8 @@ class ThreadUnsafeDWARFContextState : public DWARFContext::DWARFContextState {
   std::string DWPName;
 
 public:
-  ThreadUnsafeDWARFContextState(DWARFContext &DC, std::string &DWP) :
-      DWARFContext::DWARFContextState(DC),
-      DWPName(std::move(DWP)) {}
+  ThreadUnsafeDWARFContextState(DWARFContext &DC, std::string &DWP)
+      : DWARFContext::DWARFContextState(DC), DWPName(std::move(DWP)) {}
 
   DWARFUnitVector &getNormalUnits() override {
     if (NormalUnits.empty()) {
@@ -327,8 +324,8 @@ public:
     if (CUIndex)
       return *CUIndex;
 
-    DataExtractor Data(D.getDWARFObj().getCUIndexSection(),
-                       D.isLittleEndian(), 0);
+    DataExtractor Data(D.getDWARFObj().getCUIndexSection(), D.isLittleEndian(),
+                       0);
     CUIndex = std::make_unique<DWARFUnitIndex>(DW_SECT_INFO);
     if (CUIndex->parse(Data))
       fixupIndex(D, *CUIndex);
@@ -338,8 +335,8 @@ public:
     if (TUIndex)
       return *TUIndex;
 
-    DataExtractor Data(D.getDWARFObj().getTUIndexSection(),
-                       D.isLittleEndian(), 0);
+    DataExtractor Data(D.getDWARFObj().getTUIndexSection(), D.isLittleEndian(),
+                       0);
     TUIndex = std::make_unique<DWARFUnitIndex>(DW_SECT_EXT_TYPES);
     bool isParseSuccessful = TUIndex->parse(Data);
     // If we are parsing TU-index and for .debug_types section we don't need
@@ -363,8 +360,8 @@ public:
     if (Abbrev)
       return Abbrev.get();
 
-    DataExtractor Data(D.getDWARFObj().getAbbrevSection(),
-                       D.isLittleEndian(), 0);
+    DataExtractor Data(D.getDWARFObj().getAbbrevSection(), D.isLittleEndian(),
+                       0);
     Abbrev = std::make_unique<DWARFDebugAbbrev>(Data);
     return Abbrev.get();
   }
@@ -393,8 +390,9 @@ public:
     return Aranges.get();
   }
 
-  Expected<const DWARFDebugLine::LineTable *>
-  getLineTableForUnit(DWARFUnit *U, function_ref<void(Error)> RecoverableErrorHandler) override {
+  Expected<const DWARFDebugLine::LineTable *> getLineTableForUnit(
+      DWARFUnit *U,
+      function_ref<void(Error)> RecoverableErrorHandler) override {
     if (!Line)
       Line = std::make_unique<DWARFDebugLine>();
 
@@ -420,7 +418,6 @@ public:
                             U->isLittleEndian(), U->getAddressByteSize());
     return Line->getOrParseLineTable(Data, stmtOffset, U->getContext(), U,
                                      RecoverableErrorHandler);
-
   }
 
   void clearLineTableForUnit(DWARFUnit *U) override {
@@ -445,20 +442,19 @@ public:
     const DWARFObject &DObj = D.getDWARFObj();
     const DWARFSection &DS = DObj.getFrameSection();
 
-    // There's a "bug" in the DWARFv3 standard with respect to the target address
-    // size within debug frame sections. While DWARF is supposed to be independent
-    // of its container, FDEs have fields with size being "target address size",
-    // which isn't specified in DWARF in general. It's only specified for CUs, but
-    // .eh_frame can appear without a .debug_info section. Follow the example of
-    // other tools (libdwarf) and extract this from the container (ObjectFile
-    // provides this information). This problem is fixed in DWARFv4
-    // See this dwarf-discuss discussion for more details:
+    // There's a "bug" in the DWARFv3 standard with respect to the target
+    // address size within debug frame sections. While DWARF is supposed to be
+    // independent of its container, FDEs have fields with size being "target
+    // address size", which isn't specified in DWARF in general. It's only
+    // specified for CUs, but .eh_frame can appear without a .debug_info
+    // section. Follow the example of other tools (libdwarf) and extract this
+    // from the container (ObjectFile provides this information). This problem
+    // is fixed in DWARFv4 See this dwarf-discuss discussion for more details:
     // http://lists.dwarfstd.org/htdig.cgi/dwarf-discuss-dwarfstd.org/2011-December/001173.html
     DWARFDataExtractor Data(DObj, DS, D.isLittleEndian(),
                             DObj.getAddressSize());
-    auto DF =
-        std::make_unique<DWARFDebugFrame>(D.getArch(), /*IsEH=*/false,
-                                          DS.Address);
+    auto DF = std::make_unique<DWARFDebugFrame>(D.getArch(), /*IsEH=*/false,
+                                                DS.Address);
     if (Error E = DF->parse(Data))
       return std::move(E);
 
@@ -474,9 +470,8 @@ public:
     const DWARFSection &DS = DObj.getEHFrameSection();
     DWARFDataExtractor Data(DObj, DS, D.isLittleEndian(),
                             DObj.getAddressSize());
-    auto DF =
-        std::make_unique<DWARFDebugFrame>(D.getArch(), /*IsEH=*/true,
-                                          DS.Address);
+    auto DF = std::make_unique<DWARFDebugFrame>(D.getArch(), /*IsEH=*/true,
+                                                DS.Address);
     if (Error E = DF->parse(Data))
       return std::move(E);
     EHFrame.swap(DF);
@@ -512,20 +507,17 @@ public:
     const DWARFObject &DObj = D.getDWARFObj();
     return getAccelTable(AppleNames, DObj, DObj.getAppleNamesSection(),
                          DObj.getStrSection(), D.isLittleEndian());
-
   }
   const AppleAcceleratorTable &getAppleTypes() override {
     const DWARFObject &DObj = D.getDWARFObj();
     return getAccelTable(AppleTypes, DObj, DObj.getAppleTypesSection(),
                          DObj.getStrSection(), D.isLittleEndian());
-
   }
   const AppleAcceleratorTable &getAppleNamespaces() override {
     const DWARFObject &DObj = D.getDWARFObj();
     return getAccelTable(AppleNamespaces, DObj,
-                         DObj.getAppleNamespacesSection(),
-                         DObj.getStrSection(), D.isLittleEndian());
-
+                         DObj.getAppleNamespacesSection(), DObj.getStrSection(),
+                         D.isLittleEndian());
   }
   const AppleAcceleratorTable &getAppleObjC() override {
     const DWARFObject &DObj = D.getDWARFObj();
@@ -533,8 +525,7 @@ public:
                          DObj.getStrSection(), D.isLittleEndian());
   }
 
-  std::shared_ptr<DWARFContext>
-  getDWOContext(StringRef AbsolutePath) override {
+  std::shared_ptr<DWARFContext> getDWOContext(StringRef AbsolutePath) override {
     if (auto S = DWP.lock()) {
       DWARFContext *Ctxt = S->Context.get();
       return std::shared_ptr<DWARFContext>(std::move(S), Ctxt);
@@ -595,7 +586,7 @@ public:
   const DenseMap<uint64_t, DWARFTypeUnit *> &getNormalTypeUnitMap() {
     if (!NormalTypeUnits) {
       NormalTypeUnits.emplace();
-      for (const auto &U :D.normal_units()) {
+      for (const auto &U : D.normal_units()) {
         if (DWARFTypeUnit *TU = dyn_cast<DWARFTypeUnit>(U.get()))
           (*NormalTypeUnits)[TU->getTypeHash()] = TU;
       }
@@ -606,7 +597,7 @@ public:
   const DenseMap<uint64_t, DWARFTypeUnit *> &getDWOTypeUnitMap() {
     if (!DWOTypeUnits) {
       DWOTypeUnits.emplace();
-      for (const auto &U :D.dwo_units()) {
+      for (const auto &U : D.dwo_units()) {
         if (DWARFTypeUnit *TU = dyn_cast<DWARFTypeUnit>(U.get()))
           (*DWOTypeUnits)[TU->getTypeHash()] = TU;
       }
@@ -627,8 +618,8 @@ class ThreadSafeState : public ThreadUnsafeDWARFContextState {
   std::recursive_mutex Mutex;
 
 public:
-  ThreadSafeState(DWARFContext &DC, std::string &DWP) :
-      ThreadUnsafeDWARFContextState(DC, DWP) {}
+  ThreadSafeState(DWARFContext &DC, std::string &DWP)
+      : ThreadUnsafeDWARFContextState(DC, DWP) {}
 
   DWARFUnitVector &getNormalUnits() override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
@@ -670,10 +661,12 @@ public:
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
     return ThreadUnsafeDWARFContextState::getDebugAranges();
   }
-  Expected<const DWARFDebugLine::LineTable *>
-  getLineTableForUnit(DWARFUnit *U, function_ref<void(Error)> RecoverableErrorHandler) override {
+  Expected<const DWARFDebugLine::LineTable *> getLineTableForUnit(
+      DWARFUnit *U,
+      function_ref<void(Error)> RecoverableErrorHandler) override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
-    return ThreadUnsafeDWARFContextState::getLineTableForUnit(U, RecoverableErrorHandler);
+    return ThreadUnsafeDWARFContextState::getLineTableForUnit(
+        U, RecoverableErrorHandler);
   }
   void clearLineTableForUnit(DWARFUnit *U) override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
@@ -723,8 +716,7 @@ public:
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
     return ThreadUnsafeDWARFContextState::getAppleObjC();
   }
-  std::shared_ptr<DWARFContext>
-  getDWOContext(StringRef AbsolutePath) override {
+  std::shared_ptr<DWARFContext> getDWOContext(StringRef AbsolutePath) override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
     return ThreadUnsafeDWARFContextState::getDWOContext(AbsolutePath);
   }
@@ -744,14 +736,13 @@ DWARFContext::DWARFContext(std::unique_ptr<const DWARFObject> DObj,
                            std::function<void(Error)> RecoverableErrorHandler,
                            std::function<void(Error)> WarningHandler,
                            bool ThreadSafe)
-    : DIContext(CK_DWARF),
-      RecoverableErrorHandler(RecoverableErrorHandler),
+    : DIContext(CK_DWARF), RecoverableErrorHandler(RecoverableErrorHandler),
       WarningHandler(WarningHandler), DObj(std::move(DObj)) {
-        if (ThreadSafe)
-          State = std::make_unique<ThreadSafeState>(*this, DWPName);
-        else
-          State = std::make_unique<ThreadUnsafeDWARFContextState>(*this, DWPName);
-      }
+  if (ThreadSafe)
+    State = std::make_unique<ThreadSafeState>(*this, DWPName);
+  else
+    State = std::make_unique<ThreadUnsafeDWARFContextState>(*this, DWPName);
+}
 
 DWARFContext::~DWARFContext() = default;
 
@@ -768,7 +759,7 @@ static void dumpUUID(raw_ostream &OS, const ObjectFile &Obj) {
         return;
       }
       OS << "UUID: ";
-      memcpy(&UUID, LC.Ptr+sizeof(LC.C), sizeof(UUID));
+      memcpy(&UUID, LC.Ptr + sizeof(LC.C), sizeof(UUID));
       OS.write_uuid(UUID);
       Triple T = MachO->getArchTriple();
       OS << " (" << T.getArchName() << ')';
@@ -941,7 +932,6 @@ static void dumpRnglistsSection(
     }
   }
 }
-
 
 static void dumpLoclistsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
                                 DWARFDataExtractor Data, const DWARFObject &Obj,
@@ -1232,8 +1222,8 @@ void DWARFContext::dump(
 
   if (shouldDump(Explicit, ".debug_addr", DIDT_ID_DebugAddr,
                  DObj->getAddrSection().Data)) {
-    DWARFDataExtractor AddrData(*DObj, DObj->getAddrSection(),
-                                   isLittleEndian(), 0);
+    DWARFDataExtractor AddrData(*DObj, DObj->getAddrSection(), isLittleEndian(),
+                                0);
     dumpAddrSection(OS, AddrData, DumpOpts, getMaxVersion(), getCUAddrSize());
   }
 
@@ -1419,17 +1409,11 @@ bool DWARFContext::verify(raw_ostream &OS, DIDumpOptions DumpOpts) {
   return Success;
 }
 
-const DWARFUnitIndex &DWARFContext::getCUIndex() {
-  return State->getCUIndex();
-}
+const DWARFUnitIndex &DWARFContext::getCUIndex() { return State->getCUIndex(); }
 
-const DWARFUnitIndex &DWARFContext::getTUIndex() {
-  return State->getTUIndex();
-}
+const DWARFUnitIndex &DWARFContext::getTUIndex() { return State->getTUIndex(); }
 
-DWARFGdbIndex &DWARFContext::getGdbIndex() {
-  return State->getGdbIndex();
-}
+DWARFGdbIndex &DWARFContext::getGdbIndex() { return State->getGdbIndex(); }
 
 const DWARFDebugAbbrev *DWARFContext::getDebugAbbrev() {
   return State->getDebugAbbrev();
@@ -1470,7 +1454,6 @@ const DWARFDebugMacro *DWARFContext::getDebugMacinfo() {
 const DWARFDebugMacro *DWARFContext::getDebugMacinfoDWO() {
   return State->getDebugMacinfoDWO();
 }
-
 
 const DWARFDebugNames &DWARFContext::getDebugNames() {
   return State->getDebugNames();
@@ -2156,7 +2139,7 @@ public:
         consumeError(NameOrErr.takeError());
 
       ++SectionAmountMap[Name];
-      SectionNames.push_back({ Name, true });
+      SectionNames.push_back({Name, true});
 
       // Skip BSS and Virtual sections, they aren't interesting.
       if (Section.isBSS() || Section.isVirtual())
@@ -2391,17 +2374,19 @@ public:
 
   StringRef getAbbrevSection() const override { return AbbrevSection; }
   const DWARFSection &getLocSection() const override { return LocSection; }
-  const DWARFSection &getLoclistsSection() const override { return LoclistsSection; }
-  StringRef getArangesSection() const override { return ArangesSection; }
-  const DWARFSection &getFrameSection() const override {
-    return FrameSection;
+  const DWARFSection &getLoclistsSection() const override {
+    return LoclistsSection;
   }
+  StringRef getArangesSection() const override { return ArangesSection; }
+  const DWARFSection &getFrameSection() const override { return FrameSection; }
   const DWARFSection &getEHFrameSection() const override {
     return EHFrameSection;
   }
   const DWARFSection &getLineSection() const override { return LineSection; }
   StringRef getStrSection() const override { return StrSection; }
-  const DWARFSection &getRangesSection() const override { return RangesSection; }
+  const DWARFSection &getRangesSection() const override {
+    return RangesSection;
+  }
   const DWARFSection &getRnglistsSection() const override {
     return RnglistsSection;
   }
@@ -2409,8 +2394,12 @@ public:
   StringRef getMacroDWOSection() const override { return MacroDWOSection; }
   StringRef getMacinfoSection() const override { return MacinfoSection; }
   StringRef getMacinfoDWOSection() const override { return MacinfoDWOSection; }
-  const DWARFSection &getPubnamesSection() const override { return PubnamesSection; }
-  const DWARFSection &getPubtypesSection() const override { return PubtypesSection; }
+  const DWARFSection &getPubnamesSection() const override {
+    return PubnamesSection;
+  }
+  const DWARFSection &getPubtypesSection() const override {
+    return PubtypesSection;
+  }
   const DWARFSection &getGnuPubnamesSection() const override {
     return GnuPubnamesSection;
   }
@@ -2429,9 +2418,7 @@ public:
   const DWARFSection &getAppleObjCSection() const override {
     return AppleObjCSection;
   }
-  const DWARFSection &getNamesSection() const override {
-    return NamesSection;
-  }
+  const DWARFSection &getNamesSection() const override { return NamesSection; }
 
   StringRef getFileName() const override { return FileName; }
   uint8_t getAddressSize() const override { return AddressSize; }
@@ -2448,28 +2435,22 @@ public:
 };
 } // namespace
 
-std::unique_ptr<DWARFContext>
-DWARFContext::create(const object::ObjectFile &Obj,
-                     ProcessDebugRelocations RelocAction,
-                     const LoadedObjectInfo *L, std::string DWPName,
-                     std::function<void(Error)> RecoverableErrorHandler,
-                     std::function<void(Error)> WarningHandler,
-                     bool ThreadSafe) {
+std::unique_ptr<DWARFContext> DWARFContext::create(
+    const object::ObjectFile &Obj, ProcessDebugRelocations RelocAction,
+    const LoadedObjectInfo *L, std::string DWPName,
+    std::function<void(Error)> RecoverableErrorHandler,
+    std::function<void(Error)> WarningHandler, bool ThreadSafe) {
   auto DObj = std::make_unique<DWARFObjInMemory>(
       Obj, L, RecoverableErrorHandler, WarningHandler, RelocAction);
-  return std::make_unique<DWARFContext>(std::move(DObj),
-                                        std::move(DWPName),
-                                        RecoverableErrorHandler,
-                                        WarningHandler,
+  return std::make_unique<DWARFContext>(std::move(DObj), std::move(DWPName),
+                                        RecoverableErrorHandler, WarningHandler,
                                         ThreadSafe);
 }
 
-std::unique_ptr<DWARFContext>
-DWARFContext::create(const StringMap<std::unique_ptr<MemoryBuffer>> &Sections,
-                     uint8_t AddrSize, bool isLittleEndian,
-                     std::function<void(Error)> RecoverableErrorHandler,
-                     std::function<void(Error)> WarningHandler,
-                     bool ThreadSafe) {
+std::unique_ptr<DWARFContext> DWARFContext::create(
+    const StringMap<std::unique_ptr<MemoryBuffer>> &Sections, uint8_t AddrSize,
+    bool isLittleEndian, std::function<void(Error)> RecoverableErrorHandler,
+    std::function<void(Error)> WarningHandler, bool ThreadSafe) {
   auto DObj =
       std::make_unique<DWARFObjInMemory>(Sections, AddrSize, isLittleEndian);
   return std::make_unique<DWARFContext>(

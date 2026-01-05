@@ -32,8 +32,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
-STATISTIC(NumAssigned   , "Number of registers assigned");
-STATISTIC(NumUnassigned , "Number of registers unassigned");
+STATISTIC(NumAssigned, "Number of registers assigned");
+STATISTIC(NumUnassigned, "Number of registers unassigned");
 
 char LiveRegMatrixWrapperLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(LiveRegMatrixWrapperLegacy, "liveregmatrix",

@@ -9,8 +9,8 @@
 #ifndef LLVM_ADT_ADL_H
 #define LLVM_ADT_ADL_H
 
-#include <type_traits>
 #include <iterator>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {

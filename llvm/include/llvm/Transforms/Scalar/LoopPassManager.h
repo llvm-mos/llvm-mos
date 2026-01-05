@@ -320,15 +320,11 @@ public:
     Worklist.insert(CurrentL);
   }
 
-  bool isLoopNestChanged() const {
-    return LoopNestChanged;
-  }
+  bool isLoopNestChanged() const { return LoopNestChanged; }
 
   /// Loopnest passes should use this method to indicate if the
   /// loopnest has been modified.
-  void markLoopNestChanged(bool Changed) {
-    LoopNestChanged = Changed;
-  }
+  void markLoopNestChanged(bool Changed) { LoopNestChanged = Changed; }
 
 private:
   friend class llvm::FunctionToLoopPassAdaptor;
@@ -497,6 +493,6 @@ public:
   LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &,
                                  LoopStandardAnalysisResults &, LPMUpdater &);
 };
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_LOOPPASSMANAGER_H

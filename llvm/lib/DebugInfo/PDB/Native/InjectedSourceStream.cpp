@@ -38,7 +38,7 @@ Error InjectedSourceStream::reload(const PDBStringTable &Strings) {
   if (auto EC = InjectedSourceTable.load(Reader))
     return EC;
 
-  for (const auto& Entry : *this) {
+  for (const auto &Entry : *this) {
     if (Entry.second.Size != sizeof(SrcHeaderBlockEntry))
       return make_error<RawError>(raw_error_code::corrupt_file,
                                   "Invalid headerbock entry size");

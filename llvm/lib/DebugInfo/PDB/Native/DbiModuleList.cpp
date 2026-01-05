@@ -26,8 +26,8 @@ DbiModuleSourceFilesIterator::DbiModuleSourceFilesIterator(
   setValue();
 }
 
-bool DbiModuleSourceFilesIterator::
-operator==(const DbiModuleSourceFilesIterator &R) const {
+bool DbiModuleSourceFilesIterator::operator==(
+    const DbiModuleSourceFilesIterator &R) const {
   // incompatible iterators are never equal
   if (!isCompatible(R))
     return false;
@@ -54,8 +54,8 @@ operator==(const DbiModuleSourceFilesIterator &R) const {
   return (Filei == R.Filei);
 }
 
-bool DbiModuleSourceFilesIterator::
-operator<(const DbiModuleSourceFilesIterator &R) const {
+bool DbiModuleSourceFilesIterator::operator<(
+    const DbiModuleSourceFilesIterator &R) const {
   assert(isCompatible(R));
 
   // It's not sufficient to compare the file indices, because default
@@ -67,8 +67,8 @@ operator<(const DbiModuleSourceFilesIterator &R) const {
   return Filei < R.Filei;
 }
 
-std::ptrdiff_t DbiModuleSourceFilesIterator::
-operator-(const DbiModuleSourceFilesIterator &R) const {
+std::ptrdiff_t DbiModuleSourceFilesIterator::operator-(
+    const DbiModuleSourceFilesIterator &R) const {
   assert(isCompatible(R));
   assert(!(*this < R));
 
@@ -92,8 +92,8 @@ operator-(const DbiModuleSourceFilesIterator &R) const {
   return Thisi - R.Filei;
 }
 
-DbiModuleSourceFilesIterator &DbiModuleSourceFilesIterator::
-operator+=(std::ptrdiff_t N) {
+DbiModuleSourceFilesIterator &
+DbiModuleSourceFilesIterator::operator+=(std::ptrdiff_t N) {
   assert(!isEnd());
 
   Filei += N;
@@ -102,8 +102,8 @@ operator+=(std::ptrdiff_t N) {
   return *this;
 }
 
-DbiModuleSourceFilesIterator &DbiModuleSourceFilesIterator::
-operator-=(std::ptrdiff_t N) {
+DbiModuleSourceFilesIterator &
+DbiModuleSourceFilesIterator::operator-=(std::ptrdiff_t N) {
   // Note that we can subtract from an end iterator, but not a universal end
   // iterator.
   assert(!isUniversalEnd());

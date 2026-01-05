@@ -112,10 +112,10 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
 
   if (Object.RawLinkEditSegment || !IO.outputting())
     IO.mapOptional("__LINKEDIT", Object.RawLinkEditSegment);
-  if(!Object.LinkEdit.isEmpty() || !IO.outputting())
+  if (!Object.LinkEdit.isEmpty() || !IO.outputting())
     IO.mapOptional("LinkEditData", Object.LinkEdit);
 
-  if(!Object.DWARF.isEmpty() || !IO.outputting())
+  if (!Object.DWARF.isEmpty() || !IO.outputting())
     IO.mapOptional("DWARF", Object.DWARF);
 
   if (IO.getContext() == &Object)

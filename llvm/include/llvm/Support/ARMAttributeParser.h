@@ -80,6 +80,6 @@ public:
   ARMAttributeParser()
       : ELFCompactAttrParser(ARMBuildAttrs::getARMAttributeTags(), "aeabi") {}
 };
-}
+} // namespace llvm
 
 #endif

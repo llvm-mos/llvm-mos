@@ -365,7 +365,7 @@ protected:
   }
   /// Helper function to find the right canonical register for a phi instruction
   /// coming from a peeled out prologue.
-  Register getPhiCanonicalReg(MachineInstr* CanonicalPhi, MachineInstr* Phi);
+  Register getPhiCanonicalReg(MachineInstr *CanonicalPhi, MachineInstr *Phi);
   /// Target loop info before kernel peeling.
   std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> LoopInfo;
 };

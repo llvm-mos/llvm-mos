@@ -181,10 +181,9 @@ LazyCallGraph::LazyCallGraph(
   for (auto &A : M.aliases()) {
     if (A.hasLocalLinkage())
       continue;
-    if (Function* F = dyn_cast<Function>(A.getAliasee())) {
-      LLVM_DEBUG(dbgs() << "  Adding '" << F->getName()
-                        << "' with alias '" << A.getName()
-                        << "' to entry set of the graph.\n");
+    if (Function *F = dyn_cast<Function>(A.getAliasee())) {
+      LLVM_DEBUG(dbgs() << "  Adding '" << F->getName() << "' with alias '"
+                        << A.getName() << "' to entry set of the graph.\n");
       addEdge(EntryEdges.Edges, EntryEdges.EdgeIndexMap, get(*F), Edge::Ref);
     }
   }

@@ -18,21 +18,20 @@
 #include "llvm/Support/AlwaysTrue.h"
 
 namespace {
-  struct ForceAsmWriterLinking {
-    ForceAsmWriterLinking() {
-      // We must reference the plug-ins in such a way that compilers will not
-      // delete it all as dead code, even with whole program optimization,
-      // yet is effectively a NO-OP. This is so that globals in the translation
-      // units where these functions are defined are forced to be initialized,
-      // populating various registries.
-      if (llvm::getNonFoldableAlwaysTrue())
-        return;
+struct ForceAsmWriterLinking {
+  ForceAsmWriterLinking() {
+    // We must reference the plug-ins in such a way that compilers will not
+    // delete it all as dead code, even with whole program optimization,
+    // yet is effectively a NO-OP. This is so that globals in the translation
+    // units where these functions are defined are forced to be initialized,
+    // populating various registries.
+    if (llvm::getNonFoldableAlwaysTrue())
+      return;
 
-      llvm::linkOcamlGCPrinter();
-      llvm::linkErlangGCPrinter();
-
-    }
-  } ForceAsmWriterLinking; // Force link by creating a global definition.
-}
+    llvm::linkOcamlGCPrinter();
+    llvm::linkErlangGCPrinter();
+  }
+} ForceAsmWriterLinking; // Force link by creating a global definition.
+} // namespace
 
 #endif // LLVM_CODEGEN_LINKALLASMWRITERCOMPONENTS_H

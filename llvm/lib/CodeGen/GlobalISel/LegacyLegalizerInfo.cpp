@@ -244,7 +244,8 @@ LegacyLegalizerInfo::decreaseToSmallerTypesAndIncreaseToSmallest(
 }
 
 LegacyLegalizerInfo::SizeAndAction
-LegacyLegalizerInfo::findAction(const SizeAndActionsVec &Vec, const uint32_t Size) {
+LegacyLegalizerInfo::findAction(const SizeAndActionsVec &Vec,
+                                const uint32_t Size) {
   assert(Size >= 1);
   // Find the last element in Vec that has a bitsize equal to or smaller than
   // the requested bit size.
@@ -367,7 +368,6 @@ unsigned LegacyLegalizerInfo::getOpcodeIdxForOpcode(unsigned Opcode) const {
   return Opcode - FirstOp;
 }
 
-
 LegacyLegalizeActionStep
 LegacyLegalizerInfo::getAction(const LegalityQuery &Query) const {
   for (unsigned i = 0; i < Query.Types.size(); ++i) {
@@ -382,4 +382,3 @@ LegacyLegalizerInfo::getAction(const LegalityQuery &Query) const {
   LLVM_DEBUG(dbgs() << ".. (legacy) Legal\n");
   return {Legal, 0, LLT{}};
 }
-

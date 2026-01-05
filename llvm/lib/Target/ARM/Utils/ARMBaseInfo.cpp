@@ -54,12 +54,12 @@ const MClassSysReg *lookupMClassSysRegBy12bitSYSmValue(unsigned SYSm) {
 // returns APSR with _<bits> qualifier.
 // Note: ARMv7-M deprecates using MSR APSR without a _<bits> qualifier
 const MClassSysReg *lookupMClassSysRegAPSRNonDeprecated(unsigned SYSm) {
-  return lookupMClassSysRegByM2M3Encoding8((1<<9)|(SYSm & 0xFF));
+  return lookupMClassSysRegByM2M3Encoding8((1 << 9) | (SYSm & 0xFF));
 }
 
 // lookup system registers using 8-bit SYSm value
 const MClassSysReg *lookupMClassSysRegBy8bitSYSmValue(unsigned SYSm) {
-  return ARMSysReg::lookupMClassSysRegByM2M3Encoding8((1<<8)|(SYSm & 0xFF));
+  return ARMSysReg::lookupMClassSysRegByM2M3Encoding8((1 << 8) | (SYSm & 0xFF));
 }
 
 #define GET_MClassSysRegsList_IMPL
@@ -70,5 +70,5 @@ const MClassSysReg *lookupMClassSysRegBy8bitSYSmValue(unsigned SYSm) {
 namespace ARMBankedReg {
 #define GET_BankedRegsList_IMPL
 #include "ARMGenSystemRegister.inc"
-} // end namespce ARMSysReg
+} // namespace ARMBankedReg
 } // end namespace llvm

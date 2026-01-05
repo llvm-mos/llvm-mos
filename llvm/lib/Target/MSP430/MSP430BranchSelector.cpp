@@ -59,7 +59,7 @@ public:
   StringRef getPassName() const override { return "MSP430 Branch Selector"; }
 };
 char MSP430BSel::ID = 0;
-}
+} // namespace
 
 static bool isInRage(int DistanceInBytes) {
   // According to CC430 Family User's Guide, Section 4.5.1.3, branch

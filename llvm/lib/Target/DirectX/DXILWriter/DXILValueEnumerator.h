@@ -241,7 +241,6 @@ public:
   void EnumerateType(Type *T);
 
 private:
-
   /// Reorder the reachable metadata.
   ///
   /// This is not just an optimization, but is mandatory for emitting MDString

@@ -21,7 +21,7 @@ public:
 
   virtual Error dump() = 0;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

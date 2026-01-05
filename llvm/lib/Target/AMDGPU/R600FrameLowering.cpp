@@ -19,8 +19,8 @@ StackOffset
 R600FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
                                           Register &FrameReg) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const R600RegisterInfo *RI
-    = MF.getSubtarget<R600Subtarget>().getRegisterInfo();
+  const R600RegisterInfo *RI =
+      MF.getSubtarget<R600Subtarget>().getRegisterInfo();
 
   // Fill in FrameReg output argument.
   FrameReg = RI->getFrameRegister(MF);

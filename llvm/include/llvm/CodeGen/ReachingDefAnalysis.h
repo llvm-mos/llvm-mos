@@ -1,4 +1,5 @@
-//==--- llvm/CodeGen/ReachingDefAnalysis.h - Reaching Def Analysis -*- C++ -*---==//
+//==--- llvm/CodeGen/ReachingDefAnalysis.h - Reaching Def Analysis -*- C++
+//-*---==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,12 +46,11 @@ class ReachingDef {
 
 public:
   ReachingDef(std::nullptr_t) : Encoded(0) {}
-  ReachingDef(int Instr) : Encoded(((uintptr_t) Instr << 2) | 2) {}
-  operator int() const { return ((int) Encoded) >> 2; }
+  ReachingDef(int Instr) : Encoded(((uintptr_t)Instr << 2) | 2) {}
+  operator int() const { return ((int)Encoded) >> 2; }
 };
 
-template<>
-struct PointerLikeTypeTraits<ReachingDef> {
+template <> struct PointerLikeTypeTraits<ReachingDef> {
   static constexpr int NumLowBitsAvailable = 1;
 
   static inline void *getAsVoidPointer(const ReachingDef &RD) {
@@ -153,8 +153,8 @@ private:
   /// Default values are 'nothing happened a long time ago'.
   const int ReachingDefDefaultVal = -(1 << 21);
 
-  using InstSet = SmallPtrSetImpl<MachineInstr*>;
-  using BlockSet = SmallPtrSetImpl<MachineBasicBlock*>;
+  using InstSet = SmallPtrSetImpl<MachineInstr *>;
+  using BlockSet = SmallPtrSetImpl<MachineBasicBlock *>;
 
 public:
   ReachingDefInfo();
@@ -293,14 +293,14 @@ private:
   void processDefs(MachineInstr *);
 
   /// Utility function for isSafeToMoveForwards/Backwards.
-  template<typename Iterator>
+  template <typename Iterator>
   bool isSafeToMove(MachineInstr *From, MachineInstr *To) const;
 
   /// Return whether removing this instruction will have no effect on the
   /// program, ignoring the possible effects on some instructions, returning
   /// the redundant use-def chain.
-  bool isSafeToRemove(MachineInstr *MI, InstSet &Visited,
-                      InstSet &ToRemove, InstSet &Ignore) const;
+  bool isSafeToRemove(MachineInstr *MI, InstSet &Visited, InstSet &ToRemove,
+                      InstSet &Ignore) const;
 
   /// Provides the MI, from the given block, corresponding to the Id or a
   /// nullptr if the id does not refer to the block.

@@ -31,7 +31,7 @@ public:
   virtual uint32_t getCompilandId() const = 0;
   virtual bool isStatement() const = 0;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

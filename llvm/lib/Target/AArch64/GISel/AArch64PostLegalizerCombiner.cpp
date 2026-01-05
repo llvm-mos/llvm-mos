@@ -614,7 +614,6 @@ private:
   bool IsOptNone;
   AArch64PostLegalizerCombinerImplRuleConfig RuleConfig;
 
-
   struct StoreInfo {
     GStore *St = nullptr;
     // The G_PTR_ADD that's used by the store. We keep this to cache the

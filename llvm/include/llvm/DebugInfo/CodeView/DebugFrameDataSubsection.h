@@ -62,7 +62,7 @@ private:
   bool IncludeRelocPtr = false;
   std::vector<FrameData> Frames;
 };
-}
-}
+} // namespace codeview
+} // namespace llvm
 
 #endif

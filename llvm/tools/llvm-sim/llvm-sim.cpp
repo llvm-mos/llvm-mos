@@ -59,8 +59,7 @@ getPositionInModule(const Instruction *I,
 /// module represented by an unsigned integer.
 /// \returns A nonzero error code if there was a failure creating the file.
 std::error_code
-exportToFile(const StringRef FilePath,
-             const SimilarityGroupList &SimSections,
+exportToFile(const StringRef FilePath, const SimilarityGroupList &SimSections,
              const DenseMap<Instruction *, unsigned> &LLVMInstNum) {
   std::error_code EC;
   std::unique_ptr<ToolOutputFile> Out(
@@ -130,7 +129,7 @@ int main(int argc, const char *argv[]) {
   for (Function &F : *ModuleToAnalyze)
     for (BasicBlock &BB : F)
       for (Instruction &I : BB.instructionsWithoutDebug())
-        LLVMInstNum[&I]= InstructionNumber++;
+        LLVMInstNum[&I] = InstructionNumber++;
 
   // The similarity identifier we will use to find the similar sections.
   IRSimilarityIdentifier SimIdent;

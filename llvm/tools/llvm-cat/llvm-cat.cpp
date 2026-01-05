@@ -86,8 +86,8 @@ int main(int argc, char **argv) {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename, EC, sys::fs::OpenFlags::OF_None);
   if (EC) {
-    errs() << argv[0] << ": cannot open " << OutputFilename << " for writing: "
-           << EC.message();
+    errs() << argv[0] << ": cannot open " << OutputFilename
+           << " for writing: " << EC.message();
     return 1;
   }
 

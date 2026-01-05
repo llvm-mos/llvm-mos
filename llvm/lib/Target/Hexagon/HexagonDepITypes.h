@@ -63,6 +63,6 @@ enum Type {
   TypeV4LDST = 48,
 };
 }
-}
+} // namespace llvm
 
-#endif  // LLVM_LIB_TARGET_HEXAGON_HEXAGONDEPITYPES_H
+#endif // LLVM_LIB_TARGET_HEXAGON_HEXAGONDEPITYPES_H

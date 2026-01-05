@@ -431,7 +431,8 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
     const unsigned BalOp =
         STI->hasMips32r6()
             ? STI->inMicroMipsMode() ? Mips::BALC_MMR6 : Mips::BALC
-            : STI->inMicroMipsMode() ? Mips::BAL_BR_MM : Mips::BAL_BR;
+        : STI->inMicroMipsMode() ? Mips::BAL_BR_MM
+                                 : Mips::BAL_BR;
 
     if (!ABI.IsN64()) {
       // Pre R6:

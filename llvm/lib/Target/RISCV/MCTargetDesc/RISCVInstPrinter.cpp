@@ -142,7 +142,7 @@ void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
   unsigned FenceArg = MI->getOperand(OpNo).getImm();
-  assert (((FenceArg >> 4) == 0) && "Invalid immediate in printFenceArg");
+  assert(((FenceArg >> 4) == 0) && "Invalid immediate in printFenceArg");
 
   if ((FenceArg & RISCVFenceField::I) != 0)
     O << 'i';
@@ -248,7 +248,8 @@ void RISCVInstPrinter::printXSfmmVType(const MCInst *MI, unsigned OpNo,
 // than ABI register names, we need to print "{x1, x8-x9, x18-x27}" for all
 // registers. Otherwise, we print "{ra, s0-s11}".
 void RISCVInstPrinter::printRegList(const MCInst *MI, unsigned OpNo,
-                                    const MCSubtargetInfo &STI, raw_ostream &O) {
+                                    const MCSubtargetInfo &STI,
+                                    raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
 
   assert(Imm >= RISCVZC::RLISTENCODE::RA &&

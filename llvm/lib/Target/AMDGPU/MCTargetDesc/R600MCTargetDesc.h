@@ -22,8 +22,7 @@ class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
 
-MCCodeEmitter *createR600MCCodeEmitter(const MCInstrInfo &MCII,
-                                       MCContext &Ctx);
+MCCodeEmitter *createR600MCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx);
 MCInstrInfo *createR600MCInstrInfo();
 
 } // namespace llvm

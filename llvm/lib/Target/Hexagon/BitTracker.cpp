@@ -69,108 +69,108 @@ using BT = BitTracker;
 
 namespace {
 
-  // Local trickery to pretty print a register (without the whole "%number"
-  // business).
-  struct printv {
-    printv(unsigned r) : R(r) {}
+// Local trickery to pretty print a register (without the whole "%number"
+// business).
+struct printv {
+  printv(unsigned r) : R(r) {}
 
-    unsigned R;
-  };
+  unsigned R;
+};
 
-  raw_ostream &operator<< (raw_ostream &OS, const printv &PV) {
-    if (PV.R)
-      OS << 'v' << Register(PV.R).virtRegIndex();
-    else
-      OS << 's';
-    return OS;
-  }
+raw_ostream &operator<<(raw_ostream &OS, const printv &PV) {
+  if (PV.R)
+    OS << 'v' << Register(PV.R).virtRegIndex();
+  else
+    OS << 's';
+  return OS;
+}
 
 } // end anonymous namespace
 
 namespace llvm {
 
-  raw_ostream &operator<<(raw_ostream &OS, const BT::BitValue &BV) {
-    switch (BV.Type) {
-      case BT::BitValue::Top:
-        OS << 'T';
-        break;
-      case BT::BitValue::Zero:
-        OS << '0';
-        break;
-      case BT::BitValue::One:
-        OS << '1';
-        break;
-      case BT::BitValue::Ref:
-        OS << printv(BV.RefI.Reg) << '[' << BV.RefI.Pos << ']';
-        break;
-    }
-    return OS;
+raw_ostream &operator<<(raw_ostream &OS, const BT::BitValue &BV) {
+  switch (BV.Type) {
+  case BT::BitValue::Top:
+    OS << 'T';
+    break;
+  case BT::BitValue::Zero:
+    OS << '0';
+    break;
+  case BT::BitValue::One:
+    OS << '1';
+    break;
+  case BT::BitValue::Ref:
+    OS << printv(BV.RefI.Reg) << '[' << BV.RefI.Pos << ']';
+    break;
   }
+  return OS;
+}
 
-  raw_ostream &operator<<(raw_ostream &OS, const BT::RegisterCell &RC) {
-    unsigned n = RC.Bits.size();
-    OS << "{ w:" << n;
-    // Instead of printing each bit value individually, try to group them
-    // into logical segments, such as sequences of 0 or 1 bits or references
-    // to consecutive bits (e.g. "bits 3-5 are same as bits 7-9 of reg xyz").
-    // "Start" will be the index of the beginning of the most recent segment.
-    unsigned Start = 0;
-    bool SeqRef = false;    // A sequence of refs to consecutive bits.
-    bool ConstRef = false;  // A sequence of refs to the same bit.
+raw_ostream &operator<<(raw_ostream &OS, const BT::RegisterCell &RC) {
+  unsigned n = RC.Bits.size();
+  OS << "{ w:" << n;
+  // Instead of printing each bit value individually, try to group them
+  // into logical segments, such as sequences of 0 or 1 bits or references
+  // to consecutive bits (e.g. "bits 3-5 are same as bits 7-9 of reg xyz").
+  // "Start" will be the index of the beginning of the most recent segment.
+  unsigned Start = 0;
+  bool SeqRef = false;   // A sequence of refs to consecutive bits.
+  bool ConstRef = false; // A sequence of refs to the same bit.
 
-    for (unsigned i = 1, n = RC.Bits.size(); i < n; ++i) {
-      const BT::BitValue &V = RC[i];
-      const BT::BitValue &SV = RC[Start];
-      bool IsRef = (V.Type == BT::BitValue::Ref);
-      // If the current value is the same as Start, skip to the next one.
-      if (!IsRef && V == SV)
+  for (unsigned i = 1, n = RC.Bits.size(); i < n; ++i) {
+    const BT::BitValue &V = RC[i];
+    const BT::BitValue &SV = RC[Start];
+    bool IsRef = (V.Type == BT::BitValue::Ref);
+    // If the current value is the same as Start, skip to the next one.
+    if (!IsRef && V == SV)
+      continue;
+    if (IsRef && SV.Type == BT::BitValue::Ref && V.RefI.Reg == SV.RefI.Reg) {
+      if (Start + 1 == i) {
+        SeqRef = (V.RefI.Pos == SV.RefI.Pos + 1);
+        ConstRef = (V.RefI.Pos == SV.RefI.Pos);
+      }
+      if (SeqRef && V.RefI.Pos == SV.RefI.Pos + (i - Start))
         continue;
-      if (IsRef && SV.Type == BT::BitValue::Ref && V.RefI.Reg == SV.RefI.Reg) {
-        if (Start+1 == i) {
-          SeqRef = (V.RefI.Pos == SV.RefI.Pos+1);
-          ConstRef = (V.RefI.Pos == SV.RefI.Pos);
-        }
-        if (SeqRef && V.RefI.Pos == SV.RefI.Pos+(i-Start))
-          continue;
-        if (ConstRef && V.RefI.Pos == SV.RefI.Pos)
-          continue;
-      }
-
-      // The current value is different. Print the previous one and reset
-      // the Start.
-      OS << " [" << Start;
-      unsigned Count = i - Start;
-      if (Count == 1) {
-        OS << "]:" << SV;
-      } else {
-        OS << '-' << i-1 << "]:";
-        if (SV.Type == BT::BitValue::Ref && SeqRef)
-          OS << printv(SV.RefI.Reg) << '[' << SV.RefI.Pos << '-'
-             << SV.RefI.Pos+(Count-1) << ']';
-        else
-          OS << SV;
-      }
-      Start = i;
-      SeqRef = ConstRef = false;
+      if (ConstRef && V.RefI.Pos == SV.RefI.Pos)
+        continue;
     }
 
+    // The current value is different. Print the previous one and reset
+    // the Start.
     OS << " [" << Start;
-    unsigned Count = n - Start;
-    if (n-Start == 1) {
-      OS << "]:" << RC[Start];
+    unsigned Count = i - Start;
+    if (Count == 1) {
+      OS << "]:" << SV;
     } else {
-      OS << '-' << n-1 << "]:";
-      const BT::BitValue &SV = RC[Start];
+      OS << '-' << i - 1 << "]:";
       if (SV.Type == BT::BitValue::Ref && SeqRef)
         OS << printv(SV.RefI.Reg) << '[' << SV.RefI.Pos << '-'
-           << SV.RefI.Pos+(Count-1) << ']';
+           << SV.RefI.Pos + (Count - 1) << ']';
       else
         OS << SV;
     }
-    OS << " }";
-
-    return OS;
+    Start = i;
+    SeqRef = ConstRef = false;
   }
+
+  OS << " [" << Start;
+  unsigned Count = n - Start;
+  if (n - Start == 1) {
+    OS << "]:" << RC[Start];
+  } else {
+    OS << '-' << n - 1 << "]:";
+    const BT::BitValue &SV = RC[Start];
+    if (SV.Type == BT::BitValue::Ref && SeqRef)
+      OS << printv(SV.RefI.Reg) << '[' << SV.RefI.Pos << '-'
+         << SV.RefI.Pos + (Count - 1) << ']';
+    else
+      OS << SV;
+  }
+  OS << " }";
+
+  return OS;
+}
 
 } // end namespace llvm
 
@@ -180,12 +180,9 @@ void BitTracker::print_cells(raw_ostream &OS) const {
 }
 
 BitTracker::BitTracker(const MachineEvaluator &E, MachineFunction &F)
-    : ME(E), MF(F), MRI(F.getRegInfo()), Map(*new CellMapType), Trace(false) {
-}
+    : ME(E), MF(F), MRI(F.getRegInfo()), Map(*new CellMapType), Trace(false) {}
 
-BitTracker::~BitTracker() {
-  delete &Map;
-}
+BitTracker::~BitTracker() { delete &Map; }
 
 // If we were allowed to update a cell for a part of a register, the meet
 // operation would need to be parametrized by the register number and the
@@ -207,22 +204,23 @@ bool BT::RegisterCell::meet(const RegisterCell &RC, Register SelfR) {
 
 // Insert the entire cell RC into the current cell at position given by M.
 BT::RegisterCell &BT::RegisterCell::insert(const BT::RegisterCell &RC,
-      const BitMask &M) {
+                                           const BitMask &M) {
   uint16_t B = M.first(), E = M.last(), W = width();
   // M must be a valid mask for *this.
   assert(B < W && E < W);
   // The masked part of *this must have the same number of bits
   // as the source.
-  assert(B > E || E-B+1 == RC.width());      // B <= E  =>  E-B+1 = |RC|.
-  assert(B <= E || E+(W-B)+1 == RC.width()); // E < B   =>  E+(W-B)+1 = |RC|.
+  assert(B > E || E - B + 1 == RC.width()); // B <= E  =>  E-B+1 = |RC|.
+  assert(B <= E ||
+         E + (W - B) + 1 == RC.width()); // E < B   =>  E+(W-B)+1 = |RC|.
   if (B <= E) {
-    for (uint16_t i = 0; i <= E-B; ++i)
-      Bits[i+B] = RC[i];
+    for (uint16_t i = 0; i <= E - B; ++i)
+      Bits[i + B] = RC[i];
   } else {
-    for (uint16_t i = 0; i < W-B; ++i)
-      Bits[i+B] = RC[i];
+    for (uint16_t i = 0; i < W - B; ++i)
+      Bits[i + B] = RC[i];
     for (uint16_t i = 0; i <= E; ++i)
-      Bits[i] = RC[i+(W-B)];
+      Bits[i] = RC[i + (W - B)];
   }
   return *this;
 }
@@ -231,17 +229,17 @@ BT::RegisterCell BT::RegisterCell::extract(const BitMask &M) const {
   uint16_t B = M.first(), E = M.last(), W = width();
   assert(B < W && E < W);
   if (B <= E) {
-    RegisterCell RC(E-B+1);
+    RegisterCell RC(E - B + 1);
     for (uint16_t i = B; i <= E; ++i)
-      RC.Bits[i-B] = Bits[i];
+      RC.Bits[i - B] = Bits[i];
     return RC;
   }
 
-  RegisterCell RC(E+(W-B)+1);
-  for (uint16_t i = 0; i < W-B; ++i)
-    RC.Bits[i] = Bits[i+B];
+  RegisterCell RC(E + (W - B) + 1);
+  for (uint16_t i = 0; i < W - B; ++i)
+    RC.Bits[i] = Bits[i + B];
   for (uint16_t i = 0; i <= E; ++i)
-    RC.Bits[i+(W-B)] = Bits[i];
+    RC.Bits[i + (W - B)] = Bits[i];
   return RC;
 }
 
@@ -253,21 +251,21 @@ BT::RegisterCell &BT::RegisterCell::rol(uint16_t Sh) {
   if (Sh == 0)
     return *this;
 
-  RegisterCell Tmp(W-Sh);
+  RegisterCell Tmp(W - Sh);
   // Tmp = [0..W-Sh-1].
-  for (uint16_t i = 0; i < W-Sh; ++i)
+  for (uint16_t i = 0; i < W - Sh; ++i)
     Tmp[i] = Bits[i];
   // Shift [W-Sh..W-1] to [0..Sh-1].
   for (uint16_t i = 0; i < Sh; ++i)
-    Bits[i] = Bits[W-Sh+i];
+    Bits[i] = Bits[W - Sh + i];
   // Copy Tmp to [Sh..W-1].
-  for (uint16_t i = 0; i < W-Sh; ++i)
-    Bits[i+Sh] = Tmp.Bits[i];
+  for (uint16_t i = 0; i < W - Sh; ++i)
+    Bits[i + Sh] = Tmp.Bits[i];
   return *this;
 }
 
 BT::RegisterCell &BT::RegisterCell::fill(uint16_t B, uint16_t E,
-      const BitValue &V) {
+                                         const BitValue &V) {
   assert(B <= E);
   while (B < E)
     Bits[B++] = V;
@@ -278,9 +276,9 @@ BT::RegisterCell &BT::RegisterCell::cat(const RegisterCell &RC) {
   // Append the cell given as the argument to the "this" cell.
   // Bit 0 of RC becomes bit W of the result, where W is this->width().
   uint16_t W = width(), WRC = RC.width();
-  Bits.resize(W+WRC);
+  Bits.resize(W + WRC);
   for (uint16_t i = 0; i < WRC; ++i)
-    Bits[i+W] = RC.Bits[i];
+    Bits[i + W] = RC.Bits[i];
   return *this;
 }
 
@@ -297,12 +295,12 @@ uint16_t BT::RegisterCell::cl(bool B) const {
   uint16_t W = width();
   uint16_t C = 0;
   BitValue V = B;
-  while (C < W && Bits[W-(C+1)] == V)
+  while (C < W && Bits[W - (C + 1)] == V)
     C++;
   return C;
 }
 
-bool BT::RegisterCell::operator== (const RegisterCell &RC) const {
+bool BT::RegisterCell::operator==(const RegisterCell &RC) const {
   uint16_t W = Bits.size();
   if (RC.Bits.size() != W)
     return false;
@@ -341,7 +339,7 @@ uint16_t BT::MachineEvaluator::getRegBitWidth(const RegisterRef &RR) const {
 }
 
 BT::RegisterCell BT::MachineEvaluator::getCell(const RegisterRef &RR,
-      const CellMapType &M) const {
+                                               const CellMapType &M) const {
   uint16_t BW = getRegBitWidth(RR);
 
   // Physical registers are assumed to be present in the map with an unknown
@@ -368,7 +366,7 @@ BT::RegisterCell BT::MachineEvaluator::getCell(const RegisterRef &RR,
 }
 
 void BT::MachineEvaluator::putCell(const RegisterRef &RR, RegisterCell RC,
-      CellMapType &M) const {
+                                   CellMapType &M) const {
   // While updating the cell map can be done in a meaningful way for
   // a part of a register, it makes little sense to implement it as the
   // SSA representation would never contain such "partial definitions".
@@ -425,7 +423,7 @@ BT::RegisterCell BT::MachineEvaluator::eIMM(const ConstantInt *CI) const {
 }
 
 BT::RegisterCell BT::MachineEvaluator::eADD(const RegisterCell &A1,
-      const RegisterCell &A2) const {
+                                            const RegisterCell &A2) const {
   uint16_t W = A1.width();
   assert(W == A2.width());
   RegisterCell Res(W);
@@ -458,7 +456,7 @@ BT::RegisterCell BT::MachineEvaluator::eADD(const RegisterCell &A1,
 }
 
 BT::RegisterCell BT::MachineEvaluator::eSUB(const RegisterCell &A1,
-      const RegisterCell &A2) const {
+                                            const RegisterCell &A2) const {
   uint16_t W = A1.width();
   assert(W == A2.width());
   RegisterCell Res(W);
@@ -491,7 +489,7 @@ BT::RegisterCell BT::MachineEvaluator::eSUB(const RegisterCell &A1,
 }
 
 BT::RegisterCell BT::MachineEvaluator::eMLS(const RegisterCell &A1,
-      const RegisterCell &A2) const {
+                                            const RegisterCell &A2) const {
   uint16_t W = A1.width() + A2.width();
   uint16_t Z = A1.ct(false) + A2.ct(false);
   RegisterCell Res(W);
@@ -501,7 +499,7 @@ BT::RegisterCell BT::MachineEvaluator::eMLS(const RegisterCell &A1,
 }
 
 BT::RegisterCell BT::MachineEvaluator::eMLU(const RegisterCell &A1,
-      const RegisterCell &A2) const {
+                                            const RegisterCell &A2) const {
   uint16_t W = A1.width() + A2.width();
   uint16_t Z = A1.ct(false) + A2.ct(false);
   RegisterCell Res(W);
@@ -511,7 +509,7 @@ BT::RegisterCell BT::MachineEvaluator::eMLU(const RegisterCell &A1,
 }
 
 BT::RegisterCell BT::MachineEvaluator::eASL(const RegisterCell &A1,
-      uint16_t Sh) const {
+                                            uint16_t Sh) const {
   assert(Sh <= A1.width());
   RegisterCell Res = RegisterCell::ref(A1);
   Res.rol(Sh);
@@ -520,28 +518,28 @@ BT::RegisterCell BT::MachineEvaluator::eASL(const RegisterCell &A1,
 }
 
 BT::RegisterCell BT::MachineEvaluator::eLSR(const RegisterCell &A1,
-      uint16_t Sh) const {
+                                            uint16_t Sh) const {
   uint16_t W = A1.width();
   assert(Sh <= W);
   RegisterCell Res = RegisterCell::ref(A1);
-  Res.rol(W-Sh);
-  Res.fill(W-Sh, W, BitValue::Zero);
+  Res.rol(W - Sh);
+  Res.fill(W - Sh, W, BitValue::Zero);
   return Res;
 }
 
 BT::RegisterCell BT::MachineEvaluator::eASR(const RegisterCell &A1,
-      uint16_t Sh) const {
+                                            uint16_t Sh) const {
   uint16_t W = A1.width();
   assert(Sh <= W);
   RegisterCell Res = RegisterCell::ref(A1);
-  BitValue Sign = Res[W-1];
-  Res.rol(W-Sh);
-  Res.fill(W-Sh, W, Sign);
+  BitValue Sign = Res[W - 1];
+  Res.rol(W - Sh);
+  Res.fill(W - Sh, W, Sign);
   return Res;
 }
 
 BT::RegisterCell BT::MachineEvaluator::eAND(const RegisterCell &A1,
-      const RegisterCell &A2) const {
+                                            const RegisterCell &A2) const {
   uint16_t W = A1.width();
   assert(W == A2.width());
   RegisterCell Res(W);
@@ -563,7 +561,7 @@ BT::RegisterCell BT::MachineEvaluator::eAND(const RegisterCell &A1,
 }
 
 BT::RegisterCell BT::MachineEvaluator::eORL(const RegisterCell &A1,
-      const RegisterCell &A2) const {
+                                            const RegisterCell &A2) const {
   uint16_t W = A1.width();
   assert(W == A2.width());
   RegisterCell Res(W);
@@ -585,7 +583,7 @@ BT::RegisterCell BT::MachineEvaluator::eORL(const RegisterCell &A1,
 }
 
 BT::RegisterCell BT::MachineEvaluator::eXOR(const RegisterCell &A1,
-      const RegisterCell &A2) const {
+                                            const RegisterCell &A2) const {
   uint16_t W = A1.width();
   assert(W == A2.width());
   RegisterCell Res(W);
@@ -620,7 +618,7 @@ BT::RegisterCell BT::MachineEvaluator::eNOT(const RegisterCell &A1) const {
 }
 
 BT::RegisterCell BT::MachineEvaluator::eSET(const RegisterCell &A1,
-      uint16_t BitN) const {
+                                            uint16_t BitN) const {
   assert(BitN < A1.width());
   RegisterCell Res = RegisterCell::ref(A1);
   Res[BitN] = BitValue::One;
@@ -628,7 +626,7 @@ BT::RegisterCell BT::MachineEvaluator::eSET(const RegisterCell &A1,
 }
 
 BT::RegisterCell BT::MachineEvaluator::eCLR(const RegisterCell &A1,
-      uint16_t BitN) const {
+                                            uint16_t BitN) const {
   assert(BitN < A1.width());
   RegisterCell Res = RegisterCell::ref(A1);
   Res[BitN] = BitValue::Zero;
@@ -636,17 +634,17 @@ BT::RegisterCell BT::MachineEvaluator::eCLR(const RegisterCell &A1,
 }
 
 BT::RegisterCell BT::MachineEvaluator::eCLB(const RegisterCell &A1, bool B,
-      uint16_t W) const {
+                                            uint16_t W) const {
   uint16_t C = A1.cl(B), AW = A1.width();
   // If the last leading non-B bit is not a constant, then we don't know
   // the real count.
-  if ((C < AW && A1[AW-1-C].num()) || C == AW)
+  if ((C < AW && A1[AW - 1 - C].num()) || C == AW)
     return eIMM(C, W);
   return RegisterCell::self(0, W);
 }
 
 BT::RegisterCell BT::MachineEvaluator::eCTB(const RegisterCell &A1, bool B,
-      uint16_t W) const {
+                                            uint16_t W) const {
   uint16_t C = A1.ct(B), AW = A1.width();
   // If the last trailing non-B bit is not a constant, then we don't know
   // the real count.
@@ -656,18 +654,18 @@ BT::RegisterCell BT::MachineEvaluator::eCTB(const RegisterCell &A1, bool B,
 }
 
 BT::RegisterCell BT::MachineEvaluator::eSXT(const RegisterCell &A1,
-      uint16_t FromN) const {
+                                            uint16_t FromN) const {
   uint16_t W = A1.width();
   assert(FromN <= W);
   RegisterCell Res = RegisterCell::ref(A1);
-  BitValue Sign = Res[FromN-1];
+  BitValue Sign = Res[FromN - 1];
   // Sign-extend "inreg".
   Res.fill(FromN, W, Sign);
   return Res;
 }
 
 BT::RegisterCell BT::MachineEvaluator::eZXT(const RegisterCell &A1,
-      uint16_t FromN) const {
+                                            uint16_t FromN) const {
   uint16_t W = A1.width();
   assert(FromN <= W);
   RegisterCell Res = RegisterCell::ref(A1);
@@ -675,27 +673,28 @@ BT::RegisterCell BT::MachineEvaluator::eZXT(const RegisterCell &A1,
   return Res;
 }
 
-BT::RegisterCell BT::MachineEvaluator::eXTR(const RegisterCell &A1,
-      uint16_t B, uint16_t E) const {
+BT::RegisterCell BT::MachineEvaluator::eXTR(const RegisterCell &A1, uint16_t B,
+                                            uint16_t E) const {
   uint16_t W = A1.width();
   assert(B < W && E <= W);
   if (B == E)
     return RegisterCell(0);
-  uint16_t Last = (E > 0) ? E-1 : W-1;
+  uint16_t Last = (E > 0) ? E - 1 : W - 1;
   RegisterCell Res = RegisterCell::ref(A1).extract(BT::BitMask(B, Last));
   // Return shorter cell.
   return Res;
 }
 
 BT::RegisterCell BT::MachineEvaluator::eINS(const RegisterCell &A1,
-      const RegisterCell &A2, uint16_t AtN) const {
+                                            const RegisterCell &A2,
+                                            uint16_t AtN) const {
   uint16_t W1 = A1.width(), W2 = A2.width();
   (void)W1;
-  assert(AtN < W1 && AtN+W2 <= W1);
+  assert(AtN < W1 && AtN + W2 <= W1);
   // Copy bits from A1, insert A2 at position AtN.
   RegisterCell Res = RegisterCell::ref(A1);
   if (W2 > 0)
-    Res.insert(RegisterCell::ref(A2), BT::BitMask(AtN, AtN+W2-1));
+    Res.insert(RegisterCell::ref(A2), BT::BitMask(AtN, AtN + W2 - 1));
   return Res;
 }
 
@@ -703,7 +702,7 @@ BT::BitMask BT::MachineEvaluator::mask(Register Reg, unsigned Sub) const {
   assert(Sub == 0 && "Generic BitTracker::mask called for Sub != 0");
   uint16_t W = getRegBitWidth(Reg);
   assert(W > 0 && "Cannot generate mask for empty register");
-  return BitMask(0, W-1);
+  return BitMask(0, W - 1);
 }
 
 uint16_t BT::MachineEvaluator::getPhysRegBitWidth(MCRegister Reg) const {
@@ -716,42 +715,42 @@ bool BT::MachineEvaluator::evaluate(const MachineInstr &MI,
                                     CellMapType &Outputs) const {
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
-    case TargetOpcode::REG_SEQUENCE: {
-      RegisterRef RD = MI.getOperand(0);
-      assert(RD.Sub == 0);
-      RegisterRef RS = MI.getOperand(1);
-      unsigned SS = MI.getOperand(2).getImm();
-      RegisterRef RT = MI.getOperand(3);
-      unsigned ST = MI.getOperand(4).getImm();
-      assert(SS != ST);
+  case TargetOpcode::REG_SEQUENCE: {
+    RegisterRef RD = MI.getOperand(0);
+    assert(RD.Sub == 0);
+    RegisterRef RS = MI.getOperand(1);
+    unsigned SS = MI.getOperand(2).getImm();
+    RegisterRef RT = MI.getOperand(3);
+    unsigned ST = MI.getOperand(4).getImm();
+    assert(SS != ST);
 
-      uint16_t W = getRegBitWidth(RD);
-      RegisterCell Res(W);
-      Res.insert(RegisterCell::ref(getCell(RS, Inputs)), mask(RD.Reg, SS));
-      Res.insert(RegisterCell::ref(getCell(RT, Inputs)), mask(RD.Reg, ST));
-      putCell(RD, Res, Outputs);
-      break;
-    }
+    uint16_t W = getRegBitWidth(RD);
+    RegisterCell Res(W);
+    Res.insert(RegisterCell::ref(getCell(RS, Inputs)), mask(RD.Reg, SS));
+    Res.insert(RegisterCell::ref(getCell(RT, Inputs)), mask(RD.Reg, ST));
+    putCell(RD, Res, Outputs);
+    break;
+  }
 
-    case TargetOpcode::COPY: {
-      // COPY can transfer a smaller register into a wider one.
-      // If that is the case, fill the remaining high bits with 0.
-      RegisterRef RD = MI.getOperand(0);
-      RegisterRef RS = MI.getOperand(1);
-      assert(RD.Sub == 0);
-      uint16_t WD = getRegBitWidth(RD);
-      uint16_t WS = getRegBitWidth(RS);
-      assert(WD >= WS);
-      RegisterCell Src = getCell(RS, Inputs);
-      RegisterCell Res(WD);
-      Res.insert(Src, BitMask(0, WS-1));
-      Res.fill(WS, WD, BitValue::Zero);
-      putCell(RD, Res, Outputs);
-      break;
-    }
+  case TargetOpcode::COPY: {
+    // COPY can transfer a smaller register into a wider one.
+    // If that is the case, fill the remaining high bits with 0.
+    RegisterRef RD = MI.getOperand(0);
+    RegisterRef RS = MI.getOperand(1);
+    assert(RD.Sub == 0);
+    uint16_t WD = getRegBitWidth(RD);
+    uint16_t WS = getRegBitWidth(RS);
+    assert(WD >= WS);
+    RegisterCell Src = getCell(RS, Inputs);
+    RegisterCell Res(WD);
+    Res.insert(Src, BitMask(0, WS - 1));
+    Res.fill(WS, WD, BitValue::Zero);
+    putCell(RD, Res, Outputs);
+    break;
+  }
 
-    default:
-      return false;
+  default:
+    return false;
   }
 
   return true;
@@ -773,7 +772,7 @@ bool BT::UseQueueType::Cmp::operator()(const MachineInstr *InstA,
     return BA->getNumber() > BB->getNumber();
   }
 
-  auto getDist = [this] (const MachineInstr *MI) {
+  auto getDist = [this](const MachineInstr *MI) {
     auto F = Dist.find(MI);
     if (F != Dist.end())
       return F->second;
@@ -800,7 +799,7 @@ void BT::visitPHI(const MachineInstr &PI) {
   uint16_t DefBW = ME.getRegBitWidth(DefRR);
 
   RegisterCell DefC = ME.getCell(DefRR, Map);
-  if (DefC == RegisterCell::self(DefRR.Reg, DefBW))    // XXX slow
+  if (DefC == RegisterCell::self(DefRR.Reg, DefBW)) // XXX slow
     return;
 
   bool Changed = false;
@@ -855,8 +854,8 @@ void BT::visitNonBranch(const MachineInstr &MI) {
     dbgs() << "Outputs:\n";
     for (const std::pair<const unsigned, RegisterCell> &P : ResMap) {
       RegisterRef RD(P.first);
-      dbgs() << "  " << printReg(P.first, &ME.TRI) << " cell: "
-             << ME.getCell(RD, ResMap) << "\n";
+      dbgs() << "  " << printReg(P.first, &ME.TRI)
+             << " cell: " << ME.getCell(RD, ResMap) << "\n";
     }
   }
 
@@ -981,9 +980,7 @@ void BT::visitUsesOf(Register Reg) {
     UseQ.push(&UseI);
 }
 
-BT::RegisterCell BT::get(RegisterRef RR) const {
-  return ME.getCell(RR, Map);
-}
+BT::RegisterCell BT::get(RegisterRef RR) const { return ME.getCell(RR, Map); }
 
 void BT::put(RegisterRef RR, const RegisterCell &RC) {
   ME.putCell(RR, RC, Map);
@@ -998,7 +995,7 @@ void BT::subst(RegisterRef OldRR, RegisterRef NewRR) {
   uint16_t OMB = OM.first(), OME = OM.last();
   uint16_t NMB = NM.first(), NME = NM.last();
   (void)NME;
-  assert((OME-OMB == NME-NMB) &&
+  assert((OME - OMB == NME - NMB) &&
          "Substituting registers of different lengths");
   for (std::pair<const unsigned, RegisterCell> &P : Map) {
     RegisterCell &RC = P.second;
@@ -1009,7 +1006,7 @@ void BT::subst(RegisterRef OldRR, RegisterRef NewRR) {
       if (V.RefI.Pos < OMB || V.RefI.Pos > OME)
         continue;
       V.RefI.Reg = NewRR.Reg;
-      V.RefI.Pos += NMB-OMB;
+      V.RefI.Pos += NMB - OMB;
     }
   }
 }
@@ -1113,7 +1110,7 @@ void BT::run() {
   reset();
   assert(FlowQ.empty());
 
-  using MachineFlowGraphTraits = GraphTraits<const MachineFunction*>;
+  using MachineFlowGraphTraits = GraphTraits<const MachineFunction *>;
   const MachineBasicBlock *Entry = MachineFlowGraphTraits::getEntryNode(&MF);
 
   unsigned MaxBN = 0;
@@ -1125,7 +1122,7 @@ void BT::run() {
   }
 
   // Keep track of visited blocks.
-  BitVector BlockScanned(MaxBN+1);
+  BitVector BlockScanned(MaxBN + 1);
 
   int EntryN = Entry->getNumber();
   // Generate a fake edge to get something to start with.

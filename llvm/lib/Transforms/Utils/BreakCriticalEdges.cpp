@@ -213,8 +213,9 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
   // through the split block, making those edges non-critical as well (and
   // reducing the number of phi entries in the DestBB if relevant).
   if (Options.MergeIdenticalEdges) {
-    for (unsigned i = SuccNum+1, e = TI->getNumSuccessors(); i != e; ++i) {
-      if (TI->getSuccessor(i) != DestBB) continue;
+    for (unsigned i = SuccNum + 1, e = TI->getNumSuccessors(); i != e; ++i) {
+      if (TI->getSuccessor(i) != DestBB)
+        continue;
 
       // Remove an entry for TIBB from DestBB phi nodes.
       DestBB->removePredecessor(TIBB, Options.KeepOneInputPHIs);
@@ -417,8 +418,8 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       BasicBlock *Src = Pred != Target ? Pred : BodyBlock;
       Src->getTerminator()->replaceUsesOfWith(Target, DirectSucc);
       if (ShouldUpdateAnalysis)
-        BlockFreqForDirectSucc += BFI->getBlockFreq(Src) *
-            BPI->getEdgeProbability(Src, DirectSucc);
+        BlockFreqForDirectSucc +=
+            BFI->getBlockFreq(Src) * BPI->getEdgeProbability(Src, DirectSucc);
     }
     if (ShouldUpdateAnalysis) {
       BFI->setBlockFreq(DirectSucc, BlockFreqForDirectSucc);
@@ -454,7 +455,8 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       // PHI is erased.
       Indirect++;
 
-      PHINode *NewIndPHI = PHINode::Create(IndPHI->getType(), 1, "ind", InsertPt);
+      PHINode *NewIndPHI =
+          PHINode::Create(IndPHI->getType(), 1, "ind", InsertPt);
       NewIndPHI->addIncoming(IndPHI->getIncomingValueForBlock(IBRPred),
                              IBRPred);
       NewIndPHI->setDebugLoc(IndPHI->getDebugLoc());

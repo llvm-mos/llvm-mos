@@ -459,8 +459,8 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
         (IntNo == Intrinsic::bpf_load_word && MaskV == 0xFFFFFFFF)))
     return;
 
-  LLVM_DEBUG(dbgs() << "Remove the redundant AND operation in: ";
-             Node->dump(); dbgs() << '\n');
+  LLVM_DEBUG(dbgs() << "Remove the redundant AND operation in: "; Node->dump();
+             dbgs() << '\n');
 
   I--;
   CurDAG->ReplaceAllUsesWith(SDValue(Node, 0), BaseV);

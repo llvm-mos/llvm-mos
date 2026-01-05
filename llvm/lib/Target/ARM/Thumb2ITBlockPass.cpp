@@ -31,42 +31,40 @@ using namespace llvm;
 #define DEBUG_TYPE "thumb2-it"
 #define PASS_NAME "Thumb IT blocks insertion pass"
 
-STATISTIC(NumITs,        "Number of IT blocks inserted");
+STATISTIC(NumITs, "Number of IT blocks inserted");
 STATISTIC(NumMovedInsts, "Number of predicated instructions moved");
 
 using RegisterSet = SmallSet<unsigned, 4>;
 
 namespace {
 
-  class Thumb2ITBlock : public MachineFunctionPass {
-  public:
-    static char ID;
+class Thumb2ITBlock : public MachineFunctionPass {
+public:
+  static char ID;
 
-    bool restrictIT;
-    const Thumb2InstrInfo *TII;
-    const TargetRegisterInfo *TRI;
-    ARMFunctionInfo *AFI;
+  bool restrictIT;
+  const Thumb2InstrInfo *TII;
+  const TargetRegisterInfo *TRI;
+  ARMFunctionInfo *AFI;
 
-    Thumb2ITBlock() : MachineFunctionPass(ID) {}
+  Thumb2ITBlock() : MachineFunctionPass(ID) {}
 
-    bool runOnMachineFunction(MachineFunction &Fn) override;
+  bool runOnMachineFunction(MachineFunction &Fn) override;
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
-    }
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
 
-    StringRef getPassName() const override {
-      return PASS_NAME;
-    }
+  StringRef getPassName() const override { return PASS_NAME; }
 
-  private:
-    bool MoveCopyOutOfITBlock(MachineInstr *MI,
-                              ARMCC::CondCodes CC, ARMCC::CondCodes OCC,
-                              RegisterSet &Defs, RegisterSet &Uses);
-    bool InsertITInstructions(MachineBasicBlock &Block);
-  };
+private:
+  bool MoveCopyOutOfITBlock(MachineInstr *MI, ARMCC::CondCodes CC,
+                            ARMCC::CondCodes OCC, RegisterSet &Defs,
+                            RegisterSet &Uses);
+  bool InsertITInstructions(MachineBasicBlock &Block);
+};
 
-  char Thumb2ITBlock::ID = 0;
+char Thumb2ITBlock::ID = 0;
 
 } // end anonymous namespace
 
@@ -127,10 +125,9 @@ static bool isCopy(MachineInstr *MI) {
   }
 }
 
-bool
-Thumb2ITBlock::MoveCopyOutOfITBlock(MachineInstr *MI,
-                                    ARMCC::CondCodes CC, ARMCC::CondCodes OCC,
-                                    RegisterSet &Defs, RegisterSet &Uses) {
+bool Thumb2ITBlock::MoveCopyOutOfITBlock(MachineInstr *MI, ARMCC::CondCodes CC,
+                                         ARMCC::CondCodes OCC,
+                                         RegisterSet &Defs, RegisterSet &Uses) {
   if (!isCopy(MI))
     return false;
   // llvm models select's as two-address instructions. That means a copy
@@ -206,12 +203,12 @@ bool Thumb2ITBlock::InsertITInstructions(MachineBasicBlock &MBB) {
     TrackDefUses(MI, Defs, Uses, TRI);
 
     // Insert an IT instruction.
-    MachineInstrBuilder MIB = BuildMI(MBB, MBBI, dl, TII->get(ARM::t2IT))
-      .addImm(CC);
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, MBBI, dl, TII->get(ARM::t2IT)).addImm(CC);
 
     // Add implicit use of ITSTATE to IT block instructions.
-    MI->addOperand(MachineOperand::CreateReg(ARM::ITSTATE, false/*ifDef*/,
-                                             true/*isImp*/, false/*isKill*/));
+    MI->addOperand(MachineOperand::CreateReg(ARM::ITSTATE, false /*ifDef*/,
+                                             true /*isImp*/, false /*isKill*/));
 
     MachineInstr *LastITMI = MI;
     MachineBasicBlock::iterator InsertPos = MIB.getInstr();
@@ -227,8 +224,7 @@ bool Thumb2ITBlock::InsertITInstructions(MachineBasicBlock &MBB) {
       LLVM_DEBUG(dbgs() << "Allowing complex IT block\n");
       // Branches, including tricky ones like LDM_RET, need to end an IT
       // block so check the instruction we just put in the block.
-      for (; MBBI != E && Pos &&
-             (!MI->isBranch() && !MI->isReturn()) ; ++MBBI) {
+      for (; MBBI != E && Pos && (!MI->isBranch() && !MI->isReturn()); ++MBBI) {
         if (MBBI->isDebugInstr())
           continue;
 
@@ -240,8 +236,8 @@ bool Thumb2ITBlock::InsertITInstructions(MachineBasicBlock &MBB) {
         if (NCC == CC || NCC == OCC) {
           Mask |= ((NCC ^ CC) & 1) << Pos;
           // Add implicit use of ITSTATE.
-          NMI->addOperand(MachineOperand::CreateReg(ARM::ITSTATE, false/*ifDef*/,
-                                                 true/*isImp*/, false/*isKill*/));
+          NMI->addOperand(MachineOperand::CreateReg(
+              ARM::ITSTATE, false /*ifDef*/, true /*isImp*/, false /*isKill*/));
           LastITMI = NMI;
         } else {
           if (NCC == ARMCC::AL &&
@@ -292,7 +288,7 @@ bool Thumb2ITBlock::runOnMachineFunction(MachineFunction &Fn) {
     return false;
 
   bool Modified = false;
-  for (auto &MBB : Fn )
+  for (auto &MBB : Fn)
     Modified |= InsertITInstructions(MBB);
 
   if (Modified)

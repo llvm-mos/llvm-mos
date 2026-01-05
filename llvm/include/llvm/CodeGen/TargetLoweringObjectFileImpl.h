@@ -33,7 +33,8 @@ class TargetMachine;
 
 class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
   bool UseInitArray = false;
-  mutable unsigned NextUniqueID = 1;  // ID 0 is reserved for execute-only sections
+  mutable unsigned NextUniqueID =
+      1; // ID 0 is reserved for execute-only sections
   SmallPtrSet<GlobalObject *, 2> Used;
 
 protected:

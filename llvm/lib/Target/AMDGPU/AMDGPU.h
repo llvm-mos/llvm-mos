@@ -95,7 +95,7 @@ public:
 
 void initializeAMDGPUDAGToDAGISelLegacyPass(PassRegistry &);
 
-void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
+void initializeAMDGPUAlwaysInlinePass(PassRegistry &);
 
 void initializeAMDGPUAsmPrinterPass(PassRegistry &);
 
@@ -250,7 +250,7 @@ extern char &AMDGPUPreloadKernelArgumentsLegacyID;
 
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();
-void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
+void initializeAMDGPUPromoteAllocaPass(PassRegistry &);
 extern char &AMDGPUPromoteAllocaID;
 
 struct AMDGPUPromoteAllocaPass : PassInfoMixin<AMDGPUPromoteAllocaPass> {
@@ -324,7 +324,7 @@ private:
   TargetMachine &TM;
 
 public:
-  AMDGPUCodeGenPreparePass(TargetMachine &TM) : TM(TM){};
+  AMDGPUCodeGenPreparePass(TargetMachine &TM) : TM(TM) {};
   PreservedAnalyses run(Function &, FunctionAnalysisManager &);
 };
 
@@ -344,7 +344,7 @@ private:
   TargetMachine &TM;
 
 public:
-  AMDGPULowerKernelArgumentsPass(TargetMachine &TM) : TM(TM){};
+  AMDGPULowerKernelArgumentsPass(TargetMachine &TM) : TM(TM) {};
   PreservedAnalyses run(Function &, FunctionAnalysisManager &);
 };
 
@@ -448,7 +448,7 @@ public:
 FunctionPass *createAMDGPUAnnotateUniformValuesLegacy();
 
 ModulePass *createAMDGPUPrintfRuntimeBinding();
-void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
+void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry &);
 extern char &AMDGPUPrintfRuntimeBindingID;
 
 void initializeAMDGPUResourceUsageAnalysisWrapperPassPass(PassRegistry &);
@@ -468,7 +468,7 @@ extern char &SIOptimizeVGPRLiveRangeLegacyID;
 void initializeAMDGPUAnnotateUniformValuesLegacyPass(PassRegistry &);
 extern char &AMDGPUAnnotateUniformValuesLegacyPassID;
 
-void initializeAMDGPUCodeGenPreparePass(PassRegistry&);
+void initializeAMDGPUCodeGenPreparePass(PassRegistry &);
 extern char &AMDGPUCodeGenPrepareID;
 
 void initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(PassRegistry &);
@@ -528,13 +528,13 @@ extern char &SIPostRABundlerLegacyID;
 void initializeGCNCreateVOPDLegacyPass(PassRegistry &);
 extern char &GCNCreateVOPDID;
 
-void initializeAMDGPUUnifyDivergentExitNodesPass(PassRegistry&);
+void initializeAMDGPUUnifyDivergentExitNodesPass(PassRegistry &);
 extern char &AMDGPUUnifyDivergentExitNodesID;
 
 ImmutablePass *createAMDGPUAAWrapperPass();
-void initializeAMDGPUAAWrapperPassPass(PassRegistry&);
+void initializeAMDGPUAAWrapperPassPass(PassRegistry &);
 ImmutablePass *createAMDGPUExternalAAWrapperPass();
-void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
+void initializeAMDGPUExternalAAWrapperPass(PassRegistry &);
 
 void initializeAMDGPUArgumentUsageInfoPass(PassRegistry &);
 
@@ -613,7 +613,7 @@ static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
   return ASAliasRules[AS1][AS2];
 }
 
-}
+} // namespace AMDGPU
 
 } // End namespace llvm
 

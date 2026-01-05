@@ -2358,7 +2358,6 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         ProcessedIter->second = NewOp;
         R.setOperand(Idx, NewOp);
       }
-
     }
   }
 }

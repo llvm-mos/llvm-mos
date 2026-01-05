@@ -461,8 +461,7 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
         std::make_unique<ELFYAML::SectionHeaderTable>(/*IsImplicit=*/true));
 }
 
-template <class ELFT>
-void ELFState<ELFT>::writeELFHeader(raw_ostream &OS) {
+template <class ELFT> void ELFState<ELFT>::writeELFHeader(raw_ostream &OS) {
   using namespace llvm::ELF;
 
   Elf_Ehdr Header;
@@ -562,7 +561,8 @@ void ELFState<ELFT>::initProgramHeaders(std::vector<Elf_Phdr> &PHeaders) {
     if (!YamlPhdr.FirstSec && !YamlPhdr.LastSec)
       continue;
 
-    // Get the index of the section, or 0 in the case when the section doesn't exist.
+    // Get the index of the section, or 0 in the case when the section doesn't
+    // exist.
     size_t First = NameToIndex[*YamlPhdr.FirstSec];
     if (!First)
       reportError("unknown section or fill referenced: '" + *YamlPhdr.FirstSec +

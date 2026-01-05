@@ -25,8 +25,7 @@ Expected<Format> llvm::remarks::parseFormat(StringRef FormatStr) {
 
   if (Result == Format::Unknown)
     return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Unknown remark format: '%s'",
-                             FormatStr.data());
+                             "Unknown remark format: '%s'", FormatStr.data());
 
   return Result;
 }

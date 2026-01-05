@@ -23,17 +23,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips-lower"
 
-static cl::opt<bool> DontExpandCondPseudos16(
-  "mips16-dont-expand-cond-pseudo",
-  cl::init(false),
-  cl::desc("Don't expand conditional move related "
-           "pseudos for Mips 16"),
-  cl::Hidden);
+static cl::opt<bool>
+    DontExpandCondPseudos16("mips16-dont-expand-cond-pseudo", cl::init(false),
+                            cl::desc("Don't expand conditional move related "
+                                     "pseudos for Mips 16"),
+                            cl::Hidden);
 
 namespace {
-struct Mips16IntrinsicHelperType{
-  const char* Name;
-  const char* Helper;
+struct Mips16IntrinsicHelperType {
+  const char *Name;
+  const char *Helper;
 
   bool operator<(const Mips16IntrinsicHelperType &RHS) const {
     return std::strcmp(Name, RHS.Name) < 0;
@@ -65,29 +64,29 @@ static const RTLIB::LibcallImpl HardFloatLibCalls[] = {
     RTLIB::impl___mips16_unorddf2,      RTLIB::impl___mips16_unordsf2};
 
 static const Mips16IntrinsicHelperType Mips16IntrinsicHelper[] = {
-  {"__fixunsdfsi", "__mips16_call_stub_2" },
-  {"ceil",  "__mips16_call_stub_df_2"},
-  {"ceilf", "__mips16_call_stub_sf_1"},
-  {"copysign",  "__mips16_call_stub_df_10"},
-  {"copysignf", "__mips16_call_stub_sf_5"},
-  {"cos",  "__mips16_call_stub_df_2"},
-  {"cosf", "__mips16_call_stub_sf_1"},
-  {"exp2",  "__mips16_call_stub_df_2"},
-  {"exp2f", "__mips16_call_stub_sf_1"},
-  {"floor",  "__mips16_call_stub_df_2"},
-  {"floorf", "__mips16_call_stub_sf_1"},
-  {"log2",  "__mips16_call_stub_df_2"},
-  {"log2f", "__mips16_call_stub_sf_1"},
-  {"nearbyint",  "__mips16_call_stub_df_2"},
-  {"nearbyintf", "__mips16_call_stub_sf_1"},
-  {"rint",  "__mips16_call_stub_df_2"},
-  {"rintf", "__mips16_call_stub_sf_1"},
-  {"sin",  "__mips16_call_stub_df_2"},
-  {"sinf", "__mips16_call_stub_sf_1"},
-  {"sqrt",  "__mips16_call_stub_df_2"},
-  {"sqrtf", "__mips16_call_stub_sf_1"},
-  {"trunc",  "__mips16_call_stub_df_2"},
-  {"truncf", "__mips16_call_stub_sf_1"},
+    {"__fixunsdfsi", "__mips16_call_stub_2"},
+    {"ceil", "__mips16_call_stub_df_2"},
+    {"ceilf", "__mips16_call_stub_sf_1"},
+    {"copysign", "__mips16_call_stub_df_10"},
+    {"copysignf", "__mips16_call_stub_sf_5"},
+    {"cos", "__mips16_call_stub_df_2"},
+    {"cosf", "__mips16_call_stub_sf_1"},
+    {"exp2", "__mips16_call_stub_df_2"},
+    {"exp2f", "__mips16_call_stub_sf_1"},
+    {"floor", "__mips16_call_stub_df_2"},
+    {"floorf", "__mips16_call_stub_sf_1"},
+    {"log2", "__mips16_call_stub_df_2"},
+    {"log2f", "__mips16_call_stub_sf_1"},
+    {"nearbyint", "__mips16_call_stub_df_2"},
+    {"nearbyintf", "__mips16_call_stub_sf_1"},
+    {"rint", "__mips16_call_stub_df_2"},
+    {"rintf", "__mips16_call_stub_sf_1"},
+    {"sin", "__mips16_call_stub_df_2"},
+    {"sinf", "__mips16_call_stub_sf_1"},
+    {"sqrt", "__mips16_call_stub_df_2"},
+    {"sqrtf", "__mips16_call_stub_sf_1"},
+    {"trunc", "__mips16_call_stub_df_2"},
+    {"truncf", "__mips16_call_stub_sf_1"},
 };
 
 Mips16TargetLowering::Mips16TargetLowering(const MipsTargetMachine &TM,
@@ -114,8 +113,8 @@ Mips16TargetLowering::Mips16TargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i32, LibCall);
   setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, LibCall);
 
-  setOperationAction(ISD::ROTR, MVT::i32,  Expand);
-  setOperationAction(ISD::ROTR, MVT::i64,  Expand);
+  setOperationAction(ISD::ROTR, MVT::i32, Expand);
+  setOperationAction(ISD::ROTR, MVT::i64, Expand);
   setOperationAction(ISD::BSWAP, MVT::i32, Expand);
   setOperationAction(ISD::BSWAP, MVT::i64, Expand);
 
@@ -183,31 +182,35 @@ Mips16TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // TBD: figure out a way to get this or remove the instruction
     // altogether.
     return emitFEXT_T8I816_ins(Mips::Btnez16, Mips::SltuRxRy16, MI, BB);
-  case Mips::BteqzT8CmpiX16: return emitFEXT_T8I8I16_ins(
-    Mips::Bteqz16, Mips::CmpiRxImm16, Mips::CmpiRxImmX16, false, MI, BB);
-  case Mips::BteqzT8SltiX16: return emitFEXT_T8I8I16_ins(
-    Mips::Bteqz16, Mips::SltiRxImm16, Mips::SltiRxImmX16, true, MI, BB);
-  case Mips::BteqzT8SltiuX16: return emitFEXT_T8I8I16_ins(
-    Mips::Bteqz16, Mips::SltiuRxImm16, Mips::SltiuRxImmX16, false, MI, BB);
-  case Mips::BtnezT8CmpiX16: return emitFEXT_T8I8I16_ins(
-    Mips::Btnez16, Mips::CmpiRxImm16, Mips::CmpiRxImmX16, false, MI, BB);
-  case Mips::BtnezT8SltiX16: return emitFEXT_T8I8I16_ins(
-    Mips::Btnez16, Mips::SltiRxImm16, Mips::SltiRxImmX16, true, MI, BB);
-  case Mips::BtnezT8SltiuX16: return emitFEXT_T8I8I16_ins(
-    Mips::Btnez16, Mips::SltiuRxImm16, Mips::SltiuRxImmX16, false, MI, BB);
+  case Mips::BteqzT8CmpiX16:
+    return emitFEXT_T8I8I16_ins(Mips::Bteqz16, Mips::CmpiRxImm16,
+                                Mips::CmpiRxImmX16, false, MI, BB);
+  case Mips::BteqzT8SltiX16:
+    return emitFEXT_T8I8I16_ins(Mips::Bteqz16, Mips::SltiRxImm16,
+                                Mips::SltiRxImmX16, true, MI, BB);
+  case Mips::BteqzT8SltiuX16:
+    return emitFEXT_T8I8I16_ins(Mips::Bteqz16, Mips::SltiuRxImm16,
+                                Mips::SltiuRxImmX16, false, MI, BB);
+  case Mips::BtnezT8CmpiX16:
+    return emitFEXT_T8I8I16_ins(Mips::Btnez16, Mips::CmpiRxImm16,
+                                Mips::CmpiRxImmX16, false, MI, BB);
+  case Mips::BtnezT8SltiX16:
+    return emitFEXT_T8I8I16_ins(Mips::Btnez16, Mips::SltiRxImm16,
+                                Mips::SltiRxImmX16, true, MI, BB);
+  case Mips::BtnezT8SltiuX16:
+    return emitFEXT_T8I8I16_ins(Mips::Btnez16, Mips::SltiuRxImm16,
+                                Mips::SltiuRxImmX16, false, MI, BB);
     break;
   case Mips::SltCCRxRy16:
     return emitFEXT_CCRX16_ins(Mips::SltRxRy16, MI, BB);
     break;
   case Mips::SltiCCRxImmX16:
-    return emitFEXT_CCRXI16_ins
-      (Mips::SltiRxImm16, Mips::SltiRxImmX16, MI, BB);
+    return emitFEXT_CCRXI16_ins(Mips::SltiRxImm16, Mips::SltiRxImmX16, MI, BB);
   case Mips::SltiuCCRxImmX16:
-    return emitFEXT_CCRXI16_ins
-      (Mips::SltiuRxImm16, Mips::SltiuRxImmX16, MI, BB);
+    return emitFEXT_CCRXI16_ins(Mips::SltiuRxImm16, Mips::SltiuRxImmX16, MI,
+                                BB);
   case Mips::SltuCCRxRy16:
-    return emitFEXT_CCRX16_ins
-      (Mips::SltuRxRy16, MI, BB);
+    return emitFEXT_CCRX16_ins(Mips::SltuRxRy16, MI, BB);
   }
 }
 
@@ -259,25 +262,23 @@ void Mips16TargetLowering::setMips16HardFloatLibCalls() {
 // assert if the impossible exists.
 //
 
-unsigned int Mips16TargetLowering::getMips16HelperFunctionStubNumber
-  (ArgListTy &Args) const {
+unsigned int
+Mips16TargetLowering::getMips16HelperFunctionStubNumber(ArgListTy &Args) const {
   unsigned int resultNum = 0;
   if (Args.size() >= 1) {
     Type *t = Args[0].Ty;
     if (t->isFloatTy()) {
       resultNum = 1;
-    }
-    else if (t->isDoubleTy()) {
+    } else if (t->isDoubleTy()) {
       resultNum = 2;
     }
   }
   if (resultNum) {
-    if (Args.size() >=2) {
+    if (Args.size() >= 2) {
       Type *t = Args[1].Ty;
       if (t->isFloatTy()) {
         resultNum += 4;
-      }
-      else if (t->isDoubleTy()) {
+      } else if (t->isDoubleTy()) {
         resultNum += 8;
       }
     }
@@ -312,46 +313,39 @@ unsigned int Mips16TargetLowering::getMips16HelperFunctionStubNumber
 #define P_ "__mips16_call_stub_"
 #define MAX_STUB_NUMBER 10
 #define T1 P "1", P "2", 0, 0, P "5", P "6", 0, 0, P "9", P "10"
-#define T P "0" , T1
+#define T P "0", T1
 #define P P_
-static char const * vMips16Helper[MAX_STUB_NUMBER+1] =
-  {nullptr, T1 };
+static char const *vMips16Helper[MAX_STUB_NUMBER + 1] = {nullptr, T1};
 #undef P
 #define P P_ "sf_"
-static char const * sfMips16Helper[MAX_STUB_NUMBER+1] =
-  { T };
+static char const *sfMips16Helper[MAX_STUB_NUMBER + 1] = {T};
 #undef P
 #define P P_ "df_"
-static char const * dfMips16Helper[MAX_STUB_NUMBER+1] =
-  { T };
+static char const *dfMips16Helper[MAX_STUB_NUMBER + 1] = {T};
 #undef P
 #define P P_ "sc_"
-static char const * scMips16Helper[MAX_STUB_NUMBER+1] =
-  { T };
+static char const *scMips16Helper[MAX_STUB_NUMBER + 1] = {T};
 #undef P
 #define P P_ "dc_"
-static char const * dcMips16Helper[MAX_STUB_NUMBER+1] =
-  { T };
+static char const *dcMips16Helper[MAX_STUB_NUMBER + 1] = {T};
 #undef P
 #undef P_
 
-
-const char* Mips16TargetLowering::
-  getMips16HelperFunction
-    (Type* RetTy, ArgListTy &Args, bool &needHelper) const {
+const char *
+Mips16TargetLowering::getMips16HelperFunction(Type *RetTy, ArgListTy &Args,
+                                              bool &needHelper) const {
   const unsigned int stubNum = getMips16HelperFunctionStubNumber(Args);
 #ifndef NDEBUG
   const unsigned int maxStubNum = 10;
   assert(stubNum <= maxStubNum);
-  const bool validStubNum[maxStubNum+1] =
-    {true, true, true, false, false, true, true, false, false, true, true};
+  const bool validStubNum[maxStubNum + 1] = {
+      true, true, true, false, false, true, true, false, false, true, true};
   assert(validStubNum[stubNum]);
 #endif
   const char *result;
   if (RetTy->isFloatTy()) {
     result = sfMips16Helper[stubNum];
-  }
-  else if (RetTy ->isDoubleTy()) {
+  } else if (RetTy->isDoubleTy()) {
     result = dfMips16Helper[stubNum];
   } else if (StructType *SRetTy = dyn_cast<StructType>(RetTy)) {
     // check if it's complex
@@ -387,16 +381,15 @@ static bool isMips16HardFloatLibcall(StringRef Name) {
          binary_search(HardFloatLibCalls, *ParsedLibcalls.begin());
 }
 
-void Mips16TargetLowering::
-getOpndList(SmallVectorImpl<SDValue> &Ops,
-            std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
-            bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
-            bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
-            SDValue Chain) const {
+void Mips16TargetLowering::getOpndList(
+    SmallVectorImpl<SDValue> &Ops,
+    std::deque<std::pair<unsigned, SDValue>> &RegsToPass, bool IsPICCall,
+    bool GlobalOrExternal, bool InternalLinkage, bool IsCallReloc,
+    CallLoweringInfo &CLI, SDValue Callee, SDValue Chain) const {
   SelectionDAG &DAG = CLI.DAG;
   MachineFunction &MF = DAG.getMachineFunction();
   MipsFunctionInfo *FuncInfo = MF.getInfo<MipsFunctionInfo>();
-  const char* Mips16HelperFunction = nullptr;
+  const char *Mips16HelperFunction = nullptr;
   bool NeedMips16Helper = false;
 
   if (Subtarget.inMips16HardFloat()) {
@@ -411,7 +404,7 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
         LookupHelper = false;
       else {
         const char *Symbol = S->getSymbol();
-        Mips16IntrinsicHelperType IntrinsicFind = { Symbol, "" };
+        Mips16IntrinsicHelperType IntrinsicFind = {Symbol, ""};
         const Mips16HardFloatInfo::FuncSignature *Signature =
             Mips16HardFloatInfo::findFuncSignature(Symbol);
         if (!IsPICCall && Signature &&
@@ -441,7 +434,6 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
           NeedMips16Helper = true;
           LookupHelper = false;
         }
-
       }
     } else if (GlobalAddressSDNode *G =
                    dyn_cast<GlobalAddressSDNode>(CLI.Callee)) {
@@ -451,7 +443,7 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
     }
     if (LookupHelper)
       Mips16HelperFunction =
-        getMips16HelperFunction(CLI.RetTy, CLI.getArgs(), NeedMips16Helper);
+          getMips16HelperFunction(CLI.RetTy, CLI.getArgs(), NeedMips16Helper);
   }
 
   SDValue JumpTarget = Callee;
@@ -499,10 +491,10 @@ Mips16TargetLowering::emitSel16(unsigned Opc, MachineInstr &MI,
   //   setcc r1, r2, r3
   //   bNE   r1, r0, copy1MBB
   //   fallthrough --> copy0MBB
-  MachineBasicBlock *thisMBB  = BB;
+  MachineBasicBlock *thisMBB = BB;
   MachineFunction *F = BB->getParent();
   MachineBasicBlock *copy0MBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *sinkMBB  = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *sinkMBB = F->CreateMachineBasicBlock(LLVM_BB);
   F->insert(It, copy0MBB);
   F->insert(It, sinkMBB);
 
@@ -562,10 +554,10 @@ Mips16TargetLowering::emitSelT16(unsigned Opc1, unsigned Opc2, MachineInstr &MI,
   //   setcc r1, r2, r3
   //   bNE   r1, r0, copy1MBB
   //   fallthrough --> copy0MBB
-  MachineBasicBlock *thisMBB  = BB;
+  MachineBasicBlock *thisMBB = BB;
   MachineFunction *F = BB->getParent();
   MachineBasicBlock *copy0MBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *sinkMBB  = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *sinkMBB = F->CreateMachineBasicBlock(LLVM_BB);
   F->insert(It, copy0MBB);
   F->insert(It, sinkMBB);
 
@@ -604,7 +596,6 @@ Mips16TargetLowering::emitSelT16(unsigned Opc1, unsigned Opc2, MachineInstr &MI,
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
-
 }
 
 MachineBasicBlock *
@@ -628,10 +619,10 @@ Mips16TargetLowering::emitSeliT16(unsigned Opc1, unsigned Opc2,
   //   setcc r1, r2, r3
   //   bNE   r1, r0, copy1MBB
   //   fallthrough --> copy0MBB
-  MachineBasicBlock *thisMBB  = BB;
+  MachineBasicBlock *thisMBB = BB;
   MachineFunction *F = BB->getParent();
   MachineBasicBlock *copy0MBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *sinkMBB  = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *sinkMBB = F->CreateMachineBasicBlock(LLVM_BB);
   F->insert(It, copy0MBB);
   F->insert(It, sinkMBB);
 
@@ -670,7 +661,6 @@ Mips16TargetLowering::emitSeliT16(unsigned Opc1, unsigned Opc2,
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
-
 }
 
 MachineBasicBlock *
@@ -703,8 +693,7 @@ MachineBasicBlock *Mips16TargetLowering::emitFEXT_T8I8I16_ins(
   unsigned CmpOpc;
   if (isUInt<8>(imm))
     CmpOpc = CmpiOpc;
-  else if ((!ImmSigned && isUInt<16>(imm)) ||
-           (ImmSigned && isInt<16>(imm)))
+  else if ((!ImmSigned && isUInt<16>(imm)) || (ImmSigned && isInt<16>(imm)))
     CmpOpc = CmpiXOpc;
   else
     llvm_unreachable("immediate field not usable");
@@ -714,8 +703,8 @@ MachineBasicBlock *Mips16TargetLowering::emitFEXT_T8I8I16_ins(
   return BB;
 }
 
-static unsigned Mips16WhichOp8uOr16simm
-  (unsigned shortOp, unsigned longOp, int64_t Imm) {
+static unsigned Mips16WhichOp8uOr16simm(unsigned shortOp, unsigned longOp,
+                                        int64_t Imm) {
   if (isUInt<8>(Imm))
     return shortOp;
   else if (isInt<16>(Imm))
@@ -758,5 +747,4 @@ Mips16TargetLowering::emitFEXT_CCRXI16_ins(unsigned SltiOpc, unsigned SltiXOpc,
       .addReg(Mips::T8);
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
-
 }

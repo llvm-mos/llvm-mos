@@ -58,19 +58,18 @@ using namespace llvm;
 #define DEBUG_TYPE "machinelicm"
 
 static cl::opt<bool>
-AvoidSpeculation("avoid-speculation",
-                 cl::desc("MachineLICM should avoid speculation"),
-                 cl::init(true), cl::Hidden);
+    AvoidSpeculation("avoid-speculation",
+                     cl::desc("MachineLICM should avoid speculation"),
+                     cl::init(true), cl::Hidden);
 
-static cl::opt<bool>
-HoistCheapInsts("hoist-cheap-insts",
-                cl::desc("MachineLICM should hoist even cheap instructions"),
-                cl::init(false), cl::Hidden);
+static cl::opt<bool> HoistCheapInsts(
+    "hoist-cheap-insts",
+    cl::desc("MachineLICM should hoist even cheap instructions"),
+    cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-HoistConstStores("hoist-const-stores",
-                 cl::desc("Hoist invariant stores"),
-                 cl::init(true), cl::Hidden);
+static cl::opt<bool> HoistConstStores("hoist-const-stores",
+                                      cl::desc("Hoist invariant stores"),
+                                      cl::init(true), cl::Hidden);
 
 static cl::opt<bool> HoistConstLoads("hoist-const-loads",
                                      cl::desc("Hoist invariant loads"),
@@ -78,34 +77,30 @@ static cl::opt<bool> HoistConstLoads("hoist-const-loads",
 
 // The default threshold of 100 (i.e. if target block is 100 times hotter)
 // is based on empirical data on a single target and is subject to tuning.
-static cl::opt<unsigned>
-BlockFrequencyRatioThreshold("block-freq-ratio-threshold",
-                             cl::desc("Do not hoist instructions if target"
-                             "block is N times hotter than the source."),
-                             cl::init(100), cl::Hidden);
+static cl::opt<unsigned> BlockFrequencyRatioThreshold(
+    "block-freq-ratio-threshold",
+    cl::desc("Do not hoist instructions if target"
+             "block is N times hotter than the source."),
+    cl::init(100), cl::Hidden);
 
 enum class UseBFI { None, PGO, All };
 
-static cl::opt<UseBFI>
-DisableHoistingToHotterBlocks("disable-hoisting-to-hotter-blocks",
-                              cl::desc("Disable hoisting instructions to"
-                              " hotter blocks"),
-                              cl::init(UseBFI::PGO), cl::Hidden,
-                              cl::values(clEnumValN(UseBFI::None, "none",
-                              "disable the feature"),
-                              clEnumValN(UseBFI::PGO, "pgo",
-                              "enable the feature when using profile data"),
-                              clEnumValN(UseBFI::All, "all",
-                              "enable the feature with/wo profile data")));
+static cl::opt<UseBFI> DisableHoistingToHotterBlocks(
+    "disable-hoisting-to-hotter-blocks",
+    cl::desc("Disable hoisting instructions to"
+             " hotter blocks"),
+    cl::init(UseBFI::PGO), cl::Hidden,
+    cl::values(clEnumValN(UseBFI::None, "none", "disable the feature"),
+               clEnumValN(UseBFI::PGO, "pgo",
+                          "enable the feature when using profile data"),
+               clEnumValN(UseBFI::All, "all",
+                          "enable the feature with/wo profile data")));
 
-STATISTIC(NumHoisted,
-          "Number of machine instructions hoisted out of loops");
+STATISTIC(NumHoisted, "Number of machine instructions hoisted out of loops");
 STATISTIC(NumLowRP,
           "Number of instructions hoisted in low reg pressure situation");
-STATISTIC(NumHighLatency,
-          "Number of high latency instructions hoisted");
-STATISTIC(NumCSEed,
-          "Number of hoisted machine instructions CSEed");
+STATISTIC(NumHighLatency, "Number of high latency instructions hoisted");
+STATISTIC(NumCSEed, "Number of hoisted machine instructions CSEed");
 STATISTIC(NumPostRAHoisted,
           "Number of machine instructions hoisted out of loops post regalloc");
 STATISTIC(NumStoreConst,
@@ -114,214 +109,209 @@ STATISTIC(NumNotHoistedDueToHotness,
           "Number of instructions not hoisted due to block frequency");
 
 namespace {
-  enum HoistResult { NotHoisted = 1, Hoisted = 2, ErasedMI = 4 };
+enum HoistResult { NotHoisted = 1, Hoisted = 2, ErasedMI = 4 };
 
-  class MachineLICMImpl {
-    const TargetInstrInfo *TII = nullptr;
-    const TargetLoweringBase *TLI = nullptr;
-    const TargetRegisterInfo *TRI = nullptr;
-    const MachineFrameInfo *MFI = nullptr;
-    MachineRegisterInfo *MRI = nullptr;
-    TargetSchedModel SchedModel;
-    bool PreRegAlloc = false;
-    bool HasProfileData = false;
-    Pass *LegacyPass;
-    MachineFunctionAnalysisManager *MFAM;
+class MachineLICMImpl {
+  const TargetInstrInfo *TII = nullptr;
+  const TargetLoweringBase *TLI = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+  const MachineFrameInfo *MFI = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+  TargetSchedModel SchedModel;
+  bool PreRegAlloc = false;
+  bool HasProfileData = false;
+  Pass *LegacyPass;
+  MachineFunctionAnalysisManager *MFAM;
 
-    // Various analyses that we use...
-    AliasAnalysis *AA = nullptr;               // Alias analysis info.
-    MachineBlockFrequencyInfo *MBFI = nullptr; // Machine block frequncy info
-    MachineLoopInfo *MLI = nullptr;            // Current MachineLoopInfo
-    MachineDomTreeUpdater *MDTU = nullptr;     // Wraps current dominator tree
+  // Various analyses that we use...
+  AliasAnalysis *AA = nullptr;               // Alias analysis info.
+  MachineBlockFrequencyInfo *MBFI = nullptr; // Machine block frequncy info
+  MachineLoopInfo *MLI = nullptr;            // Current MachineLoopInfo
+  MachineDomTreeUpdater *MDTU = nullptr;     // Wraps current dominator tree
 
-    // State that is updated as we process loops
-    bool Changed = false;           // True if a loop is changed.
-    bool FirstInLoop = false;       // True if it's the first LICM in the loop.
+  // State that is updated as we process loops
+  bool Changed = false;     // True if a loop is changed.
+  bool FirstInLoop = false; // True if it's the first LICM in the loop.
 
-    // Holds information about whether it is allowed to move load instructions
-    // out of the loop
-    SmallDenseMap<MachineLoop *, bool> AllowedToHoistLoads;
+  // Holds information about whether it is allowed to move load instructions
+  // out of the loop
+  SmallDenseMap<MachineLoop *, bool> AllowedToHoistLoads;
 
-    // Exit blocks of each Loop.
-    DenseMap<MachineLoop *, SmallVector<MachineBasicBlock *, 8>> ExitBlockMap;
+  // Exit blocks of each Loop.
+  DenseMap<MachineLoop *, SmallVector<MachineBasicBlock *, 8>> ExitBlockMap;
 
-    bool isExitBlock(MachineLoop *CurLoop, const MachineBasicBlock *MBB) {
-      auto [It, Inserted] = ExitBlockMap.try_emplace(CurLoop);
-      if (Inserted) {
-        SmallVector<MachineBasicBlock *, 8> ExitBlocks;
-        CurLoop->getExitBlocks(ExitBlocks);
-        It->second = std::move(ExitBlocks);
-      }
-      return is_contained(It->second, MBB);
+  bool isExitBlock(MachineLoop *CurLoop, const MachineBasicBlock *MBB) {
+    auto [It, Inserted] = ExitBlockMap.try_emplace(CurLoop);
+    if (Inserted) {
+      SmallVector<MachineBasicBlock *, 8> ExitBlocks;
+      CurLoop->getExitBlocks(ExitBlocks);
+      It->second = std::move(ExitBlocks);
     }
+    return is_contained(It->second, MBB);
+  }
 
-    // Track 'estimated' register pressure.
-    SmallDenseSet<Register> RegSeen;
-    SmallVector<unsigned, 8> RegPressure;
+  // Track 'estimated' register pressure.
+  SmallDenseSet<Register> RegSeen;
+  SmallVector<unsigned, 8> RegPressure;
 
-    // Register pressure "limit" per register pressure set. If the pressure
-    // is higher than the limit, then it's considered high.
-    SmallVector<unsigned, 8> RegLimit;
+  // Register pressure "limit" per register pressure set. If the pressure
+  // is higher than the limit, then it's considered high.
+  SmallVector<unsigned, 8> RegLimit;
 
-    // Register pressure on path leading from loop preheader to current BB.
-    SmallVector<SmallVector<unsigned, 8>, 16> BackTrace;
+  // Register pressure on path leading from loop preheader to current BB.
+  SmallVector<SmallVector<unsigned, 8>, 16> BackTrace;
 
-    // For each opcode per preheader, keep a list of potential CSE instructions.
-    DenseMap<MachineBasicBlock *,
-             DenseMap<unsigned, std::vector<MachineInstr *>>>
-        CSEMap;
+  // For each opcode per preheader, keep a list of potential CSE instructions.
+  DenseMap<MachineBasicBlock *, DenseMap<unsigned, std::vector<MachineInstr *>>>
+      CSEMap;
 
-    enum {
-      SpeculateFalse   = 0,
-      SpeculateTrue    = 1,
-      SpeculateUnknown = 2
-    };
+  enum { SpeculateFalse = 0, SpeculateTrue = 1, SpeculateUnknown = 2 };
 
-    // If a MBB does not dominate loop exiting blocks then it may not safe
-    // to hoist loads from this block.
-    // Tri-state: 0 - false, 1 - true, 2 - unknown
-    unsigned SpeculationState = SpeculateUnknown;
+  // If a MBB does not dominate loop exiting blocks then it may not safe
+  // to hoist loads from this block.
+  // Tri-state: 0 - false, 1 - true, 2 - unknown
+  unsigned SpeculationState = SpeculateUnknown;
 
-  public:
-    MachineLICMImpl(bool PreRegAlloc, Pass *LegacyPass,
-                    MachineFunctionAnalysisManager *MFAM)
-        : PreRegAlloc(PreRegAlloc), LegacyPass(LegacyPass), MFAM(MFAM) {
-      assert((LegacyPass || MFAM) && "LegacyPass or MFAM must be provided");
-      assert(!(LegacyPass && MFAM) &&
-             "LegacyPass and MFAM cannot be provided at the same time");
-    }
+public:
+  MachineLICMImpl(bool PreRegAlloc, Pass *LegacyPass,
+                  MachineFunctionAnalysisManager *MFAM)
+      : PreRegAlloc(PreRegAlloc), LegacyPass(LegacyPass), MFAM(MFAM) {
+    assert((LegacyPass || MFAM) && "LegacyPass or MFAM must be provided");
+    assert(!(LegacyPass && MFAM) &&
+           "LegacyPass and MFAM cannot be provided at the same time");
+  }
 
-    bool run(MachineFunction &MF);
+  bool run(MachineFunction &MF);
 
-    void releaseMemory() {
-      RegSeen.clear();
-      RegPressure.clear();
-      RegLimit.clear();
-      BackTrace.clear();
-      CSEMap.clear();
-      ExitBlockMap.clear();
-    }
+  void releaseMemory() {
+    RegSeen.clear();
+    RegPressure.clear();
+    RegLimit.clear();
+    BackTrace.clear();
+    CSEMap.clear();
+    ExitBlockMap.clear();
+  }
 
-  private:
-    /// Keep track of information about hoisting candidates.
-    struct CandidateInfo {
-      MachineInstr *MI;
-      Register      Def;
-      int           FI;
+private:
+  /// Keep track of information about hoisting candidates.
+  struct CandidateInfo {
+    MachineInstr *MI;
+    Register Def;
+    int FI;
 
-      CandidateInfo(MachineInstr *mi, Register def, int fi)
+    CandidateInfo(MachineInstr *mi, Register def, int fi)
         : MI(mi), Def(def), FI(fi) {}
-    };
-
-    void HoistRegionPostRA(MachineLoop *CurLoop);
-
-    void HoistPostRA(MachineInstr *MI, Register Def, MachineLoop *CurLoop);
-
-    void ProcessMI(MachineInstr *MI, BitVector &RUDefs, BitVector &RUClobbers,
-                   SmallDenseSet<int> &StoredFIs,
-                   SmallVectorImpl<CandidateInfo> &Candidates,
-                   MachineLoop *CurLoop);
-
-    void AddToLiveIns(MCRegister Reg, MachineLoop *CurLoop);
-
-    bool IsLICMCandidate(MachineInstr &I, MachineLoop *CurLoop);
-
-    bool IsLoopInvariantInst(MachineInstr &I, MachineLoop *CurLoop);
-
-    bool HasLoopPHIUse(const MachineInstr *MI, MachineLoop *CurLoop);
-
-    bool HasHighOperandLatency(MachineInstr &MI, unsigned DefIdx, Register Reg,
-                               MachineLoop *CurLoop) const;
-
-    bool IsCheapInstruction(MachineInstr &MI) const;
-
-    bool CanCauseHighRegPressure(const SmallDenseMap<unsigned, int> &Cost,
-                                 bool Cheap);
-
-    void UpdateBackTraceRegPressure(const MachineInstr *MI);
-
-    bool IsProfitableToHoist(MachineInstr &MI, MachineLoop *CurLoop);
-
-    bool IsGuaranteedToExecute(MachineBasicBlock *BB, MachineLoop *CurLoop);
-
-    void EnterScope(MachineBasicBlock *MBB);
-
-    void ExitScope(MachineBasicBlock *MBB);
-
-    void ExitScopeIfDone(
-        MachineDomTreeNode *Node,
-        DenseMap<MachineDomTreeNode *, unsigned> &OpenChildren,
-        const DenseMap<MachineDomTreeNode *, MachineDomTreeNode *> &ParentMap);
-
-    void HoistOutOfLoop(MachineDomTreeNode *HeaderN, MachineLoop *CurLoop);
-
-    void InitRegPressure(MachineBasicBlock *BB);
-
-    SmallDenseMap<unsigned, int> calcRegisterCost(const MachineInstr *MI,
-                                                  bool ConsiderSeen,
-                                                  bool ConsiderUnseenAsDef);
-
-    void UpdateRegPressure(const MachineInstr *MI,
-                           bool ConsiderUnseenAsDef = false);
-
-    MachineInstr *ExtractHoistableLoad(MachineInstr *MI, MachineLoop *CurLoop);
-
-    MachineInstr *LookForDuplicate(const MachineInstr *MI,
-                                   std::vector<MachineInstr *> &PrevMIs);
-
-    bool
-    EliminateCSE(MachineInstr *MI,
-                 DenseMap<unsigned, std::vector<MachineInstr *>>::iterator &CI);
-
-    bool MayCSE(MachineInstr *MI);
-
-    unsigned Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
-                   MachineLoop *CurLoop);
-
-    void InitCSEMap(MachineBasicBlock *BB);
-
-    void InitializeLoadsHoistableLoops();
-
-    bool isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
-                            MachineBasicBlock *TgtBlock);
-    MachineBasicBlock *getOrCreatePreheader(MachineLoop *CurLoop);
   };
 
-  class MachineLICMBase : public MachineFunctionPass {
-    bool PreRegAlloc;
+  void HoistRegionPostRA(MachineLoop *CurLoop);
 
-  public:
-    MachineLICMBase(char &ID, bool PreRegAlloc)
-        : MachineFunctionPass(ID), PreRegAlloc(PreRegAlloc) {}
+  void HoistPostRA(MachineInstr *MI, Register Def, MachineLoop *CurLoop);
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
+  void ProcessMI(MachineInstr *MI, BitVector &RUDefs, BitVector &RUClobbers,
+                 SmallDenseSet<int> &StoredFIs,
+                 SmallVectorImpl<CandidateInfo> &Candidates,
+                 MachineLoop *CurLoop);
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineLoopInfoWrapperPass>();
-      if (DisableHoistingToHotterBlocks != UseBFI::None)
-        AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addRequired<AAResultsWrapperPass>();
-      AU.addPreserved<MachineLoopInfoWrapperPass>();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
-  };
+  void AddToLiveIns(MCRegister Reg, MachineLoop *CurLoop);
 
-  class MachineLICM : public MachineLICMBase {
-  public:
-    static char ID;
-    MachineLICM() : MachineLICMBase(ID, false) {
-      initializeMachineLICMPass(*PassRegistry::getPassRegistry());
-    }
-  };
+  bool IsLICMCandidate(MachineInstr &I, MachineLoop *CurLoop);
 
-  class EarlyMachineLICM : public MachineLICMBase {
-  public:
-    static char ID;
-    EarlyMachineLICM() : MachineLICMBase(ID, true) {
-      initializeEarlyMachineLICMPass(*PassRegistry::getPassRegistry());
-    }
-  };
+  bool IsLoopInvariantInst(MachineInstr &I, MachineLoop *CurLoop);
+
+  bool HasLoopPHIUse(const MachineInstr *MI, MachineLoop *CurLoop);
+
+  bool HasHighOperandLatency(MachineInstr &MI, unsigned DefIdx, Register Reg,
+                             MachineLoop *CurLoop) const;
+
+  bool IsCheapInstruction(MachineInstr &MI) const;
+
+  bool CanCauseHighRegPressure(const SmallDenseMap<unsigned, int> &Cost,
+                               bool Cheap);
+
+  void UpdateBackTraceRegPressure(const MachineInstr *MI);
+
+  bool IsProfitableToHoist(MachineInstr &MI, MachineLoop *CurLoop);
+
+  bool IsGuaranteedToExecute(MachineBasicBlock *BB, MachineLoop *CurLoop);
+
+  void EnterScope(MachineBasicBlock *MBB);
+
+  void ExitScope(MachineBasicBlock *MBB);
+
+  void ExitScopeIfDone(
+      MachineDomTreeNode *Node,
+      DenseMap<MachineDomTreeNode *, unsigned> &OpenChildren,
+      const DenseMap<MachineDomTreeNode *, MachineDomTreeNode *> &ParentMap);
+
+  void HoistOutOfLoop(MachineDomTreeNode *HeaderN, MachineLoop *CurLoop);
+
+  void InitRegPressure(MachineBasicBlock *BB);
+
+  SmallDenseMap<unsigned, int> calcRegisterCost(const MachineInstr *MI,
+                                                bool ConsiderSeen,
+                                                bool ConsiderUnseenAsDef);
+
+  void UpdateRegPressure(const MachineInstr *MI,
+                         bool ConsiderUnseenAsDef = false);
+
+  MachineInstr *ExtractHoistableLoad(MachineInstr *MI, MachineLoop *CurLoop);
+
+  MachineInstr *LookForDuplicate(const MachineInstr *MI,
+                                 std::vector<MachineInstr *> &PrevMIs);
+
+  bool
+  EliminateCSE(MachineInstr *MI,
+               DenseMap<unsigned, std::vector<MachineInstr *>>::iterator &CI);
+
+  bool MayCSE(MachineInstr *MI);
+
+  unsigned Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
+                 MachineLoop *CurLoop);
+
+  void InitCSEMap(MachineBasicBlock *BB);
+
+  void InitializeLoadsHoistableLoops();
+
+  bool isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
+                          MachineBasicBlock *TgtBlock);
+  MachineBasicBlock *getOrCreatePreheader(MachineLoop *CurLoop);
+};
+
+class MachineLICMBase : public MachineFunctionPass {
+  bool PreRegAlloc;
+
+public:
+  MachineLICMBase(char &ID, bool PreRegAlloc)
+      : MachineFunctionPass(ID), PreRegAlloc(PreRegAlloc) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    if (DisableHoistingToHotterBlocks != UseBFI::None)
+      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
+class MachineLICM : public MachineLICMBase {
+public:
+  static char ID;
+  MachineLICM() : MachineLICMBase(ID, false) {
+    initializeMachineLICMPass(*PassRegistry::getPassRegistry());
+  }
+};
+
+class EarlyMachineLICM : public MachineLICMBase {
+public:
+  static char ID;
+  EarlyMachineLICM() : MachineLICMBase(ID, true) {
+    initializeEarlyMachineLICMPass(*PassRegistry::getPassRegistry());
+  }
+};
 
 } // end anonymous namespace
 
@@ -430,7 +420,7 @@ static bool InstructionStoresToFI(const MachineInstr *MI, int FI) {
   // Check mayStore before memory operands so that e.g. DBG_VALUEs will return
   // true since they have no memory operands.
   if (!MI->mayStore())
-     return false;
+    return false;
   // If we lost memory operands, conservatively assume that the instruction
   // writes to all slots.
   if (MI->memoperands_empty())
@@ -439,7 +429,7 @@ static bool InstructionStoresToFI(const MachineInstr *MI, int FI) {
     if (!MemOp->isStore() || !MemOp->getPseudoValue())
       continue;
     if (const FixedStackPseudoSourceValue *Value =
-        dyn_cast<FixedStackPseudoSourceValue>(MemOp->getPseudoValue())) {
+            dyn_cast<FixedStackPseudoSourceValue>(MemOp->getPseudoValue())) {
       if (Value->getFrameIndex() == FI)
         return true;
     }
@@ -514,8 +504,7 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
     if (MO.isFI()) {
       // Remember if the instruction stores to the frame index.
       int FI = MO.getIndex();
-      if (!StoredFIs.count(FI) &&
-          MFI->isSpillSlotObjectIndex(FI) &&
+      if (!StoredFIs.count(FI) && MFI->isSpillSlotObjectIndex(FI) &&
           InstructionStoresToFI(MI, FI))
         StoredFIs.insert(FI);
       HasNonInvariantUse = true;
@@ -606,7 +595,8 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
     // If the header of the loop containing this basic block is a landing pad,
     // then don't try to hoist instructions out of this loop.
     const MachineLoop *ML = MLI->getLoopFor(BB);
-    if (ML && ML->getHeader()->isEHPad()) continue;
+    if (ML && ML->getHeader()->isEHPad())
+      continue;
 
     // Conservatively treat live-in's as an external def.
     // FIXME: That means a reload that're reused in successor block(s) will not
@@ -759,7 +749,7 @@ bool MachineLICMImpl::IsGuaranteedToExecute(MachineBasicBlock *BB,
 
   if (BB != CurLoop->getHeader()) {
     // Check loop exiting blocks.
-    SmallVector<MachineBasicBlock*, 8> CurrentLoopExitingBlocks;
+    SmallVector<MachineBasicBlock *, 8> CurrentLoopExitingBlocks;
     CurLoop->getExitingBlocks(CurrentLoopExitingBlocks);
     for (MachineBasicBlock *CurrentLoopExitingBlock : CurrentLoopExitingBlocks)
       if (!MDTU->getDomTree().dominates(BB, CurrentLoopExitingBlock)) {
@@ -794,7 +784,7 @@ void MachineLICMImpl::ExitScopeIfDone(
   if (OpenChildren[Node])
     return;
 
-  for(;;) {
+  for (;;) {
     ExitScope(Node->getBlock());
     // Now traverse upwards to pop ancestors whose offsprings are all done.
     MachineDomTreeNode *Parent = ParentMap.lookup(Node);
@@ -814,10 +804,10 @@ void MachineLICMImpl::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
   if (!Preheader)
     return;
 
-  SmallVector<MachineDomTreeNode*, 32> Scopes;
-  SmallVector<MachineDomTreeNode*, 8> WorkList;
-  DenseMap<MachineDomTreeNode*, MachineDomTreeNode*> ParentMap;
-  DenseMap<MachineDomTreeNode*, unsigned> OpenChildren;
+  SmallVector<MachineDomTreeNode *, 32> Scopes;
+  SmallVector<MachineDomTreeNode *, 8> WorkList;
+  DenseMap<MachineDomTreeNode *, MachineDomTreeNode *> ParentMap;
+  DenseMap<MachineDomTreeNode *, unsigned> OpenChildren;
 
   // Perform a DFS walk to determine the order of visit.
   WorkList.push_back(HeaderN);
@@ -1037,7 +1027,7 @@ static bool isInvariantStore(const MachineInstr &MI,
       else
         FoundCallerPresReg = true;
     } else if (!MO.isImm()) {
-        return false;
+      return false;
     }
   }
   return FoundCallerPresReg;
@@ -1136,8 +1126,8 @@ bool MachineLICMImpl::HasLoopPHIUse(const MachineInstr *MI,
       for (MachineInstr &UseMI : MRI->use_instructions(Reg)) {
         // A PHI may cause a copy to be inserted.
         if (UseMI.isPHI()) {
-          // A PHI inside the loop causes a copy because the live range of Reg is
-          // extended across the PHI.
+          // A PHI inside the loop causes a copy because the live range of Reg
+          // is extended across the PHI.
           if (CurLoop->contains(&UseMI))
             return true;
           // A PHI in an exit block can cause a copy to be inserted if the PHI
@@ -1270,7 +1260,7 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
   // - When hoisting the last use of a value in the loop, that value no longer
   //   needs to be live in the loop. This lowers register pressure in the loop.
 
-  if (HoistConstStores &&  isCopyFeedingInvariantStore(MI, MRI, TRI))
+  if (HoistConstStores && isCopyFeedingInvariantStore(MI, MRI, TRI))
     return true;
 
   bool CheapInstr = IsCheapInstruction(MI);
@@ -1395,11 +1385,11 @@ MachineInstr *MachineLICMImpl::ExtractHoistableLoad(MachineInstr *MI,
   // Next determine the register class for a temporary register.
   unsigned LoadRegIndex;
   unsigned NewOpc =
-    TII->getOpcodeAfterMemoryUnfold(MI->getOpcode(),
-                                    /*UnfoldLoad=*/true,
-                                    /*UnfoldStore=*/false,
-                                    &LoadRegIndex);
-  if (NewOpc == 0) return nullptr;
+      TII->getOpcodeAfterMemoryUnfold(MI->getOpcode(),
+                                      /*UnfoldLoad=*/true,
+                                      /*UnfoldStore=*/false, &LoadRegIndex);
+  if (NewOpc == 0)
+    return nullptr;
   const MCInstrDesc &MID = TII->get(NewOpc);
   MachineFunction &MF = *MI->getMF();
   const TargetRegisterClass *RC = TII->getRegClass(MID, LoadRegIndex);
@@ -1414,8 +1404,7 @@ MachineInstr *MachineLICMImpl::ExtractHoistableLoad(MachineInstr *MI,
   assert(Success &&
          "unfoldMemoryOperand failed when getOpcodeAfterMemoryUnfold "
          "succeeded!");
-  assert(NewMIs.size() == 2 &&
-         "Unfolded a load into multiple instructions!");
+  assert(NewMIs.size() == 2 && "Unfolded a load into multiple instructions!");
   MachineBasicBlock *MBB = MI->getParent();
   MachineBasicBlock::iterator Pos = MI;
   MBB->insert(Pos, NewMIs[0]);
@@ -1536,7 +1525,7 @@ bool MachineLICMImpl::EliminateCSE(
         Defs.push_back(i);
     }
 
-    SmallVector<const TargetRegisterClass*, 2> OrigRCs;
+    SmallVector<const TargetRegisterClass *, 2> OrigRCs;
     for (unsigned i = 0, e = Defs.size(); i != e; ++i) {
       unsigned Idx = Defs[i];
       Register Reg = MI->getOperand(Idx).getReg();
@@ -1601,7 +1590,7 @@ unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
 
   // Disable the instruction hoisting due to block hotness
   if ((DisableHoistingToHotterBlocks == UseBFI::All ||
-      (DisableHoistingToHotterBlocks == UseBFI::PGO && HasProfileData)) &&
+       (DisableHoistingToHotterBlocks == UseBFI::PGO && HasProfileData)) &&
       isTgtHotterThanSrc(SrcBlock, Preheader)) {
     ++NumNotHoistedDueToHotness;
     return HoistResult::NotHoisted;
@@ -1659,7 +1648,7 @@ unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
 
   if (!HasCSEDone) {
     // Otherwise, splice the instruction to the preheader.
-    Preheader->splice(Preheader->getFirstTerminator(),MI->getParent(),MI);
+    Preheader->splice(Preheader->getFirstTerminator(), MI->getParent(), MI);
 
     // Since we are moving the instruction out of its basic block, we do not
     // retain its debug location. Doing so would degrade the debugging

@@ -487,7 +487,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
         assert(MI.getNumOperands() == 1 && "Invalid DBG_LABEL instruction!");
         const DILabel *RawLabel = MI.getDebugLabel();
         assert(RawLabel->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
-            "Expected inlined-at fields to agree");
+               "Expected inlined-at fields to agree");
         // When collecting debug information for labels, there is no MCSymbol
         // generated for it. So, we keep MachineInstr in DbgLabels in order
         // to query MCSymbol afterward.
@@ -518,7 +518,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
           // invalid outside of the function body.
           else if (MO.getReg() != FrameReg ||
                    (!MI.getFlag(MachineInstr::FrameDestroy) &&
-                   !MI.getFlag(MachineInstr::FrameSetup))) {
+                    !MI.getFlag(MachineInstr::FrameSetup))) {
             for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid();
                  ++AI)
               clobberRegisterUses(RegVars, *AI, DbgValues, LiveEntries, MI);
@@ -540,7 +540,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
           }
         }
       } // End MO loop.
-    }   // End instr loop.
+    } // End instr loop.
 
     // Make sure locations for all variables are valid only until the end of
     // the basic block (unless it's the last basic block, in which case let

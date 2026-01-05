@@ -24,6 +24,6 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_LOWERINVOKE_H

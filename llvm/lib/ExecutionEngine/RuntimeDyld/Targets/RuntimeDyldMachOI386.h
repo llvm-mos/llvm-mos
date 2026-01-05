@@ -18,7 +18,6 @@ namespace llvm {
 class RuntimeDyldMachOI386
     : public RuntimeDyldMachOCRTPBase<RuntimeDyldMachOI386> {
 public:
-
   typedef uint32_t TargetPtrT;
 
   RuntimeDyldMachOI386(RuntimeDyld::MemoryManager &MM,
@@ -29,13 +28,10 @@ public:
 
   Align getStubAlignment() override { return Align(1); }
 
-  Expected<relocation_iterator>
-  processRelocationRef(unsigned SectionID, relocation_iterator RelI,
-                       const ObjectFile &BaseObjT,
-                       ObjSectionToIDMap &ObjSectionToID,
-                       StubMap &Stubs) override {
-    const MachOObjectFile &Obj =
-        static_cast<const MachOObjectFile &>(BaseObjT);
+  Expected<relocation_iterator> processRelocationRef(
+      unsigned SectionID, relocation_iterator RelI, const ObjectFile &BaseObjT,
+      ObjSectionToIDMap &ObjSectionToID, StubMap &Stubs) override {
+    const MachOObjectFile &Obj = static_cast<const MachOObjectFile &>(BaseObjT);
     MachO::any_relocation_info RelInfo =
         Obj.getRelocation(RelI->getRawDataRefImpl());
     uint32_t RelType = Obj.getAnyRelocationType(RelInfo);
@@ -43,23 +39,26 @@ public:
     if (Obj.isRelocationScattered(RelInfo)) {
       if (RelType == MachO::GENERIC_RELOC_SECTDIFF ||
           RelType == MachO::GENERIC_RELOC_LOCAL_SECTDIFF)
-        return processSECTDIFFRelocation(SectionID, RelI, Obj,
-                                         ObjSectionToID);
+        return processSECTDIFFRelocation(SectionID, RelI, Obj, ObjSectionToID);
       else if (RelType == MachO::GENERIC_RELOC_VANILLA)
         return processScatteredVANILLA(SectionID, RelI, Obj, ObjSectionToID);
-      return make_error<RuntimeDyldError>(("Unhandled I386 scattered relocation "
-                                           "type: " + Twine(RelType)).str());
+      return make_error<RuntimeDyldError>(
+          ("Unhandled I386 scattered relocation "
+           "type: " +
+           Twine(RelType))
+              .str());
     }
 
     switch (RelType) {
-    UNIMPLEMENTED_RELOC(MachO::GENERIC_RELOC_PAIR);
-    UNIMPLEMENTED_RELOC(MachO::GENERIC_RELOC_PB_LA_PTR);
-    UNIMPLEMENTED_RELOC(MachO::GENERIC_RELOC_TLV);
+      UNIMPLEMENTED_RELOC(MachO::GENERIC_RELOC_PAIR);
+      UNIMPLEMENTED_RELOC(MachO::GENERIC_RELOC_PB_LA_PTR);
+      UNIMPLEMENTED_RELOC(MachO::GENERIC_RELOC_TLV);
     default:
       if (RelType > MachO::GENERIC_RELOC_TLV)
         return make_error<RuntimeDyldError>(("MachO I386 relocation type " +
                                              Twine(RelType) +
-                                             " is out of range").str());
+                                             " is out of range")
+                                                .str());
       break;
     }
 
@@ -125,7 +124,7 @@ public:
   }
 
   Error finalizeSection(const ObjectFile &Obj, unsigned SectionID,
-                       const SectionRef &Section) {
+                        const SectionRef &Section) {
     StringRef Name;
     if (Expected<StringRef> NameOrErr = Section.getName())
       Name = *NameOrErr;
@@ -145,8 +144,7 @@ private:
   processSECTDIFFRelocation(unsigned SectionID, relocation_iterator RelI,
                             const ObjectFile &BaseObjT,
                             ObjSectionToIDMap &ObjSectionToID) {
-    const MachOObjectFile &Obj =
-        static_cast<const MachOObjectFile&>(BaseObjT);
+    const MachOObjectFile &Obj = static_cast<const MachOObjectFile &>(BaseObjT);
     MachO::any_relocation_info RE =
         Obj.getRelocation(RelI->getRawDataRefImpl());
 
@@ -172,7 +170,7 @@ private:
     bool IsCode = SectionA.isText();
     uint32_t SectionAID = ~0U;
     if (auto SectionAIDOrErr =
-        findOrEmitSection(Obj, SectionA, IsCode, ObjSectionToID))
+            findOrEmitSection(Obj, SectionA, IsCode, ObjSectionToID))
       SectionAID = *SectionAIDOrErr;
     else
       return SectionAIDOrErr.takeError();
@@ -185,7 +183,7 @@ private:
     SectionRef SectionB = *SBI;
     uint32_t SectionBID = ~0U;
     if (auto SectionBIDOrErr =
-        findOrEmitSection(Obj, SectionB, IsCode, ObjSectionToID))
+            findOrEmitSection(Obj, SectionB, IsCode, ObjSectionToID))
       SectionBID = *SectionBIDOrErr;
     else
       return SectionBIDOrErr.takeError();
@@ -199,8 +197,8 @@ private:
                       << SectionAOffset << ", SectionB ID: " << SectionBID
                       << ", SectionBOffset: " << SectionBOffset << "\n");
     RelocationEntry R(SectionID, Offset, RelocType, Addend, SectionAID,
-                      SectionAOffset, SectionBID, SectionBOffset,
-                      IsPCRel, Size);
+                      SectionAOffset, SectionBID, SectionBOffset, IsPCRel,
+                      Size);
 
     addRelocationForSection(R, SectionAID);
 
@@ -209,8 +207,7 @@ private:
 
   // Populate stubs in __jump_table section.
   Error populateJumpTable(const MachOObjectFile &Obj,
-                          const SectionRef &JTSection,
-                         unsigned JTSectionID) {
+                          const SectionRef &JTSection, unsigned JTSectionID) {
     MachO::dysymtab_command DySymTabCmd = Obj.getDysymtabLoadCommand();
     MachO::section Sec32 = Obj.getSection(JTSection.getRawDataRefImpl());
     uint32_t JTSectionSize = Sec32.size;
@@ -241,9 +238,8 @@ private:
 
     return Error::success();
   }
-
 };
-}
+} // namespace llvm
 
 #undef DEBUG_TYPE
 

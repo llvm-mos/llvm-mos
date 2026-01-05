@@ -50,14 +50,13 @@ using namespace llvm;
 #define DEBUG_TYPE "stack-slot-coloring"
 
 static cl::opt<bool>
-DisableSharing("no-stack-slot-sharing",
-             cl::init(false), cl::Hidden,
-             cl::desc("Suppress slot sharing during stack coloring"));
+    DisableSharing("no-stack-slot-sharing", cl::init(false), cl::Hidden,
+                   cl::desc("Suppress slot sharing during stack coloring"));
 
 static cl::opt<int> DCELimit("ssc-dce-limit", cl::init(-1), cl::Hidden);
 
 STATISTIC(NumEliminated, "Number of stack slots eliminated due to coloring");
-STATISTIC(NumDead,       "Number of trivially dead stack accesses eliminated");
+STATISTIC(NumDead, "Number of trivially dead stack accesses eliminated");
 
 namespace {
 
@@ -206,7 +205,7 @@ namespace {
 // IntervalSorter - Comparison predicate that sort live intervals by
 // their weight.
 struct IntervalSorter {
-  bool operator()(LiveInterval* LHS, LiveInterval* RHS) const {
+  bool operator()(LiveInterval *LHS, LiveInterval *RHS) const {
     return LHS->weight() > RHS->weight();
   }
 };
@@ -283,7 +282,7 @@ void StackSlotColoring::InitializeSlots() {
 
     SSIntervals.push_back(&li);
     OrigAlignments[FI] = MFI->getObjectAlign(FI);
-    OrigSizes[FI]      = MFI->getObjectSize(FI);
+    OrigSizes[FI] = MFI->getObjectSize(FI);
 
     auto StackID = MFI->getStackID(FI);
     if (StackID != 0) {
@@ -424,7 +423,8 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
   for (int StackID = 0, E = AllColors.size(); StackID != E; ++StackID) {
     int NextColor = NextColors[StackID];
     while (NextColor != -1) {
-      LLVM_DEBUG(dbgs() << "Removing unused stack object fi#" << NextColor << "\n");
+      LLVM_DEBUG(dbgs() << "Removing unused stack object fi#" << NextColor
+                        << "\n");
       MFI->RemoveStackObject(NextColor);
       NextColor = AllColors[StackID].find_next(NextColor);
     }
@@ -461,15 +461,15 @@ void StackSlotColoring::RewriteInstruction(MachineInstr &MI,
 /// definitely dead.  This could obviously be much more aggressive (consider
 /// pairs with instructions between them), but such extensions might have a
 /// considerable compile time impact.
-bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
+bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock *MBB) {
   // FIXME: This could be much more aggressive, but we need to investigate
   // the compile time impact of doing so.
   bool changed = false;
 
-  SmallVector<MachineInstr*, 4> toErase;
+  SmallVector<MachineInstr *, 4> toErase;
 
-  for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end();
-       I != E; ++I) {
+  for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;
+       ++I) {
     if (DCELimit != -1 && (int)NumDead >= DCELimit)
       break;
     int FirstSS, SecondSS;
@@ -495,7 +495,8 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
       ++NextMI;
       ++I;
     }
-    if (NextMI == E) continue;
+    if (NextMI == E)
+      continue;
     if (!(StoreReg = TII->isStoreToStackSlot(*NextMI, SecondSS, StoreSize)))
       continue;
     if (FirstSS != SecondSS || LoadReg != StoreReg || FirstSS == -1 ||

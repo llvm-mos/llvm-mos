@@ -42,8 +42,7 @@ using namespace llvm::bfi_detail;
 
 namespace llvm {
 cl::opt<bool> CheckBFIUnknownBlockQueries(
-    "check-bfi-unknown-block-queries",
-    cl::init(false), cl::Hidden,
+    "check-bfi-unknown-block-queries", cl::init(false), cl::Hidden,
     cl::desc("Check if block frequency is queried for an unknown block "
              "for debugging missed BFI updates"));
 
@@ -265,8 +264,8 @@ void Distribution::normalize() {
     // sum of the weights, but let's double-check.
     assert(Total == std::accumulate(Weights.begin(), Weights.end(), UINT64_C(0),
                                     [](uint64_t Sum, const Weight &W) {
-                      return Sum + W.Amount;
-                    }) &&
+                                      return Sum + W.Amount;
+                                    }) &&
            "Expected total to be correct");
     return;
   }
@@ -580,10 +579,8 @@ BlockFrequencyInfoImplBase::getBlockFreq(const BlockNode &Node) const {
   return BlockFrequency(Freqs[Node.Index].Integer);
 }
 
-std::optional<uint64_t>
-BlockFrequencyInfoImplBase::getBlockProfileCount(const Function &F,
-                                                 const BlockNode &Node,
-                                                 bool AllowSynthetic) const {
+std::optional<uint64_t> BlockFrequencyInfoImplBase::getBlockProfileCount(
+    const Function &F, const BlockNode &Node, bool AllowSynthetic) const {
   return getProfileCountFromFreq(F, getBlockFreq(Node), AllowSynthetic);
 }
 
@@ -603,8 +600,7 @@ std::optional<uint64_t> BlockFrequencyInfoImplBase::getProfileCountFromFreq(
   return BlockCount.getLimitedValue();
 }
 
-bool
-BlockFrequencyInfoImplBase::isIrrLoopHeader(const BlockNode &Node) {
+bool BlockFrequencyInfoImplBase::isIrrLoopHeader(const BlockNode &Node) {
   if (!Node.isValid())
     return false;
   return IsIrrLoopHeader.test(Node.Index);
@@ -687,8 +683,7 @@ template <> struct GraphTraits<IrreducibleGraph> {
 /// Find entry blocks and other blocks with backedges, which exist when \c G
 /// contains irreducible sub-SCCs.
 static void findIrreducibleHeaders(
-    const BlockFrequencyInfoImplBase &BFI,
-    const IrreducibleGraph &G,
+    const BlockFrequencyInfoImplBase &BFI, const IrreducibleGraph &G,
     const std::vector<const IrreducibleGraph::IrrNode *> &SCC,
     LoopData::NodeList &Headers, LoopData::NodeList &Others) {
   // Map from nodes in the SCC to whether it's an entry block.
@@ -797,8 +792,8 @@ BlockFrequencyInfoImplBase::analyzeIrreducible(
   return make_range(Loops.begin(), Insert);
 }
 
-void
-BlockFrequencyInfoImplBase::updateLoopWithIrreducible(LoopData &OuterLoop) {
+void BlockFrequencyInfoImplBase::updateLoopWithIrreducible(
+    LoopData &OuterLoop) {
   OuterLoop.Exits.clear();
   for (auto &Mass : OuterLoop.BackedgeMass)
     Mass = BlockMass::getEmpty();
@@ -846,7 +841,8 @@ void BlockFrequencyInfoImplBase::adjustLoopHeaderMass(LoopData &Loop) {
   }
 }
 
-void BlockFrequencyInfoImplBase::distributeIrrLoopHeaderMass(Distribution &Dist) {
+void BlockFrequencyInfoImplBase::distributeIrrLoopHeaderMass(
+    Distribution &Dist) {
   BlockMass LoopMass = BlockMass::getFull();
   DitheringDistributer D(Dist, LoopMass);
   for (const Weight &W : Dist.Weights) {

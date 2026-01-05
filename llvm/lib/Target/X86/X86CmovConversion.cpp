@@ -98,17 +98,16 @@ static cl::opt<bool> ForceMemOperand(
     cl::desc("Convert cmovs to branches whenever they have memory operands."),
     cl::init(true), cl::Hidden);
 
-static cl::opt<bool> ForceAll(
-    "x86-cmov-converter-force-all",
-    cl::desc("Convert all cmovs to branches."),
-    cl::init(false), cl::Hidden);
+static cl::opt<bool> ForceAll("x86-cmov-converter-force-all",
+                              cl::desc("Convert all cmovs to branches."),
+                              cl::init(false), cl::Hidden);
 
 namespace {
 
 /// Converts X86 cmov instructions into branches when profitable.
 class X86CmovConverterPass : public MachineFunctionPass {
 public:
-  X86CmovConverterPass() : MachineFunctionPass(ID) { }
+  X86CmovConverterPass() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "X86 cmov Conversion"; }
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -384,9 +383,8 @@ static unsigned getDepthOfOptCmov(unsigned TrueOpDepth, unsigned FalseOpDepth) {
   // TrueOpDepth * TrueOpProbability + FalseOpDepth * FalseOpProbability.
   // As we have no info about branch weight, we assume 75% for one and 25% for
   // the other, and pick the result with the largest resulting depth.
-  return std::max(
-      divideCeil(TrueOpDepth * 3 + FalseOpDepth, 4),
-      divideCeil(FalseOpDepth * 3 + TrueOpDepth, 4));
+  return std::max(divideCeil(TrueOpDepth * 3 + FalseOpDepth, 4),
+                  divideCeil(FalseOpDepth * 3 + TrueOpDepth, 4));
 }
 
 bool X86CmovConverterPass::checkForProfitableCmovCandidates(
@@ -798,7 +796,8 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     for (auto *NewMI : NewMIs) {
       LLVM_DEBUG(dbgs() << "\tRewritten load instr: "; NewMI->dump());
       FalseMBB->insert(FalseInsertionPoint, NewMI);
-      // Re-map any operands that are from other cmovs to the inputs for this block.
+      // Re-map any operands that are from other cmovs to the inputs for this
+      // block.
       for (auto &MOp : NewMI->uses()) {
         if (!MOp.isReg())
           continue;

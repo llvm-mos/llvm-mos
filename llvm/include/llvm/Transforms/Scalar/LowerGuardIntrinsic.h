@@ -22,6 +22,6 @@ struct LowerGuardIntrinsicPass : PassInfoMixin<LowerGuardIntrinsicPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_LOWERGUARDINTRINSIC_H

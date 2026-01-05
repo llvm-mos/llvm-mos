@@ -14,16 +14,16 @@
 
 #include "llvm/IR/Function.h"
 
-using namespace llvm; 
+using namespace llvm;
 
 namespace llvm {
 
 int64_t MOSInstrCost::value(Mode Mode) const {
   switch (Mode) {
   case Mode::PreferBytes:
-    return ((int64_t) Bytes << 32) + Cycles;
+    return ((int64_t)Bytes << 32) + Cycles;
   case Mode::PreferCycles:
-    return ((int64_t) Cycles << 32) + Bytes;
+    return ((int64_t)Cycles << 32) + Bytes;
   case Mode::Average:
     return Bytes + Cycles;
   }

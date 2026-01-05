@@ -30,7 +30,8 @@ DIAEnumSymbols::getChildAtIndex(uint32_t Index) const {
     return nullptr;
 
   std::unique_ptr<DIARawSymbol> RawSymbol(new DIARawSymbol(Session, Item));
-  return std::unique_ptr<PDBSymbol>(PDBSymbol::create(Session, std::move(RawSymbol)));
+  return std::unique_ptr<PDBSymbol>(
+      PDBSymbol::create(Session, std::move(RawSymbol)));
 }
 
 std::unique_ptr<PDBSymbol> DIAEnumSymbols::getNext() {

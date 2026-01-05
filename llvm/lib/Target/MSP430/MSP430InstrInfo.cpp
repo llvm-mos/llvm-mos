@@ -35,7 +35,8 @@ void MSP430InstrInfo::storeRegToStackSlot(
     bool isKill, int FrameIdx, const TargetRegisterClass *RC, Register VReg,
     MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
-  if (MI != MBB.end()) DL = MI->getDebugLoc();
+  if (MI != MBB.end())
+    DL = MI->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
@@ -46,12 +47,16 @@ void MSP430InstrInfo::storeRegToStackSlot(
 
   if (RC == &MSP430::GR16RegClass)
     BuildMI(MBB, MI, DL, get(MSP430::MOV16mr))
-      .addFrameIndex(FrameIdx).addImm(0)
-      .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
+        .addFrameIndex(FrameIdx)
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addMemOperand(MMO);
   else if (RC == &MSP430::GR8RegClass)
     BuildMI(MBB, MI, DL, get(MSP430::MOV8mr))
-      .addFrameIndex(FrameIdx).addImm(0)
-      .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
+        .addFrameIndex(FrameIdx)
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addMemOperand(MMO);
   else
     llvm_unreachable("Cannot store this register to stack slot!");
 }
@@ -63,7 +68,8 @@ void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                            Register VReg,
                                            MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
-  if (MI != MBB.end()) DL = MI->getDebugLoc();
+  if (MI != MBB.end())
+    DL = MI->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
@@ -74,12 +80,16 @@ void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
   if (RC == &MSP430::GR16RegClass)
     BuildMI(MBB, MI, DL, get(MSP430::MOV16rm))
-      .addReg(DestReg, getDefRegState(true)).addFrameIndex(FrameIdx)
-      .addImm(0).addMemOperand(MMO);
+        .addReg(DestReg, getDefRegState(true))
+        .addFrameIndex(FrameIdx)
+        .addImm(0)
+        .addMemOperand(MMO);
   else if (RC == &MSP430::GR8RegClass)
     BuildMI(MBB, MI, DL, get(MSP430::MOV8rm))
-      .addReg(DestReg, getDefRegState(true)).addFrameIndex(FrameIdx)
-      .addImm(0).addMemOperand(MMO);
+        .addReg(DestReg, getDefRegState(true))
+        .addFrameIndex(FrameIdx)
+        .addImm(0)
+        .addMemOperand(MMO);
   else
     llvm_unreachable("Cannot store this register to stack slot!");
 }
@@ -98,7 +108,7 @@ void MSP430InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     llvm_unreachable("Impossible reg-to-reg copy");
 
   BuildMI(MBB, I, DL, get(Opc), DestReg)
-    .addReg(SrcReg, getKillRegState(KillSrc));
+      .addReg(SrcReg, getKillRegState(KillSrc));
 }
 
 unsigned MSP430InstrInfo::removeBranch(MachineBasicBlock &MBB,
@@ -112,10 +122,8 @@ unsigned MSP430InstrInfo::removeBranch(MachineBasicBlock &MBB,
     --I;
     if (I->isDebugInstr())
       continue;
-    if (I->getOpcode() != MSP430::JMP &&
-        I->getOpcode() != MSP430::JCC &&
-        I->getOpcode() != MSP430::Bi &&
-        I->getOpcode() != MSP430::Br &&
+    if (I->getOpcode() != MSP430::JMP && I->getOpcode() != MSP430::JCC &&
+        I->getOpcode() != MSP430::Bi && I->getOpcode() != MSP430::Br &&
         I->getOpcode() != MSP430::Bm)
       break;
     // Remove the branch.
@@ -127,14 +135,15 @@ unsigned MSP430InstrInfo::removeBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-bool MSP430InstrInfo::
-reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
+bool MSP430InstrInfo::reverseBranchCondition(
+    SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 1 && "Invalid Xbranch condition!");
 
   MSP430CC::CondCodes CC = static_cast<MSP430CC::CondCodes>(Cond[0].getImm());
 
   switch (CC) {
-  default: llvm_unreachable("Invalid branch condition!");
+  default:
+    llvm_unreachable("Invalid branch condition!");
   case MSP430CC::COND_E:
     CC = MSP430CC::COND_NE;
     break;
@@ -183,8 +192,7 @@ bool MSP430InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       return true;
 
     // Cannot handle indirect branches.
-    if (I->getOpcode() == MSP430::Br ||
-        I->getOpcode() == MSP430::Bm)
+    if (I->getOpcode() == MSP430::Br || I->getOpcode() == MSP430::Bm)
       return true;
 
     // Handle unconditional branches.
@@ -215,9 +223,9 @@ bool MSP430InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     // Handle conditional branches.
     assert(I->getOpcode() == MSP430::JCC && "Invalid conditional branch");
     MSP430CC::CondCodes BranchCode =
-      static_cast<MSP430CC::CondCodes>(I->getOperand(1).getImm());
+        static_cast<MSP430CC::CondCodes>(I->getOperand(1).getImm());
     if (BranchCode == MSP430CC::COND_INVALID)
-      return true;  // Can't handle weird stuff.
+      return true; // Can't handle weird stuff.
 
     // Working from the bottom, handle the first conditional branch.
     if (Cond.empty()) {
@@ -248,12 +256,9 @@ bool MSP430InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return false;
 }
 
-unsigned MSP430InstrInfo::insertBranch(MachineBasicBlock &MBB,
-                                       MachineBasicBlock *TBB,
-                                       MachineBasicBlock *FBB,
-                                       ArrayRef<MachineOperand> Cond,
-                                       const DebugLoc &DL,
-                                       int *BytesAdded) const {
+unsigned MSP430InstrInfo::insertBranch(
+    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
+    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 1 || Cond.size() == 0) &&

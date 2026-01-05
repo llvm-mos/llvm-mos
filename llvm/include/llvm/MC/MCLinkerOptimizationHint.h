@@ -42,31 +42,27 @@ enum MCLOHType {
   MCLOH_AdrpLdrGot = 0x8u     ///< Adrp _v@GOTPAGE -> Ldr _v@GOTPAGEOFF.
 };
 
-static inline StringRef MCLOHDirectiveName() {
-  return StringRef(".loh");
-}
+static inline StringRef MCLOHDirectiveName() { return StringRef(".loh"); }
 
 static inline bool isValidMCLOHType(unsigned Kind) {
   return Kind >= MCLOH_AdrpAdrp && Kind <= MCLOH_AdrpLdrGot;
 }
 
 static inline int MCLOHNameToId(StringRef Name) {
-#define MCLOHCaseNameToId(Name)     .Case(#Name, MCLOH_ ## Name)
-  return StringSwitch<int>(Name)
-    MCLOHCaseNameToId(AdrpAdrp)
-    MCLOHCaseNameToId(AdrpLdr)
-    MCLOHCaseNameToId(AdrpAddLdr)
-    MCLOHCaseNameToId(AdrpLdrGotLdr)
-    MCLOHCaseNameToId(AdrpAddStr)
-    MCLOHCaseNameToId(AdrpLdrGotStr)
-    MCLOHCaseNameToId(AdrpAdd)
-    MCLOHCaseNameToId(AdrpLdrGot)
-    .Default(-1);
+#define MCLOHCaseNameToId(Name) .Case(#Name, MCLOH_##Name)
+  return StringSwitch<int>(Name) MCLOHCaseNameToId(AdrpAdrp)
+      MCLOHCaseNameToId(AdrpLdr) MCLOHCaseNameToId(AdrpAddLdr)
+          MCLOHCaseNameToId(AdrpLdrGotLdr) MCLOHCaseNameToId(AdrpAddStr)
+              MCLOHCaseNameToId(AdrpLdrGotStr) MCLOHCaseNameToId(AdrpAdd)
+                  MCLOHCaseNameToId(AdrpLdrGot)
+                      .Default(-1);
 #undef MCLOHCaseNameToId
 }
 
 static inline StringRef MCLOHIdToName(MCLOHType Kind) {
-#define MCLOHCaseIdToName(Name)      case MCLOH_ ## Name: return StringRef(#Name);
+#define MCLOHCaseIdToName(Name)                                                \
+  case MCLOH_##Name:                                                           \
+    return StringRef(#Name);
   switch (Kind) {
     MCLOHCaseIdToName(AdrpAdrp);
     MCLOHCaseIdToName(AdrpLdr);
@@ -147,9 +143,7 @@ public:
   MCLOHContainer() = default;
 
   /// Const accessor to the directives.
-  const LOHDirectives &getDirectives() const {
-    return Directives;
-  }
+  const LOHDirectives &getDirectives() const { return Directives; }
 
   /// Add the directive of the given kind \p Kind with the given arguments
   /// \p Args to the container.

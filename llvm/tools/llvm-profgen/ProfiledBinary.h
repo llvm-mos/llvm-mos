@@ -108,7 +108,7 @@ struct PrologEpilogTracker {
   // A set of prolog and epilog addresses. Used by virtual unwinding.
   std::unordered_set<uint64_t> PrologEpilogSet;
   ProfiledBinary *Binary;
-  PrologEpilogTracker(ProfiledBinary *Bin) : Binary(Bin){};
+  PrologEpilogTracker(ProfiledBinary *Bin) : Binary(Bin) {};
 
   // Take the two addresses from the start of function as prolog
   void

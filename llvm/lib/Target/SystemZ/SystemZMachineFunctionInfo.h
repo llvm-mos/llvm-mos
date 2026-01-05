@@ -21,8 +21,8 @@ struct GPRRegs {
   unsigned HighGPR = 0;
   unsigned GPROffset = 0;
   GPRRegs() = default;
-  };
-}
+};
+} // namespace SystemZ
 
 class SystemZMachineFunctionInfo : public MachineFunctionInfo {
   virtual void anchor();

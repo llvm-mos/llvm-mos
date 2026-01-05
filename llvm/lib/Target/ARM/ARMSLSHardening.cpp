@@ -64,8 +64,8 @@ private:
 
 char ARMSLSHardening::ID = 0;
 
-INITIALIZE_PASS(ARMSLSHardening, "arm-sls-hardening",
-                ARM_SLS_HARDENING_NAME, false, false)
+INITIALIZE_PASS(ARMSLSHardening, "arm-sls-hardening", ARM_SLS_HARDENING_NAME,
+                false, false)
 
 static void insertSpeculationBarrier(const ARMSubtarget *ST,
                                      MachineBasicBlock &MBB,
@@ -127,7 +127,7 @@ bool ARMSLSHardening::hardenReturnsAndBRs(MachineBasicBlock &MBB) const {
 static const char SLSBLRNamePrefix[] = "__llvm_slsblr_thunk_";
 
 static const struct ThunkNameRegMode {
-  const char* Name;
+  const char *Name;
   Register Reg;
   bool isThumb;
 } SLSBLRThunks[] = {
@@ -232,8 +232,7 @@ void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
         .addReg(ThunkReg)
         .add(predOps(ARMCC::AL));
   else
-    BuildMI(Entry, DebugLoc(), TII->get(ARM::BX))
-        .addReg(ThunkReg);
+    BuildMI(Entry, DebugLoc(), TII->get(ARM::BX)).addReg(ThunkReg);
 
   // Make sure the thunks do not make use of the SB extension in case there is
   // a function somewhere that will call to it that for some reason disabled
@@ -279,8 +278,8 @@ MachineBasicBlock &ARMSLSHardening::ConvertIndirectCallToIndirectJump(
   int RegOpIdxOnIndirectCall = -1;
   bool isThumb;
   switch (IndirectCall.getOpcode()) {
-  case ARM::BLX:   // !isThumb2
-  case ARM::BLX_noip:   // !isThumb2
+  case ARM::BLX:      // !isThumb2
+  case ARM::BLX_noip: // !isThumb2
     isThumb = false;
     RegOpIdxOnIndirectCall = 0;
     break;
@@ -377,8 +376,6 @@ bool ARMSLSHardening::hardenIndirectCalls(MachineBasicBlock &MBB) const {
   }
   return Modified;
 }
-
-
 
 FunctionPass *llvm::createARMSLSHardeningPass() {
   return new ARMSLSHardening();

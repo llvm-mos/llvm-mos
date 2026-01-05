@@ -65,16 +65,16 @@
 // SET reads 4 input bytes in little-endian byte order and stores them
 // in a properly aligned word in host byte order.
 #define SET(n)                                                                 \
-  (InternalState.block[(n)] = (MD5_u32plus)ptr[(n)*4] |                        \
-                              ((MD5_u32plus)ptr[(n)*4 + 1] << 8) |             \
-                              ((MD5_u32plus)ptr[(n)*4 + 2] << 16) |            \
-                              ((MD5_u32plus)ptr[(n)*4 + 3] << 24))
+  (InternalState.block[(n)] = (MD5_u32plus)ptr[(n) * 4] |                      \
+                              ((MD5_u32plus)ptr[(n) * 4 + 1] << 8) |           \
+                              ((MD5_u32plus)ptr[(n) * 4 + 2] << 16) |          \
+                              ((MD5_u32plus)ptr[(n) * 4 + 3] << 24))
 #define GET(n) (InternalState.block[(n)])
 
 using namespace llvm;
 
 /// This processes one or more 64-byte data blocks, but does NOT update
-///the bit counters.  There are no alignment requirements.
+/// the bit counters.  There are no alignment requirements.
 const uint8_t *MD5::body(ArrayRef<uint8_t> Data) {
   const uint8_t *ptr;
   MD5_u32plus a, b, c, d;

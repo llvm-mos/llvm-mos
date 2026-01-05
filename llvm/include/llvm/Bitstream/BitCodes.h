@@ -34,37 +34,41 @@ namespace llvm {
 class BitCodeAbbrevOp {
 public:
   enum Encoding {
-    Fixed = 1,  // A fixed width field, Val specifies number of bits.
-    VBR   = 2,  // A VBR field where Val specifies the width of each chunk.
-    Array = 3,  // A sequence of fields, next field species elt encoding.
-    Char6 = 4,  // A 6-bit fixed field which maps to [a-zA-Z0-9._].
-    Blob  = 5   // 32-bit aligned array of 8-bit characters.
+    Fixed = 1, // A fixed width field, Val specifies number of bits.
+    VBR = 2,   // A VBR field where Val specifies the width of each chunk.
+    Array = 3, // A sequence of fields, next field species elt encoding.
+    Char6 = 4, // A 6-bit fixed field which maps to [a-zA-Z0-9._].
+    Blob = 5   // 32-bit aligned array of 8-bit characters.
   };
 
 protected:
-  uint64_t Val;           // A literal value or data for an encoding.
+  uint64_t Val; // A literal value or data for an encoding.
   LLVM_PREFERRED_TYPE(bool)
   uint64_t IsLiteral : 1; // Indicate whether this is a literal value or not.
   LLVM_PREFERRED_TYPE(Encoding)
-  uint64_t Enc : 3;       // The encoding to use.
+  uint64_t Enc : 3; // The encoding to use.
 
 public:
-  static bool isValidEncoding(uint64_t E) {
-    return E >= 1 && E <= 5;
-  }
+  static bool isValidEncoding(uint64_t E) { return E >= 1 && E <= 5; }
 
-  explicit BitCodeAbbrevOp(uint64_t V) :  Val(V), IsLiteral(true) {}
+  explicit BitCodeAbbrevOp(uint64_t V) : Val(V), IsLiteral(true) {}
   explicit BitCodeAbbrevOp(Encoding E, uint64_t Data = 0)
-    : Val(Data), IsLiteral(false), Enc(E) {}
+      : Val(Data), IsLiteral(false), Enc(E) {}
 
-  bool isLiteral() const  { return IsLiteral; }
+  bool isLiteral() const { return IsLiteral; }
   bool isEncoding() const { return !IsLiteral; }
 
   // Accessors for literals.
-  uint64_t getLiteralValue() const { assert(isLiteral()); return Val; }
+  uint64_t getLiteralValue() const {
+    assert(isLiteral());
+    return Val;
+  }
 
   // Accessors for encoding info.
-  Encoding getEncoding() const { assert(isEncoding()); return (Encoding)Enc; }
+  Encoding getEncoding() const {
+    assert(isEncoding());
+    return (Encoding)Enc;
+  }
   uint64_t getEncodingData() const {
     assert(isEncoding() && hasEncodingData());
     return Val;
@@ -87,11 +91,16 @@ public:
   /// isChar6 - Return true if this character is legal in the Char6 encoding.
   static bool isChar6(char C) { return isAlnum(C) || C == '.' || C == '_'; }
   static unsigned EncodeChar6(char C) {
-    if (C >= 'a' && C <= 'z') return C-'a';
-    if (C >= 'A' && C <= 'Z') return C-'A'+26;
-    if (C >= '0' && C <= '9') return C-'0'+26+26;
-    if (C == '.')             return 62;
-    if (C == '_')             return 63;
+    if (C >= 'a' && C <= 'z')
+      return C - 'a';
+    if (C >= 'A' && C <= 'Z')
+      return C - 'A' + 26;
+    if (C >= '0' && C <= '9')
+      return C - '0' + 26 + 26;
+    if (C == '.')
+      return 62;
+    if (C == '_')
+      return 63;
     llvm_unreachable("Not a value Char6 character!");
   }
 
@@ -100,7 +109,6 @@ public:
     return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._"
         [V];
   }
-
 };
 
 /// BitCodeAbbrev - This class represents an abbreviation record.  An
@@ -122,9 +130,7 @@ public:
     return OperandList[N];
   }
 
-  void Add(const BitCodeAbbrevOp &OpInfo) {
-    OperandList.push_back(OpInfo);
-  }
+  void Add(const BitCodeAbbrevOp &OpInfo) { OperandList.push_back(OpInfo); }
 };
 } // namespace llvm
 

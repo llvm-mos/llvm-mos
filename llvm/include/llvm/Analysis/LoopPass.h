@@ -39,13 +39,11 @@ public:
   // whatever action is necessary for the specified Loop.
   virtual bool runOnLoop(Loop *L, LPPassManager &LPM) = 0;
 
-  using llvm::Pass::doInitialization;
   using llvm::Pass::doFinalization;
+  using llvm::Pass::doInitialization;
 
   // Initialization and finalization hooks.
-  virtual bool doInitialization(Loop *L, LPPassManager &LPM) {
-    return false;
-  }
+  virtual bool doInitialization(Loop *L, LPPassManager &LPM) { return false; }
 
   // Finalization hook does not supply Loop because at this time
   // loop nest is completely different.
@@ -133,6 +131,6 @@ struct LCSSAVerificationPass : public FunctionPass {
   }
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

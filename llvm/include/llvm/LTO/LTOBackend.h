@@ -79,7 +79,7 @@ LLVM_ABI Expected<BitcodeModule> findThinLTOModule(MemoryBufferRef MBRef);
 LLVM_ABI bool initImportList(const Module &M,
                              const ModuleSummaryIndex &CombinedIndex,
                              FunctionImporter::ImportMapTy &ImportList);
-}
-}
+} // namespace lto
+} // namespace llvm
 
 #endif

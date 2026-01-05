@@ -158,7 +158,7 @@ bool SpeculativeExecutionPass::runImpl(Function &F, TargetTransformInfo *TTI) {
 
   this->TTI = TTI;
   bool Changed = false;
-  for (auto& B : F) {
+  for (auto &B : F) {
     Changed |= runOnBasicBlock(B);
   }
   return Changed;
@@ -211,51 +211,51 @@ bool SpeculativeExecutionPass::runOnBasicBlock(BasicBlock &B) {
 static InstructionCost ComputeSpeculationCost(const Instruction *I,
                                               const TargetTransformInfo &TTI) {
   switch (Operator::getOpcode(I)) {
-    case Instruction::GetElementPtr:
-    case Instruction::Add:
-    case Instruction::Mul:
-    case Instruction::And:
-    case Instruction::Or:
-    case Instruction::Select:
-    case Instruction::Shl:
-    case Instruction::Sub:
-    case Instruction::LShr:
-    case Instruction::AShr:
-    case Instruction::Xor:
-    case Instruction::ZExt:
-    case Instruction::SExt:
-    case Instruction::Call:
-    case Instruction::BitCast:
-    case Instruction::PtrToInt:
-    case Instruction::PtrToAddr:
-    case Instruction::IntToPtr:
-    case Instruction::AddrSpaceCast:
-    case Instruction::FPToUI:
-    case Instruction::FPToSI:
-    case Instruction::UIToFP:
-    case Instruction::SIToFP:
-    case Instruction::FPExt:
-    case Instruction::FPTrunc:
-    case Instruction::FAdd:
-    case Instruction::FSub:
-    case Instruction::FMul:
-    case Instruction::FDiv:
-    case Instruction::FRem:
-    case Instruction::FNeg:
-    case Instruction::ICmp:
-    case Instruction::FCmp:
-    case Instruction::Trunc:
-    case Instruction::Freeze:
-    case Instruction::ExtractElement:
-    case Instruction::InsertElement:
-    case Instruction::ShuffleVector:
-    case Instruction::ExtractValue:
-    case Instruction::InsertValue:
-      return TTI.getInstructionCost(I, TargetTransformInfo::TCK_SizeAndLatency);
+  case Instruction::GetElementPtr:
+  case Instruction::Add:
+  case Instruction::Mul:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Select:
+  case Instruction::Shl:
+  case Instruction::Sub:
+  case Instruction::LShr:
+  case Instruction::AShr:
+  case Instruction::Xor:
+  case Instruction::ZExt:
+  case Instruction::SExt:
+  case Instruction::Call:
+  case Instruction::BitCast:
+  case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
+  case Instruction::IntToPtr:
+  case Instruction::AddrSpaceCast:
+  case Instruction::FPToUI:
+  case Instruction::FPToSI:
+  case Instruction::UIToFP:
+  case Instruction::SIToFP:
+  case Instruction::FPExt:
+  case Instruction::FPTrunc:
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::FRem:
+  case Instruction::FNeg:
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+  case Instruction::Trunc:
+  case Instruction::Freeze:
+  case Instruction::ExtractElement:
+  case Instruction::InsertElement:
+  case Instruction::ShuffleVector:
+  case Instruction::ExtractValue:
+  case Instruction::InsertValue:
+    return TTI.getInstructionCost(I, TargetTransformInfo::TCK_SizeAndLatency);
 
-    default:
-      return InstructionCost::getInvalid(); // Disallow anything not explicitly
-                                            // listed.
+  default:
+    return InstructionCost::getInvalid(); // Disallow anything not explicitly
+                                          // listed.
   }
 }
 
@@ -281,8 +281,8 @@ static InstructionCost ComputeSpeculationCost(const Instruction *I,
 // 'y * z', we should not see the value of 'x' change unless we
 // actually go inside the 'if' block.
 
-bool SpeculativeExecutionPass::considerHoistingFromTo(
-    BasicBlock &FromBlock, BasicBlock &ToBlock) {
+bool SpeculativeExecutionPass::considerHoistingFromTo(BasicBlock &FromBlock,
+                                                      BasicBlock &ToBlock) {
   SmallPtrSet<const Instruction *, 8> NotHoisted;
   auto HasNoUnhoistedInstr = [&NotHoisted](auto Values) {
     for (const Value *V : Values) {
@@ -305,7 +305,7 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
         AllPrecedingUsesFromBlockHoisted(&I)) {
       TotalSpeculationCost += Cost;
       if (TotalSpeculationCost > SpecExecMaxSpeculationCost)
-        return false;  // too much to hoist
+        return false; // too much to hoist
     } else {
       NotHoistedInstCount++;
       if (NotHoistedInstCount > SpecExecMaxNotHoisted)

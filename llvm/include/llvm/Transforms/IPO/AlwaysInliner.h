@@ -44,6 +44,6 @@ public:
 /// Create a legacy pass manager instance of a pass to inline and remove
 /// functions marked as "always_inline".
 LLVM_ABI Pass *createAlwaysInlinerLegacyPass(bool InsertLifetime = true);
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_ALWAYSINLINER_H

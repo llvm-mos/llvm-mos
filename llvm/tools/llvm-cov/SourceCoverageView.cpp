@@ -165,11 +165,11 @@ SourceCoverageView::create(StringRef SourceName, const MemoryBuffer &File,
                            CoverageData &&CoverageInfo) {
   switch (Options.Format) {
   case CoverageViewOptions::OutputFormat::Text:
-    return std::make_unique<SourceCoverageViewText>(
-        SourceName, File, Options, std::move(CoverageInfo));
+    return std::make_unique<SourceCoverageViewText>(SourceName, File, Options,
+                                                    std::move(CoverageInfo));
   case CoverageViewOptions::OutputFormat::HTML:
-    return std::make_unique<SourceCoverageViewHTML>(
-        SourceName, File, Options, std::move(CoverageInfo));
+    return std::make_unique<SourceCoverageViewHTML>(SourceName, File, Options,
+                                                    std::move(CoverageInfo));
   case CoverageViewOptions::OutputFormat::Lcov:
     // Unreachable because CodeCoverage.cpp should terminate with an error
     // before we get here.

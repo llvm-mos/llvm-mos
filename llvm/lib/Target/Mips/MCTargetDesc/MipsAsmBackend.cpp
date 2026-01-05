@@ -126,7 +126,7 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case Mips::fixup_MICROMIPS_PC7_S1:
     Value -= 4;
     // Forcing a signed division because Value can be negative.
-    Value = (int64_t) Value / 2;
+    Value = (int64_t)Value / 2;
     // We now check if Value can be encoded as a 7-bit signed immediate.
     if (!isInt<7>(Value)) {
       Ctx.reportError(Fixup.getLoc(), "out of range PC7 fixup");
@@ -136,7 +136,7 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case Mips::fixup_MICROMIPS_PC10_S1:
     Value -= 2;
     // Forcing a signed division because Value can be negative.
-    Value = (int64_t) Value / 2;
+    Value = (int64_t)Value / 2;
     // We now check if Value can be encoded as a 10-bit signed immediate.
     if (!isInt<10>(Value)) {
       Ctx.reportError(Fixup.getLoc(), "out of range PC10 fixup");
@@ -177,7 +177,7 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     break;
   case Mips::fixup_MIPS_PC21_S2:
     // Forcing a signed division because Value can be negative.
-    Value = (int64_t) Value / 4;
+    Value = (int64_t)Value / 4;
     // We now check if Value can be encoded as a 21-bit signed immediate.
     if (!isInt<21>(Value)) {
       Ctx.reportError(Fixup.getLoc(), "out of range PC21 fixup");
@@ -186,7 +186,7 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     break;
   case Mips::fixup_MIPS_PC26_S2:
     // Forcing a signed division because Value can be negative.
-    Value = (int64_t) Value / 4;
+    Value = (int64_t)Value / 4;
     // We now check if Value can be encoded as a 26-bit signed immediate.
     if (!isInt<26>(Value)) {
       Ctx.reportError(Fixup.getLoc(), "out of range PC26 fixup");
@@ -320,7 +320,7 @@ void MipsAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // Grab current value, if any, from bits.
   uint64_t CurVal = 0;
 
-  bool microMipsLEByteOrder = needsMMLEByteOrder((unsigned) Kind);
+  bool microMipsLEByteOrder = needsMMLEByteOrder((unsigned)Kind);
 
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned Idx = Endian == llvm::endianness::little
@@ -329,8 +329,7 @@ void MipsAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     CurVal |= (uint64_t)((uint8_t)Data[Idx]) << (i * 8);
   }
 
-  uint64_t Mask = ((uint64_t)(-1) >>
-                    (64 - getFixupKindInfo(Kind).TargetSize));
+  uint64_t Mask = ((uint64_t)(-1) >> (64 - getFixupKindInfo(Kind).TargetSize));
   CurVal |= Value & Mask;
 
   // Write out the fixed up bytes back to the code/data bits.

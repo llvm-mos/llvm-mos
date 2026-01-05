@@ -891,6 +891,6 @@ private:
   }
 };
 
-} // llvm namespace
+} // namespace llvm
 
 #endif

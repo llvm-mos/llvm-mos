@@ -22,9 +22,9 @@ namespace llvm {
 static bool isAESPair(const MachineInstr *FirstMI,
                       const MachineInstr &SecondMI) {
   // Assume the 1st instr to be a wildcard if it is unspecified.
-  switch(SecondMI.getOpcode()) {
+  switch (SecondMI.getOpcode()) {
   // AES encode.
-  case ARM::AESMC :
+  case ARM::AESMC:
     return FirstMI == nullptr || FirstMI->getOpcode() == ARM::AESE;
   // AES decode.
   case ARM::AESIMC:
@@ -52,7 +52,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
                                    const MachineInstr &SecondMI) {
-  const ARMSubtarget &ST = static_cast<const ARMSubtarget&>(TSI);
+  const ARMSubtarget &ST = static_cast<const ARMSubtarget &>(TSI);
 
   if (ST.hasFuseAES() && isAESPair(FirstMI, SecondMI))
     return true;

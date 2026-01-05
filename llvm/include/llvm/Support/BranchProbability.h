@@ -237,9 +237,9 @@ void BranchProbability::normalizeProbabilities(ProbabilityIter Begin,
       ProbForUnknown = BranchProbability::getRaw(
           (BranchProbability::getDenominator() - Sum) / UnknownProbCount);
 
-    std::replace_if(Begin, End,
-                    [](const BranchProbability &BP) { return BP.isUnknown(); },
-                    ProbForUnknown);
+    std::replace_if(
+        Begin, End, [](const BranchProbability &BP) { return BP.isUnknown(); },
+        ProbForUnknown);
 
     if (Sum <= BranchProbability::getDenominator())
       return;
@@ -255,6 +255,6 @@ void BranchProbability::normalizeProbabilities(ProbabilityIter Begin,
     I->N = (I->N * uint64_t(D) + Sum / 2) / Sum;
 }
 
-}
+} // namespace llvm
 
 #endif

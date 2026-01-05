@@ -40,4 +40,4 @@ unsigned getSLEB128Size(int64_t Value) {
   return Size;
 }
 
-}  // namespace llvm
+} // namespace llvm

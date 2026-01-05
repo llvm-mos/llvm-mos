@@ -46,6 +46,6 @@ public:
   IRBuilder<> *Next();
 };
 
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_ESCAPEENUMERATOR_H

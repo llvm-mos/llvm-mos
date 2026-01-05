@@ -39,17 +39,16 @@ const InterferenceCache::BlockInterference
 // also support for when pass managers are reused for targets with different
 // numbers of PhysRegs: in this case PhysRegEntries is freed and reinitialized.
 void InterferenceCache::reinitPhysRegEntries() {
-  if (PhysRegEntriesCount == TRI->getNumRegs()) return;
+  if (PhysRegEntriesCount == TRI->getNumRegs())
+    return;
   free(PhysRegEntries);
   PhysRegEntriesCount = TRI->getNumRegs();
-  PhysRegEntries = static_cast<unsigned char*>(
+  PhysRegEntries = static_cast<unsigned char *>(
       safe_calloc(PhysRegEntriesCount, sizeof(unsigned char)));
 }
 
-void InterferenceCache::init(MachineFunction *mf,
-                             LiveIntervalUnion *liuarray,
-                             SlotIndexes *indexes,
-                             LiveIntervals *lis,
+void InterferenceCache::init(MachineFunction *mf, LiveIntervalUnion *liuarray,
+                             SlotIndexes *indexes, LiveIntervals *lis,
                              const TargetRegisterInfo *tri) {
   MF = mf;
   LIUArray = liuarray;
@@ -153,7 +152,7 @@ void InterferenceCache::Entry::update(unsigned MBBNum) {
       MF->getBlockNumbered(MBBNum)->getIterator();
   BlockInterference *BI = &Blocks[MBBNum];
   ArrayRef<SlotIndex> RegMaskSlots;
-  ArrayRef<const uint32_t*> RegMaskBits;
+  ArrayRef<const uint32_t *> RegMaskBits;
   while (true) {
     BI->Tag = Tag;
     BI->First = BI->Last = SlotIndex();
@@ -245,11 +244,11 @@ void InterferenceCache::Entry::update(unsigned MBBNum) {
   // Also check for register mask interference.
   SlotIndex Limit = BI->Last.isValid() ? BI->Last : Start;
   for (unsigned i = RegMaskSlots.size();
-       i && RegMaskSlots[i-1].getDeadSlot() > Limit; --i)
-    if (MachineOperand::clobbersPhysReg(RegMaskBits[i-1], PhysReg)) {
+       i && RegMaskSlots[i - 1].getDeadSlot() > Limit; --i)
+    if (MachineOperand::clobbersPhysReg(RegMaskBits[i - 1], PhysReg)) {
       // Register mask i-1 clobbers PhysReg after the LIU interference.
       // Model the regmask clobber as a dead def.
-      BI->Last = RegMaskSlots[i-1].getDeadSlot();
+      BI->Last = RegMaskSlots[i - 1].getDeadSlot();
       break;
     }
 }

@@ -218,13 +218,13 @@ Error consume(BinaryStreamReader &Reader,
 }
 
 template <typename T, typename U, typename... Args>
-Error consume(BinaryStreamReader &Reader, T &&X, U &&Y, Args &&... Rest) {
+Error consume(BinaryStreamReader &Reader, T &&X, U &&Y, Args &&...Rest) {
   if (auto EC = consume(Reader, X))
     return EC;
   return consume(Reader, Y, std::forward<Args>(Rest)...);
 }
 
-}
-}
+} // namespace codeview
+} // namespace llvm
 
 #endif

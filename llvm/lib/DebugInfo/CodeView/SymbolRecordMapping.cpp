@@ -23,7 +23,7 @@ struct MapGap {
     return Error::success();
   }
 };
-}
+} // namespace
 
 static Error mapLocalVariableAddrRange(CodeViewRecordIO &IO,
                                        LocalVariableAddrRange &Range) {
@@ -519,18 +519,26 @@ RegisterId codeview::decodeFramePtrReg(EncodedFramePtrReg EncodedReg,
   case CPUType::PentiumPro:
   case CPUType::Pentium3:
     switch (EncodedReg) {
-    case EncodedFramePtrReg::None:     return RegisterId::NONE;
-    case EncodedFramePtrReg::StackPtr: return RegisterId::VFRAME;
-    case EncodedFramePtrReg::FramePtr: return RegisterId::EBP;
-    case EncodedFramePtrReg::BasePtr:  return RegisterId::EBX;
+    case EncodedFramePtrReg::None:
+      return RegisterId::NONE;
+    case EncodedFramePtrReg::StackPtr:
+      return RegisterId::VFRAME;
+    case EncodedFramePtrReg::FramePtr:
+      return RegisterId::EBP;
+    case EncodedFramePtrReg::BasePtr:
+      return RegisterId::EBX;
     }
     llvm_unreachable("bad encoding");
   case CPUType::X64:
     switch (EncodedReg) {
-    case EncodedFramePtrReg::None:     return RegisterId::NONE;
-    case EncodedFramePtrReg::StackPtr: return RegisterId::RSP;
-    case EncodedFramePtrReg::FramePtr: return RegisterId::RBP;
-    case EncodedFramePtrReg::BasePtr:  return RegisterId::R13;
+    case EncodedFramePtrReg::None:
+      return RegisterId::NONE;
+    case EncodedFramePtrReg::StackPtr:
+      return RegisterId::RSP;
+    case EncodedFramePtrReg::FramePtr:
+      return RegisterId::RBP;
+    case EncodedFramePtrReg::BasePtr:
+      return RegisterId::R13;
     }
     llvm_unreachable("bad encoding");
   }

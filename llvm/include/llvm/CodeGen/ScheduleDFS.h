@@ -37,24 +37,20 @@ struct ILPValue {
   /// and cycles or nodes depending on context.
   unsigned Length;
 
-  ILPValue(unsigned count, unsigned length):
-    InstrCount(count), Length(length) {}
+  ILPValue(unsigned count, unsigned length)
+      : InstrCount(count), Length(length) {}
 
   // Order by the ILP metric's value.
   bool operator<(ILPValue RHS) const {
-    return (uint64_t)InstrCount * RHS.Length
-      < (uint64_t)Length * RHS.InstrCount;
+    return (uint64_t)InstrCount * RHS.Length <
+           (uint64_t)Length * RHS.InstrCount;
   }
-  bool operator>(ILPValue RHS) const {
-    return RHS < *this;
-  }
+  bool operator>(ILPValue RHS) const { return RHS < *this; }
   bool operator<=(ILPValue RHS) const {
-    return (uint64_t)InstrCount * RHS.Length
-      <= (uint64_t)Length * RHS.InstrCount;
+    return (uint64_t)InstrCount * RHS.Length <=
+           (uint64_t)Length * RHS.InstrCount;
   }
-  bool operator>=(ILPValue RHS) const {
-    return RHS <= *this;
-  }
+  bool operator>=(ILPValue RHS) const { return RHS <= *this; }
 
   void print(raw_ostream &OS) const;
 
@@ -93,7 +89,7 @@ class SchedDFSResult {
     unsigned TreeID;
     unsigned Level;
 
-    Connection(unsigned tree, unsigned level): TreeID(tree), Level(level) {}
+    Connection(unsigned tree, unsigned level) : TreeID(tree), Level(level) {}
   };
 
   bool IsBottomUp;
@@ -114,7 +110,7 @@ class SchedDFSResult {
 
 public:
   SchedDFSResult(bool IsBU, unsigned lim)
-    : IsBottomUp(IsBU), SubtreeLimit(lim) {}
+      : IsBottomUp(IsBU), SubtreeLimit(lim) {}
 
   /// Get the node cutoff before subtrees are considered significant.
   unsigned getSubtreeLimit() const { return SubtreeLimit; }
@@ -133,9 +129,7 @@ public:
   }
 
   /// Initialize the result data with the size of the DAG.
-  void resize(unsigned NumSUnits) {
-    DFSNodeData.resize(NumSUnits);
-  }
+  void resize(unsigned NumSUnits) { DFSNodeData.resize(NumSUnits); }
 
   /// Compute various metrics for the DAG with given roots.
   void compute(ArrayRef<SUnit> SUnits);
@@ -169,7 +163,7 @@ public:
   unsigned getSubtreeID(const SUnit *SU) const {
     if (empty())
       return 0;
-    assert(SU->NodeNum < DFSNodeData.size() &&  "New Node");
+    assert(SU->NodeNum < DFSNodeData.size() && "New Node");
     return DFSNodeData[SU->NodeNum].SubtreeID;
   }
 

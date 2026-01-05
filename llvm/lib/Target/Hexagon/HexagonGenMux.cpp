@@ -49,90 +49,90 @@
 using namespace llvm;
 
 // Initialize this to 0 to always prefer generating mux by default.
-static cl::opt<unsigned> MinPredDist("hexagon-gen-mux-threshold", cl::Hidden,
-  cl::init(0), cl::desc("Minimum distance between predicate definition and "
-  "farther of the two predicated uses"));
+static cl::opt<unsigned>
+    MinPredDist("hexagon-gen-mux-threshold", cl::Hidden, cl::init(0),
+                cl::desc("Minimum distance between predicate definition and "
+                         "farther of the two predicated uses"));
 
 namespace {
 
-  class HexagonGenMux : public MachineFunctionPass {
-  public:
-    static char ID;
+class HexagonGenMux : public MachineFunctionPass {
+public:
+  static char ID;
 
-    HexagonGenMux() : MachineFunctionPass(ID) {}
+  HexagonGenMux() : MachineFunctionPass(ID) {}
 
-    StringRef getPassName() const override {
-      return "Hexagon generate mux instructions";
-    }
+  StringRef getPassName() const override {
+    return "Hexagon generate mux instructions";
+  }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
-    }
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
 
-  private:
-    const HexagonInstrInfo *HII = nullptr;
-    const HexagonRegisterInfo *HRI = nullptr;
+private:
+  const HexagonInstrInfo *HII = nullptr;
+  const HexagonRegisterInfo *HRI = nullptr;
 
-    struct CondsetInfo {
-      unsigned PredR = 0;
-      unsigned TrueX = std::numeric_limits<unsigned>::max();
-      unsigned FalseX = std::numeric_limits<unsigned>::max();
+  struct CondsetInfo {
+    unsigned PredR = 0;
+    unsigned TrueX = std::numeric_limits<unsigned>::max();
+    unsigned FalseX = std::numeric_limits<unsigned>::max();
 
-      CondsetInfo() = default;
-    };
-
-    struct DefUseInfo {
-      BitVector Defs, Uses;
-
-      DefUseInfo() = default;
-      DefUseInfo(const BitVector &D, const BitVector &U) : Defs(D), Uses(U) {}
-    };
-
-    struct MuxInfo {
-      MachineBasicBlock::iterator At;
-      unsigned DefR, PredR;
-      MachineOperand *SrcT, *SrcF;
-      MachineInstr *Def1, *Def2;
-
-      MuxInfo(MachineBasicBlock::iterator It, unsigned DR, unsigned PR,
-              MachineOperand *TOp, MachineOperand *FOp, MachineInstr &D1,
-              MachineInstr &D2)
-          : At(It), DefR(DR), PredR(PR), SrcT(TOp), SrcF(FOp), Def1(&D1),
-            Def2(&D2) {}
-    };
-
-    using InstrIndexMap = DenseMap<MachineInstr *, unsigned>;
-    using DefUseInfoMap = DenseMap<unsigned, DefUseInfo>;
-    using MuxInfoList = SmallVector<MuxInfo, 4>;
-
-    bool isRegPair(unsigned Reg) const {
-      return Hexagon::DoubleRegsRegClass.contains(Reg);
-    }
-
-    void getSubRegs(unsigned Reg, BitVector &SRs) const;
-    void expandReg(unsigned Reg, BitVector &Set) const;
-    void getDefsUses(const MachineInstr *MI, BitVector &Defs,
-          BitVector &Uses) const;
-    void buildMaps(MachineBasicBlock &B, InstrIndexMap &I2X,
-          DefUseInfoMap &DUM);
-    bool isCondTransfer(unsigned Opc) const;
-    unsigned getMuxOpcode(const MachineOperand &Src1,
-          const MachineOperand &Src2) const;
-    bool genMuxInBlock(MachineBasicBlock &B);
+    CondsetInfo() = default;
   };
+
+  struct DefUseInfo {
+    BitVector Defs, Uses;
+
+    DefUseInfo() = default;
+    DefUseInfo(const BitVector &D, const BitVector &U) : Defs(D), Uses(U) {}
+  };
+
+  struct MuxInfo {
+    MachineBasicBlock::iterator At;
+    unsigned DefR, PredR;
+    MachineOperand *SrcT, *SrcF;
+    MachineInstr *Def1, *Def2;
+
+    MuxInfo(MachineBasicBlock::iterator It, unsigned DR, unsigned PR,
+            MachineOperand *TOp, MachineOperand *FOp, MachineInstr &D1,
+            MachineInstr &D2)
+        : At(It), DefR(DR), PredR(PR), SrcT(TOp), SrcF(FOp), Def1(&D1),
+          Def2(&D2) {}
+  };
+
+  using InstrIndexMap = DenseMap<MachineInstr *, unsigned>;
+  using DefUseInfoMap = DenseMap<unsigned, DefUseInfo>;
+  using MuxInfoList = SmallVector<MuxInfo, 4>;
+
+  bool isRegPair(unsigned Reg) const {
+    return Hexagon::DoubleRegsRegClass.contains(Reg);
+  }
+
+  void getSubRegs(unsigned Reg, BitVector &SRs) const;
+  void expandReg(unsigned Reg, BitVector &Set) const;
+  void getDefsUses(const MachineInstr *MI, BitVector &Defs,
+                   BitVector &Uses) const;
+  void buildMaps(MachineBasicBlock &B, InstrIndexMap &I2X, DefUseInfoMap &DUM);
+  bool isCondTransfer(unsigned Opc) const;
+  unsigned getMuxOpcode(const MachineOperand &Src1,
+                        const MachineOperand &Src2) const;
+  bool genMuxInBlock(MachineBasicBlock &B);
+};
 
 } // end anonymous namespace
 
 char HexagonGenMux::ID = 0;
 
 INITIALIZE_PASS(HexagonGenMux, "hexagon-gen-mux",
-  "Hexagon generate mux instructions", false, false)
+                "Hexagon generate mux instructions", false, false)
 
 void HexagonGenMux::getSubRegs(unsigned Reg, BitVector &SRs) const {
   for (MCPhysReg I : HRI->subregs(Reg))
@@ -147,7 +147,7 @@ void HexagonGenMux::expandReg(unsigned Reg, BitVector &Set) const {
 }
 
 void HexagonGenMux::getDefsUses(const MachineInstr *MI, BitVector &Defs,
-      BitVector &Uses) const {
+                                BitVector &Uses) const {
   // First, get the implicit defs and uses for this instruction.
   unsigned Opc = MI->getOpcode();
   const MCInstrDesc &D = HII->get(Opc);
@@ -167,7 +167,7 @@ void HexagonGenMux::getDefsUses(const MachineInstr *MI, BitVector &Defs,
 }
 
 void HexagonGenMux::buildMaps(MachineBasicBlock &B, InstrIndexMap &I2X,
-      DefUseInfoMap &DUM) {
+                              DefUseInfoMap &DUM) {
   unsigned Index = 0;
   unsigned NR = HRI->getNumRegs();
   BitVector Defs(NR), Uses(NR);
@@ -184,17 +184,17 @@ void HexagonGenMux::buildMaps(MachineBasicBlock &B, InstrIndexMap &I2X,
 
 bool HexagonGenMux::isCondTransfer(unsigned Opc) const {
   switch (Opc) {
-    case Hexagon::A2_tfrt:
-    case Hexagon::A2_tfrf:
-    case Hexagon::C2_cmoveit:
-    case Hexagon::C2_cmoveif:
-      return true;
+  case Hexagon::A2_tfrt:
+  case Hexagon::A2_tfrf:
+  case Hexagon::C2_cmoveit:
+  case Hexagon::C2_cmoveif:
+    return true;
   }
   return false;
 }
 
 unsigned HexagonGenMux::getMuxOpcode(const MachineOperand &Src1,
-      const MachineOperand &Src2) const {
+                                     const MachineOperand &Src2) const {
   bool IsReg1 = Src1.isReg(), IsReg2 = Src2.isReg();
   if (IsReg1)
     return IsReg2 ? Hexagon::C2_mux : Hexagon::C2_muxir;
@@ -264,7 +264,7 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     unsigned MaxX = std::max(CI.TrueX, CI.FalseX);
     // Specifically, check if the predicate definition is within a prescribed
     // distance from the farther of the two predicated instructions.
-    unsigned SearchX = (MaxX >= MinPredDist) ? MaxX-MinPredDist : 0;
+    unsigned SearchX = (MaxX >= MinPredDist) ? MaxX - MinPredDist : 0;
     bool NearDef = false;
     for (unsigned X = SearchX; X < MaxX; ++X) {
       const DefUseInfo &DU = DUM.lookup(X);
@@ -290,7 +290,7 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     Register SR1 = Src1->isReg() ? Src1->getReg() : Register();
     Register SR2 = Src2->isReg() ? Src2->getReg() : Register();
     bool Failure = false, CanUp = true, CanDown = true;
-    for (unsigned X = MinX+1; X < MaxX; X++) {
+    for (unsigned X = MinX + 1; X < MaxX; X++) {
       const DefUseInfo &DU = DUM.lookup(X);
       if (DU.Defs[PR] || DU.Defs[DR] || DU.Uses[DR]) {
         Failure = true;
@@ -369,6 +369,4 @@ bool HexagonGenMux::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-FunctionPass *llvm::createHexagonGenMux() {
-  return new HexagonGenMux();
-}
+FunctionPass *llvm::createHexagonGenMux() { return new HexagonGenMux(); }

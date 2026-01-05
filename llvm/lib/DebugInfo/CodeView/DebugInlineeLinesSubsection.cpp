@@ -21,8 +21,8 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-Error VarStreamArrayExtractor<InlineeSourceLine>::
-operator()(BinaryStreamRef Stream, uint32_t &Len, InlineeSourceLine &Item) {
+Error VarStreamArrayExtractor<InlineeSourceLine>::operator()(
+    BinaryStreamRef Stream, uint32_t &Len, InlineeSourceLine &Item) {
   BinaryStreamReader Reader(Stream);
 
   if (auto EC = Reader.readObject(Item.Header))

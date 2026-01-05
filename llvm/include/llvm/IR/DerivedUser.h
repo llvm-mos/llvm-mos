@@ -26,7 +26,7 @@ class Use;
 /// its use/def list machinery.
 class DerivedUser : public User {
 protected:
-  using  DeleteValueTy = void (*)(DerivedUser *);
+  using DeleteValueTy = void (*)(DerivedUser *);
 
 private:
   friend class Value;

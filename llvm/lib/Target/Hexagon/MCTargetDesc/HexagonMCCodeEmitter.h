@@ -47,7 +47,7 @@ class HexagonMCCodeEmitter : public MCCodeEmitter {
 
 public:
   HexagonMCCodeEmitter(MCInstrInfo const &MII, MCContext &MCT)
-    : MCT(MCT), MCII(MII) {}
+      : MCT(MCT), MCII(MII) {}
 
   void encodeInstruction(MCInst const &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,

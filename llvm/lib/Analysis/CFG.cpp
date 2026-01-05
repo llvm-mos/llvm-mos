@@ -32,15 +32,17 @@ static cl::opt<unsigned> DefaultMaxBBsToExplore(
 /// (compared to computing dominators and loop info) analysis.
 ///
 /// The output is added to Result, as pairs of <from,to> edge info.
-void llvm::FindFunctionBackedges(const Function &F,
-     SmallVectorImpl<std::pair<const BasicBlock*,const BasicBlock*> > &Result) {
+void llvm::FindFunctionBackedges(
+    const Function &F,
+    SmallVectorImpl<std::pair<const BasicBlock *, const BasicBlock *>>
+        &Result) {
   const BasicBlock *BB = &F.getEntryBlock();
   if (succ_empty(BB))
     return;
 
-  SmallPtrSet<const BasicBlock*, 8> Visited;
+  SmallPtrSet<const BasicBlock *, 8> Visited;
   SmallVector<std::pair<const BasicBlock *, const_succ_iterator>, 8> VisitStack;
-  SmallPtrSet<const BasicBlock*, 8> InStack;
+  SmallPtrSet<const BasicBlock *, 8> InStack;
 
   Visited.insert(BB);
   VisitStack.push_back(std::make_pair(BB, succ_begin(BB)));
@@ -78,12 +80,12 @@ void llvm::FindFunctionBackedges(const Function &F,
 /// successors.  It is an error to call this with a block that is not a
 /// successor.
 unsigned llvm::GetSuccessorNumber(const BasicBlock *BB,
-    const BasicBlock *Succ) {
+                                  const BasicBlock *Succ) {
   const Instruction *Term = BB->getTerminator();
 #ifndef NDEBUG
   unsigned e = Term->getNumSuccessors();
 #endif
-  for (unsigned i = 0; ; ++i) {
+  for (unsigned i = 0;; ++i) {
     assert(i != e && "Didn't find edge?");
     if (Term->getSuccessor(i) == Succ)
       return i;
@@ -102,7 +104,8 @@ bool llvm::isCriticalEdge(const Instruction *TI, unsigned SuccNum,
 bool llvm::isCriticalEdge(const Instruction *TI, const BasicBlock *Dest,
                           bool AllowIdenticalEdges) {
   assert(TI->isTerminator() && "Must be a terminator to have successors!");
-  if (TI->getNumSuccessors() == 1) return false;
+  if (TI->getNumSuccessors() == 1)
+    return false;
 
   assert(is_contained(predecessors(Dest), TI->getParent()) &&
          "No edge between TI's block and Dest.");
@@ -112,7 +115,7 @@ bool llvm::isCriticalEdge(const Instruction *TI, const BasicBlock *Dest,
   // If there is more than one predecessor, this is a critical edge...
   assert(I != E && "No preds, but we have an edge to the block?");
   const BasicBlock *FirstPred = *I;
-  ++I;        // Skip one edge due to the incoming arc from TI.
+  ++I; // Skip one edge due to the incoming arc from TI.
   if (!AllowIdenticalEdges)
     return I != E;
 
@@ -172,7 +175,7 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
   }
 
   unsigned Limit = DefaultMaxBBsToExplore;
-  SmallPtrSet<const BasicBlock*, 32> Visited;
+  SmallPtrSet<const BasicBlock *, 32> Visited;
   do {
     BasicBlock *BB = Worklist.pop_back_val();
     if (!Visited.insert(BB).second)
@@ -273,8 +276,8 @@ bool llvm::isPotentiallyReachable(
     }
   }
 
-  SmallVector<BasicBlock*, 32> Worklist;
-  Worklist.push_back(const_cast<BasicBlock*>(A));
+  SmallVector<BasicBlock *, 32> Worklist;
+  Worklist.push_back(const_cast<BasicBlock *>(A));
 
   return isPotentiallyReachableFromMany(Worklist, B, ExclusionSet, DT, LI);
 }
@@ -309,7 +312,7 @@ bool llvm::isPotentiallyReachable(
       return false;
 
     // Otherwise, continue doing the normal per-BB CFG walk.
-    SmallVector<BasicBlock*, 32> Worklist;
+    SmallVector<BasicBlock *, 32> Worklist;
     Worklist.append(succ_begin(BB), succ_end(BB));
     if (Worklist.empty()) {
       // We've proven that there's no path!
@@ -320,8 +323,8 @@ bool llvm::isPotentiallyReachable(
                                           ExclusionSet, DT, LI);
   }
 
-  return isPotentiallyReachable(
-      A->getParent(), B->getParent(), ExclusionSet, DT, LI);
+  return isPotentiallyReachable(A->getParent(), B->getParent(), ExclusionSet,
+                                DT, LI);
 }
 
 static bool instructionDoesNotReturn(const Instruction &I) {

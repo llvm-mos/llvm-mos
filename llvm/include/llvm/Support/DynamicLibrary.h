@@ -1,4 +1,5 @@
-//===-- llvm/Support/DynamicLibrary.h - Portable Dynamic Library -*- C++ -*-===//
+//===-- llvm/Support/DynamicLibrary.h - Portable Dynamic Library -*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -149,7 +150,7 @@ public:
   class HandleSet;
 };
 
-} // End sys namespace
-} // End llvm namespace
+} // namespace sys
+} // namespace llvm
 
 #endif

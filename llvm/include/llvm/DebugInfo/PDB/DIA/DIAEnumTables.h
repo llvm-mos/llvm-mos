@@ -29,7 +29,7 @@ public:
 private:
   CComPtr<IDiaEnumTables> Enumerator;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif // LLVM_DEBUGINFO_PDB_DIA_DIAENUMTABLES_H

@@ -90,9 +90,7 @@ struct MemberAttributes {
   }
 
   /// Is this method static.
-  bool isStatic() const {
-    return getMethodKind() == MethodKind::Static;
-  }
+  bool isStatic() const { return getMethodKind() == MethodKind::Static; }
 };
 
 // Does not correspond to any tag, this is the tail of an LF_POINTER record
@@ -219,7 +217,7 @@ public:
   MemberFuncIdRecord() = default;
   explicit MemberFuncIdRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   MemberFuncIdRecord(TypeIndex ClassType, TypeIndex FunctionType,
-                         StringRef Name)
+                     StringRef Name)
       : TypeRecord(TypeRecordKind::MemberFuncId), ClassType(ClassType),
         FunctionType(FunctionType), Name(Name) {}
 
@@ -851,8 +849,7 @@ class VFPtrRecord : public TypeRecord {
 public:
   VFPtrRecord() = default;
   explicit VFPtrRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
-  VFPtrRecord(TypeIndex Type)
-      : TypeRecord(TypeRecordKind::VFPtr), Type(Type) {}
+  VFPtrRecord(TypeIndex Type) : TypeRecord(TypeRecordKind::VFPtr), Type(Type) {}
 
   TypeIndex getType() const { return Type; }
 

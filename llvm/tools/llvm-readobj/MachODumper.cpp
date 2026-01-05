@@ -50,11 +50,10 @@ public:
   void printMachODysymtab() override;
   void printMachOSegment() override;
   void printMachOIndirectSymbols() override;
-  void printMachOLinkerOptions () override;
+  void printMachOLinkerOptions() override;
 
 private:
-  template<class MachHeader>
-  void printFileHeaders(const MachHeader &Header);
+  template <class MachHeader> void printFileHeaders(const MachHeader &Header);
 
   StringRef getSymbolName(const SymbolRef &Symbol) const;
   uint8_t getSymbolType(const SymbolRef &Symbol) const;
@@ -77,7 +76,6 @@ private:
 
 } // namespace
 
-
 namespace llvm {
 
 std::unique_ptr<ObjDumper> createMachODumper(const object::MachOObjectFile &Obj,
@@ -88,82 +86,79 @@ std::unique_ptr<ObjDumper> createMachODumper(const object::MachOObjectFile &Obj,
 } // namespace llvm
 
 const EnumEntry<uint32_t> MachOMagics[] = {
-  { "Magic",      MachO::MH_MAGIC    },
-  { "Cigam",      MachO::MH_CIGAM    },
-  { "Magic64",    MachO::MH_MAGIC_64 },
-  { "Cigam64",    MachO::MH_CIGAM_64 },
-  { "FatMagic",   MachO::FAT_MAGIC   },
-  { "FatCigam",   MachO::FAT_CIGAM   },
+    {"Magic", MachO::MH_MAGIC},      {"Cigam", MachO::MH_CIGAM},
+    {"Magic64", MachO::MH_MAGIC_64}, {"Cigam64", MachO::MH_CIGAM_64},
+    {"FatMagic", MachO::FAT_MAGIC},  {"FatCigam", MachO::FAT_CIGAM},
 };
 
 const EnumEntry<uint32_t> MachOHeaderFileTypes[] = {
-  { "Relocatable",          MachO::MH_OBJECT      },
-  { "Executable",           MachO::MH_EXECUTE     },
-  { "FixedVMLibrary",       MachO::MH_FVMLIB      },
-  { "Core",                 MachO::MH_CORE        },
-  { "PreloadedExecutable",  MachO::MH_PRELOAD     },
-  { "DynamicLibrary",       MachO::MH_DYLIB       },
-  { "DynamicLinker",        MachO::MH_DYLINKER    },
-  { "Bundle",               MachO::MH_BUNDLE      },
-  { "DynamicLibraryStub",   MachO::MH_DYLIB_STUB  },
-  { "DWARFSymbol",          MachO::MH_DSYM        },
-  { "KextBundle",           MachO::MH_KEXT_BUNDLE },
+    {"Relocatable", MachO::MH_OBJECT},
+    {"Executable", MachO::MH_EXECUTE},
+    {"FixedVMLibrary", MachO::MH_FVMLIB},
+    {"Core", MachO::MH_CORE},
+    {"PreloadedExecutable", MachO::MH_PRELOAD},
+    {"DynamicLibrary", MachO::MH_DYLIB},
+    {"DynamicLinker", MachO::MH_DYLINKER},
+    {"Bundle", MachO::MH_BUNDLE},
+    {"DynamicLibraryStub", MachO::MH_DYLIB_STUB},
+    {"DWARFSymbol", MachO::MH_DSYM},
+    {"KextBundle", MachO::MH_KEXT_BUNDLE},
 };
 
 const EnumEntry<uint32_t> MachOHeaderCpuTypes[] = {
-  { "Any"       , static_cast<uint32_t>(MachO::CPU_TYPE_ANY) },
-  { "X86"       , MachO::CPU_TYPE_X86       },
-  { "X86-64"    , MachO::CPU_TYPE_X86_64    },
-  { "Mc98000"   , MachO::CPU_TYPE_MC98000   },
-  { "Arm"       , MachO::CPU_TYPE_ARM       },
-  { "Arm64"     , MachO::CPU_TYPE_ARM64     },
-  { "Sparc"     , MachO::CPU_TYPE_SPARC     },
-  { "PowerPC"   , MachO::CPU_TYPE_POWERPC   },
-  { "PowerPC64" , MachO::CPU_TYPE_POWERPC64 },
+    {"Any", static_cast<uint32_t>(MachO::CPU_TYPE_ANY)},
+    {"X86", MachO::CPU_TYPE_X86},
+    {"X86-64", MachO::CPU_TYPE_X86_64},
+    {"Mc98000", MachO::CPU_TYPE_MC98000},
+    {"Arm", MachO::CPU_TYPE_ARM},
+    {"Arm64", MachO::CPU_TYPE_ARM64},
+    {"Sparc", MachO::CPU_TYPE_SPARC},
+    {"PowerPC", MachO::CPU_TYPE_POWERPC},
+    {"PowerPC64", MachO::CPU_TYPE_POWERPC64},
 };
 
 const EnumEntry<uint32_t> MachOHeaderCpuSubtypesX86[] = {
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_I386_ALL),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_386),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_486),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_486SX),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_586),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTPRO),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTII_M3),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTII_M5),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_CELERON),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_CELERON_MOBILE),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTIUM_3),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTIUM_3_M),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTIUM_3_XEON),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTIUM_M),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTIUM_4),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTIUM_4_M),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ITANIUM),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ITANIUM_2),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_XEON),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_XEON_MP),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_I386_ALL),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_386),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_486),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_486SX),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_586),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTPRO),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTII_M3),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTII_M5),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_CELERON),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_CELERON_MOBILE),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTIUM_3),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTIUM_3_M),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTIUM_3_XEON),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTIUM_M),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTIUM_4),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_PENTIUM_4_M),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ITANIUM),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ITANIUM_2),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_XEON),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_XEON_MP),
 };
 
 const EnumEntry<uint32_t> MachOHeaderCpuSubtypesX64[] = {
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_X86_64_ALL),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_X86_ARCH1),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_X86_64_H),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_X86_64_ALL),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_X86_ARCH1),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_X86_64_H),
 };
 
 const EnumEntry<uint32_t> MachOHeaderCpuSubtypesARM[] = {
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_ALL),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V4T),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V6),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V5),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V5TEJ),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_XSCALE),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V7),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V7S),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V7K),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V6M),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V7M),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V7EM),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_ALL),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V4T),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V6),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V5),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V5TEJ),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_XSCALE),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V7),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V7S),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V7K),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V6M),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V7M),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V7EM),
 };
 
 const EnumEntry<uint32_t> MachOHeaderCpuSubtypesARM64[] = {
@@ -173,161 +168,153 @@ const EnumEntry<uint32_t> MachOHeaderCpuSubtypesARM64[] = {
 };
 
 const EnumEntry<uint32_t> MachOHeaderCpuSubtypesSPARC[] = {
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_SPARC_ALL),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_SPARC_ALL),
 };
 
 const EnumEntry<uint32_t> MachOHeaderCpuSubtypesPPC[] = {
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_ALL),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_601),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_602),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_603),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_603e),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_603ev),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_604),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_604e),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_620),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_750),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_7400),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_7450),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_970),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_ALL),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_601),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_602),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_603),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_603e),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_603ev),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_604),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_604e),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_620),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_750),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_7400),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_7450),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_POWERPC_970),
 };
 
 const EnumEntry<uint32_t> MachOHeaderFlags[] = {
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_NOUNDEFS),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_INCRLINK),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_DYLDLINK),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_BINDATLOAD),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_PREBOUND),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_SPLIT_SEGS),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_LAZY_INIT),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_TWOLEVEL),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_FORCE_FLAT),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_NOMULTIDEFS),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_NOFIXPREBINDING),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_PREBINDABLE),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_ALLMODSBOUND),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_SUBSECTIONS_VIA_SYMBOLS),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_CANONICAL),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_WEAK_DEFINES),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_BINDS_TO_WEAK),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_ALLOW_STACK_EXECUTION),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_ROOT_SAFE),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_SETUID_SAFE),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_NO_REEXPORTED_DYLIBS),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_PIE),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_DEAD_STRIPPABLE_DYLIB),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_HAS_TLV_DESCRIPTORS),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_NO_HEAP_EXECUTION),
-  LLVM_READOBJ_ENUM_ENT(MachO, MH_APP_EXTENSION_SAFE),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_NOUNDEFS),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_INCRLINK),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_DYLDLINK),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_BINDATLOAD),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_PREBOUND),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_SPLIT_SEGS),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_LAZY_INIT),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_TWOLEVEL),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_FORCE_FLAT),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_NOMULTIDEFS),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_NOFIXPREBINDING),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_PREBINDABLE),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_ALLMODSBOUND),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_SUBSECTIONS_VIA_SYMBOLS),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_CANONICAL),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_WEAK_DEFINES),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_BINDS_TO_WEAK),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_ALLOW_STACK_EXECUTION),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_ROOT_SAFE),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_SETUID_SAFE),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_NO_REEXPORTED_DYLIBS),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_PIE),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_DEAD_STRIPPABLE_DYLIB),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_HAS_TLV_DESCRIPTORS),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_NO_HEAP_EXECUTION),
+    LLVM_READOBJ_ENUM_ENT(MachO, MH_APP_EXTENSION_SAFE),
 };
 
 const EnumEntry<unsigned> MachOSectionTypes[] = {
-  { "Regular"                        , MachO::S_REGULAR },
-  { "ZeroFill"                       , MachO::S_ZEROFILL },
-  { "CStringLiterals"                , MachO::S_CSTRING_LITERALS },
-  { "4ByteLiterals"                  , MachO::S_4BYTE_LITERALS },
-  { "8ByteLiterals"                  , MachO::S_8BYTE_LITERALS },
-  { "LiteralPointers"                , MachO::S_LITERAL_POINTERS },
-  { "NonLazySymbolPointers"          , MachO::S_NON_LAZY_SYMBOL_POINTERS },
-  { "LazySymbolPointers"             , MachO::S_LAZY_SYMBOL_POINTERS },
-  { "SymbolStubs"                    , MachO::S_SYMBOL_STUBS },
-  { "ModInitFuncPointers"            , MachO::S_MOD_INIT_FUNC_POINTERS },
-  { "ModTermFuncPointers"            , MachO::S_MOD_TERM_FUNC_POINTERS },
-  { "Coalesced"                      , MachO::S_COALESCED },
-  { "GBZeroFill"                     , MachO::S_GB_ZEROFILL },
-  { "Interposing"                    , MachO::S_INTERPOSING },
-  { "16ByteLiterals"                 , MachO::S_16BYTE_LITERALS },
-  { "DTraceDOF"                      , MachO::S_DTRACE_DOF },
-  { "LazyDylibSymbolPointers"        , MachO::S_LAZY_DYLIB_SYMBOL_POINTERS },
-  { "ThreadLocalRegular"             , MachO::S_THREAD_LOCAL_REGULAR },
-  { "ThreadLocalZerofill"            , MachO::S_THREAD_LOCAL_ZEROFILL },
-  { "ThreadLocalVariables"           , MachO::S_THREAD_LOCAL_VARIABLES },
-  { "ThreadLocalVariablePointers"    , MachO::S_THREAD_LOCAL_VARIABLE_POINTERS },
-  { "ThreadLocalInitFunctionPointers", MachO::S_THREAD_LOCAL_INIT_FUNCTION_POINTERS }
-};
+    {"Regular", MachO::S_REGULAR},
+    {"ZeroFill", MachO::S_ZEROFILL},
+    {"CStringLiterals", MachO::S_CSTRING_LITERALS},
+    {"4ByteLiterals", MachO::S_4BYTE_LITERALS},
+    {"8ByteLiterals", MachO::S_8BYTE_LITERALS},
+    {"LiteralPointers", MachO::S_LITERAL_POINTERS},
+    {"NonLazySymbolPointers", MachO::S_NON_LAZY_SYMBOL_POINTERS},
+    {"LazySymbolPointers", MachO::S_LAZY_SYMBOL_POINTERS},
+    {"SymbolStubs", MachO::S_SYMBOL_STUBS},
+    {"ModInitFuncPointers", MachO::S_MOD_INIT_FUNC_POINTERS},
+    {"ModTermFuncPointers", MachO::S_MOD_TERM_FUNC_POINTERS},
+    {"Coalesced", MachO::S_COALESCED},
+    {"GBZeroFill", MachO::S_GB_ZEROFILL},
+    {"Interposing", MachO::S_INTERPOSING},
+    {"16ByteLiterals", MachO::S_16BYTE_LITERALS},
+    {"DTraceDOF", MachO::S_DTRACE_DOF},
+    {"LazyDylibSymbolPointers", MachO::S_LAZY_DYLIB_SYMBOL_POINTERS},
+    {"ThreadLocalRegular", MachO::S_THREAD_LOCAL_REGULAR},
+    {"ThreadLocalZerofill", MachO::S_THREAD_LOCAL_ZEROFILL},
+    {"ThreadLocalVariables", MachO::S_THREAD_LOCAL_VARIABLES},
+    {"ThreadLocalVariablePointers", MachO::S_THREAD_LOCAL_VARIABLE_POINTERS},
+    {"ThreadLocalInitFunctionPointers",
+     MachO::S_THREAD_LOCAL_INIT_FUNCTION_POINTERS}};
 
 const EnumEntry<unsigned> MachOSectionAttributes[] = {
-  { "LocReloc"         , 1 <<  0 /*S_ATTR_LOC_RELOC          */ },
-  { "ExtReloc"         , 1 <<  1 /*S_ATTR_EXT_RELOC          */ },
-  { "SomeInstructions" , 1 <<  2 /*S_ATTR_SOME_INSTRUCTIONS  */ },
-  { "Debug"            , 1 << 17 /*S_ATTR_DEBUG              */ },
-  { "SelfModifyingCode", 1 << 18 /*S_ATTR_SELF_MODIFYING_CODE*/ },
-  { "LiveSupport"      , 1 << 19 /*S_ATTR_LIVE_SUPPORT       */ },
-  { "NoDeadStrip"      , 1 << 20 /*S_ATTR_NO_DEAD_STRIP      */ },
-  { "StripStaticSyms"  , 1 << 21 /*S_ATTR_STRIP_STATIC_SYMS  */ },
-  { "NoTOC"            , 1 << 22 /*S_ATTR_NO_TOC             */ },
-  { "PureInstructions" , 1 << 23 /*S_ATTR_PURE_INSTRUCTIONS  */ },
+    {"LocReloc", 1 << 0 /*S_ATTR_LOC_RELOC          */},
+    {"ExtReloc", 1 << 1 /*S_ATTR_EXT_RELOC          */},
+    {"SomeInstructions", 1 << 2 /*S_ATTR_SOME_INSTRUCTIONS  */},
+    {"Debug", 1 << 17 /*S_ATTR_DEBUG              */},
+    {"SelfModifyingCode", 1 << 18 /*S_ATTR_SELF_MODIFYING_CODE*/},
+    {"LiveSupport", 1 << 19 /*S_ATTR_LIVE_SUPPORT       */},
+    {"NoDeadStrip", 1 << 20 /*S_ATTR_NO_DEAD_STRIP      */},
+    {"StripStaticSyms", 1 << 21 /*S_ATTR_STRIP_STATIC_SYMS  */},
+    {"NoTOC", 1 << 22 /*S_ATTR_NO_TOC             */},
+    {"PureInstructions", 1 << 23 /*S_ATTR_PURE_INSTRUCTIONS  */},
 };
 
 const EnumEntry<unsigned> MachOSymbolRefTypes[] = {
-  { "UndefinedNonLazy",                     0 },
-  { "ReferenceFlagUndefinedLazy",           1 },
-  { "ReferenceFlagDefined",                 2 },
-  { "ReferenceFlagPrivateDefined",          3 },
-  { "ReferenceFlagPrivateUndefinedNonLazy", 4 },
-  { "ReferenceFlagPrivateUndefinedLazy",    5 }
-};
+    {"UndefinedNonLazy", 0},
+    {"ReferenceFlagUndefinedLazy", 1},
+    {"ReferenceFlagDefined", 2},
+    {"ReferenceFlagPrivateDefined", 3},
+    {"ReferenceFlagPrivateUndefinedNonLazy", 4},
+    {"ReferenceFlagPrivateUndefinedLazy", 5}};
 
 const EnumEntry<unsigned> MachOSymbolFlags[] = {
-  { "ThumbDef",               0x8 },
-  { "ReferencedDynamically", 0x10 },
-  { "NoDeadStrip",           0x20 },
-  { "WeakRef",               0x40 },
-  { "WeakDef",               0x80 },
-  { "SymbolResolver",       0x100 },
-  { "AltEntry",             0x200 },
-  { "ColdFunc",             0x400 },
+    {"ThumbDef", 0x8},     {"ReferencedDynamically", 0x10},
+    {"NoDeadStrip", 0x20}, {"WeakRef", 0x40},
+    {"WeakDef", 0x80},     {"SymbolResolver", 0x100},
+    {"AltEntry", 0x200},   {"ColdFunc", 0x400},
 };
 
-const EnumEntry<unsigned> MachOSymbolTypes[] = {
-  { "Undef",           0x0 },
-  { "Abs",             0x2 },
-  { "Indirect",        0xA },
-  { "PreboundUndef",   0xC },
-  { "Section",         0xE }
-};
+const EnumEntry<unsigned> MachOSymbolTypes[] = {{"Undef", 0x0},
+                                                {"Abs", 0x2},
+                                                {"Indirect", 0xA},
+                                                {"PreboundUndef", 0xC},
+                                                {"Section", 0xE}};
 
 namespace {
-  struct MachOSection {
-    ArrayRef<char> Name;
-    ArrayRef<char> SegmentName;
-    uint64_t Address;
-    uint64_t Size;
-    uint32_t Offset;
-    uint32_t Alignment;
-    uint32_t RelocationTableOffset;
-    uint32_t NumRelocationTableEntries;
-    uint32_t Flags;
-    uint32_t Reserved1;
-    uint32_t Reserved2;
-    uint32_t Reserved3;
-  };
+struct MachOSection {
+  ArrayRef<char> Name;
+  ArrayRef<char> SegmentName;
+  uint64_t Address;
+  uint64_t Size;
+  uint32_t Offset;
+  uint32_t Alignment;
+  uint32_t RelocationTableOffset;
+  uint32_t NumRelocationTableEntries;
+  uint32_t Flags;
+  uint32_t Reserved1;
+  uint32_t Reserved2;
+  uint32_t Reserved3;
+};
 
-  struct MachOSegment {
-    std::string CmdName;
-    std::string SegName;
-    uint64_t cmdsize;
-    uint64_t vmaddr;
-    uint64_t vmsize;
-    uint64_t fileoff;
-    uint64_t filesize;
-    uint32_t maxprot;
-    uint32_t initprot;
-    uint32_t nsects;
-    uint32_t flags;
-  };
+struct MachOSegment {
+  std::string CmdName;
+  std::string SegName;
+  uint64_t cmdsize;
+  uint64_t vmaddr;
+  uint64_t vmsize;
+  uint64_t fileoff;
+  uint64_t filesize;
+  uint32_t maxprot;
+  uint32_t initprot;
+  uint32_t nsects;
+  uint32_t flags;
+};
 
-  struct MachOSymbol {
-    uint32_t StringIndex;
-    uint8_t Type;
-    uint8_t SectionIndex;
-    uint16_t Flags;
-    uint64_t Value;
-  };
-}
+struct MachOSymbol {
+  uint32_t StringIndex;
+  uint8_t Type;
+  uint8_t SectionIndex;
+  uint16_t Flags;
+  uint64_t Value;
+};
+} // namespace
 
-static std::string getMask(uint32_t prot)
-{
+static std::string getMask(uint32_t prot) {
   // TODO (davide): This always assumes prot is valid.
   // Catch mistakes and report if needed.
   std::string Prot;
@@ -338,33 +325,32 @@ static std::string getMask(uint32_t prot)
   return Prot;
 }
 
-static void getSection(const MachOObjectFile *Obj,
-                       DataRefImpl Sec,
+static void getSection(const MachOObjectFile *Obj, DataRefImpl Sec,
                        MachOSection &Section) {
   if (!Obj->is64Bit()) {
     MachO::section Sect = Obj->getSection(Sec);
-    Section.Address     = Sect.addr;
-    Section.Size        = Sect.size;
-    Section.Offset      = Sect.offset;
-    Section.Alignment   = Sect.align;
+    Section.Address = Sect.addr;
+    Section.Size = Sect.size;
+    Section.Offset = Sect.offset;
+    Section.Alignment = Sect.align;
     Section.RelocationTableOffset = Sect.reloff;
     Section.NumRelocationTableEntries = Sect.nreloc;
-    Section.Flags       = Sect.flags;
-    Section.Reserved1   = Sect.reserved1;
-    Section.Reserved2   = Sect.reserved2;
+    Section.Flags = Sect.flags;
+    Section.Reserved1 = Sect.reserved1;
+    Section.Reserved2 = Sect.reserved2;
     return;
   }
   MachO::section_64 Sect = Obj->getSection64(Sec);
-  Section.Address     = Sect.addr;
-  Section.Size        = Sect.size;
-  Section.Offset      = Sect.offset;
-  Section.Alignment   = Sect.align;
+  Section.Address = Sect.addr;
+  Section.Size = Sect.size;
+  Section.Offset = Sect.offset;
+  Section.Alignment = Sect.align;
   Section.RelocationTableOffset = Sect.reloff;
   Section.NumRelocationTableEntries = Sect.nreloc;
-  Section.Flags       = Sect.flags;
-  Section.Reserved1   = Sect.reserved1;
-  Section.Reserved2   = Sect.reserved2;
-  Section.Reserved3   = Sect.reserved3;
+  Section.Flags = Sect.flags;
+  Section.Reserved1 = Sect.reserved1;
+  Section.Reserved2 = Sect.reserved2;
+  Section.Reserved3 = Sect.reserved3;
 }
 
 static void getSegment(const MachOObjectFile *Obj,
@@ -399,24 +385,23 @@ static void getSegment(const MachOObjectFile *Obj,
   Segment.flags = SC.flags;
 }
 
-static void getSymbol(const MachOObjectFile *Obj,
-                      DataRefImpl DRI,
+static void getSymbol(const MachOObjectFile *Obj, DataRefImpl DRI,
                       MachOSymbol &Symbol) {
   if (!Obj->is64Bit()) {
     MachO::nlist Entry = Obj->getSymbolTableEntry(DRI);
-    Symbol.StringIndex  = Entry.n_strx;
-    Symbol.Type         = Entry.n_type;
+    Symbol.StringIndex = Entry.n_strx;
+    Symbol.Type = Entry.n_type;
     Symbol.SectionIndex = Entry.n_sect;
-    Symbol.Flags        = Entry.n_desc;
-    Symbol.Value        = Entry.n_value;
+    Symbol.Flags = Entry.n_desc;
+    Symbol.Value = Entry.n_value;
     return;
   }
   MachO::nlist_64 Entry = Obj->getSymbol64TableEntry(DRI);
-  Symbol.StringIndex  = Entry.n_strx;
-  Symbol.Type         = Entry.n_type;
+  Symbol.StringIndex = Entry.n_strx;
+  Symbol.Type = Entry.n_type;
   Symbol.SectionIndex = Entry.n_sect;
-  Symbol.Flags        = Entry.n_desc;
-  Symbol.Value        = Entry.n_value;
+  Symbol.Flags = Entry.n_desc;
+  Symbol.Value = Entry.n_value;
 }
 
 void MachODumper::printFileHeaders() {
@@ -429,7 +414,7 @@ void MachODumper::printFileHeaders() {
   }
 }
 
-template<class MachHeader>
+template <class MachHeader>
 void MachODumper::printFileHeaders(const MachHeader &Header) {
   W.printEnum("Magic", Header.magic, ArrayRef(MachOMagics));
   W.printEnum("CpuType", Header.cputype, ArrayRef(MachOHeaderCpuTypes));
@@ -595,17 +580,14 @@ void MachODumper::printRelocation(const MachOObjectFile *Obj,
       SymbolNameOrOffset = TargetName;
     }
 
-    raw_ostream& OS = W.startLine();
-    OS << W.hex(Offset)
-       << " " << Obj->getAnyRelocationPCRel(RE)
-       << " " << Obj->getAnyRelocationLength(RE);
+    raw_ostream &OS = W.startLine();
+    OS << W.hex(Offset) << " " << Obj->getAnyRelocationPCRel(RE) << " "
+       << Obj->getAnyRelocationLength(RE);
     if (IsScattered)
       OS << " n/a";
     else
       OS << " " << Obj->getPlainRelocationExternal(RE);
-    OS << " " << RelocName
-       << " " << IsScattered
-       << " " << SymbolNameOrOffset
+    OS << " " << RelocName << " " << IsScattered << " " << SymbolNameOrOffset
        << "\n";
   }
 }
@@ -620,8 +602,8 @@ StringRef MachODumper::getSymbolName(const SymbolRef &Symbol) const {
 
 uint8_t MachODumper::getSymbolType(const SymbolRef &Symbol) const {
   return Obj->is64Bit()
-      ? Obj->getSymbol64TableEntry(Symbol.getRawDataRefImpl()).n_type
-      : Obj->getSymbolTableEntry(Symbol.getRawDataRefImpl()).n_type;
+             ? Obj->getSymbol64TableEntry(Symbol.getRawDataRefImpl()).n_type
+             : Obj->getSymbolTableEntry(Symbol.getRawDataRefImpl()).n_type;
 }
 
 bool MachODumper::compareSymbolsByName(SymbolRef LHS, SymbolRef RHS) const {
@@ -797,7 +779,7 @@ void MachODumper::printNeededLibraries() {
         Command.C.cmd == MachO::LC_LOAD_UPWARD_DYLIB) {
       MachO::dylib_command Dl = Obj->getDylibIDLoadCommand(Command);
       if (Dl.dylib.name < Dl.cmdsize) {
-        auto *P = static_cast<const char*>(Command.Ptr) + Dl.dylib.name;
+        auto *P = static_cast<const char *>(Command.Ptr) + Dl.dylib.name;
         Libs.push_back(P);
       }
     }
@@ -812,7 +794,7 @@ void MachODumper::printNeededLibraries() {
 
 void MachODumper::printMachODataInCode() {
   for (const auto &Load : Obj->load_commands()) {
-    if (Load.C.cmd  == MachO::LC_DATA_IN_CODE) {
+    if (Load.C.cmd == MachO::LC_DATA_IN_CODE) {
       MachO::linkedit_data_command LLC = Obj->getLinkeditDataLoadCommand(Load);
       DictScope Group(W, "DataInCode");
       W.printNumber("Data offset", LLC.dataoff);
@@ -820,8 +802,8 @@ void MachODumper::printMachODataInCode() {
       ListScope D(W, "Data entries");
       unsigned NumRegions = LLC.datasize / sizeof(MachO::data_in_code_entry);
       for (unsigned i = 0; i < NumRegions; ++i) {
-        MachO::data_in_code_entry DICE = Obj->getDataInCodeTableEntry(
-                                                              LLC.dataoff, i);
+        MachO::data_in_code_entry DICE =
+            Obj->getDataInCodeTableEntry(LLC.dataoff, i);
         DictScope Group(W, "Entry");
         W.printNumber("Index", i);
         W.printNumber("Offset", DICE.offset);
@@ -970,7 +952,7 @@ void MachODumper::printMachOLinkerOptions() {
       const char *P = Load.Ptr + sizeof(MachO::linker_option_command);
       StringRef Data(P, DataSize);
       for (unsigned i = 0; i < LOLC.count; ++i) {
-        std::pair<StringRef,StringRef> Split = Data.split('\0');
+        std::pair<StringRef, StringRef> Split = Data.split('\0');
         W.printString("Value", Split.first);
         Data = Split.second;
       }

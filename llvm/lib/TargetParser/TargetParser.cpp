@@ -75,35 +75,34 @@ struct GPUInfo {
 };
 
 constexpr GPUInfo R600GPUs[] = {
-  // Name       Canonical    Kind        Features
-  //            Name
-  {{"r600"},    {"r600"},    GK_R600,    FEATURE_NONE },
-  {{"rv630"},   {"r600"},    GK_R600,    FEATURE_NONE },
-  {{"rv635"},   {"r600"},    GK_R600,    FEATURE_NONE },
-  {{"r630"},    {"r630"},    GK_R630,    FEATURE_NONE },
-  {{"rs780"},   {"rs880"},   GK_RS880,   FEATURE_NONE },
-  {{"rs880"},   {"rs880"},   GK_RS880,   FEATURE_NONE },
-  {{"rv610"},   {"rs880"},   GK_RS880,   FEATURE_NONE },
-  {{"rv620"},   {"rs880"},   GK_RS880,   FEATURE_NONE },
-  {{"rv670"},   {"rv670"},   GK_RV670,   FEATURE_NONE },
-  {{"rv710"},   {"rv710"},   GK_RV710,   FEATURE_NONE },
-  {{"rv730"},   {"rv730"},   GK_RV730,   FEATURE_NONE },
-  {{"rv740"},   {"rv770"},   GK_RV770,   FEATURE_NONE },
-  {{"rv770"},   {"rv770"},   GK_RV770,   FEATURE_NONE },
-  {{"cedar"},   {"cedar"},   GK_CEDAR,   FEATURE_NONE },
-  {{"palm"},    {"cedar"},   GK_CEDAR,   FEATURE_NONE },
-  {{"cypress"}, {"cypress"}, GK_CYPRESS, FEATURE_FMA  },
-  {{"hemlock"}, {"cypress"}, GK_CYPRESS, FEATURE_FMA  },
-  {{"juniper"}, {"juniper"}, GK_JUNIPER, FEATURE_NONE },
-  {{"redwood"}, {"redwood"}, GK_REDWOOD, FEATURE_NONE },
-  {{"sumo"},    {"sumo"},    GK_SUMO,    FEATURE_NONE },
-  {{"sumo2"},   {"sumo"},    GK_SUMO,    FEATURE_NONE },
-  {{"barts"},   {"barts"},   GK_BARTS,   FEATURE_NONE },
-  {{"caicos"},  {"caicos"},  GK_CAICOS,  FEATURE_NONE },
-  {{"aruba"},   {"cayman"},  GK_CAYMAN,  FEATURE_FMA  },
-  {{"cayman"},  {"cayman"},  GK_CAYMAN,  FEATURE_FMA  },
-  {{"turks"},   {"turks"},   GK_TURKS,   FEATURE_NONE }
-};
+    // Name       Canonical    Kind        Features
+    //            Name
+    {{"r600"}, {"r600"}, GK_R600, FEATURE_NONE},
+    {{"rv630"}, {"r600"}, GK_R600, FEATURE_NONE},
+    {{"rv635"}, {"r600"}, GK_R600, FEATURE_NONE},
+    {{"r630"}, {"r630"}, GK_R630, FEATURE_NONE},
+    {{"rs780"}, {"rs880"}, GK_RS880, FEATURE_NONE},
+    {{"rs880"}, {"rs880"}, GK_RS880, FEATURE_NONE},
+    {{"rv610"}, {"rs880"}, GK_RS880, FEATURE_NONE},
+    {{"rv620"}, {"rs880"}, GK_RS880, FEATURE_NONE},
+    {{"rv670"}, {"rv670"}, GK_RV670, FEATURE_NONE},
+    {{"rv710"}, {"rv710"}, GK_RV710, FEATURE_NONE},
+    {{"rv730"}, {"rv730"}, GK_RV730, FEATURE_NONE},
+    {{"rv740"}, {"rv770"}, GK_RV770, FEATURE_NONE},
+    {{"rv770"}, {"rv770"}, GK_RV770, FEATURE_NONE},
+    {{"cedar"}, {"cedar"}, GK_CEDAR, FEATURE_NONE},
+    {{"palm"}, {"cedar"}, GK_CEDAR, FEATURE_NONE},
+    {{"cypress"}, {"cypress"}, GK_CYPRESS, FEATURE_FMA},
+    {{"hemlock"}, {"cypress"}, GK_CYPRESS, FEATURE_FMA},
+    {{"juniper"}, {"juniper"}, GK_JUNIPER, FEATURE_NONE},
+    {{"redwood"}, {"redwood"}, GK_REDWOOD, FEATURE_NONE},
+    {{"sumo"}, {"sumo"}, GK_SUMO, FEATURE_NONE},
+    {{"sumo2"}, {"sumo"}, GK_SUMO, FEATURE_NONE},
+    {{"barts"}, {"barts"}, GK_BARTS, FEATURE_NONE},
+    {{"caicos"}, {"caicos"}, GK_CAICOS, FEATURE_NONE},
+    {{"aruba"}, {"cayman"}, GK_CAYMAN, FEATURE_FMA},
+    {{"cayman"}, {"cayman"}, GK_CAYMAN, FEATURE_FMA},
+    {{"turks"}, {"turks"}, GK_TURKS, FEATURE_NONE}};
 
 // This table should be sorted by the value of GPUKind
 // Don't bother listing the implicitly true features
@@ -187,7 +186,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
 };
 
 const GPUInfo *getArchEntry(AMDGPU::GPUKind AK, ArrayRef<GPUInfo> Table) {
-  GPUInfo Search = { {""}, {""}, AK, AMDGPU::FEATURE_NONE };
+  GPUInfo Search = {{""}, {""}, AK, AMDGPU::FEATURE_NONE};
 
   auto I =
       llvm::lower_bound(Table, Search, [](const GPUInfo &A, const GPUInfo &B) {

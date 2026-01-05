@@ -68,7 +68,7 @@ private:
 class SnippetSignal : public SnippetExecutionFailure {
 public:
   static char ID;
-  SnippetSignal(int Signal) : SignalNumber(Signal){};
+  SnippetSignal(int Signal) : SignalNumber(Signal) {};
 
   void log(raw_ostream &OS) const override;
 

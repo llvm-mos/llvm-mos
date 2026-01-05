@@ -128,7 +128,7 @@ public:
   void evaluate(const Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc);
 
   /// evaluate - Evaluate a sequence of Inits and append to Elts.
-  template<typename Iter>
+  template <typename Iter>
   void evaluate(Iter begin, Iter end, RecSet &Elts, ArrayRef<SMLoc> Loc) {
     while (begin != end)
       evaluate(*begin++, Elts, Loc);

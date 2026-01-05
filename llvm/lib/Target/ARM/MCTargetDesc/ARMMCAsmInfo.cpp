@@ -44,7 +44,7 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {ARM::S_TPOFF, "TPOFF"},
 };
 
-void ARMMCAsmInfoDarwin::anchor() { }
+void ARMMCAsmInfoDarwin::anchor() {}
 
 ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
   if ((TheTriple.getArch() == Triple::armeb) ||
@@ -69,7 +69,7 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
   initializeAtSpecifiers(atSpecifiers);
 }
 
-void ARMELFMCAsmInfo::anchor() { }
+void ARMELFMCAsmInfo::anchor() {}
 
 ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
   if ((TheTriple.getArch() == Triple::armeb) ||
@@ -115,7 +115,7 @@ void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
   }
 }
 
-void ARMCOFFMCAsmInfoMicrosoft::anchor() { }
+void ARMCOFFMCAsmInfoMicrosoft::anchor() {}
 
 ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
   AlignmentIsInBytes = false;
@@ -132,7 +132,7 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
   initializeAtSpecifiers(atSpecifiers);
 }
 
-void ARMCOFFMCAsmInfoGNU::anchor() { }
+void ARMCOFFMCAsmInfoGNU::anchor() {}
 
 ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   AlignmentIsInBytes = false;

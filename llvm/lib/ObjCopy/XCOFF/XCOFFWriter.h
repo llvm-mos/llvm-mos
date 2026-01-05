@@ -9,8 +9,8 @@
 #ifndef LLVM_LIB_OBJCOPY_XCOFF_XCOFFWRITER_H
 #define LLVM_LIB_OBJCOPY_XCOFF_XCOFFWRITER_H
 
-#include "llvm/Support/MemoryBuffer.h"
 #include "XCOFFObject.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 #include <cstdint>
 

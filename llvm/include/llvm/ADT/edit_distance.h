@@ -84,11 +84,11 @@ unsigned ComputeMappedEditDistance(ArrayRef<T> FromArray, ArrayRef<T> ToArray,
       if (AllowReplacements) {
         Row[x] = std::min(Previous + (CurItem == Map(ToArray[x - 1]) ? 0u : 1u),
                           std::min(Row[x - 1], Row[x]) + 1);
-      }
-      else {
+      } else {
         if (CurItem == Map(ToArray[x - 1]))
           Row[x] = Previous;
-        else Row[x] = std::min(Row[x-1], Row[x]) + 1;
+        else
+          Row[x] = std::min(Row[x - 1], Row[x]) + 1;
       }
       Previous = OldRow;
       BestThisRow = std::min(BestThisRow, Row[x]);
@@ -111,6 +111,6 @@ unsigned ComputeEditDistance(ArrayRef<T> FromArray, ArrayRef<T> ToArray,
       AllowReplacements, MaxEditDistance);
 }
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

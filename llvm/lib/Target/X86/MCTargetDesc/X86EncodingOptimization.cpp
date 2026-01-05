@@ -278,7 +278,7 @@ bool X86::optimizeVPCMPWithImmediateOneOrSix(MCInst &MI) {
   unsigned NewOpc;
   if (Imm == 0)
     NewOpc = Opc1;
-  else if(Imm == 6)
+  else if (Imm == 6)
     NewOpc = Opc2;
   else
     return false;

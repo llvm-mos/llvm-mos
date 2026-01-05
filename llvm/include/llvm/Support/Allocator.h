@@ -193,7 +193,7 @@ public:
 
       uintptr_t AlignedAddr = alignAddr(NewSlab, Alignment);
       assert(AlignedAddr + Size <= (uintptr_t)NewSlab + PaddedSize);
-      char *AlignedPtr = (char*)AlignedAddr;
+      char *AlignedPtr = (char *)AlignedAddr;
       __msan_allocated_memory(AlignedPtr, Size);
       __asan_unpoison_memory_region(AlignedPtr, Size);
       return AlignedPtr;
@@ -204,15 +204,15 @@ public:
     uintptr_t AlignedAddr = alignAddr(CurPtr, Alignment);
     assert(AlignedAddr + SizeToAllocate <= (uintptr_t)End &&
            "Unable to allocate memory!");
-    char *AlignedPtr = (char*)AlignedAddr;
+    char *AlignedPtr = (char *)AlignedAddr;
     CurPtr = AlignedPtr + SizeToAllocate;
     __msan_allocated_memory(AlignedPtr, Size);
     __asan_unpoison_memory_region(AlignedPtr, Size);
     return AlignedPtr;
   }
 
-  inline LLVM_ATTRIBUTE_RETURNS_NONNULL void *
-  Allocate(size_t Size, size_t Alignment) {
+  inline LLVM_ATTRIBUTE_RETURNS_NONNULL void *Allocate(size_t Size,
+                                                       size_t Alignment) {
     assert(Alignment > 0 && "0-byte alignment is not allowed. Use 1 instead.");
     return Allocate(Size, Align(Alignment));
   }
@@ -279,8 +279,7 @@ public:
   /// an input pointer \p Ptr in the given allocator. This identifier is
   /// different from the ones produced by identifyObject and
   /// identifyAlignedObject.
-  template <typename T>
-  int64_t identifyKnownAlignedObject(const void *Ptr) {
+  template <typename T> int64_t identifyKnownAlignedObject(const void *Ptr) {
     int64_t Out = identifyKnownObject(Ptr);
     assert(Out % alignof(T) == 0 && "Wrong alignment information");
     return Out / alignof(T);
@@ -297,9 +296,7 @@ public:
 
   size_t getBytesAllocated() const { return BytesAllocated; }
 
-  void setRedZoneSize(size_t NewSize) {
-    RedZoneSize = NewSize;
-  }
+  void setRedZoneSize(size_t NewSize) { RedZoneSize = NewSize; }
 
   void PrintStats() const {
     detail::printBumpPtrAllocatorStats(Slabs.size(), BytesAllocated,

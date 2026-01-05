@@ -128,7 +128,8 @@ bool BPFMISimplifyPatchable::isLoadInst(unsigned Opcode) {
 }
 
 void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
-    MachineOperand *RelocOp, const GlobalValue *GVal) {
+                                        MachineOperand *RelocOp,
+                                        const GlobalValue *GVal) {
   const MachineInstr *Inst = RelocOp->getParent();
   const MachineOperand *Op1 = &Inst->getOperand(1);
   const MachineOperand *Op2 = &Inst->getOperand(2);
@@ -168,30 +169,37 @@ void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
         continue;
     }
 
-    BuildMI(*DefInst->getParent(), *DefInst, DefInst->getDebugLoc(), TII->get(COREOp))
-        .add(DefInst->getOperand(0)).addImm(Opcode).add(*BaseOp)
+    BuildMI(*DefInst->getParent(), *DefInst, DefInst->getDebugLoc(),
+            TII->get(COREOp))
+        .add(DefInst->getOperand(0))
+        .addImm(Opcode)
+        .add(*BaseOp)
         .addGlobalAddress(GVal);
     DefInst->eraseFromParent();
   }
 }
 
 void BPFMISimplifyPatchable::checkShift(MachineRegisterInfo *MRI,
-    MachineBasicBlock &MBB, MachineOperand *RelocOp, const GlobalValue *GVal,
-    unsigned Opcode) {
+                                        MachineBasicBlock &MBB,
+                                        MachineOperand *RelocOp,
+                                        const GlobalValue *GVal,
+                                        unsigned Opcode) {
   // Relocation operand should be the operand #2.
   MachineInstr *Inst = RelocOp->getParent();
   if (RelocOp != &Inst->getOperand(2))
     return;
 
   BuildMI(MBB, *Inst, Inst->getDebugLoc(), TII->get(BPF::CORE_SHIFT))
-      .add(Inst->getOperand(0)).addImm(Opcode)
-      .add(Inst->getOperand(1)).addGlobalAddress(GVal);
+      .add(Inst->getOperand(0))
+      .addImm(Opcode)
+      .add(Inst->getOperand(1))
+      .addGlobalAddress(GVal);
   Inst->eraseFromParent();
 }
 
-void BPFMISimplifyPatchable::processCandidate(MachineRegisterInfo *MRI,
-    MachineBasicBlock &MBB, MachineInstr &MI, Register &SrcReg,
-    Register &DstReg, const GlobalValue *GVal, bool IsAma) {
+void BPFMISimplifyPatchable::processCandidate(
+    MachineRegisterInfo *MRI, MachineBasicBlock &MBB, MachineInstr &MI,
+    Register &SrcReg, Register &DstReg, const GlobalValue *GVal, bool IsAma) {
   if (MRI->getRegClass(DstReg) == &BPF::GPR32RegClass) {
     if (IsAma) {
       // We can optimize such a pattern:
@@ -225,8 +233,9 @@ void BPFMISimplifyPatchable::processCandidate(MachineRegisterInfo *MRI,
 }
 
 void BPFMISimplifyPatchable::processDstReg(MachineRegisterInfo *MRI,
-    Register &DstReg, Register &SrcReg, const GlobalValue *GVal,
-    bool doSrcRegProp, bool IsAma) {
+                                           Register &DstReg, Register &SrcReg,
+                                           const GlobalValue *GVal,
+                                           bool doSrcRegProp, bool IsAma) {
   auto Begin = MRI->use_begin(DstReg), End = MRI->use_end();
   decltype(End) NextI;
   for (auto I = Begin; I != End; I = NextI) {
@@ -286,7 +295,9 @@ void BPFMISimplifyPatchable::processDstReg(MachineRegisterInfo *MRI,
 //    and later on, BTF emit phase will translate to
 //       %r4 = SRA_ri %r4, 63
 void BPFMISimplifyPatchable::processInst(MachineRegisterInfo *MRI,
-    MachineInstr *Inst, MachineOperand *RelocOp, const GlobalValue *GVal) {
+                                         MachineInstr *Inst,
+                                         MachineOperand *RelocOp,
+                                         const GlobalValue *GVal) {
   unsigned Opcode = Inst->getOpcode();
   if (isLoadInst(Opcode)) {
     SkipInsts.insert(Inst);

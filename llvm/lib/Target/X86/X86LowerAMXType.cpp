@@ -1028,7 +1028,8 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
   return EraseLoad;
 }
 
-// %19 = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> zeroinitializer)
+// %19 = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32>
+// zeroinitializer)
 // -->
 // %19 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %row, i16 %col)
 bool X86LowerAMXCast::combineTilezero(IntrinsicInst *Cast) {
@@ -1071,9 +1072,11 @@ bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
       for (auto *Store : DeadStores)
         Store->eraseFromParent();
     } else { // x86_cast_vector_to_tile
-      //  %19 = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> zeroinitializer)
+      //  %19 = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x
+      //  i32> zeroinitializer)
       //  -->
-      //  %19 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %row, i16 %col)
+      //  %19 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %row, i16
+      //  %col)
       if (isa<ConstantAggregateZero>(Cast->getOperand(0))) {
         Change |= combineTilezero(cast<IntrinsicInst>(Cast));
         continue;

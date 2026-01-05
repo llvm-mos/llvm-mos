@@ -16,7 +16,6 @@ namespace opts {
 extern llvm::cl::list<std::string> InputFilenames;
 } // namespace opts
 
-#define LLVM_CXXDUMP_ENUM_ENT(ns, enum)                                        \
-  { #enum, ns::enum }
+#define LLVM_CXXDUMP_ENUM_ENT(ns, enum) {#enum, ns::enum}
 
 #endif

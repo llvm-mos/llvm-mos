@@ -863,8 +863,7 @@ static Error readCoverageMappingData(
   using namespace coverage;
 
   // Read the records in the coverage data section.
-  auto CovHeader =
-      reinterpret_cast<const CovMapHeader *>(CovMap.data());
+  auto CovHeader = reinterpret_cast<const CovMapHeader *>(CovMap.data());
   CovMapVersion Version = (CovMapVersion)CovHeader->getVersion<Endian>();
   if (Version > CovMapVersion::CurrentVersion)
     return make_error<CoverageMapError>(coveragemap_error::unsupported_version);

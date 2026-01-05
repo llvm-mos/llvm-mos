@@ -21,7 +21,7 @@
 
 using namespace llvm;
 
-template<typename T, std::size_t N>
+template <typename T, std::size_t N>
 static int format_to_buffer(T Value, char (&Buffer)[N]) {
   char *EndPtr = std::end(Buffer);
   char *CurPtr = EndPtr;

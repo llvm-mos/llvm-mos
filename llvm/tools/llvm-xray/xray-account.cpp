@@ -342,7 +342,8 @@ void LatencyAccountant::exportStats(const XRayFileHeader &Header, F Fn) const {
     sortByKey(Results, [](const TupleType &X) { return std::get<2>(X).Min; });
     break;
   case SortField::MED:
-    sortByKey(Results, [](const TupleType &X) { return std::get<2>(X).Median; });
+    sortByKey(Results,
+              [](const TupleType &X) { return std::get<2>(X).Median; });
     break;
   case SortField::PCT90:
     sortByKey(Results, [](const TupleType &X) { return std::get<2>(X).Pct90; });

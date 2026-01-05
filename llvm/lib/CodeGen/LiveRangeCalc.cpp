@@ -44,10 +44,8 @@ void LiveRangeCalc::resetLiveOutMap() {
   Map.resize(NumBlocks);
 }
 
-void LiveRangeCalc::reset(const MachineFunction *mf,
-                          SlotIndexes *SI,
-                          MachineDominatorTree *MDT,
-                          VNInfo::Allocator *VNIA) {
+void LiveRangeCalc::reset(const MachineFunction *mf, SlotIndexes *SI,
+                          MachineDominatorTree *MDT, VNInfo::Allocator *VNIA) {
   MF = mf;
   MRI = &MF->getRegInfo();
   Indexes = SI;
@@ -218,7 +216,8 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
     if (PhysReg.isPhysical()) {
       const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
       bool IsLiveIn = MBB->isLiveIn(PhysReg);
-      for (MCRegAliasIterator Alias(PhysReg, TRI, false); !IsLiveIn && Alias.isValid(); ++Alias)
+      for (MCRegAliasIterator Alias(PhysReg, TRI, false);
+           !IsLiveIn && Alias.isValid(); ++Alias)
         IsLiveIn = MBB->isLiveIn(*Alias);
       if (!IsLiveIn) {
         MBB->getParent()->verify(nullptr, nullptr, &errs());
@@ -232,39 +231,39 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
     FoundUndef |= MBB->pred_empty();
 
     for (MachineBasicBlock *Pred : MBB->predecessors()) {
-       // Is this a known live-out block?
-       if (Seen.test(Pred->getNumber())) {
-         if (VNInfo *VNI = Map[Pred].first) {
-           if (TheVNI && TheVNI != VNI)
-             UniqueVNI = false;
-           TheVNI = VNI;
-         }
-         continue;
-       }
+      // Is this a known live-out block?
+      if (Seen.test(Pred->getNumber())) {
+        if (VNInfo *VNI = Map[Pred].first) {
+          if (TheVNI && TheVNI != VNI)
+            UniqueVNI = false;
+          TheVNI = VNI;
+        }
+        continue;
+      }
 
-       SlotIndex Start, End;
-       std::tie(Start, End) = Indexes->getMBBRange(Pred);
+      SlotIndex Start, End;
+      std::tie(Start, End) = Indexes->getMBBRange(Pred);
 
-       // First time we see Pred.  Try to determine the live-out value, but set
-       // it as null if Pred is live-through with an unknown value.
-       auto EP = LR.extendInBlock(Undefs, Start, End);
-       VNInfo *VNI = EP.first;
-       FoundUndef |= EP.second;
-       setLiveOutValue(Pred, EP.second ? &UndefVNI : VNI);
-       if (VNI) {
-         if (TheVNI && TheVNI != VNI)
-           UniqueVNI = false;
-         TheVNI = VNI;
-       }
-       if (VNI || EP.second)
-         continue;
+      // First time we see Pred.  Try to determine the live-out value, but set
+      // it as null if Pred is live-through with an unknown value.
+      auto EP = LR.extendInBlock(Undefs, Start, End);
+      VNInfo *VNI = EP.first;
+      FoundUndef |= EP.second;
+      setLiveOutValue(Pred, EP.second ? &UndefVNI : VNI);
+      if (VNI) {
+        if (TheVNI && TheVNI != VNI)
+          UniqueVNI = false;
+        TheVNI = VNI;
+      }
+      if (VNI || EP.second)
+        continue;
 
-       // No, we need a live-in value for Pred as well
-       if (Pred != &UseMBB)
-         WorkList.push_back(Pred->getNumber());
-       else
-          // Loopback to UseMBB, so value is really live through.
-         Use = SlotIndex();
+      // No, we need a live-in value for Pred as well
+      if (Pred != &UseMBB)
+        WorkList.push_back(Pred->getNumber());
+      else
+        // Loopback to UseMBB, so value is really live through.
+        Use = SlotIndex();
     }
   }
 
@@ -360,7 +359,7 @@ void LiveRangeCalc::updateSSA() {
         if (IDomValue.first && IDomValue.first != &UndefVNI &&
             !IDomValue.second) {
           Map[IDom->getBlock()].second = IDomValue.second =
-            DomTree->getNode(Indexes->getMBBFromIndex(IDomValue.first->def));
+              DomTree->getNode(Indexes->getMBBFromIndex(IDomValue.first->def));
         }
 
         for (MachineBasicBlock *Pred : MBB->predecessors()) {
@@ -375,7 +374,7 @@ void LiveRangeCalc::updateSSA() {
           // Cache the DomTree node that defined the value.
           if (!Value.second)
             Value.second =
-              DomTree->getNode(Indexes->getMBBFromIndex(Value.first->def));
+                DomTree->getNode(Indexes->getMBBFromIndex(Value.first->def));
 
           // This predecessor is carrying something other than IDomValue.
           // It could be because IDomValue hasn't propagated yet, or it could be

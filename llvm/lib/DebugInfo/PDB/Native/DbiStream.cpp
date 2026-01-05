@@ -110,8 +110,8 @@ Error DbiStream::reload(PDBFile *Pdb) {
     return EC;
   if (auto EC = Reader.readSubstream(ECSubstream, Header->ECSubstreamSize))
     return EC;
-  if (auto EC = Reader.readArray(
-          DbgStreams, Header->OptionalDbgHdrSize / sizeof(ulittle16_t)))
+  if (auto EC = Reader.readArray(DbgStreams, Header->OptionalDbgHdrSize /
+                                                 sizeof(ulittle16_t)))
     return EC;
 
   if (auto EC = Modules.initialize(ModiSubstream.StreamData,
@@ -127,7 +127,7 @@ Error DbiStream::reload(PDBFile *Pdb) {
   if (auto EC = initializeOldFpoRecords(Pdb))
     return EC;
   if (auto EC = initializeNewFpoRecords(Pdb))
-     return EC;
+    return EC;
 
   if (Reader.bytesRemaining() > 0)
     return make_error<RawError>(raw_error_code::corrupt_file,

@@ -105,18 +105,19 @@ static cl::opt<std::string> PrintOnCrashPath(
     cl::desc("Print the last form of the IR before crash to a file"),
     cl::Hidden);
 
-static cl::opt<bool> PrintOnCrash(
-    "print-on-crash",
-    cl::desc("Print the last form of the IR before crash (use -print-on-crash-path to dump to a file)"),
-    cl::Hidden);
+static cl::opt<bool>
+    PrintOnCrash("print-on-crash",
+                 cl::desc("Print the last form of the IR before crash (use "
+                          "-print-on-crash-path to dump to a file)"),
+                 cl::Hidden);
 
 static cl::opt<std::string> OptBisectPrintIRPath(
     "opt-bisect-print-ir-path",
     cl::desc("Print IR to path when opt-bisect-limit is reached"), cl::Hidden);
 
-static cl::opt<bool> PrintPassNumbers(
-    "print-pass-numbers", cl::init(false), cl::Hidden,
-    cl::desc("Print pass names and their ordinals"));
+static cl::opt<bool>
+    PrintPassNumbers("print-pass-numbers", cl::init(false), cl::Hidden,
+                     cl::desc("Print pass names and their ordinals"));
 
 static cl::list<unsigned> PrintBeforePassNumber(
     "print-before-pass-number", cl::CommaSeparated, cl::Hidden,
@@ -863,8 +864,8 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   ++CurrentPassNumber;
 
   if (shouldPrintPassNumbers())
-    dbgs() << " Running pass " << CurrentPassNumber << " " << PassID
-           << " on " << getIRName(IR) << "\n";
+    dbgs() << " Running pass " << CurrentPassNumber << " " << PassID << " on "
+           << getIRName(IR) << "\n";
 
   if (shouldPrintAfterCurrentPassNumber())
     pushPassRunDescriptor(PassID, IR, CurrentPassNumber);
@@ -1113,29 +1114,29 @@ void PrintPassInstrumentation::registerCallbacks(
 
     print() << "Skipping pass: " << PassID << " on " << getIRName(IR) << "\n";
   });
-  PIC.registerBeforeNonSkippedPassCallback([this, SpecialPasses](
-                                               StringRef PassID, Any IR) {
-    if (isSpecialPass(PassID, SpecialPasses))
-      return;
+  PIC.registerBeforeNonSkippedPassCallback(
+      [this, SpecialPasses](StringRef PassID, Any IR) {
+        if (isSpecialPass(PassID, SpecialPasses))
+          return;
 
-    auto &OS = print();
-    OS << "Running pass: " << PassID << " on " << getIRName(IR);
-    if (const auto *F = unwrapIR<Function>(IR)) {
-      unsigned Count = F->getInstructionCount();
-      OS << " (" << Count << " instruction";
-      if (Count != 1)
-        OS << 's';
-      OS << ')';
-    } else if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
-      int Count = C->size();
-      OS << " (" << Count << " node";
-      if (Count != 1)
-        OS << 's';
-      OS << ')';
-    }
-    OS << "\n";
-    Indent += 2;
-  });
+        auto &OS = print();
+        OS << "Running pass: " << PassID << " on " << getIRName(IR);
+        if (const auto *F = unwrapIR<Function>(IR)) {
+          unsigned Count = F->getInstructionCount();
+          OS << " (" << Count << " instruction";
+          if (Count != 1)
+            OS << 's';
+          OS << ')';
+        } else if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+          int Count = C->size();
+          OS << " (" << Count << " node";
+          if (Count != 1)
+            OS << 's';
+          OS << ')';
+        }
+        OS << "\n";
+        Indent += 2;
+      });
   PIC.registerAfterPassCallback(
       [this, SpecialPasses](StringRef PassID, Any IR,
                             const PreservedAnalyses &) {
@@ -1454,75 +1455,72 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 
 void VerifyInstrumentation::registerCallbacks(PassInstrumentationCallbacks &PIC,
                                               ModuleAnalysisManager *MAM) {
-  PIC.registerAfterPassCallback(
-      [this, MAM](StringRef P, Any IR, const PreservedAnalyses &PassPA) {
-        if (isIgnored(P) || P == "VerifierPass")
-          return;
-        const auto *F = unwrapIR<Function>(IR);
-        if (!F) {
-          if (const auto *L = unwrapIR<Loop>(IR))
-            F = L->getHeader()->getParent();
-        }
+  PIC.registerAfterPassCallback([this, MAM](StringRef P, Any IR,
+                                            const PreservedAnalyses &PassPA) {
+    if (isIgnored(P) || P == "VerifierPass")
+      return;
+    const auto *F = unwrapIR<Function>(IR);
+    if (!F) {
+      if (const auto *L = unwrapIR<Loop>(IR))
+        F = L->getHeader()->getParent();
+    }
 
-        if (F) {
-          if (DebugLogging)
-            dbgs() << "Verifying function " << F->getName() << "\n";
+    if (F) {
+      if (DebugLogging)
+        dbgs() << "Verifying function " << F->getName() << "\n";
 
-          if (verifyFunction(*F, &errs()))
-            report_fatal_error(formatv("Broken function found after pass "
-                                       "\"{0}\", compilation aborted!",
-                                       P));
+      if (verifyFunction(*F, &errs()))
+        report_fatal_error(formatv("Broken function found after pass "
+                                   "\"{0}\", compilation aborted!",
+                                   P));
+    } else {
+      const auto *M = unwrapIR<Module>(IR);
+      if (!M) {
+        if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR))
+          M = C->begin()->getFunction().getParent();
+      }
+
+      if (M) {
+        if (DebugLogging)
+          dbgs() << "Verifying module " << M->getName() << "\n";
+
+        if (verifyModule(*M, &errs()))
+          report_fatal_error(formatv("Broken module found after pass "
+                                     "\"{0}\", compilation aborted!",
+                                     P));
+      }
+
+      if (auto *MF = unwrapIR<MachineFunction>(IR)) {
+        if (DebugLogging)
+          dbgs() << "Verifying machine function " << MF->getName() << '\n';
+        std::string Banner = formatv("Broken machine function found after pass "
+                                     "\"{0}\", compilation aborted!",
+                                     P);
+        if (MAM) {
+          Module &M = const_cast<Module &>(*MF->getFunction().getParent());
+          auto &MFAM =
+              MAM->getResult<MachineFunctionAnalysisManagerModuleProxy>(M)
+                  .getManager();
+          MachineVerifierPass Verifier(Banner);
+          Verifier.run(const_cast<MachineFunction &>(*MF), MFAM);
         } else {
-          const auto *M = unwrapIR<Module>(IR);
-          if (!M) {
-            if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR))
-              M = C->begin()->getFunction().getParent();
-          }
-
-          if (M) {
-            if (DebugLogging)
-              dbgs() << "Verifying module " << M->getName() << "\n";
-
-            if (verifyModule(*M, &errs()))
-              report_fatal_error(formatv("Broken module found after pass "
-                                         "\"{0}\", compilation aborted!",
-                                         P));
-          }
-
-          if (auto *MF = unwrapIR<MachineFunction>(IR)) {
-            if (DebugLogging)
-              dbgs() << "Verifying machine function " << MF->getName() << '\n';
-            std::string Banner =
-                formatv("Broken machine function found after pass "
-                        "\"{0}\", compilation aborted!",
-                        P);
-            if (MAM) {
-              Module &M = const_cast<Module &>(*MF->getFunction().getParent());
-              auto &MFAM =
-                  MAM->getResult<MachineFunctionAnalysisManagerModuleProxy>(M)
-                      .getManager();
-              MachineVerifierPass Verifier(Banner);
-              Verifier.run(const_cast<MachineFunction &>(*MF), MFAM);
-            } else {
-              verifyMachineFunction(Banner, *MF);
-            }
-          }
+          verifyMachineFunction(Banner, *MF);
         }
-      });
+      }
+    }
+  });
 }
 
 InLineChangePrinter::~InLineChangePrinter() = default;
 
-void InLineChangePrinter::generateIRRepresentation(Any IR,
-                                                   StringRef PassID,
+void InLineChangePrinter::generateIRRepresentation(Any IR, StringRef PassID,
                                                    IRDataT<EmptyData> &D) {
   IRComparer<EmptyData>::analyzeIR(IR, D);
 }
 
 void InLineChangePrinter::handleAfter(StringRef PassID, std::string &Name,
                                       const IRDataT<EmptyData> &Before,
-                                      const IRDataT<EmptyData> &After,
-                                      Any IR) {
+                                      const IRDataT<EmptyData> &After, Any IR) {
   SmallString<20> Banner =
       formatv("*** IR Dump After {0} on {1} ***\n", PassID, Name);
   Out << Banner;
@@ -2424,7 +2422,7 @@ DotCfgChangeReporter::~DotCfgChangeReporter() {
 void DotCfgChangeReporter::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
   if (PrintChanged == ChangePrinter::DotCfgVerbose ||
-       PrintChanged == ChangePrinter::DotCfgQuiet) {
+      PrintChanged == ChangePrinter::DotCfgQuiet) {
     SmallString<128> OutputDir;
     sys::fs::expand_tilde(DotCfgDir, OutputDir);
     sys::fs::make_absolute(OutputDir);

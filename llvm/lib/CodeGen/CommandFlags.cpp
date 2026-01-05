@@ -271,17 +271,17 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
 
   // FIXME: Doesn't have way to specify separate input and output modes.
   static cl::opt<DenormalMode::DenormalModeKind> DenormalFPMath(
-    "denormal-fp-math",
-    cl::desc("Select which denormal numbers the code is permitted to require"),
-    cl::init(DenormalMode::IEEE),
-    DenormFlagEnumOptions);
+      "denormal-fp-math",
+      cl::desc(
+          "Select which denormal numbers the code is permitted to require"),
+      cl::init(DenormalMode::IEEE), DenormFlagEnumOptions);
   CGBINDOPT(DenormalFPMath);
 
   static cl::opt<DenormalMode::DenormalModeKind> DenormalFP32Math(
-    "denormal-fp-math-f32",
-    cl::desc("Select which denormal numbers the code is permitted to require for float"),
-    cl::init(DenormalMode::Invalid),
-    DenormFlagEnumOptions);
+      "denormal-fp-math-f32",
+      cl::desc("Select which denormal numbers the code is permitted to require "
+               "for float"),
+      cl::init(DenormalMode::Invalid), DenormFlagEnumOptions);
   CGBINDOPT(DenormalFP32Math);
 
   static cl::opt<bool> EnableHonorSignDependentRoundingFPMath(
@@ -536,7 +536,8 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
 
   static cl::opt<bool> JMCInstrument(
       "enable-jmc-instrument",
-      cl::desc("Instrument functions with a call to __CheckForDebuggerJustMyCode"),
+      cl::desc(
+          "Instrument functions with a call to __CheckForDebuggerJustMyCode"),
       cl::init(false));
   CGBINDOPT(JMCInstrument);
 
@@ -770,9 +771,8 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
     // FIXME: Command line flag should expose separate input/output modes.
     DenormalMode::DenormalModeKind DenormKind = getDenormalFP32Math();
 
-    NewAttrs.addAttribute(
-      "denormal-fp-math-f32",
-      DenormalMode(DenormKind, DenormKind).str());
+    NewAttrs.addAttribute("denormal-fp-math-f32",
+                          DenormalMode(DenormKind, DenormKind).str());
   }
 
   if (TrapFuncNameView->getNumOccurrences() > 0)

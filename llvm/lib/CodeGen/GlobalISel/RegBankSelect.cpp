@@ -158,10 +158,11 @@ bool RegBankSelect::repairReg(
 
     // Build the instruction used to repair, then clone it at the right
     // places. Avoiding buildCopy bypasses the check that Src and Dst have the
-    // same types because the type is a placeholder when this function is called.
+    // same types because the type is a placeholder when this function is
+    // called.
     MI = MIRBuilder.buildInstrNoInsert(TargetOpcode::COPY)
-      .addDef(Dst)
-      .addUse(Src);
+             .addDef(Dst)
+             .addUse(Src);
     LLVM_DEBUG(dbgs() << "Copy: " << printReg(Src) << ':'
                       << printRegClassOrBank(Src, *MRI, TRI)
                       << " to: " << printReg(Dst) << ':'
@@ -169,7 +170,8 @@ bool RegBankSelect::repairReg(
   } else {
     // TODO: Support with G_IMPLICIT_DEF + G_INSERT sequence or G_EXTRACT
     // sequence.
-    assert(ValMapping.partsAllUniform() && "irregular breakdowns not supported");
+    assert(ValMapping.partsAllUniform() &&
+           "irregular breakdowns not supported");
 
     LLT RegTy = MRI->getType(MO.getReg());
     if (MO.isDef()) {
@@ -191,8 +193,7 @@ bool RegBankSelect::repairReg(
         MergeOp = TargetOpcode::G_MERGE_VALUES;
 
       auto MergeBuilder =
-        MIRBuilder.buildInstrNoInsert(MergeOp)
-        .addDef(MO.getReg());
+          MIRBuilder.buildInstrNoInsert(MergeOp).addDef(MO.getReg());
 
       for (Register SrcReg : NewVRegs)
         MergeBuilder.addUse(SrcReg);
@@ -200,7 +201,7 @@ bool RegBankSelect::repairReg(
       MI = MergeBuilder;
     } else {
       MachineInstrBuilder UnMergeBuilder =
-        MIRBuilder.buildInstrNoInsert(TargetOpcode::G_UNMERGE_VALUES);
+          MIRBuilder.buildInstrNoInsert(TargetOpcode::G_UNMERGE_VALUES);
       for (Register DefReg : NewVRegs)
         UnMergeBuilder.addDef(DefReg);
 
@@ -682,7 +683,7 @@ bool RegBankSelect::assignRegisterBanks(MachineFunction &MF) {
   // Walk the function and assign register banks to all operands.
   // Use a RPOT to make sure all registers are assigned before we choose
   // the best mapping of the current instruction.
-  ReversePostOrderTraversal<MachineFunction*> RPOT(&MF);
+  ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
   for (MachineBasicBlock *MBB : RPOT) {
     // Set a sensible insertion point so that subsequent calls to
     // MIRBuilder.

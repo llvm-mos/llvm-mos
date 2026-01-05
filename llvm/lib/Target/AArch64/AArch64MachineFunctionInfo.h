@@ -516,7 +516,7 @@ public:
   }
   void setJumpTableEntryInfo(int Idx, unsigned Size, MCSymbol *PCRelSym) {
     if ((unsigned)Idx >= JumpTableEntryInfo.size())
-      JumpTableEntryInfo.resize(Idx+1);
+      JumpTableEntryInfo.resize(Idx + 1);
     JumpTableEntryInfo[Idx] = std::make_pair(Size, PCRelSym);
   }
 
@@ -614,9 +614,7 @@ public:
   }
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
 
-  void setSwiftAsyncContextFrameIdx(int FI) {
-    SwiftAsyncContextFrameIdx = FI;
-  }
+  void setSwiftAsyncContextFrameIdx(int FI) { SwiftAsyncContextFrameIdx = FI; }
   int getSwiftAsyncContextFrameIdx() const { return SwiftAsyncContextFrameIdx; }
 
   bool needsDwarfUnwindInfo(const MachineFunction &MF) const;

@@ -89,7 +89,8 @@ void MachineOperand::substVirtReg(Register Reg, unsigned SubIdx,
     setSubReg(SubIdx);
 }
 
-void MachineOperand::substPhysReg(MCRegister Reg, const TargetRegisterInfo &TRI) {
+void MachineOperand::substPhysReg(MCRegister Reg,
+                                  const TargetRegisterInfo &TRI) {
   assert(Reg.isPhysical());
   if (getSubReg()) {
     Reg = TRI.getSubReg(Reg, getSubReg());
@@ -179,8 +180,7 @@ void MachineOperand::ChangeToFPImmediate(const ConstantFP *FPImm,
   setTargetFlags(TargetFlags);
 }
 
-void MachineOperand::ChangeToES(const char *SymName,
-                                unsigned TargetFlags) {
+void MachineOperand::ChangeToES(const char *SymName, unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into an external symbol");
 
@@ -242,7 +242,8 @@ void MachineOperand::ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags) {
   setTargetFlags(TargetFlags);
 }
 
-void MachineOperand::ChangeToFrameIndex(int Idx, int64_t Offset, unsigned TargetFlags) {
+void MachineOperand::ChangeToFrameIndex(int Idx, int64_t Offset,
+                                        unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into a FrameIndex");
 
@@ -563,7 +564,7 @@ static const char *getTargetMMOFlagName(const TargetInstrInfo &TII,
   return nullptr;
 }
 
-static void printFrameIndex(raw_ostream& OS, int FrameIndex, bool IsFixed,
+static void printFrameIndex(raw_ostream &OS, int FrameIndex, bool IsFixed,
                             const MachineFrameInfo *MFI) {
   StringRef Name;
   if (MFI) {
@@ -1020,8 +1021,8 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   case MachineOperand::MO_Predicate: {
     auto Pred = static_cast<CmpInst::Predicate>(getPredicate());
-    OS << (CmpInst::isIntPredicate(Pred) ? "int" : "float") << "pred("
-       << Pred << ')';
+    OS << (CmpInst::isIntPredicate(Pred) ? "int" : "float") << "pred(" << Pred
+       << ')';
     break;
   }
   case MachineOperand::MO_ShuffleMask:

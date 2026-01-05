@@ -64,7 +64,7 @@ namespace {
 class XCorePassConfig : public TargetPassConfig {
 public:
   XCorePassConfig(XCoreTargetMachine &TM, PassManagerBase &PM)
-    : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM) {}
 
   XCoreTargetMachine &getXCoreTargetMachine() const {
     return getTM<XCoreTargetMachine>();

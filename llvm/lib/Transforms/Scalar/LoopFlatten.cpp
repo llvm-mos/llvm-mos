@@ -112,7 +112,7 @@ namespace {
 // checks will be performed in this bookkeeping struct.
 //
 struct FlattenInfo {
-  Loop *OuterLoop = nullptr;  // The loop pair to be flattened.
+  Loop *OuterLoop = nullptr; // The loop pair to be flattened.
   Loop *InnerLoop = nullptr;
 
   PHINode *InnerInductionPHI = nullptr; // These PHINodes correspond to loop
@@ -125,13 +125,13 @@ struct FlattenInfo {
                                    // tripcount. Also used to recognise a
                                    // linear expression that will be replaced.
 
-  SmallPtrSet<Value *, 4> LinearIVUses;  // Contains the linear expressions
-                                         // of the form i*M+j that will be
-                                         // replaced.
+  SmallPtrSet<Value *, 4> LinearIVUses; // Contains the linear expressions
+                                        // of the form i*M+j that will be
+                                        // replaced.
 
-  BinaryOperator *InnerIncrement = nullptr;  // Uses of induction variables in
-  BinaryOperator *OuterIncrement = nullptr;  // loop control statements that
-  BranchInst *InnerBranch = nullptr;         // are safe to ignore.
+  BinaryOperator *InnerIncrement = nullptr; // Uses of induction variables in
+  BinaryOperator *OuterIncrement = nullptr; // loop control statements that
+  BranchInst *InnerBranch = nullptr;        // are safe to ignore.
 
   BranchInst *OuterBranch = nullptr; // The instruction that needs to be
                                      // updated with new tripcount.
@@ -148,7 +148,7 @@ struct FlattenInfo {
 
   Value *NewTripCount = nullptr; // The tripcount of the flattened loop.
 
-  FlattenInfo(Loop *OL, Loop *IL) : OuterLoop(OL), InnerLoop(IL){};
+  FlattenInfo(Loop *OL, Loop *IL) : OuterLoop(OL), InnerLoop(IL) {};
 
   bool isNarrowInductionPhi(PHINode *Phi) {
     // This can't be the narrow phi if we haven't widened the IV first.
@@ -156,23 +156,18 @@ struct FlattenInfo {
       return false;
     return NarrowInnerInductionPHI == Phi || NarrowOuterInductionPHI == Phi;
   }
-  bool isInnerLoopIncrement(User *U) {
-    return InnerIncrement == U;
-  }
-  bool isOuterLoopIncrement(User *U) {
-    return OuterIncrement == U;
-  }
-  bool isInnerLoopTest(User *U) {
-    return InnerBranch->getCondition() == U;
-  }
+  bool isInnerLoopIncrement(User *U) { return InnerIncrement == U; }
+  bool isOuterLoopIncrement(User *U) { return OuterIncrement == U; }
+  bool isInnerLoopTest(User *U) { return InnerBranch->getCondition() == U; }
 
   bool checkOuterInductionPhiUsers(SmallPtrSet<Value *, 4> &ValidOuterPHIUses) {
     for (User *U : OuterInductionPHI->users()) {
       if (isOuterLoopIncrement(U))
         continue;
 
-      auto IsValidOuterPHIUses = [&] (User *U) -> bool {
-        LLVM_DEBUG(dbgs() << "Found use of outer induction variable: "; U->dump());
+      auto IsValidOuterPHIUses = [&](User *U) -> bool {
+        LLVM_DEBUG(dbgs() << "Found use of outer induction variable: ";
+                   U->dump());
         if (!ValidOuterPHIUses.count(U)) {
           LLVM_DEBUG(dbgs() << "Did not match expected pattern, bailing\n");
           return false;
@@ -201,10 +196,10 @@ struct FlattenInfo {
     Value *MatchedMul = nullptr;
     Value *MatchedItCount = nullptr;
 
-    bool IsAdd = match(U, m_c_Add(m_Specific(InnerInductionPHI),
-                                  m_Value(MatchedMul))) &&
-                 match(MatchedMul, m_c_Mul(m_Specific(OuterInductionPHI),
-                                           m_Value(MatchedItCount)));
+    bool IsAdd =
+        match(U, m_c_Add(m_Specific(InnerInductionPHI), m_Value(MatchedMul))) &&
+        match(MatchedMul,
+              m_c_Mul(m_Specific(OuterInductionPHI), m_Value(MatchedItCount)));
 
     // Matches the same pattern as above, except it also looks for truncs
     // on the phi, which can be the result of widening the induction variables.
@@ -283,8 +278,9 @@ struct FlattenInfo {
 
       // If the use is in the compare (which is also the condition of the inner
       // branch) then the compare has been altered by another transformation e.g
-      // icmp ult %inc, tripcount -> icmp ult %j, tripcount-1, where tripcount is
-      // a constant. Ignore this use as the compare gets removed later anyway.
+      // icmp ult %inc, tripcount -> icmp ult %j, tripcount-1, where tripcount
+      // is a constant. Ignore this use as the compare gets removed later
+      // anyway.
       if (isInnerLoopTest(U)) {
         LLVM_DEBUG(dbgs() << "Use is the inner loop test, continuing\n");
         continue;
@@ -318,8 +314,8 @@ setLoopComponents(Value *&TC, Value *&TripCount, BinaryOperator *&Increment,
 // complicated now. It is therefore worth revisiting what the additional
 // benefits are of this (compared to relying on canonical loops and pattern
 // matching).
-static bool verifyTripCount(Value *RHS, Loop *L,
-     SmallPtrSetImpl<Instruction *> &IterationInstructions,
+static bool verifyTripCount(
+    Value *RHS, Loop *L, SmallPtrSetImpl<Instruction *> &IterationInstructions,
     PHINode *&InductionPHI, Value *&TripCount, BinaryOperator *&Increment,
     BranchInst *&BackBranch, ScalarEvolution *SE, bool IsWidened) {
   const SCEV *BackedgeTakenCount = SE->getBackedgeTakenCount(L);
@@ -331,9 +327,8 @@ static bool verifyTripCount(Value *RHS, Loop *L,
   // Evaluating in the trip count's type can not overflow here as the overflow
   // checks are performed in checkOverflow, but are first tried to avoid by
   // widening the IV.
-  const SCEV *SCEVTripCount =
-    SE->getTripCountFromExitCount(BackedgeTakenCount,
-                                  BackedgeTakenCount->getType(), L);
+  const SCEV *SCEVTripCount = SE->getTripCountFromExitCount(
+      BackedgeTakenCount, BackedgeTakenCount->getType(), L);
 
   const SCEV *SCEVRHS = SE->getSCEV(RHS);
   if (SCEVRHS == SCEVTripCount)
@@ -346,8 +341,8 @@ static bool verifyTripCount(Value *RHS, Loop *L,
       // Find the extended backedge taken count and extended trip count using
       // SCEV. One of these should now match the RHS of the compare.
       BackedgeTCExt = SE->getZeroExtendExpr(BackedgeTakenCount, RHS->getType());
-      SCEVTripCountExt = SE->getTripCountFromExitCount(BackedgeTCExt,
-                                                       RHS->getType(), L);
+      SCEVTripCountExt =
+          SE->getTripCountFromExitCount(BackedgeTCExt, RHS->getType(), L);
       if (SCEVRHS != BackedgeTCExt && SCEVRHS != SCEVTripCountExt) {
         LLVM_DEBUG(dbgs() << "Could not find valid trip count\n");
         return false;
@@ -608,8 +603,6 @@ checkOuterLoopInsts(FlattenInfo &FI,
   return true;
 }
 
-
-
 // We require all uses of both induction variables to match this pattern:
 //
 //   (OuterPHI * InnerTripCount) + InnerPHI
@@ -752,7 +745,8 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   LLVM_DEBUG(dbgs() << "Checks all passed, doing the transformation\n");
   {
     using namespace ore;
-    OptimizationRemark Remark(DEBUG_TYPE, "Flattened", FI.InnerLoop->getStartLoc(),
+    OptimizationRemark Remark(DEBUG_TYPE, "Flattened",
+                              FI.InnerLoop->getStartLoc(),
                               FI.InnerLoop->getHeader());
     OptimizationRemarkEmitter ORE(F);
     Remark << "Flattened into outer loop";

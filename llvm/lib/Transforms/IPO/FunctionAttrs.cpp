@@ -1090,13 +1090,13 @@ static bool addArgumentAttrsFromCallsites(Function &F) {
 
 static bool addAccessAttr(Argument *A, Attribute::AttrKind R) {
   assert((R == Attribute::ReadOnly || R == Attribute::ReadNone ||
-          R == Attribute::WriteOnly)
-         && "Must be an access attribute.");
+          R == Attribute::WriteOnly) &&
+         "Must be an access attribute.");
   assert(A && "Argument must not be null.");
 
   // If the argument already has the attribute, nothing needs to be done.
   if (A->hasAttribute(R))
-      return false;
+    return false;
 
   // Otherwise, remove potentially conflicting attribute, add the new one,
   // and update statistics.
@@ -1533,8 +1533,7 @@ static void addNoAliasAttrs(const SCCNodeSet &SCCNodes,
   }
 
   for (Function *F : SCCNodes) {
-    if (F->returnDoesNotAlias() ||
-        !F->getReturnType()->isPointerTy())
+    if (F->returnDoesNotAlias() || !F->getReturnType()->isPointerTy())
       continue;
 
     F->setReturnDoesNotAlias();
@@ -2036,9 +2035,7 @@ static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
         // Skip functions known not to free memory.
         [](const Function &F) { return F.doesNotFreeMemory(); },
         // Instructions that break non-deallocating assumption.
-        [&SCCNodes](Instruction &I) {
-          return InstrBreaksNoFree(I, SCCNodes);
-        },
+        [&SCCNodes](Instruction &I) { return InstrBreaksNoFree(I, SCCNodes); },
         [](Function &F) {
           LLVM_DEBUG(dbgs()
                      << "Adding nofree attr to fn " << F.getName() << "\n");
@@ -2052,12 +2049,10 @@ static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
       // Skip already marked functions.
       [](const Function &F) { return F.hasNoSync(); },
       // Instructions that break nosync assumption.
-      [&SCCNodes](Instruction &I) {
-        return InstrBreaksNoSync(I, SCCNodes);
-      },
+      [&SCCNodes](Instruction &I) { return InstrBreaksNoSync(I, SCCNodes); },
       [](Function &F) {
-        LLVM_DEBUG(dbgs()
-                   << "Adding nosync attr to fn " << F.getName() << "\n");
+        LLVM_DEBUG(dbgs() << "Adding nosync attr to fn " << F.getName()
+                          << "\n");
         F.setNoSync();
         ++NumNoSync;
       },
@@ -2221,9 +2216,8 @@ static bool functionWillReturn(const Function &F) {
 
   // If there are no loops, then the function is willreturn if all calls in
   // it are willreturn.
-  return all_of(instructions(F), [](const Instruction &I) {
-    return I.willReturn();
-  });
+  return all_of(instructions(F),
+                [](const Instruction &I) { return I.willReturn(); });
 }
 
 // Set the willreturn function attribute if possible.

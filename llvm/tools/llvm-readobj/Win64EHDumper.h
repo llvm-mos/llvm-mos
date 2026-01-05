@@ -17,7 +17,7 @@ namespace object {
 class COFFObjectFile;
 class SymbolRef;
 struct coff_section;
-}
+} // namespace object
 
 namespace Win64EH {
 class Dumper {
@@ -36,7 +36,7 @@ public:
 
     Context(const object::COFFObjectFile &COFF, SymbolResolver Resolver,
             void *UserData)
-      : COFF(COFF), ResolveSymbol(Resolver), UserData(UserData) {}
+        : COFF(COFF), ResolveSymbol(Resolver), UserData(UserData) {}
   };
 
 private:
@@ -57,7 +57,7 @@ public:
 
   void printData(const Context &Ctx);
 };
-}
-}
+} // namespace Win64EH
+} // namespace llvm
 
 #endif

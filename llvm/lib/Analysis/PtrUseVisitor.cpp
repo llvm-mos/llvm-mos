@@ -20,10 +20,8 @@ using namespace llvm;
 void detail::PtrUseVisitorBase::enqueueUsers(Value &I) {
   for (Use &U : I.uses()) {
     if (VisitedUses.insert(&U).second) {
-      UseToVisit NewU = {
-        UseToVisit::UseAndIsOffsetKnownPair(&U, IsOffsetKnown),
-        Offset
-      };
+      UseToVisit NewU = {UseToVisit::UseAndIsOffsetKnownPair(&U, IsOffsetKnown),
+                         Offset};
       Worklist.push_back(std::move(NewU));
     }
   }

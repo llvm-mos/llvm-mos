@@ -36,10 +36,10 @@ TargetMachine *EngineBuilder::selectTarget() {
 
 /// selectTarget - Pick a target either via -march or by guessing the native
 /// arch.  Add any CPU features specified via -mcpu or -mattr.
-TargetMachine *EngineBuilder::selectTarget(const Triple &TargetTriple,
-                              StringRef MArch,
-                              StringRef MCPU,
-                              const SmallVectorImpl<std::string>& MAttrs) {
+TargetMachine *
+EngineBuilder::selectTarget(const Triple &TargetTriple, StringRef MArch,
+                            StringRef MCPU,
+                            const SmallVectorImpl<std::string> &MAttrs) {
   Triple TheTriple(TargetTriple);
   if (TheTriple.getTriple().empty())
     TheTriple.setTriple(sys::getProcessTriple());

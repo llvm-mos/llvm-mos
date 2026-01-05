@@ -196,8 +196,7 @@ enum Kind {
   kw_sync,
   kw_async,
 #define GET_ATTR_NAMES
-#define ATTRIBUTE_ENUM(ENUM_NAME, DISPLAY_NAME) \
-  kw_##DISPLAY_NAME,
+#define ATTRIBUTE_ENUM(ENUM_NAME, DISPLAY_NAME) kw_##DISPLAY_NAME,
 #include "llvm/IR/Attributes.inc"
 
   // Memory attribute:

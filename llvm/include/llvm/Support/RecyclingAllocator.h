@@ -39,16 +39,18 @@ public:
   /// Allocate - Return a pointer to storage for an object of type
   /// SubClass. The storage may be either newly allocated or recycled.
   ///
-  template<class SubClass>
-  SubClass *Allocate() { return Base.template Allocate<SubClass>(Allocator); }
+  template <class SubClass> SubClass *Allocate() {
+    return Base.template Allocate<SubClass>(Allocator);
+  }
 
   T *Allocate() { return Base.Allocate(Allocator); }
 
   /// Deallocate - Release storage for the pointed-to object. The
   /// storage will be kept track of and may be recycled.
   ///
-  template<class SubClass>
-  void Deallocate(SubClass* E) { return Base.Deallocate(Allocator, E); }
+  template <class SubClass> void Deallocate(SubClass *E) {
+    return Base.Deallocate(Allocator, E);
+  }
 
   void PrintStats() {
     Allocator.PrintStats();
@@ -56,20 +58,20 @@ public:
   }
 };
 
-}
+} // namespace llvm
 
-template<class AllocatorType, class T, size_t Size, size_t Align>
-inline void *operator new(size_t size,
-                          llvm::RecyclingAllocator<AllocatorType,
-                                                   T, Size, Align> &Allocator) {
+template <class AllocatorType, class T, size_t Size, size_t Align>
+inline void *operator new(
+    size_t size,
+    llvm::RecyclingAllocator<AllocatorType, T, Size, Align> &Allocator) {
   assert(size <= Size && "allocation size exceeded");
   return Allocator.Allocate();
 }
 
-template<class AllocatorType, class T, size_t Size, size_t Align>
-inline void operator delete(void *E,
-                            llvm::RecyclingAllocator<AllocatorType,
-                                                     T, Size, Align> &A) {
+template <class AllocatorType, class T, size_t Size, size_t Align>
+inline void
+operator delete(void *E,
+                llvm::RecyclingAllocator<AllocatorType, T, Size, Align> &A) {
   A.Deallocate(E);
 }
 

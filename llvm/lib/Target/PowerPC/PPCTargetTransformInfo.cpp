@@ -29,26 +29,29 @@ static cl::opt<bool> Pwr9EVL("ppc-pwr9-evl",
                              cl::init(false), cl::Hidden);
 
 static cl::opt<bool> VecMaskCost("ppc-vec-mask-cost",
-cl::desc("add masking cost for i1 vectors"), cl::init(true), cl::Hidden);
-
-static cl::opt<bool> DisablePPCConstHoist("disable-ppc-constant-hoisting",
-cl::desc("disable constant hoisting on PPC"), cl::init(false), cl::Hidden);
+                                 cl::desc("add masking cost for i1 vectors"),
+                                 cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
-EnablePPCColdCC("ppc-enable-coldcc", cl::Hidden, cl::init(false),
-                cl::desc("Enable using coldcc calling conv for cold "
-                         "internal functions"));
+    DisablePPCConstHoist("disable-ppc-constant-hoisting",
+                         cl::desc("disable constant hoisting on PPC"),
+                         cl::init(false), cl::Hidden);
 
 static cl::opt<bool>
-LsrNoInsnsCost("ppc-lsr-no-insns-cost", cl::Hidden, cl::init(false),
-               cl::desc("Do not add instruction count to lsr cost model"));
+    EnablePPCColdCC("ppc-enable-coldcc", cl::Hidden, cl::init(false),
+                    cl::desc("Enable using coldcc calling conv for cold "
+                             "internal functions"));
+
+static cl::opt<bool>
+    LsrNoInsnsCost("ppc-lsr-no-insns-cost", cl::Hidden, cl::init(false),
+                   cl::desc("Do not add instruction count to lsr cost model"));
 
 // The latency of mtctr is only justified if there are more than 4
 // comparisons that will be removed as a result.
-static cl::opt<unsigned>
-SmallCTRLoopThreshold("min-ctr-loop-threshold", cl::init(4), cl::Hidden,
-                      cl::desc("Loops with a constant trip count smaller than "
-                               "this value will not use the count register."));
+static cl::opt<unsigned> SmallCTRLoopThreshold(
+    "min-ctr-loop-threshold", cl::init(4), cl::Hidden,
+    cl::desc("Loops with a constant trip count smaller than "
+             "this value will not use the count register."));
 
 //===----------------------------------------------------------------------===//
 //
@@ -60,8 +63,9 @@ TargetTransformInfo::PopcntSupportKind
 PPCTTIImpl::getPopcntSupport(unsigned TyWidth) const {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
   if (ST->hasPOPCNTD() != PPCSubtarget::POPCNTD_Unavailable && TyWidth <= 64)
-    return ST->hasPOPCNTD() == PPCSubtarget::POPCNTD_Slow ?
-             TTI::PSK_SlowHardware : TTI::PSK_FastHardware;
+    return ST->hasPOPCNTD() == PPCSubtarget::POPCNTD_Slow
+               ? TTI::PSK_SlowHardware
+               : TTI::PSK_FastHardware;
   return TTI::PSK_Software;
 }
 
@@ -295,14 +299,12 @@ InstructionCost PPCTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
       return TTI::TCC_Free;
 
     if (RunFree) {
-      if (Imm.getBitWidth() <= 32 &&
-          (isShiftedMask_32(Imm.getZExtValue()) ||
-           isShiftedMask_32(~Imm.getZExtValue())))
+      if (Imm.getBitWidth() <= 32 && (isShiftedMask_32(Imm.getZExtValue()) ||
+                                      isShiftedMask_32(~Imm.getZExtValue())))
         return TTI::TCC_Free;
 
-      if (ST->isPPC64() &&
-          (isShiftedMask_64(Imm.getZExtValue()) ||
-           isShiftedMask_64(~Imm.getZExtValue())))
+      if (ST->isPPC64() && (isShiftedMask_64(Imm.getZExtValue()) ||
+                            isShiftedMask_64(~Imm.getZExtValue())))
         return TTI::TCC_Free;
     }
 
@@ -373,14 +375,15 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
             Call->getIntrinsicID() == Intrinsic::loop_decrement)
           return false;
 
-  SmallVector<BasicBlock*, 4> ExitingBlocks;
+  SmallVector<BasicBlock *, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
   // If there is an exit edge known to be frequently taken,
   // we should not transform this loop.
   for (auto &BB : ExitingBlocks) {
     Instruction *TI = BB->getTerminator();
-    if (!TI) continue;
+    if (!TI)
+      continue;
 
     if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
       uint64_t TrueWeight = 0, FalseWeight = 0;
@@ -391,15 +394,15 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
       // If the exit path is more frequent than the loop path,
       // we return here without further analysis for this loop.
       bool TrueIsExit = !L->contains(BI->getSuccessor(0));
-      if (( TrueIsExit && FalseWeight < TrueWeight) ||
+      if ((TrueIsExit && FalseWeight < TrueWeight) ||
           (!TrueIsExit && FalseWeight > TrueWeight))
         return false;
     }
   }
 
   LLVMContext &C = L->getHeader()->getContext();
-  HWLoopInfo.CountType = TM.isPPC64() ?
-    Type::getInt64Ty(C) : Type::getInt32Ty(C);
+  HWLoopInfo.CountType =
+      TM.isPPC64() ? Type::getInt64Ty(C) : Type::getInt32Ty(C);
   HWLoopInfo.LoopDecrement = ConstantInt::get(HWLoopInfo.CountType, 1);
   return true;
 }
@@ -455,8 +458,8 @@ PPCTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
 bool PPCTTIImpl::enableInterleavedAccessVectorization() const { return true; }
 
 unsigned PPCTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
-  assert(ClassID == GPRRC || ClassID == FPRRC ||
-         ClassID == VRRC || ClassID == VSXRC);
+  assert(ClassID == GPRRC || ClassID == FPRRC || ClassID == VRRC ||
+         ClassID == VSXRC);
   if (ST->hasVSX()) {
     assert(ClassID == GPRRC || ClassID == VSXRC || ClassID == VRRC);
     return ClassID == VSXRC ? 64 : 32;
@@ -479,16 +482,20 @@ unsigned PPCTTIImpl::getRegisterClassForType(bool Vector, Type *Ty) const {
   return GPRRC;
 }
 
-const char* PPCTTIImpl::getRegisterClassName(unsigned ClassID) const {
+const char *PPCTTIImpl::getRegisterClassName(unsigned ClassID) const {
 
   switch (ClassID) {
-    default:
-      llvm_unreachable("unknown register class");
-      return "PPC::unknown register class";
-    case GPRRC:       return "PPC::GPRRC";
-    case FPRRC:       return "PPC::FPRRC";
-    case VRRC:        return "PPC::VRRC";
-    case VSXRC:       return "PPC::VSXRC";
+  default:
+    llvm_unreachable("unknown register class");
+    return "PPC::unknown register class";
+  case GPRRC:
+    return "PPC::GPRRC";
+  case FPRRC:
+    return "PPC::FPRRC";
+  case VRRC:
+    return "PPC::VRRC";
+  case VSXRC:
+    return "PPC::VSXRC";
   }
 }
 
@@ -519,9 +526,7 @@ unsigned PPCTTIImpl::getCacheLineSize() const {
   return 64;
 }
 
-unsigned PPCTTIImpl::getPrefetchDistance() const {
-  return 300;
-}
+unsigned PPCTTIImpl::getPrefetchDistance() const { return 300; }
 
 unsigned PPCTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
   unsigned Directive = ST->getCPUDirective();
@@ -602,12 +607,12 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CxtI);
 
   // Fallback to the default implementation.
-  InstructionCost Cost = BaseT::getArithmeticInstrCost(
-      Opcode, Ty, CostKind, Op1Info, Op2Info);
+  InstructionCost Cost =
+      BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info);
   return Cost * CostFactor;
 }
 
@@ -764,8 +769,7 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   // because they require store and reload with the attendant
   // processor stall for load-hit-store.  Until VSX is available,
   // these need to be estimated as very costly.
-  if (ISD == ISD::EXTRACT_VECTOR_ELT ||
-      ISD == ISD::INSERT_VECTOR_ELT)
+  if (ISD == ISD::EXTRACT_VECTOR_ELT || ISD == ISD::INSERT_VECTOR_ELT)
     return LHSPenalty + Cost;
 
   return Cost;
@@ -782,7 +786,7 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (!CostFactor.isValid())
     return InstructionCost::getMax();
 
-  if (TLI->getValueType(DL, Src,  true) == MVT::Other)
+  if (TLI->getValueType(DL, Src, true) == MVT::Other)
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind);
   // Legalize the type.
@@ -798,11 +802,11 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
   Cost *= CostFactor;
 
-  bool IsAltivecType = ST->hasAltivec() &&
-                       (LT.second == MVT::v16i8 || LT.second == MVT::v8i16 ||
-                        LT.second == MVT::v4i32 || LT.second == MVT::v4f32);
-  bool IsVSXType = ST->hasVSX() &&
-                   (LT.second == MVT::v2f64 || LT.second == MVT::v2i64);
+  bool IsAltivecType =
+      ST->hasAltivec() && (LT.second == MVT::v16i8 || LT.second == MVT::v8i16 ||
+                           LT.second == MVT::v4i32 || LT.second == MVT::v4f32);
+  bool IsVSXType =
+      ST->hasVSX() && (LT.second == MVT::v2f64 || LT.second == MVT::v2i64);
 
   // VSX has 32b/64b load instructions. Legalization can handle loading of
   // 32b/64b to VSR correctly and cheaply. But BaseT::getMemoryOpCost and
@@ -893,7 +897,7 @@ InstructionCost PPCTTIImpl::getInterleavedMemoryOpCost(
   // instruction). For each result vector, we need one shuffle per incoming
   // vector (except that the first shuffle can take two incoming vectors
   // because it does not need to take itself).
-  Cost += Factor*(LT.first-1);
+  Cost += Factor * (LT.first - 1);
 
   return Cost;
 }

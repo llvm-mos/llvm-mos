@@ -68,8 +68,8 @@ void DIBuilder::finalize() {
 
   if (!AllEnumTypes.empty())
     CUNode->replaceEnumTypes(MDTuple::get(
-        VMContext, SmallVector<Metadata *, 16>(AllEnumTypes.begin(),
-                                               AllEnumTypes.end())));
+        VMContext,
+        SmallVector<Metadata *, 16>(AllEnumTypes.begin(), AllEnumTypes.end())));
 
   SmallVector<Metadata *, 16> RetainValues;
   // Declarations and definitions of the same type may be retained. Some
@@ -909,8 +909,7 @@ DIGlobalVariable *DIBuilder::createTempGlobalVariableFwdDecl(
 }
 
 static DILocalVariable *createLocalVariable(
-    LLVMContext &VMContext,
-    SmallVectorImpl<TrackingMDNodeRef> &PreservedNodes,
+    LLVMContext &VMContext, SmallVectorImpl<TrackingMDNodeRef> &PreservedNodes,
     DIScope *Context, StringRef Name, unsigned ArgNo, DIFile *File,
     unsigned LineNo, DIType *Ty, bool AlwaysPreserve, DINode::DIFlags Flags,
     uint32_t AlignInBits, DINodeArray Annotations = nullptr) {

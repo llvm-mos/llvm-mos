@@ -170,7 +170,7 @@ protected:
 private:
   InstrProfCorrelatorImpl(InstrProfCorrelatorKind Kind,
                           std::unique_ptr<InstrProfCorrelator::Context> Ctx)
-      : InstrProfCorrelator(Kind, std::move(Ctx)){};
+      : InstrProfCorrelator(Kind, std::move(Ctx)) {};
   llvm::DenseSet<IntPtrT> CounterOffsets;
 };
 

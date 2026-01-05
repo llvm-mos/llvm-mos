@@ -13,27 +13,28 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-  class MCContext;
-  class MCInst;
-  class MCOperand;
-  class MachineInstr;
-  class AsmPrinter;
+class MCContext;
+class MCInst;
+class MCOperand;
+class MachineInstr;
+class AsmPrinter;
 
 /// This class is used to lower an MachineInstr into an MCInst.
 class LLVM_LIBRARY_VISIBILITY XCoreMCInstLower {
   typedef MachineOperand::MachineOperandType MachineOperandType;
   MCContext *Ctx;
   AsmPrinter &Printer;
+
 public:
   XCoreMCInstLower(class AsmPrinter &asmprinter);
   void Initialize(MCContext *C);
   void Lower(const MachineInstr *MI, MCInst &OutMI) const;
-  MCOperand LowerOperand(const MachineOperand& MO, unsigned offset = 0) const;
+  MCOperand LowerOperand(const MachineOperand &MO, unsigned offset = 0) const;
 
 private:
   MCOperand LowerSymbolOperand(const MachineOperand &MO,
                                MachineOperandType MOTy, unsigned Offset) const;
 };
-}
+} // namespace llvm
 
 #endif

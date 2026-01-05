@@ -26,7 +26,7 @@ struct Lowerer : coro::LowererBase {
   Lowerer(Module &M) : LowererBase(M), Builder(Context) {}
   bool lower(Function &F);
 };
-}
+} // namespace
 
 static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
   Builder.SetInsertPoint(SubFn);
@@ -117,8 +117,7 @@ static bool declaresCoroCleanupIntrinsics(const Module &M) {
           Intrinsic::coro_async_resume, Intrinsic::coro_begin_custom_abi});
 }
 
-PreservedAnalyses CoroCleanupPass::run(Module &M,
-                                       ModuleAnalysisManager &MAM) {
+PreservedAnalyses CoroCleanupPass::run(Module &M, ModuleAnalysisManager &MAM) {
   if (!declaresCoroCleanupIntrinsics(M))
     return PreservedAnalyses::all();
 

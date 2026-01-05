@@ -84,6 +84,6 @@ public:
   LLVM_ABI void uncompress();
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

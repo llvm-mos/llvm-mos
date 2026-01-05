@@ -302,15 +302,33 @@ static Printable printFPOReg(const MCRegisterInfo *MRI, unsigned LLVMReg) {
     switch (LLVMReg) {
     // MSVC only seems to emit symbolic register names for EIP, EBP, and ESP,
     // but the format seems to support more than that, so we emit them.
-    case X86::EAX: OS << "$eax"; break;
-    case X86::EBX: OS << "$ebx"; break;
-    case X86::ECX: OS << "$ecx"; break;
-    case X86::EDX: OS << "$edx"; break;
-    case X86::EDI: OS << "$edi"; break;
-    case X86::ESI: OS << "$esi"; break;
-    case X86::ESP: OS << "$esp"; break;
-    case X86::EBP: OS << "$ebp"; break;
-    case X86::EIP: OS << "$eip"; break;
+    case X86::EAX:
+      OS << "$eax";
+      break;
+    case X86::EBX:
+      OS << "$ebx";
+      break;
+    case X86::ECX:
+      OS << "$ecx";
+      break;
+    case X86::EDX:
+      OS << "$edx";
+      break;
+    case X86::EDI:
+      OS << "$edi";
+      break;
+    case X86::ESI:
+      OS << "$esi";
+      break;
+    case X86::ESP:
+      OS << "$esp";
+      break;
+    case X86::EBP:
+      OS << "$ebp";
+      break;
+    case X86::EIP:
+      OS << "$eip";
+      break;
     // Otherwise, get the codeview register number and print $N.
     default:
       OS << '$' << MRI->getCodeViewRegNum(LLVMReg);

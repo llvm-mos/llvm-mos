@@ -30,7 +30,7 @@ template <typename T> struct object_deleter {
   static void call(void *Ptr) { delete (T *)Ptr; }
 };
 template <typename T, size_t N> struct object_deleter<T[N]> {
-  static void call(void *Ptr) { delete[](T *)Ptr; }
+  static void call(void *Ptr) { delete[] (T *)Ptr; }
 };
 
 // ManagedStatic must be initialized to zero, and it must *not* have a dynamic
@@ -107,9 +107,7 @@ public:
 
   // Extract the instance, leaving the ManagedStatic uninitialized. The
   // user is then responsible for the lifetime of the returned instance.
-  C *claim() {
-    return static_cast<C *>(Ptr.exchange(nullptr));
-  }
+  C *claim() { return static_cast<C *>(Ptr.exchange(nullptr)); }
 };
 
 /// llvm_shutdown - Deallocate and destroy all ManagedStatic variables.

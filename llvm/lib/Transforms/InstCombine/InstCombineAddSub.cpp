@@ -40,178 +40,179 @@ using namespace PatternMatch;
 
 namespace {
 
-  /// Class representing coefficient of floating-point addend.
-  /// This class needs to be highly efficient, which is especially true for
-  /// the constructor. As of I write this comment, the cost of the default
-  /// constructor is merely 4-byte-store-zero (Assuming compiler is able to
-  /// perform write-merging).
-  ///
-  class FAddendCoef {
-  public:
-    // The constructor has to initialize a APFloat, which is unnecessary for
-    // most addends which have coefficient either 1 or -1. So, the constructor
-    // is expensive. In order to avoid the cost of the constructor, we should
-    // reuse some instances whenever possible. The pre-created instances
-    // FAddCombine::Add[0-5] embodies this idea.
-    FAddendCoef() = default;
-    ~FAddendCoef();
+/// Class representing coefficient of floating-point addend.
+/// This class needs to be highly efficient, which is especially true for
+/// the constructor. As of I write this comment, the cost of the default
+/// constructor is merely 4-byte-store-zero (Assuming compiler is able to
+/// perform write-merging).
+///
+class FAddendCoef {
+public:
+  // The constructor has to initialize a APFloat, which is unnecessary for
+  // most addends which have coefficient either 1 or -1. So, the constructor
+  // is expensive. In order to avoid the cost of the constructor, we should
+  // reuse some instances whenever possible. The pre-created instances
+  // FAddCombine::Add[0-5] embodies this idea.
+  FAddendCoef() = default;
+  ~FAddendCoef();
 
-    // If possible, don't define operator+/operator- etc because these
-    // operators inevitably call FAddendCoef's constructor which is not cheap.
-    void operator=(const FAddendCoef &A);
-    void operator+=(const FAddendCoef &A);
-    void operator*=(const FAddendCoef &S);
+  // If possible, don't define operator+/operator- etc because these
+  // operators inevitably call FAddendCoef's constructor which is not cheap.
+  void operator=(const FAddendCoef &A);
+  void operator+=(const FAddendCoef &A);
+  void operator*=(const FAddendCoef &S);
 
-    void set(short C) {
-      assert(!insaneIntVal(C) && "Insane coefficient");
-      IsFp = false; IntVal = C;
-    }
+  void set(short C) {
+    assert(!insaneIntVal(C) && "Insane coefficient");
+    IsFp = false;
+    IntVal = C;
+  }
 
-    void set(const APFloat& C);
+  void set(const APFloat &C);
 
-    void negate();
+  void negate();
 
-    bool isZero() const { return isInt() ? !IntVal : getFpVal().isZero(); }
-    Value *getValue(Type *) const;
+  bool isZero() const { return isInt() ? !IntVal : getFpVal().isZero(); }
+  Value *getValue(Type *) const;
 
-    bool isOne() const { return isInt() && IntVal == 1; }
-    bool isTwo() const { return isInt() && IntVal == 2; }
-    bool isMinusOne() const { return isInt() && IntVal == -1; }
-    bool isMinusTwo() const { return isInt() && IntVal == -2; }
+  bool isOne() const { return isInt() && IntVal == 1; }
+  bool isTwo() const { return isInt() && IntVal == 2; }
+  bool isMinusOne() const { return isInt() && IntVal == -1; }
+  bool isMinusTwo() const { return isInt() && IntVal == -2; }
 
-  private:
-    bool insaneIntVal(int V) { return V > 4 || V < -4; }
+private:
+  bool insaneIntVal(int V) { return V > 4 || V < -4; }
 
-    APFloat *getFpValPtr() { return reinterpret_cast<APFloat *>(&FpValBuf); }
+  APFloat *getFpValPtr() { return reinterpret_cast<APFloat *>(&FpValBuf); }
 
-    const APFloat *getFpValPtr() const {
-      return reinterpret_cast<const APFloat *>(&FpValBuf);
-    }
+  const APFloat *getFpValPtr() const {
+    return reinterpret_cast<const APFloat *>(&FpValBuf);
+  }
 
-    const APFloat &getFpVal() const {
-      assert(IsFp && BufHasFpVal && "Incorret state");
-      return *getFpValPtr();
-    }
+  const APFloat &getFpVal() const {
+    assert(IsFp && BufHasFpVal && "Incorret state");
+    return *getFpValPtr();
+  }
 
-    APFloat &getFpVal() {
-      assert(IsFp && BufHasFpVal && "Incorret state");
-      return *getFpValPtr();
-    }
+  APFloat &getFpVal() {
+    assert(IsFp && BufHasFpVal && "Incorret state");
+    return *getFpValPtr();
+  }
 
-    bool isInt() const { return !IsFp; }
+  bool isInt() const { return !IsFp; }
 
-    // If the coefficient is represented by an integer, promote it to a
-    // floating point.
-    void convertToFpType(const fltSemantics &Sem);
+  // If the coefficient is represented by an integer, promote it to a
+  // floating point.
+  void convertToFpType(const fltSemantics &Sem);
 
-    // Construct an APFloat from a signed integer.
-    // TODO: We should get rid of this function when APFloat can be constructed
-    //       from an *SIGNED* integer.
-    APFloat createAPFloatFromInt(const fltSemantics &Sem, int Val);
+  // Construct an APFloat from a signed integer.
+  // TODO: We should get rid of this function when APFloat can be constructed
+  //       from an *SIGNED* integer.
+  APFloat createAPFloatFromInt(const fltSemantics &Sem, int Val);
 
-    bool IsFp = false;
+  bool IsFp = false;
 
-    // True iff FpValBuf contains an instance of APFloat.
-    bool BufHasFpVal = false;
+  // True iff FpValBuf contains an instance of APFloat.
+  bool BufHasFpVal = false;
 
-    // The integer coefficient of an individual addend is either 1 or -1,
-    // and we try to simplify at most 4 addends from neighboring at most
-    // two instructions. So the range of <IntVal> falls in [-4, 4]. APInt
-    // is overkill of this end.
-    short IntVal = 0;
+  // The integer coefficient of an individual addend is either 1 or -1,
+  // and we try to simplify at most 4 addends from neighboring at most
+  // two instructions. So the range of <IntVal> falls in [-4, 4]. APInt
+  // is overkill of this end.
+  short IntVal = 0;
 
-    AlignedCharArrayUnion<APFloat> FpValBuf;
-  };
+  AlignedCharArrayUnion<APFloat> FpValBuf;
+};
 
-  /// FAddend is used to represent floating-point addend. An addend is
-  /// represented as <C, V>, where the V is a symbolic value, and C is a
-  /// constant coefficient. A constant addend is represented as <C, 0>.
-  class FAddend {
-  public:
-    FAddend() = default;
+/// FAddend is used to represent floating-point addend. An addend is
+/// represented as <C, V>, where the V is a symbolic value, and C is a
+/// constant coefficient. A constant addend is represented as <C, 0>.
+class FAddend {
+public:
+  FAddend() = default;
 
-    void operator+=(const FAddend &T) {
-      assert((Val == T.Val) && "Symbolic-values disagree");
-      Coeff += T.Coeff;
-    }
+  void operator+=(const FAddend &T) {
+    assert((Val == T.Val) && "Symbolic-values disagree");
+    Coeff += T.Coeff;
+  }
 
-    Value *getSymVal() const { return Val; }
-    const FAddendCoef &getCoef() const { return Coeff; }
+  Value *getSymVal() const { return Val; }
+  const FAddendCoef &getCoef() const { return Coeff; }
 
-    bool isConstant() const { return Val == nullptr; }
-    bool isZero() const { return Coeff.isZero(); }
+  bool isConstant() const { return Val == nullptr; }
+  bool isZero() const { return Coeff.isZero(); }
 
-    void set(short Coefficient, Value *V) {
-      Coeff.set(Coefficient);
-      Val = V;
-    }
-    void set(const APFloat &Coefficient, Value *V) {
-      Coeff.set(Coefficient);
-      Val = V;
-    }
-    void set(const ConstantFP *Coefficient, Value *V) {
-      Coeff.set(Coefficient->getValueAPF());
-      Val = V;
-    }
+  void set(short Coefficient, Value *V) {
+    Coeff.set(Coefficient);
+    Val = V;
+  }
+  void set(const APFloat &Coefficient, Value *V) {
+    Coeff.set(Coefficient);
+    Val = V;
+  }
+  void set(const ConstantFP *Coefficient, Value *V) {
+    Coeff.set(Coefficient->getValueAPF());
+    Val = V;
+  }
 
-    void negate() { Coeff.negate(); }
+  void negate() { Coeff.negate(); }
 
-    /// Drill down the U-D chain one step to find the definition of V, and
-    /// try to break the definition into one or two addends.
-    static unsigned drillValueDownOneStep(Value* V, FAddend &A0, FAddend &A1);
+  /// Drill down the U-D chain one step to find the definition of V, and
+  /// try to break the definition into one or two addends.
+  static unsigned drillValueDownOneStep(Value *V, FAddend &A0, FAddend &A1);
 
-    /// Similar to FAddend::drillDownOneStep() except that the value being
-    /// splitted is the addend itself.
-    unsigned drillAddendDownOneStep(FAddend &Addend0, FAddend &Addend1) const;
+  /// Similar to FAddend::drillDownOneStep() except that the value being
+  /// splitted is the addend itself.
+  unsigned drillAddendDownOneStep(FAddend &Addend0, FAddend &Addend1) const;
 
-  private:
-    void Scale(const FAddendCoef& ScaleAmt) { Coeff *= ScaleAmt; }
+private:
+  void Scale(const FAddendCoef &ScaleAmt) { Coeff *= ScaleAmt; }
 
-    // This addend has the value of "Coeff * Val".
-    Value *Val = nullptr;
-    FAddendCoef Coeff;
-  };
+  // This addend has the value of "Coeff * Val".
+  Value *Val = nullptr;
+  FAddendCoef Coeff;
+};
 
-  /// FAddCombine is the class for optimizing an unsafe fadd/fsub along
-  /// with its neighboring at most two instructions.
-  ///
-  class FAddCombine {
-  public:
-    FAddCombine(InstCombiner::BuilderTy &B) : Builder(B) {}
+/// FAddCombine is the class for optimizing an unsafe fadd/fsub along
+/// with its neighboring at most two instructions.
+///
+class FAddCombine {
+public:
+  FAddCombine(InstCombiner::BuilderTy &B) : Builder(B) {}
 
-    Value *simplify(Instruction *FAdd);
+  Value *simplify(Instruction *FAdd);
 
-  private:
-    using AddendVect = SmallVector<const FAddend *, 4>;
+private:
+  using AddendVect = SmallVector<const FAddend *, 4>;
 
-    Value *simplifyFAdd(AddendVect& V, unsigned InstrQuota);
+  Value *simplifyFAdd(AddendVect &V, unsigned InstrQuota);
 
-    /// Convert given addend to a Value
-    Value *createAddendVal(const FAddend &A, bool& NeedNeg);
+  /// Convert given addend to a Value
+  Value *createAddendVal(const FAddend &A, bool &NeedNeg);
 
-    /// Return the number of instructions needed to emit the N-ary addition.
-    unsigned calcInstrNumber(const AddendVect& Vect);
+  /// Return the number of instructions needed to emit the N-ary addition.
+  unsigned calcInstrNumber(const AddendVect &Vect);
 
-    Value *createFSub(Value *Opnd0, Value *Opnd1);
-    Value *createFAdd(Value *Opnd0, Value *Opnd1);
-    Value *createFMul(Value *Opnd0, Value *Opnd1);
-    Value *createFNeg(Value *V);
-    Value *createNaryFAdd(const AddendVect& Opnds, unsigned InstrQuota);
-    void createInstPostProc(Instruction *NewInst, bool NoNumber = false);
+  Value *createFSub(Value *Opnd0, Value *Opnd1);
+  Value *createFAdd(Value *Opnd0, Value *Opnd1);
+  Value *createFMul(Value *Opnd0, Value *Opnd1);
+  Value *createFNeg(Value *V);
+  Value *createNaryFAdd(const AddendVect &Opnds, unsigned InstrQuota);
+  void createInstPostProc(Instruction *NewInst, bool NoNumber = false);
 
-     // Debugging stuff are clustered here.
-    #ifndef NDEBUG
-      unsigned CreateInstrNum;
-      void initCreateInstNum() { CreateInstrNum = 0; }
-      void incCreateInstNum() { CreateInstrNum++; }
-    #else
-      void initCreateInstNum() {}
-      void incCreateInstNum() {}
-    #endif
+  // Debugging stuff are clustered here.
+#ifndef NDEBUG
+  unsigned CreateInstrNum;
+  void initCreateInstNum() { CreateInstrNum = 0; }
+  void incCreateInstNum() { CreateInstrNum++; }
+#else
+  void initCreateInstNum() {}
+  void incCreateInstNum() {}
+#endif
 
-    InstCombiner::BuilderTy &Builder;
-    Instruction *Instr = nullptr;
-  };
+  InstCombiner::BuilderTy &Builder;
+  Instruction *Instr = nullptr;
+};
 
 } // end anonymous namespace
 
@@ -226,13 +227,13 @@ FAddendCoef::~FAddendCoef() {
     getFpValPtr()->~APFloat();
 }
 
-void FAddendCoef::set(const APFloat& C) {
+void FAddendCoef::set(const APFloat &C) {
   APFloat *P = getFpValPtr();
 
   if (isInt()) {
     // As the buffer is meanless byte stream, we cannot call
     // APFloat::operator=().
-    new(P) APFloat(C);
+    new (P) APFloat(C);
   } else
     *P = C;
 
@@ -245,9 +246,9 @@ void FAddendCoef::convertToFpType(const fltSemantics &Sem) {
 
   APFloat *P = getFpValPtr();
   if (IntVal > 0)
-    new(P) APFloat(Sem, IntVal);
+    new (P) APFloat(Sem, IntVal);
   else {
-    new(P) APFloat(Sem, 0 - IntVal);
+    new (P) APFloat(Sem, 0 - IntVal);
     P->changeSign();
   }
   IsFp = BufHasFpVal = true;
@@ -308,7 +309,7 @@ void FAddendCoef::operator*=(const FAddendCoef &That) {
   }
 
   const fltSemantics &Semantic =
-    isInt() ? That.getFpVal().getSemantics() : getFpVal().getSemantics();
+      isInt() ? That.getFpVal().getSemantics() : getFpVal().getSemantics();
 
   if (isInt())
     convertToFpType(Semantic);
@@ -329,9 +330,8 @@ void FAddendCoef::negate() {
 }
 
 Value *FAddendCoef::getValue(Type *Ty) const {
-  return isInt() ?
-    ConstantFP::get(Ty, float(IntVal)) :
-    ConstantFP::get(Ty->getContext(), getFpVal());
+  return isInt() ? ConstantFP::get(Ty, float(IntVal))
+                 : ConstantFP::get(Ty->getContext(), getFpVal());
 }
 
 // The definition of <Val>     Addends
@@ -344,8 +344,8 @@ Value *FAddendCoef::getValue(Type *Ty) const {
 //  0 +/- 0                   <0, NULL> (corner case)
 //
 // Legend: A and B are not constant, C is constant
-unsigned FAddend::drillValueDownOneStep
-  (Value *Val, FAddend &Addend0, FAddend &Addend1) {
+unsigned FAddend::drillValueDownOneStep(Value *Val, FAddend &Addend0,
+                                        FAddend &Addend1) {
   Instruction *I = nullptr;
   if (!Val || !(I = dyn_cast<Instruction>(Val)))
     return 0;
@@ -407,8 +407,8 @@ unsigned FAddend::drillValueDownOneStep
 // Try to break *this* addend into two addends. e.g. Suppose this addend is
 // <2.3, V>, and V = X + Y, by calling this function, we obtain two addends,
 // i.e. <2.3, X> and <2.3, Y>.
-unsigned FAddend::drillAddendDownOneStep
-  (FAddend &Addend0, FAddend &Addend1) const {
+unsigned FAddend::drillAddendDownOneStep(FAddend &Addend0,
+                                         FAddend &Addend1) const {
   if (isConstant())
     return 0;
 
@@ -433,7 +433,8 @@ Value *FAddCombine::simplify(Instruction *I) {
     return nullptr;
 
   assert((I->getOpcode() == Instruction::FAdd ||
-          I->getOpcode() == Instruction::FSub) && "Expect add/sub");
+          I->getOpcode() == Instruction::FSub) &&
+         "Expect add/sub");
 
   // Save the instruction before calling other member-functions.
   Instr = I;
@@ -469,7 +470,9 @@ Value *FAddCombine::simplify(Instruction *I) {
     Value *V0 = I->getOperand(0);
     Value *V1 = I->getOperand(1);
     InstQuota = ((!isa<Constant>(V0) && V0->hasOneUse()) &&
-                 (!isa<Constant>(V1) && V1->hasOneUse())) ? 2 : 1;
+                 (!isa<Constant>(V1) && V1->hasOneUse()))
+                    ? 2
+                    : 1;
 
     if (Value *R = simplifyFAdd(AllOpnds, InstQuota))
       return R;
@@ -511,7 +514,7 @@ Value *FAddCombine::simplify(Instruction *I) {
   return nullptr;
 }
 
-Value *FAddCombine::simplifyFAdd(AddendVect& Addends, unsigned InstrQuota) {
+Value *FAddCombine::simplifyFAdd(AddendVect &Addends, unsigned InstrQuota) {
   unsigned AddendNum = Addends.size();
   assert(AddendNum <= 4 && "Too many addends");
 
@@ -550,8 +553,8 @@ Value *FAddCombine::simplifyFAdd(AddendVect& Addends, unsigned InstrQuota) {
     // example, if the symbolic value "y" is being processed, the inner loop
     // will collect two addends "<b1,y>" and "<b2,Y>". These two addends will
     // be later on folded into "<b1+b2, y>".
-    for (unsigned SameSymIdx = SymIdx + 1;
-         SameSymIdx < AddendNum; SameSymIdx++) {
+    for (unsigned SameSymIdx = SymIdx + 1; SameSymIdx < AddendNum;
+         SameSymIdx++) {
       const FAddend *T = Addends[SameSymIdx];
       if (T && T->getSymVal() == Val) {
         // Set null such that next iteration of the outer loop will not process
@@ -563,7 +566,7 @@ Value *FAddCombine::simplifyFAdd(AddendVect& Addends, unsigned InstrQuota) {
 
     // If multiple addends share same symbolic value, fold them together.
     if (StartIdx + 1 != SimpVect.size()) {
-      FAddend &R = TmpResult[NextTmpIdx ++];
+      FAddend &R = TmpResult[NextTmpIdx++];
       R = *SimpVect[StartIdx];
       for (unsigned Idx = StartIdx + 1; Idx < SimpVect.size(); Idx++)
         R += *SimpVect[Idx];
@@ -589,8 +592,8 @@ Value *FAddCombine::simplifyFAdd(AddendVect& Addends, unsigned InstrQuota) {
   return Result;
 }
 
-Value *FAddCombine::createNaryFAdd
-  (const AddendVect &Opnds, unsigned InstrQuota) {
+Value *FAddCombine::createNaryFAdd(const AddendVect &Opnds,
+                                   unsigned InstrQuota) {
   assert(!Opnds.empty() && "Expect at least one addend");
 
   // Step 1: Check if the # of instructions needed exceeds the quota.
@@ -1248,15 +1251,15 @@ static Instruction *foldToUnsignedSaturatedAdd(BinaryOperator &I) {
 
   // add (umin X, ~Y), Y --> uaddsat X, Y
   Value *X, *Y;
-  if (match(&I, m_c_Add(m_c_UMin(m_Value(X), m_Not(m_Value(Y))),
-                        m_Deferred(Y))))
-    return CallInst::Create(getUAddSat(), { X, Y });
+  if (match(&I,
+            m_c_Add(m_c_UMin(m_Value(X), m_Not(m_Value(Y))), m_Deferred(Y))))
+    return CallInst::Create(getUAddSat(), {X, Y});
 
   // add (umin X, ~C), C --> uaddsat X, C
   const APInt *C, *NotC;
   if (match(&I, m_Add(m_UMin(m_Value(X), m_APInt(NotC)), m_APInt(C))) &&
       *C == ~*NotC)
-    return CallInst::Create(getUAddSat(), { X, ConstantInt::get(Ty, *C) });
+    return CallInst::Create(getUAddSat(), {X, ConstantInt::get(Ty, *C)});
 
   return nullptr;
 }
@@ -1462,8 +1465,8 @@ static Instruction *factorizeMathWithShlOps(BinaryOperator &I,
     return nullptr;
 
   // No-wrap propagates only when all ops have no-wrap.
-  bool HasNSW = I.hasNoSignedWrap() && Op0->hasNoSignedWrap() &&
-                Op1->hasNoSignedWrap();
+  bool HasNSW =
+      I.hasNoSignedWrap() && Op0->hasNoSignedWrap() && Op1->hasNoSignedWrap();
   bool HasNUW = I.hasNoUnsignedWrap() && Op0->hasNoUnsignedWrap() &&
                 Op1->hasNoUnsignedWrap();
 
@@ -1521,9 +1524,9 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
 }
 
 Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
-  if (Value *V = simplifyAddInst(I.getOperand(0), I.getOperand(1),
-                                 I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
-                                 SQ.getWithInstruction(&I)))
+  if (Value *V =
+          simplifyAddInst(I.getOperand(0), I.getOperand(1), I.hasNoSignedWrap(),
+                          I.hasNoUnsignedWrap(), SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (SimplifyAssociativeOrCommutative(I))
@@ -1637,7 +1640,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   }
 
   // X % C0 + (( X / C0 ) % C1) * C0 => X % (C0 * C1)
-  if (Value *V = SimplifyAddWithRemainder(I)) return replaceInstUsesWith(I, V);
+  if (Value *V = SimplifyAddWithRemainder(I))
+    return replaceInstUsesWith(I, V);
 
   const APInt *C1;
   // (A & 2^C1) + A => A & (2^C1 - 1) iff bit C1 in A is a sign bit
@@ -1863,11 +1867,11 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return SatAdd;
 
   // usub.sat(A, B) + B => umax(A, B)
-  if (match(&I, m_c_BinOp(
-          m_OneUse(m_Intrinsic<Intrinsic::usub_sat>(m_Value(A), m_Value(B))),
-          m_Deferred(B)))) {
-    return replaceInstUsesWith(I,
-        Builder.CreateIntrinsic(Intrinsic::umax, {I.getType()}, {A, B}));
+  if (match(&I, m_c_BinOp(m_OneUse(m_Intrinsic<Intrinsic::usub_sat>(
+                              m_Value(A), m_Value(B))),
+                          m_Deferred(B)))) {
+    return replaceInstUsesWith(
+        I, Builder.CreateIntrinsic(Intrinsic::umax, {I.getType()}, {A, B}));
   }
 
   // ctpop(A) + ctpop(B) => ctpop(A | B) if A and B have no bits set in common.
@@ -1928,10 +1932,10 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 static Instruction *factorizeLerp(BinaryOperator &I,
                                   InstCombiner::BuilderTy &Builder) {
   Value *X, *Y, *Z;
-  if (!match(&I, m_c_FAdd(m_OneUse(m_c_FMul(m_Value(Y),
-                                            m_OneUse(m_FSub(m_FPOne(),
-                                                            m_Value(Z))))),
-                          m_OneUse(m_c_FMul(m_Value(X), m_Deferred(Z))))))
+  if (!match(&I,
+             m_c_FAdd(m_OneUse(m_c_FMul(
+                          m_Value(Y), m_OneUse(m_FSub(m_FPOne(), m_Value(Z))))),
+                      m_OneUse(m_c_FMul(m_Value(X), m_Deferred(Z))))))
     return nullptr;
 
   // (Y * (1.0 - Z)) + (X * Z) --> Y + Z * (X - Y) [8 commuted variants]
@@ -1944,7 +1948,8 @@ static Instruction *factorizeLerp(BinaryOperator &I,
 static Instruction *factorizeFAddFSub(BinaryOperator &I,
                                       InstCombiner::BuilderTy &Builder) {
   assert((I.getOpcode() == Instruction::FAdd ||
-          I.getOpcode() == Instruction::FSub) && "Expecting fadd/fsub");
+          I.getOpcode() == Instruction::FSub) &&
+         "Expecting fadd/fsub");
   assert(I.hasAllowReassoc() && I.hasNoSignedZeros() &&
          "FP factorization requires FMF");
 
@@ -1987,9 +1992,9 @@ static Instruction *factorizeFAddFSub(BinaryOperator &I,
 }
 
 Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
-  if (Value *V = simplifyFAddInst(I.getOperand(0), I.getOperand(1),
-                                  I.getFastMathFlags(),
-                                  SQ.getWithInstruction(&I)))
+  if (Value *V =
+          simplifyFAddInst(I.getOperand(0), I.getOperand(1),
+                           I.getFastMathFlags(), SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (SimplifyAssociativeOrCommutative(I))
@@ -2279,9 +2284,9 @@ static Instruction *foldSubOfMinMax(BinaryOperator &I,
 }
 
 Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
-  if (Value *V = simplifySubInst(I.getOperand(0), I.getOperand(1),
-                                 I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
-                                 SQ.getWithInstruction(&I)))
+  if (Value *V =
+          simplifySubInst(I.getOperand(0), I.getOperand(1), I.hasNoSignedWrap(),
+                          I.hasNoUnsignedWrap(), SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *X = foldVectorBinop(I))
@@ -2812,8 +2817,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   const APInt *ShAmt;
   Type *Ty = I.getType();
   unsigned BitWidth = Ty->getScalarSizeInBits();
-  if (match(Op1, m_AShr(m_Value(A), m_APInt(ShAmt))) &&
-      Op1->hasNUses(2) && *ShAmt == BitWidth - 1 &&
+  if (match(Op1, m_AShr(m_Value(A), m_APInt(ShAmt))) && Op1->hasNUses(2) &&
+      *ShAmt == BitWidth - 1 &&
       match(Op0, m_OneUse(m_c_Xor(m_Specific(A), m_Specific(Op1))))) {
     // B = ashr i32 A, 31 ; smear the sign bit
     // sub (xor A, B), B  ; flip bits if negative and subtract -1 (add 1)

@@ -28,43 +28,44 @@ using namespace llvm;
 #include "MSP430GenRegisterInfo.inc"
 
 // FIXME: Provide proper call frame setup / destroy opcodes.
-MSP430RegisterInfo::MSP430RegisterInfo()
-  : MSP430GenRegisterInfo(MSP430::PC) {}
+MSP430RegisterInfo::MSP430RegisterInfo() : MSP430GenRegisterInfo(MSP430::PC) {}
 
-const MCPhysReg*
+const MCPhysReg *
 MSP430RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const MSP430FrameLowering *TFI = getFrameLowering(*MF);
-  const Function* F = &MF->getFunction();
+  const Function *F = &MF->getFunction();
   static const MCPhysReg CalleeSavedRegs[] = {
-    MSP430::R4, MSP430::R5, MSP430::R6, MSP430::R7,
-    MSP430::R8, MSP430::R9, MSP430::R10,
-    0
-  };
+      MSP430::R4, MSP430::R5, MSP430::R6,  MSP430::R7,
+      MSP430::R8, MSP430::R9, MSP430::R10, 0};
   static const MCPhysReg CalleeSavedRegsFP[] = {
-    MSP430::R5, MSP430::R6, MSP430::R7,
-    MSP430::R8, MSP430::R9, MSP430::R10,
-    0
-  };
-  static const MCPhysReg CalleeSavedRegsIntr[] = {
-    MSP430::R4,  MSP430::R5,  MSP430::R6,  MSP430::R7,
-    MSP430::R8,  MSP430::R9,  MSP430::R10, MSP430::R11,
-    MSP430::R12, MSP430::R13, MSP430::R14, MSP430::R15,
-    0
-  };
+      MSP430::R5, MSP430::R6,  MSP430::R7, MSP430::R8,
+      MSP430::R9, MSP430::R10, 0};
+  static const MCPhysReg CalleeSavedRegsIntr[] = {MSP430::R4,
+                                                  MSP430::R5,
+                                                  MSP430::R6,
+                                                  MSP430::R7,
+                                                  MSP430::R8,
+                                                  MSP430::R9,
+                                                  MSP430::R10,
+                                                  MSP430::R11,
+                                                  MSP430::R12,
+                                                  MSP430::R13,
+                                                  MSP430::R14,
+                                                  MSP430::R15,
+                                                  0};
   static const MCPhysReg CalleeSavedRegsIntrFP[] = {
-    MSP430::R5,  MSP430::R6,  MSP430::R7,
-    MSP430::R8,  MSP430::R9,  MSP430::R10, MSP430::R11,
-    MSP430::R12, MSP430::R13, MSP430::R14, MSP430::R15,
-    0
-  };
+      MSP430::R5,  MSP430::R6,  MSP430::R7,  MSP430::R8,
+      MSP430::R9,  MSP430::R10, MSP430::R11, MSP430::R12,
+      MSP430::R13, MSP430::R14, MSP430::R15, 0};
 
   if (TFI->hasFP(*MF))
-    return (F->getCallingConv() == CallingConv::MSP430_INTR ?
-            CalleeSavedRegsIntrFP : CalleeSavedRegsFP);
+    return (F->getCallingConv() == CallingConv::MSP430_INTR
+                ? CalleeSavedRegsIntrFP
+                : CalleeSavedRegsFP);
   else
-    return (F->getCallingConv() == CallingConv::MSP430_INTR ?
-            CalleeSavedRegsIntr : CalleeSavedRegs);
-
+    return (F->getCallingConv() == CallingConv::MSP430_INTR
+                ? CalleeSavedRegsIntr
+                : CalleeSavedRegs);
 }
 
 BitVector MSP430RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
@@ -95,10 +96,9 @@ MSP430RegisterInfo::getPointerRegClass(unsigned Kind) const {
   return &MSP430::GR16RegClass;
 }
 
-bool
-MSP430RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
-                                        int SPAdj, unsigned FIOperandNum,
-                                        RegScavenger *RS) const {
+bool MSP430RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+                                             int SPAdj, unsigned FIOperandNum,
+                                             RegScavenger *RS) const {
   assert(SPAdj == 0 && "Unexpected");
 
   MachineInstr &MI = *II;
@@ -141,10 +141,12 @@ MSP430RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     Register DstReg = MI.getOperand(0).getReg();
     if (Offset < 0)
       BuildMI(MBB, std::next(II), dl, TII.get(MSP430::SUB16ri), DstReg)
-        .addReg(DstReg).addImm(-Offset);
+          .addReg(DstReg)
+          .addImm(-Offset);
     else
       BuildMI(MBB, std::next(II), dl, TII.get(MSP430::ADD16ri), DstReg)
-        .addReg(DstReg).addImm(Offset);
+          .addReg(DstReg)
+          .addImm(Offset);
 
     return false;
   }

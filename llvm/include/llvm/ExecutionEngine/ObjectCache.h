@@ -35,7 +35,7 @@ public:
   /// Returns a pointer to a newly allocated MemoryBuffer that contains the
   /// object which corresponds with Module M, or 0 if an object is not
   /// available.
-  virtual std::unique_ptr<MemoryBuffer> getObject(const Module* M) = 0;
+  virtual std::unique_ptr<MemoryBuffer> getObject(const Module *M) = 0;
 };
 
 } // end namespace llvm

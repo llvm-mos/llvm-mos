@@ -1152,7 +1152,8 @@ public:
   /// Mapping from lexical scopes to blocks where variables in that scope are
   /// assigned. Such blocks aren't necessarily "in" the lexical scope, it's
   /// just a block where an assignment happens.
-  using ScopeToAssignBlocksT = DenseMap<const LexicalScope *, SmallPtrSet<MachineBasicBlock *, 4>>;
+  using ScopeToAssignBlocksT =
+      DenseMap<const LexicalScope *, SmallPtrSet<MachineBasicBlock *, 4>>;
 
 private:
   MachineDominatorTree *DomTree;
@@ -1510,18 +1511,16 @@ public:
     if (!MI.hasOneMemOperand())
       return false;
     auto *MemOperand = *MI.memoperands_begin();
-    return MemOperand->isStore() &&
-           MemOperand->getPseudoValue() &&
-           MemOperand->getPseudoValue()->kind() == PseudoSourceValue::FixedStack
-           && !MemOperand->getPseudoValue()->isAliased(MFI);
+    return MemOperand->isStore() && MemOperand->getPseudoValue() &&
+           MemOperand->getPseudoValue()->kind() ==
+               PseudoSourceValue::FixedStack &&
+           !MemOperand->getPseudoValue()->isAliased(MFI);
   }
 
   std::optional<LocIdx> findLocationForMemOperand(const MachineInstr &MI);
 
   // Utility for unit testing, don't use directly.
-  DebugVariableMap &getDVMap() {
-    return DVMap;
-  }
+  DebugVariableMap &getDVMap() { return DVMap; }
 };
 
 } // namespace LiveDebugValues

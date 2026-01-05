@@ -113,9 +113,8 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
   }
 
   auto &FileInfo = It->second;
-  LLVM_DEBUG({
-    dbgs() << "Registering ELF file info for \"" << FileName << "\"\n";
-  });
+  LLVM_DEBUG(
+      { dbgs() << "Registering ELF file info for \"" << FileName << "\"\n"; });
   for (auto &Sec : G.sections()) {
     LLVM_DEBUG({
       dbgs() << "  Section \"" << Sec.getName() << "\": "

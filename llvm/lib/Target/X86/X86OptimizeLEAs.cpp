@@ -340,8 +340,8 @@ bool X86OptimizeLEAPass::chooseBestLEA(
     const SmallVectorImpl<MachineInstr *> &List, const MachineInstr &MI,
     MachineInstr *&BestLEA, int64_t &AddrDispShift, int &Dist) {
   const MCInstrDesc &Desc = MI.getDesc();
-  int MemOpNo = X86II::getMemoryOperandNo(Desc.TSFlags) +
-                X86II::getOperandBias(Desc);
+  int MemOpNo =
+      X86II::getMemoryOperandNo(Desc.TSFlags) + X86II::getOperandBias(Desc);
 
   BestLEA = nullptr;
 
@@ -668,9 +668,8 @@ bool X86OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
 
           // Get the number of the first memory operand.
           const MCInstrDesc &Desc = MI.getDesc();
-          int MemOpNo =
-              X86II::getMemoryOperandNo(Desc.TSFlags) +
-              X86II::getOperandBias(Desc);
+          int MemOpNo = X86II::getMemoryOperandNo(Desc.TSFlags) +
+                        X86II::getOperandBias(Desc);
 
           // Update address base.
           MO.setReg(FirstVReg);
@@ -717,11 +716,10 @@ bool X86OptimizeLEAPass::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
   TRI = MF.getSubtarget<X86Subtarget>().getRegisterInfo();
-  auto *PSI =
-      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  auto *MBFI = (PSI && PSI->hasProfileSummary()) ?
-               &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
-               nullptr;
+  auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  auto *MBFI = (PSI && PSI->hasProfileSummary())
+                   ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
+                   : nullptr;
 
   // Process all basic blocks.
   for (auto &MBB : MF) {

@@ -64,8 +64,7 @@ static bool lowersToCopies(const MachineInstr &MI) {
   return false;
 }
 
-static bool isCrossCopy(const MachineRegisterInfo &MRI,
-                        const MachineInstr &MI,
+static bool isCrossCopy(const MachineRegisterInfo &MRI, const MachineInstr &MI,
                         const TargetRegisterClass *DstRC,
                         const MachineOperand &MO) {
   assert(lowersToCopies(MI));
@@ -85,7 +84,7 @@ static bool isCrossCopy(const MachineRegisterInfo &MRI,
     break;
   case TargetOpcode::REG_SEQUENCE: {
     unsigned OpNum = MO.getOperandNo();
-    DstSubIdx = MI.getOperand(OpNum+1).getImm();
+    DstSubIdx = MI.getOperand(OpNum + 1).getImm();
     break;
   }
   case TargetOpcode::EXTRACT_SUBREG: {
@@ -313,8 +312,8 @@ LaneBitmask DeadLaneDetector::determineInitialDefinedLanes(Register Reg) {
         }
         unsigned MOSubReg = MO.getSubReg();
         MODefinedLanes = MRI->getMaxLaneMaskForVReg(MOReg);
-        MODefinedLanes = TRI->reverseComposeSubRegIndexLaneMask(
-            MOSubReg, MODefinedLanes);
+        MODefinedLanes =
+            TRI->reverseComposeSubRegIndexLaneMask(MOSubReg, MODefinedLanes);
       }
 
       unsigned OpNum = MO.getOperandNo();

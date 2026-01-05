@@ -44,7 +44,6 @@ public:
   }
   ~RegisterScheduler() { Registry.Remove(this); }
 
-
   // Accessors.
   RegisterScheduler *getNext() const {
     return (RegisterScheduler *)MachinePassRegistryNode::getNext();

@@ -140,7 +140,7 @@ using Boolean = unsigned char; /* 0 or 1 */
 
 #define UNI_MAX_UTF8_BYTES_PER_CODE_POINT 4
 
-#define UNI_UTF16_BYTE_ORDER_MARK_NATIVE  0xFEFF
+#define UNI_UTF16_BYTE_ORDER_MARK_NATIVE 0xFEFF
 #define UNI_UTF16_BYTE_ORDER_MARK_SWAPPED 0xFFFE
 
 #define UNI_UTF32_BYTE_ORDER_MARK_NATIVE 0x0000FEFF
@@ -234,21 +234,21 @@ LLVM_ABI bool ConvertUTF8toWide(unsigned WideCharWidth, llvm::StringRef Source,
                                 char *&ResultPtr, const UTF8 *&ErrorPtr);
 
 /**
-* Converts a UTF-8 StringRef to a std::wstring.
-* \return true on success.
-*/
+ * Converts a UTF-8 StringRef to a std::wstring.
+ * \return true on success.
+ */
 LLVM_ABI bool ConvertUTF8toWide(llvm::StringRef Source, std::wstring &Result);
 
 /**
-* Converts a UTF-8 C-string to a std::wstring.
-* \return true on success.
-*/
+ * Converts a UTF-8 C-string to a std::wstring.
+ * \return true on success.
+ */
 LLVM_ABI bool ConvertUTF8toWide(const char *Source, std::wstring &Result);
 
 /**
-* Converts a std::wstring to a UTF-8 encoded std::string.
-* \return true on success.
-*/
+ * Converts a std::wstring to a UTF-8 encoded std::string.
+ * \return true on success.
+ */
 LLVM_ABI bool convertWideToUTF8(const std::wstring &Source,
                                 std::string &Result);
 
@@ -308,12 +308,12 @@ LLVM_ABI bool convertUTF16ToUTF8String(ArrayRef<char> SrcBytes,
                                        std::string &Out);
 
 /**
-* Converts a UTF16 string into a UTF8 std::string.
-*
-* \param [in] Src A buffer of UTF-16 encoded text.
-* \param [out] Out Converted UTF-8 is stored here on success.
-* \returns true on success
-*/
+ * Converts a UTF16 string into a UTF8 std::string.
+ *
+ * \param [in] Src A buffer of UTF-16 encoded text.
+ * \param [out] Out Converted UTF-8 is stored here on success.
+ * \returns true on success
+ */
 LLVM_ABI bool convertUTF16ToUTF8String(ArrayRef<UTF16> Src, std::string &Out);
 
 /**

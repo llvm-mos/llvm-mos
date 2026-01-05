@@ -51,20 +51,34 @@ enum ShiftExtendType {
 /// getShiftName - Get the string encoding for the shift type.
 static inline const char *getShiftExtendName(AArch64_AM::ShiftExtendType ST) {
   switch (ST) {
-  default: llvm_unreachable("unhandled shift type!");
-  case AArch64_AM::LSL: return "lsl";
-  case AArch64_AM::LSR: return "lsr";
-  case AArch64_AM::ASR: return "asr";
-  case AArch64_AM::ROR: return "ror";
-  case AArch64_AM::MSL: return "msl";
-  case AArch64_AM::UXTB: return "uxtb";
-  case AArch64_AM::UXTH: return "uxth";
-  case AArch64_AM::UXTW: return "uxtw";
-  case AArch64_AM::UXTX: return "uxtx";
-  case AArch64_AM::SXTB: return "sxtb";
-  case AArch64_AM::SXTH: return "sxth";
-  case AArch64_AM::SXTW: return "sxtw";
-  case AArch64_AM::SXTX: return "sxtx";
+  default:
+    llvm_unreachable("unhandled shift type!");
+  case AArch64_AM::LSL:
+    return "lsl";
+  case AArch64_AM::LSR:
+    return "lsr";
+  case AArch64_AM::ASR:
+    return "asr";
+  case AArch64_AM::ROR:
+    return "ror";
+  case AArch64_AM::MSL:
+    return "msl";
+  case AArch64_AM::UXTB:
+    return "uxtb";
+  case AArch64_AM::UXTH:
+    return "uxth";
+  case AArch64_AM::UXTW:
+    return "uxtw";
+  case AArch64_AM::UXTX:
+    return "uxtx";
+  case AArch64_AM::SXTB:
+    return "sxtb";
+  case AArch64_AM::SXTH:
+    return "sxth";
+  case AArch64_AM::SXTW:
+    return "sxtw";
+  case AArch64_AM::SXTX:
+    return "sxtx";
   }
   return nullptr;
 }
@@ -72,19 +86,23 @@ static inline const char *getShiftExtendName(AArch64_AM::ShiftExtendType ST) {
 /// getShiftType - Extract the shift type.
 static inline AArch64_AM::ShiftExtendType getShiftType(unsigned Imm) {
   switch ((Imm >> 6) & 0x7) {
-  default: return AArch64_AM::InvalidShiftExtend;
-  case 0: return AArch64_AM::LSL;
-  case 1: return AArch64_AM::LSR;
-  case 2: return AArch64_AM::ASR;
-  case 3: return AArch64_AM::ROR;
-  case 4: return AArch64_AM::MSL;
+  default:
+    return AArch64_AM::InvalidShiftExtend;
+  case 0:
+    return AArch64_AM::LSL;
+  case 1:
+    return AArch64_AM::LSR;
+  case 2:
+    return AArch64_AM::ASR;
+  case 3:
+    return AArch64_AM::ROR;
+  case 4:
+    return AArch64_AM::MSL;
   }
 }
 
 /// getShiftValue - Extract the shift value.
-static inline unsigned getShiftValue(unsigned Imm) {
-  return Imm & 0x3f;
-}
+static inline unsigned getShiftValue(unsigned Imm) { return Imm & 0x3f; }
 
 /// getShifterImm - Encode the shift type and amount:
 ///   imm:     6-bit shift amount
@@ -100,12 +118,23 @@ static inline unsigned getShifterImm(AArch64_AM::ShiftExtendType ST,
   assert((Imm & 0x3f) == Imm && "Illegal shifted immediate value!");
   unsigned STEnc = 0;
   switch (ST) {
-  default:  llvm_unreachable("Invalid shift requested");
-  case AArch64_AM::LSL: STEnc = 0; break;
-  case AArch64_AM::LSR: STEnc = 1; break;
-  case AArch64_AM::ASR: STEnc = 2; break;
-  case AArch64_AM::ROR: STEnc = 3; break;
-  case AArch64_AM::MSL: STEnc = 4; break;
+  default:
+    llvm_unreachable("Invalid shift requested");
+  case AArch64_AM::LSL:
+    STEnc = 0;
+    break;
+  case AArch64_AM::LSR:
+    STEnc = 1;
+    break;
+  case AArch64_AM::ASR:
+    STEnc = 2;
+    break;
+  case AArch64_AM::ROR:
+    STEnc = 3;
+    break;
+  case AArch64_AM::MSL:
+    STEnc = 4;
+    break;
   }
   return (STEnc << 6) | (Imm & 0x3f);
 }
@@ -115,23 +144,30 @@ static inline unsigned getShifterImm(AArch64_AM::ShiftExtendType ST,
 //
 
 /// getArithShiftValue - get the arithmetic shift value.
-static inline unsigned getArithShiftValue(unsigned Imm) {
-  return Imm & 0x7;
-}
+static inline unsigned getArithShiftValue(unsigned Imm) { return Imm & 0x7; }
 
 /// getExtendType - Extract the extend type for operands of arithmetic ops.
 static inline AArch64_AM::ShiftExtendType getExtendType(unsigned Imm) {
   assert((Imm & 0x7) == Imm && "invalid immediate!");
   switch (Imm) {
-  default: llvm_unreachable("Compiler bug!");
-  case 0: return AArch64_AM::UXTB;
-  case 1: return AArch64_AM::UXTH;
-  case 2: return AArch64_AM::UXTW;
-  case 3: return AArch64_AM::UXTX;
-  case 4: return AArch64_AM::SXTB;
-  case 5: return AArch64_AM::SXTH;
-  case 6: return AArch64_AM::SXTW;
-  case 7: return AArch64_AM::SXTX;
+  default:
+    llvm_unreachable("Compiler bug!");
+  case 0:
+    return AArch64_AM::UXTB;
+  case 1:
+    return AArch64_AM::UXTH;
+  case 2:
+    return AArch64_AM::UXTW;
+  case 3:
+    return AArch64_AM::UXTX;
+  case 4:
+    return AArch64_AM::SXTB;
+  case 5:
+    return AArch64_AM::SXTH;
+  case 6:
+    return AArch64_AM::SXTW;
+  case 7:
+    return AArch64_AM::SXTX;
   }
 }
 
@@ -150,15 +186,32 @@ static inline AArch64_AM::ShiftExtendType getArithExtendType(unsigned Imm) {
 ///            111 ==> sxtx
 inline unsigned getExtendEncoding(AArch64_AM::ShiftExtendType ET) {
   switch (ET) {
-  default: llvm_unreachable("Invalid extend type requested");
-  case AArch64_AM::UXTB: return 0; break;
-  case AArch64_AM::UXTH: return 1; break;
-  case AArch64_AM::UXTW: return 2; break;
-  case AArch64_AM::UXTX: return 3; break;
-  case AArch64_AM::SXTB: return 4; break;
-  case AArch64_AM::SXTH: return 5; break;
-  case AArch64_AM::SXTW: return 6; break;
-  case AArch64_AM::SXTX: return 7; break;
+  default:
+    llvm_unreachable("Invalid extend type requested");
+  case AArch64_AM::UXTB:
+    return 0;
+    break;
+  case AArch64_AM::UXTH:
+    return 1;
+    break;
+  case AArch64_AM::UXTW:
+    return 2;
+    break;
+  case AArch64_AM::UXTX:
+    return 3;
+    break;
+  case AArch64_AM::SXTB:
+    return 4;
+    break;
+  case AArch64_AM::SXTH:
+    return 5;
+    break;
+  case AArch64_AM::SXTW:
+    return 6;
+    break;
+  case AArch64_AM::SXTX:
+    return 7;
+    break;
   }
 }
 
@@ -175,9 +228,7 @@ static inline unsigned getArithExtendImm(AArch64_AM::ShiftExtendType ET,
 
 /// getMemDoShift - Extract the "do shift" flag value for load/store
 /// instructions.
-static inline bool getMemDoShift(unsigned Imm) {
-  return (Imm & 0x1) != 0;
-}
+static inline bool getMemDoShift(unsigned Imm) { return (Imm & 0x1) != 0; }
 
 /// getExtendType - Extract the extend type for the offset operand of
 /// loads/stores.
@@ -203,7 +254,7 @@ static inline unsigned getMemExtendImm(AArch64_AM::ShiftExtendType ET,
 }
 
 static inline uint64_t ror(uint64_t elt, unsigned size) {
-  return ((elt & 1) << (size-1)) | (elt >> 1);
+  return ((elt & 1) << (size - 1)) | (elt >> 1);
 }
 
 /// processLogicalImmediate - Determine if an immediate value can be encoded
@@ -214,7 +265,7 @@ static inline bool processLogicalImmediate(uint64_t Imm, unsigned RegSize,
                                            uint64_t &Encoding) {
   if (Imm == 0ULL || Imm == ~0ULL ||
       (RegSize != 64 &&
-        (Imm >> RegSize != 0 || Imm == (~0ULL >> (64 - RegSize)))))
+       (Imm >> RegSize != 0 || Imm == (~0ULL >> (64 - RegSize)))))
     return false;
 
   // First, determine the element size.
@@ -257,11 +308,11 @@ static inline bool processLogicalImmediate(uint64_t Imm, unsigned RegSize,
 
   // If size has a 1 in the n'th bit, create a value that has zeroes in
   // bits [0, n] and ones above that.
-  uint64_t NImms = ~(Size-1) << 1;
+  uint64_t NImms = ~(Size - 1) << 1;
 
   // Or the CTO value into the low bits, which must be below the Nth bit
   // bit mentioned above.
-  NImms |= (CTO-1);
+  NImms |= (CTO - 1);
 
   // Extract the seventh bit and toggle it to create the N field.
   unsigned N = ((NImms >> 6) & 1) ^ 1;
@@ -366,8 +417,8 @@ static inline float getFPImmFloat(unsigned Imm) {
 /// floating-point value, then return -1.
 static inline int getFP16Imm(const APInt &Imm) {
   uint32_t Sign = Imm.lshr(15).getZExtValue() & 1;
-  int32_t Exp = (Imm.lshr(10).getSExtValue() & 0x1f) - 15;  // -14 to 15
-  int32_t Mantissa = Imm.getZExtValue() & 0x3ff;  // 10 bits
+  int32_t Exp = (Imm.lshr(10).getSExtValue() & 0x1f) - 15; // -14 to 15
+  int32_t Mantissa = Imm.getZExtValue() & 0x3ff;           // 10 bits
 
   // We can handle 4 bits of mantissa.
   // mantissa = (16+UInt(e:f:g:h))/16.
@@ -378,7 +429,7 @@ static inline int getFP16Imm(const APInt &Imm) {
   // We can handle 3 bits of exponent: exp == UInt(NOT(b):c:d)-3
   if (Exp < -3 || Exp > 4)
     return -1;
-  Exp = ((Exp+3) & 0x7) ^ 4;
+  Exp = ((Exp + 3) & 0x7) ^ 4;
 
   return ((int)Sign << 7) | (Exp << 4) | Mantissa;
 }
@@ -392,8 +443,8 @@ static inline int getFP16Imm(const APFloat &FPImm) {
 /// floating-point value, then return -1.
 static inline int getFP32Imm(const APInt &Imm) {
   uint32_t Sign = Imm.lshr(31).getZExtValue() & 1;
-  int32_t Exp = (Imm.lshr(23).getSExtValue() & 0xff) - 127;  // -126 to 127
-  int64_t Mantissa = Imm.getZExtValue() & 0x7fffff;  // 23 bits
+  int32_t Exp = (Imm.lshr(23).getSExtValue() & 0xff) - 127; // -126 to 127
+  int64_t Mantissa = Imm.getZExtValue() & 0x7fffff;         // 23 bits
 
   // We can handle 4 bits of mantissa.
   // mantissa = (16+UInt(e:f:g:h))/16.
@@ -406,7 +457,7 @@ static inline int getFP32Imm(const APInt &Imm) {
   // We can handle 3 bits of exponent: exp == UInt(NOT(b):c:d)-3
   if (Exp < -3 || Exp > 4)
     return -1;
-  Exp = ((Exp+3) & 0x7) ^ 4;
+  Exp = ((Exp + 3) & 0x7) ^ 4;
 
   return ((int)Sign << 7) | (Exp << 4) | Mantissa;
 }
@@ -420,7 +471,7 @@ static inline int getFP32Imm(const APFloat &FPImm) {
 /// floating-point value, then return -1.
 static inline int getFP64Imm(const APInt &Imm) {
   uint64_t Sign = Imm.lshr(63).getZExtValue() & 1;
-  int64_t Exp = (Imm.lshr(52).getSExtValue() & 0x7ff) - 1023;   // -1022 to 1023
+  int64_t Exp = (Imm.lshr(52).getSExtValue() & 0x7ff) - 1023; // -1022 to 1023
   uint64_t Mantissa = Imm.getZExtValue() & 0xfffffffffffffULL;
 
   // We can handle 4 bits of mantissa.
@@ -434,7 +485,7 @@ static inline int getFP64Imm(const APInt &Imm) {
   // We can handle 3 bits of exponent: exp == UInt(NOT(b):c:d)-3
   if (Exp < -3 || Exp > 4)
     return -1;
-  Exp = ((Exp+3) & 0x7) ^ 4;
+  Exp = ((Exp + 3) & 0x7) ^ 4;
 
   return ((int)Sign << 7) | (Exp << 4) | Mantissa;
 }
@@ -662,14 +713,22 @@ static inline uint8_t encodeAdvSIMDModImmType10(uint64_t Imm) {
 
 static inline uint64_t decodeAdvSIMDModImmType10(uint8_t Imm) {
   uint64_t EncVal = 0;
-  if (Imm & 0x80) EncVal |= 0xff00000000000000ULL;
-  if (Imm & 0x40) EncVal |= 0x00ff000000000000ULL;
-  if (Imm & 0x20) EncVal |= 0x0000ff0000000000ULL;
-  if (Imm & 0x10) EncVal |= 0x000000ff00000000ULL;
-  if (Imm & 0x08) EncVal |= 0x00000000ff000000ULL;
-  if (Imm & 0x04) EncVal |= 0x0000000000ff0000ULL;
-  if (Imm & 0x02) EncVal |= 0x000000000000ff00ULL;
-  if (Imm & 0x01) EncVal |= 0x00000000000000ffULL;
+  if (Imm & 0x80)
+    EncVal |= 0xff00000000000000ULL;
+  if (Imm & 0x40)
+    EncVal |= 0x00ff000000000000ULL;
+  if (Imm & 0x20)
+    EncVal |= 0x0000ff0000000000ULL;
+  if (Imm & 0x10)
+    EncVal |= 0x000000ff00000000ULL;
+  if (Imm & 0x08)
+    EncVal |= 0x00000000ff000000ULL;
+  if (Imm & 0x04)
+    EncVal |= 0x0000000000ff0000ULL;
+  if (Imm & 0x02)
+    EncVal |= 0x000000000000ff00ULL;
+  if (Imm & 0x01)
+    EncVal |= 0x00000000000000ffULL;
   return EncVal;
 }
 
@@ -711,15 +770,24 @@ static inline uint8_t encodeAdvSIMDModImmType11(uint64_t Imm) {
 
 static inline uint64_t decodeAdvSIMDModImmType11(uint8_t Imm) {
   uint64_t EncVal = 0;
-  if (Imm & 0x80) EncVal |= 0x80000000ULL;
-  if (Imm & 0x40) EncVal |= 0x3e000000ULL;
-  else            EncVal |= 0x40000000ULL;
-  if (Imm & 0x20) EncVal |= 0x01000000ULL;
-  if (Imm & 0x10) EncVal |= 0x00800000ULL;
-  if (Imm & 0x08) EncVal |= 0x00400000ULL;
-  if (Imm & 0x04) EncVal |= 0x00200000ULL;
-  if (Imm & 0x02) EncVal |= 0x00100000ULL;
-  if (Imm & 0x01) EncVal |= 0x00080000ULL;
+  if (Imm & 0x80)
+    EncVal |= 0x80000000ULL;
+  if (Imm & 0x40)
+    EncVal |= 0x3e000000ULL;
+  else
+    EncVal |= 0x40000000ULL;
+  if (Imm & 0x20)
+    EncVal |= 0x01000000ULL;
+  if (Imm & 0x10)
+    EncVal |= 0x00800000ULL;
+  if (Imm & 0x08)
+    EncVal |= 0x00400000ULL;
+  if (Imm & 0x04)
+    EncVal |= 0x00200000ULL;
+  if (Imm & 0x02)
+    EncVal |= 0x00100000ULL;
+  if (Imm & 0x01)
+    EncVal |= 0x00080000ULL;
   return (EncVal << 32) | EncVal;
 }
 
@@ -727,7 +795,7 @@ static inline uint64_t decodeAdvSIMDModImmType11(uint8_t Imm) {
 static inline bool isAdvSIMDModImmType12(uint64_t Imm) {
   uint64_t BString = (Imm & 0x7fc0000000000000ULL) >> 54;
   return ((BString == 0xff || BString == 0x100) &&
-         ((Imm & 0x0000ffffffffffffULL) == 0));
+          ((Imm & 0x0000ffffffffffffULL) == 0));
 }
 
 static inline uint8_t encodeAdvSIMDModImmType12(uint64_t Imm) {
@@ -760,15 +828,24 @@ static inline uint8_t encodeAdvSIMDModImmType12(uint64_t Imm) {
 
 static inline uint64_t decodeAdvSIMDModImmType12(uint8_t Imm) {
   uint64_t EncVal = 0;
-  if (Imm & 0x80) EncVal |= 0x8000000000000000ULL;
-  if (Imm & 0x40) EncVal |= 0x3fc0000000000000ULL;
-  else            EncVal |= 0x4000000000000000ULL;
-  if (Imm & 0x20) EncVal |= 0x0020000000000000ULL;
-  if (Imm & 0x10) EncVal |= 0x0010000000000000ULL;
-  if (Imm & 0x08) EncVal |= 0x0008000000000000ULL;
-  if (Imm & 0x04) EncVal |= 0x0004000000000000ULL;
-  if (Imm & 0x02) EncVal |= 0x0002000000000000ULL;
-  if (Imm & 0x01) EncVal |= 0x0001000000000000ULL;
+  if (Imm & 0x80)
+    EncVal |= 0x8000000000000000ULL;
+  if (Imm & 0x40)
+    EncVal |= 0x3fc0000000000000ULL;
+  else
+    EncVal |= 0x4000000000000000ULL;
+  if (Imm & 0x20)
+    EncVal |= 0x0020000000000000ULL;
+  if (Imm & 0x10)
+    EncVal |= 0x0010000000000000ULL;
+  if (Imm & 0x08)
+    EncVal |= 0x0008000000000000ULL;
+  if (Imm & 0x04)
+    EncVal |= 0x0004000000000000ULL;
+  if (Imm & 0x02)
+    EncVal |= 0x0002000000000000ULL;
+  if (Imm & 0x01)
+    EncVal |= 0x0001000000000000ULL;
   return (EncVal << 32) | EncVal;
 }
 
@@ -780,8 +857,7 @@ static inline bool isSVEMaskOfIdenticalElements(int64_t Imm) {
 }
 
 /// Returns true if Imm is valid for CPY/DUP.
-template <typename T>
-static inline bool isSVECpyImm(int64_t Imm) {
+template <typename T> static inline bool isSVECpyImm(int64_t Imm) {
   // Imm is interpreted as a signed value, which means top bits must be all ones
   // (sign bits if the immediate value is negative and passed in a larger
   // container), or all zeroes.
@@ -803,8 +879,7 @@ static inline bool isSVECpyImm(int64_t Imm) {
 }
 
 /// Returns true if Imm is valid for ADD/SUB.
-template <typename T>
-static inline bool isSVEAddSubImm(int64_t Imm) {
+template <typename T> static inline bool isSVEAddSubImm(int64_t Imm) {
   bool IsInt8t = std::is_same<int8_t, std::make_signed_t<T>>::value ||
                  std::is_same<int8_t, T>::value;
   return uint8_t(Imm) == Imm || (!IsInt8t && uint16_t(Imm & ~0xff) == Imm);

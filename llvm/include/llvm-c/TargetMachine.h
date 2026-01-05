@@ -37,36 +37,33 @@ typedef struct LLVMOpaqueTargetMachine *LLVMTargetMachineRef;
 typedef struct LLVMTarget *LLVMTargetRef;
 
 typedef enum {
-    LLVMCodeGenLevelNone,
-    LLVMCodeGenLevelLess,
-    LLVMCodeGenLevelDefault,
-    LLVMCodeGenLevelAggressive
+  LLVMCodeGenLevelNone,
+  LLVMCodeGenLevelLess,
+  LLVMCodeGenLevelDefault,
+  LLVMCodeGenLevelAggressive
 } LLVMCodeGenOptLevel;
 
 typedef enum {
-    LLVMRelocDefault,
-    LLVMRelocStatic,
-    LLVMRelocPIC,
-    LLVMRelocDynamicNoPic,
-    LLVMRelocROPI,
-    LLVMRelocRWPI,
-    LLVMRelocROPI_RWPI
+  LLVMRelocDefault,
+  LLVMRelocStatic,
+  LLVMRelocPIC,
+  LLVMRelocDynamicNoPic,
+  LLVMRelocROPI,
+  LLVMRelocRWPI,
+  LLVMRelocROPI_RWPI
 } LLVMRelocMode;
 
 typedef enum {
-    LLVMCodeModelDefault,
-    LLVMCodeModelJITDefault,
-    LLVMCodeModelTiny,
-    LLVMCodeModelSmall,
-    LLVMCodeModelKernel,
-    LLVMCodeModelMedium,
-    LLVMCodeModelLarge
+  LLVMCodeModelDefault,
+  LLVMCodeModelJITDefault,
+  LLVMCodeModelTiny,
+  LLVMCodeModelSmall,
+  LLVMCodeModelKernel,
+  LLVMCodeModelMedium,
+  LLVMCodeModelLarge
 } LLVMCodeModel;
 
-typedef enum {
-    LLVMAssemblyFile,
-    LLVMObjectFile
-} LLVMCodeGenFileType;
+typedef enum { LLVMAssemblyFile, LLVMObjectFile } LLVMCodeGenFileType;
 
 typedef enum {
   LLVMGlobalISelAbortEnable,
@@ -76,7 +73,8 @@ typedef enum {
 
 /** Returns the first llvm::Target in the registered targets list. */
 LLVM_C_ABI LLVMTargetRef LLVMGetFirstTarget(void);
-/** Returns the next llvm::Target given a previous one (or null if there's none) */
+/** Returns the next llvm::Target given a previous one (or null if there's none)
+ */
 LLVM_C_ABI LLVMTargetRef LLVMGetNextTarget(LLVMTargetRef T);
 
 /*===-- Target ------------------------------------------------------------===*/

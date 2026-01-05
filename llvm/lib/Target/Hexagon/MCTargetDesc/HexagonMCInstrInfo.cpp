@@ -239,7 +239,7 @@ void HexagonMCInstrInfo::extendIfNeeded(MCContext &Context,
 }
 
 unsigned HexagonMCInstrInfo::getMemAccessSize(MCInstrInfo const &MCII,
-      MCInst const &MCI) {
+                                              MCInst const &MCI) {
   uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
   unsigned S = (F >> HexagonII::MemAccessSizePos) & HexagonII::MemAccesSizeMask;
   return HexagonII::getMemAccessSizeInBytes(HexagonII::MemAccessSize(S));
@@ -428,8 +428,8 @@ unsigned HexagonMCInstrInfo::getType(MCInstrInfo const &MCII,
 
 /// Return the resources used by this instruction
 unsigned HexagonMCInstrInfo::getCVIResources(MCInstrInfo const &MCII,
-                                      MCSubtargetInfo const &STI,
-                                      MCInst const &MCI) {
+                                             MCSubtargetInfo const &STI,
+                                             MCInst const &MCI) {
 
   const InstrItinerary *II = STI.getSchedModel().InstrItineraries;
   int SchedClass = HexagonMCInstrInfo::getDesc(MCII, MCI).getSchedClass();
@@ -921,9 +921,7 @@ unsigned HexagonMCInstrInfo::packetSizeSlots(MCSubtargetInfo const &STI) {
 }
 
 unsigned HexagonMCInstrInfo::packetSize(StringRef CPU) {
-  return llvm::StringSwitch<unsigned>(CPU)
-      .Case("hexagonv67t", 3)
-      .Default(4);
+  return llvm::StringSwitch<unsigned>(CPU).Case("hexagonv67t", 3).Default(4);
 }
 
 void HexagonMCInstrInfo::padEndloop(MCInst &MCB, MCContext &Context) {
@@ -974,7 +972,7 @@ bool HexagonMCInstrInfo::hasHvxTmp(MCInstrInfo const &MCII, MCInst const &MCI) {
 bool HexagonMCInstrInfo::requiresSlot(MCSubtargetInfo const &STI,
                                       MCInst const &MCI) {
   const unsigned OpCode = MCI.getOpcode();
-  const bool IsTiny = STI.getFeatureBits() [Hexagon::ProcTinyCore];
+  const bool IsTiny = STI.getFeatureBits()[Hexagon::ProcTinyCore];
   const bool NoSlotReqd = Hexagon::A4_ext == OpCode ||
                           (IsTiny && Hexagon::A2_nop == OpCode) ||
                           (IsTiny && Hexagon::J4_hintjumpr == OpCode);

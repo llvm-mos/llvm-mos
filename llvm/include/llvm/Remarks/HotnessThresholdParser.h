@@ -29,7 +29,8 @@ namespace remarks {
 //
 // Return std::nullopt Optional if 'auto' is specified, indicating the value
 // will be filled later during PSI.
-inline Expected<std::optional<uint64_t>> parseHotnessThresholdOption(StringRef Arg) {
+inline Expected<std::optional<uint64_t>>
+parseHotnessThresholdOption(StringRef Arg) {
   if (Arg == "auto")
     return std::nullopt;
 
@@ -45,7 +46,8 @@ inline Expected<std::optional<uint64_t>> parseHotnessThresholdOption(StringRef A
 // A simple CL parser for '*-remarks-hotness-threshold='
 class HotnessThresholdParser : public cl::parser<std::optional<uint64_t>> {
 public:
-  HotnessThresholdParser(cl::Option &O) : cl::parser<std::optional<uint64_t>>(O) {}
+  HotnessThresholdParser(cl::Option &O)
+      : cl::parser<std::optional<uint64_t>>(O) {}
 
   bool parse(cl::Option &O, StringRef ArgName, StringRef Arg,
              std::optional<uint64_t> &V) {

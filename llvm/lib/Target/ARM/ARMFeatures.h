@@ -17,10 +17,10 @@
 
 namespace llvm {
 
-template<typename InstrType> // could be MachineInstr or MCInst
+template <typename InstrType> // could be MachineInstr or MCInst
 bool IsCPSRDead(const InstrType *Instr);
 
-template<typename InstrType> // could be MachineInstr or MCInst
+template <typename InstrType> // could be MachineInstr or MCInst
 inline bool isV8EligibleForIT(const InstrType *Instr) {
   switch (Instr->getOpcode()) {
   default:
@@ -72,7 +72,7 @@ inline bool isV8EligibleForIT(const InstrType *Instr) {
   case ARM::tSTRspi:
   case ARM::tTST:
     return true;
-// there are some "conditionally deprecated" opcodes
+    // there are some "conditionally deprecated" opcodes
   case ARM::tADDspr:
   case ARM::tBLXr:
   case ARM::tBLXr_noip:
@@ -92,6 +92,6 @@ inline bool isV8EligibleForIT(const InstrType *Instr) {
   }
 }
 
-}
+} // namespace llvm
 
 #endif

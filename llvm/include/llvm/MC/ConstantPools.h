@@ -30,7 +30,7 @@ class MCSymbolRefExpr;
 
 struct ConstantPoolEntry {
   ConstantPoolEntry(MCSymbol *L, const MCExpr *Val, unsigned Sz, SMLoc Loc_)
-    : Label(L), Value(Val), Size(Sz), Loc(Loc_) {}
+      : Label(L), Value(Val), Size(Sz), Loc(Loc_) {}
 
   MCSymbol *Label;
   const MCExpr *Value;
@@ -60,8 +60,8 @@ public:
   // \param Size is the size in bytes of the entry
   //
   // \returns a MCExpr that references the newly inserted value
-  const MCExpr *addEntry(const MCExpr *Value, MCContext &Context,
-                         unsigned Size, SMLoc Loc);
+  const MCExpr *addEntry(const MCExpr *Value, MCContext &Context, unsigned Size,
+                         SMLoc Loc);
 
   // Emit the contents of the constant pool using the provided streamer.
   void emitEntries(MCStreamer &Streamer);

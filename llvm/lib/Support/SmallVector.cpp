@@ -36,7 +36,7 @@ struct Struct32B {
 #if defined(_AIX)
 #pragma GCC diagnostic pop
 #endif
-}
+} // namespace
 static_assert(sizeof(SmallVector<void *, 0>) ==
                   sizeof(unsigned) * 2 + sizeof(void *),
               "wasted space in SmallVector size 0");

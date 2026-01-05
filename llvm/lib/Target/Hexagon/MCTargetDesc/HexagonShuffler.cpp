@@ -106,12 +106,12 @@ unsigned HexagonResource::setWeight(unsigned s) {
 }
 
 HexagonCVIResource::HexagonCVIResource(MCInstrInfo const &MCII,
-                                       MCSubtargetInfo const &STI,
-                                       unsigned s,
+                                       MCSubtargetInfo const &STI, unsigned s,
                                        MCInst const *id)
     : HexagonResource(s) {
 
-  const unsigned ItinUnits = HexagonMCInstrInfo::getCVIResources(MCII, STI, *id);
+  const unsigned ItinUnits =
+      HexagonMCInstrInfo::getCVIResources(MCII, STI, *id);
   unsigned Lanes;
   const unsigned Units = HexagonConvertUnits(ItinUnits, &Lanes);
 
@@ -138,8 +138,7 @@ struct CVIUnits {
 };
 using HVXInstsT = SmallVector<struct CVIUnits, 8>;
 
-static unsigned makeAllBits(unsigned startBit, unsigned Lanes)
-{
+static unsigned makeAllBits(unsigned startBit, unsigned Lanes) {
   for (unsigned i = 1; i < Lanes; ++i)
     startBit = (startBit << 1) | startBit;
   return startBit;
@@ -184,7 +183,6 @@ void HexagonShuffler::append(MCInst const &ID, MCInst const *Extender,
 
   Packet.push_back(PI);
 }
-
 
 static const unsigned Slot0Mask = 1 << 0;
 static const unsigned Slot1Mask = 1 << 1;
@@ -440,12 +438,12 @@ bool HexagonShuffler::restrictStoreLoadOrder(
 }
 
 static std::string SlotMaskToText(unsigned SlotMask) {
-    SmallVector<std::string, HEXAGON_PRESHUFFLE_PACKET_SIZE> Slots;
-    for (unsigned SlotNum = 0; SlotNum < HEXAGON_PACKET_SIZE; SlotNum++)
-        if ((SlotMask & (1 << SlotNum)) != 0)
-            Slots.push_back(utostr(SlotNum));
+  SmallVector<std::string, HEXAGON_PRESHUFFLE_PACKET_SIZE> Slots;
+  for (unsigned SlotNum = 0; SlotNum < HEXAGON_PACKET_SIZE; SlotNum++)
+    if ((SlotMask & (1 << SlotNum)) != 0)
+      Slots.push_back(utostr(SlotNum));
 
-    return llvm::join(Slots, StringRef(", "));
+  return llvm::join(Slots, StringRef(", "));
 }
 
 HexagonShuffler::HexagonPacketSummary HexagonShuffler::GetPacketSummary() {
@@ -468,9 +466,10 @@ HexagonShuffler::HexagonPacketSummary HexagonShuffler::GetPacketSummary() {
         HexagonMCInstrInfo::getOtherReservedSlots(MCII, STI, ID);
     Summary.ReservedSlotMask |= ReservedSlots;
     if (ReservedSlots != 0)
-      AppliedRestrictions.push_back(std::make_pair(ID.getLoc(),
-                  (Twine("Instruction has reserved slots: ") +
-                   SlotMaskToText(ReservedSlots)).str()));
+      AppliedRestrictions.push_back(std::make_pair(
+          ID.getLoc(), (Twine("Instruction has reserved slots: ") +
+                        SlotMaskToText(ReservedSlots))
+                           .str()));
 
     switch (HexagonMCInstrInfo::getType(MCII, ID)) {
     case HexagonII::TypeS_2op:
@@ -634,13 +633,11 @@ HexagonShuffler::tryAuction(HexagonPacketSummary const &Summary) {
         return AuctionCore.bid(I.Core.getUnits());
       });
 
-  LLVM_DEBUG(
-    dbgs() << "Shuffle attempt: " << (ValidSlots ? "passed" : "failed")
-           << "\n";
-    for (HexagonInstr const &ISJ : insts(PacketResult))
-      dbgs() << "\t" << HexagonMCInstrInfo::getName(MCII, *ISJ.ID) << ": "
-             << llvm::format_hex(ISJ.Core.getUnits(), 4, true) << "\n";
-  );
+  LLVM_DEBUG(dbgs() << "Shuffle attempt: " << (ValidSlots ? "passed" : "failed")
+                    << "\n";
+             for (HexagonInstr const &ISJ : insts(PacketResult)) dbgs()
+             << "\t" << HexagonMCInstrInfo::getName(MCII, *ISJ.ID) << ": "
+             << llvm::format_hex(ISJ.Core.getUnits(), 4, true) << "\n";);
 
   std::optional<HexagonPacket> Res;
   if (ValidSlots)
@@ -685,29 +682,27 @@ bool HexagonShuffler::shuffle() {
         ++emptySlots;
     }
 
-  LLVM_DEBUG(
-    for (HexagonInstr const &ISJ : insts()) {
-      dbgs().write_hex(ISJ.Core.getUnits());
-      if (ISJ.CVI.isValid()) {
-        dbgs() << '/';
-        dbgs().write_hex(ISJ.CVI.getUnits()) << '|';
-        dbgs() << ISJ.CVI.getLanes();
-      }
-      dbgs() << ':'
-             << HexagonMCInstrInfo::getDesc(MCII, ISJ.getDesc()).getOpcode()
-             << '\n';
-    } dbgs() << '\n';
-  );
+  LLVM_DEBUG(for (HexagonInstr const &ISJ : insts()) {
+    dbgs().write_hex(ISJ.Core.getUnits());
+    if (ISJ.CVI.isValid()) {
+      dbgs() << '/';
+      dbgs().write_hex(ISJ.CVI.getUnits()) << '|';
+      dbgs() << ISJ.CVI.getLanes();
+    }
+    dbgs() << ':'
+           << HexagonMCInstrInfo::getDesc(MCII, ISJ.getDesc()).getOpcode()
+           << '\n';
+  } dbgs() << '\n';);
 
   return Ok;
 }
 
-void HexagonShuffler::reportResourceError(HexagonPacketSummary const &Summary, StringRef Err) {
+void HexagonShuffler::reportResourceError(HexagonPacketSummary const &Summary,
+                                          StringRef Err) {
   if (ReportErrors)
     reportResourceUsage(Summary);
   reportError(Twine("invalid instruction packet: ") + Err);
 }
-
 
 void HexagonShuffler::reportResourceUsage(HexagonPacketSummary const &Summary) {
   auto SM = Context.getSourceManager();
@@ -718,12 +713,10 @@ void HexagonShuffler::reportResourceUsage(HexagonPacketSummary const &Summary) {
       if (HexagonMCInstrInfo::requiresSlot(STI, *I.ID)) {
         const std::string UnitsText = Units ? SlotMaskToText(Units) : "<None>";
         SM->PrintMessage(I.ID->getLoc(), SourceMgr::DK_Note,
-                Twine("Instruction can utilize slots: ") +
-                UnitsText);
-      }
-      else if (!HexagonMCInstrInfo::isImmext(*I.ID))
+                         Twine("Instruction can utilize slots: ") + UnitsText);
+      } else if (!HexagonMCInstrInfo::isImmext(*I.ID))
         SM->PrintMessage(I.ID->getLoc(), SourceMgr::DK_Note,
-                       "Instruction does not require a slot");
+                         "Instruction does not require a slot");
     }
   }
 }

@@ -116,8 +116,8 @@ BasicBlock *X86LowerAMXIntrinsics::createLoop(BasicBlock *Preheader,
   Type *I16Ty = Type::getInt16Ty(Ctx);
   BranchInst::Create(Body, Header);
   BranchInst::Create(Latch, Body);
-  PHINode *IV =
-      PHINode::Create(I16Ty, 2, Name + ".iv", Header->getTerminator()->getIterator());
+  PHINode *IV = PHINode::Create(I16Ty, 2, Name + ".iv",
+                                Header->getTerminator()->getIterator());
   IV->addIncoming(ConstantInt::get(I16Ty, 0), Preheader);
 
   B.SetInsertPoint(Latch);

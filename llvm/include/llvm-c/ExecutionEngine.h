@@ -171,13 +171,13 @@ LLVM_C_ABI LLVMBool LLVMExecutionEngineGetErrMsg(LLVMExecutionEngineRef EE,
 /*===-- Operations on memory managers -------------------------------------===*/
 
 typedef uint8_t *(*LLVMMemoryManagerAllocateCodeSectionCallback)(
-  void *Opaque, uintptr_t Size, unsigned Alignment, unsigned SectionID,
-  const char *SectionName);
+    void *Opaque, uintptr_t Size, unsigned Alignment, unsigned SectionID,
+    const char *SectionName);
 typedef uint8_t *(*LLVMMemoryManagerAllocateDataSectionCallback)(
-  void *Opaque, uintptr_t Size, unsigned Alignment, unsigned SectionID,
-  const char *SectionName, LLVMBool IsReadOnly);
-typedef LLVMBool (*LLVMMemoryManagerFinalizeMemoryCallback)(
-  void *Opaque, char **ErrMsg);
+    void *Opaque, uintptr_t Size, unsigned Alignment, unsigned SectionID,
+    const char *SectionName, LLVMBool IsReadOnly);
+typedef LLVMBool (*LLVMMemoryManagerFinalizeMemoryCallback)(void *Opaque,
+                                                            char **ErrMsg);
 typedef void (*LLVMMemoryManagerDestroyCallback)(void *Opaque);
 
 /**

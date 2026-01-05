@@ -90,7 +90,7 @@ public:
 //    %Z = add int 2, %X
 //
 LLVM_ABI FunctionPass *createInstructionCombiningPass();
-}
+} // namespace llvm
 
 #undef DEBUG_TYPE
 

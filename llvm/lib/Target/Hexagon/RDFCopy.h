@@ -9,10 +9,10 @@
 #ifndef LLVM_LIB_TARGET_HEXAGON_RDFCOPY_H
 #define LLVM_LIB_TARGET_HEXAGON_RDFCOPY_H
 
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/RDFGraph.h"
 #include "llvm/CodeGen/RDFLiveness.h"
 #include "llvm/CodeGen/RDFRegisters.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include <map>
 #include <vector>
 
@@ -24,36 +24,36 @@ class MachineInstr;
 
 namespace rdf {
 
-  struct CopyPropagation {
-    CopyPropagation(DataFlowGraph &dfg)
-        : MDT(dfg.getDT()), DFG(dfg), RDefMap(RegisterRefLess(DFG.getPRI())) {}
+struct CopyPropagation {
+  CopyPropagation(DataFlowGraph &dfg)
+      : MDT(dfg.getDT()), DFG(dfg), RDefMap(RegisterRefLess(DFG.getPRI())) {}
 
-    virtual ~CopyPropagation() = default;
+  virtual ~CopyPropagation() = default;
 
-    bool run();
-    void trace(bool On) { Trace = On; }
-    bool trace() const { return Trace; }
-    DataFlowGraph &getDFG() { return DFG; }
+  bool run();
+  void trace(bool On) { Trace = On; }
+  bool trace() const { return Trace; }
+  DataFlowGraph &getDFG() { return DFG; }
 
-    using EqualityMap = std::map<RegisterRef, RegisterRef, RegisterRefLess>;
-    virtual bool interpretAsCopy(const MachineInstr *MI, EqualityMap &EM);
+  using EqualityMap = std::map<RegisterRef, RegisterRef, RegisterRefLess>;
+  virtual bool interpretAsCopy(const MachineInstr *MI, EqualityMap &EM);
 
-  private:
-    const MachineDominatorTree &MDT;
-    DataFlowGraph &DFG;
-    DataFlowGraph::DefStackMap DefM;
-    bool Trace = false;
+private:
+  const MachineDominatorTree &MDT;
+  DataFlowGraph &DFG;
+  DataFlowGraph::DefStackMap DefM;
+  bool Trace = false;
 
-    // map: register -> (map: stmt -> reaching def)
-    std::map<RegisterRef, std::map<NodeId, NodeId>, RegisterRefLess> RDefMap;
-    // map: statement -> (map: dst reg -> src reg)
-    std::map<NodeId, EqualityMap> CopyMap;
-    std::vector<NodeId> Copies;
+  // map: register -> (map: stmt -> reaching def)
+  std::map<RegisterRef, std::map<NodeId, NodeId>, RegisterRefLess> RDefMap;
+  // map: statement -> (map: dst reg -> src reg)
+  std::map<NodeId, EqualityMap> CopyMap;
+  std::vector<NodeId> Copies;
 
-    void recordCopy(NodeAddr<StmtNode*> SA, EqualityMap &EM);
-    void updateMap(NodeAddr<InstrNode*> IA);
-    bool scanBlock(MachineBasicBlock *B);
-  };
+  void recordCopy(NodeAddr<StmtNode *> SA, EqualityMap &EM);
+  void updateMap(NodeAddr<InstrNode *> IA);
+  bool scanBlock(MachineBasicBlock *B);
+};
 
 } // end namespace rdf
 

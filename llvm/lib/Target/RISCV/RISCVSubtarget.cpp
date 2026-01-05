@@ -215,8 +215,8 @@ bool RISCVSubtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel();
 }
 
-  /// Enable use of alias analysis during code generation (during MI
-  /// scheduling, DAGCombine, etc.).
+/// Enable use of alias analysis during code generation (during MI
+/// scheduling, DAGCombine, etc.).
 bool RISCVSubtarget::useAA() const { return UseAA; }
 
 unsigned RISCVSubtarget::getMinimumJumpTableEntries() const {

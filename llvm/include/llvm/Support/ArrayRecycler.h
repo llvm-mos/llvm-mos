@@ -36,7 +36,7 @@ template <class T, size_t Align = alignof(T)> class ArrayRecycler {
   static_assert(sizeof(T) >= sizeof(FreeList), "Objects are too small");
 
   // Keep a free list for each array size.
-  SmallVector<FreeList*, 8> Bucket;
+  SmallVector<FreeList *, 8> Bucket;
 
   // Remove an entry from the free list in Bucket[Idx] and return it.
   // Return NULL if no entries are available.
@@ -49,13 +49,13 @@ template <class T, size_t Align = alignof(T)> class ArrayRecycler {
     __asan_unpoison_memory_region(Entry, Capacity::get(Idx).getSize());
     Bucket[Idx] = Entry->Next;
     __msan_allocated_memory(Entry, Capacity::get(Idx).getSize());
-    return reinterpret_cast<T*>(Entry);
+    return reinterpret_cast<T *>(Entry);
   }
 
   // Add an entry to the free list at Bucket[Idx].
   void push(unsigned Idx, T *Ptr) {
     assert(Ptr && "Cannot recycle NULL pointer");
-    FreeList *Entry = reinterpret_cast<FreeList*>(Ptr);
+    FreeList *Entry = reinterpret_cast<FreeList *>(Ptr);
     if (Idx >= Bucket.size())
       Bucket.resize(size_t(Idx) + 1);
     Entry->Next = Bucket[Idx];
@@ -76,9 +76,7 @@ public:
     Capacity() : Index(0) {}
 
     /// Get the capacity of an array that can hold at least N elements.
-    static Capacity get(size_t N) {
-      return Capacity(N ? Log2_64_Ceil(N) : 0);
-    }
+    static Capacity get(size_t N) { return Capacity(N ? Log2_64_Ceil(N) : 0); }
 
     /// Get the number of elements in an array with this capacity.
     size_t getSize() const { return size_t(1u) << Index; }
@@ -100,8 +98,7 @@ public:
 
   /// Release all the tracked allocations to the allocator. The recycler must
   /// be free of any tracked allocations before being deleted.
-  template<class AllocatorType>
-  void clear(AllocatorType &Allocator) {
+  template <class AllocatorType> void clear(AllocatorType &Allocator) {
     for (; !Bucket.empty(); Bucket.pop_back())
       while (T *Ptr = pop(Bucket.size() - 1))
         Allocator.Deallocate(Ptr);
@@ -112,33 +109,30 @@ public:
   ///
   /// There is no need to traverse the free lists, pulling all the objects into
   /// cache.
-  void clear(BumpPtrAllocator&) {
-    Bucket.clear();
-  }
+  void clear(BumpPtrAllocator &) { Bucket.clear(); }
 
   /// Allocate an array of at least the requested capacity.
   ///
   /// Return an existing recycled array, or allocate one from Allocator if
   /// none are available for recycling.
   ///
-  template<class AllocatorType>
+  template <class AllocatorType>
   T *allocate(Capacity Cap, AllocatorType &Allocator) {
     // Try to recycle an existing array.
     if (T *Ptr = pop(Cap.getBucket()))
       return Ptr;
     // Nope, get more memory.
-    return static_cast<T*>(Allocator.Allocate(sizeof(T)*Cap.getSize(), Align));
+    return static_cast<T *>(
+        Allocator.Allocate(sizeof(T) * Cap.getSize(), Align));
   }
 
   /// Deallocate an array with the specified Capacity.
   ///
   /// Cap must be the same capacity that was given to allocate().
   ///
-  void deallocate(Capacity Cap, T *Ptr) {
-    push(Cap.getBucket(), Ptr);
-  }
+  void deallocate(Capacity Cap, T *Ptr) { push(Cap.getBucket(), Ptr); }
 };
 
-} // end llvm namespace
+} // namespace llvm
 
 #endif

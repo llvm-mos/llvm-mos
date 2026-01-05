@@ -27,36 +27,34 @@ using namespace llvm;
 
 #define DEBUG_TYPE "pre-RA-sched"
 
-STATISTIC(NumUnfolds,    "Number of nodes unfolded");
-STATISTIC(NumDups,       "Number of duplicated nodes");
-STATISTIC(NumPRCopies,   "Number of physical copies");
+STATISTIC(NumUnfolds, "Number of nodes unfolded");
+STATISTIC(NumDups, "Number of duplicated nodes");
+STATISTIC(NumPRCopies, "Number of physical copies");
 
-static RegisterScheduler
-  fastDAGScheduler("fast", "Fast suboptimal list scheduling",
-                   createFastDAGScheduler);
-static RegisterScheduler
-  linearizeDAGScheduler("linearize", "Linearize DAG, no scheduling",
-                        createDAGLinearizer);
-
+static RegisterScheduler fastDAGScheduler("fast",
+                                          "Fast suboptimal list scheduling",
+                                          createFastDAGScheduler);
+static RegisterScheduler linearizeDAGScheduler("linearize",
+                                               "Linearize DAG, no scheduling",
+                                               createDAGLinearizer);
 
 namespace {
-  /// FastPriorityQueue - A degenerate priority queue that considers
-  /// all nodes to have the same priority.
-  ///
-  struct FastPriorityQueue {
-    SmallVector<SUnit *, 16> Queue;
+/// FastPriorityQueue - A degenerate priority queue that considers
+/// all nodes to have the same priority.
+///
+struct FastPriorityQueue {
+  SmallVector<SUnit *, 16> Queue;
 
-    bool empty() const { return Queue.empty(); }
+  bool empty() const { return Queue.empty(); }
 
-    void push(SUnit *U) {
-      Queue.push_back(U);
-    }
+  void push(SUnit *U) { Queue.push_back(U); }
 
-    SUnit *pop() {
-      if (empty()) return nullptr;
-      return Queue.pop_back_val();
-    }
-  };
+  SUnit *pop() {
+    if (empty())
+      return nullptr;
+    return Queue.pop_back_val();
+  }
+};
 
 //===----------------------------------------------------------------------===//
 /// ScheduleDAGFast - The actual "fast" list scheduler implementation.
@@ -70,12 +68,11 @@ private:
   /// that are "live". These nodes must be scheduled before any other nodes that
   /// modifies the registers can be scheduled.
   unsigned NumLiveRegs = 0u;
-  std::vector<SUnit*> LiveRegDefs;
+  std::vector<SUnit *> LiveRegDefs;
   std::vector<unsigned> LiveRegCycles;
 
 public:
-  ScheduleDAGFast(MachineFunction &mf)
-    : ScheduleDAGSDNodes(mf) {}
+  ScheduleDAGFast(MachineFunction &mf) : ScheduleDAGSDNodes(mf) {}
 
   void Schedule() override;
 
@@ -88,20 +85,18 @@ public:
 private:
   void ReleasePred(SUnit *SU, SDep *PredEdge);
   void ReleasePredecessors(SUnit *SU, unsigned CurCycle);
-  void ScheduleNodeBottomUp(SUnit*, unsigned);
-  SUnit *CopyAndMoveSuccessors(SUnit*);
-  void InsertCopiesAndMoveSuccs(SUnit*, unsigned,
-                                const TargetRegisterClass*,
-                                const TargetRegisterClass*,
-                                SmallVectorImpl<SUnit*>&);
-  bool DelayForLiveRegsBottomUp(SUnit*, SmallVectorImpl<unsigned>&);
+  void ScheduleNodeBottomUp(SUnit *, unsigned);
+  SUnit *CopyAndMoveSuccessors(SUnit *);
+  void InsertCopiesAndMoveSuccs(SUnit *, unsigned, const TargetRegisterClass *,
+                                const TargetRegisterClass *,
+                                SmallVectorImpl<SUnit *> &);
+  bool DelayForLiveRegsBottomUp(SUnit *, SmallVectorImpl<unsigned> &);
   void ListScheduleBottomUp();
 
   /// forceUnitLatencies - The fast scheduler doesn't care about real latencies.
   bool forceUnitLatencies() const override { return true; }
 };
-}  // end anonymous namespace
-
+} // end anonymous namespace
 
 /// Schedule - Schedule the DAG using list scheduling.
 void ScheduleDAGFast::Schedule() {
@@ -221,7 +216,7 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
   }
 
   if (TryUnfold) {
-    SmallVector<SDNode*, 2> NewNodes;
+    SmallVector<SDNode *, 2> NewNodes;
     if (!TII->unfoldMemoryOperand(*DAG, N, NewNodes))
       return nullptr;
 
@@ -234,7 +229,7 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
     unsigned OldNumVals = SU->getNode()->getNumValues();
     for (unsigned i = 0; i != NumVals; ++i)
       DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), i), SDValue(N, i));
-    DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), OldNumVals-1),
+    DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), OldNumVals - 1),
                                    SDValue(LoadNode, 1));
 
     SUnit *NewSU = newSUnit(N);
@@ -363,10 +358,9 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
 
 /// InsertCopiesAndMoveSuccs - Insert register copies and move all
 /// scheduled successors of the given SUnit to the last copy.
-void ScheduleDAGFast::InsertCopiesAndMoveSuccs(SUnit *SU, unsigned Reg,
-                                              const TargetRegisterClass *DestRC,
-                                              const TargetRegisterClass *SrcRC,
-                                              SmallVectorImpl<SUnit*> &Copies) {
+void ScheduleDAGFast::InsertCopiesAndMoveSuccs(
+    SUnit *SU, unsigned Reg, const TargetRegisterClass *DestRC,
+    const TargetRegisterClass *SrcRC, SmallVectorImpl<SUnit *> &Copies) {
   SUnit *CopyFromSU = newSUnit(static_cast<SDNode *>(nullptr));
   CopyFromSU->CopySrcRC = SrcRC;
   CopyFromSU->CopyDstRC = DestRC;
@@ -462,8 +456,8 @@ static bool CheckForLiveRegDef(SUnit *SU, MCRegister Reg,
 /// scheduling of the given node to satisfy live physical register dependencies.
 /// If the specific node is the last one that's available to schedule, do
 /// whatever is necessary (i.e. backtracking or cloning) to make it possible.
-bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
-                                              SmallVectorImpl<unsigned> &LRegs){
+bool ScheduleDAGFast::DelayForLiveRegsBottomUp(
+    SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
   if (NumLiveRegs == 0)
     return false;
 
@@ -471,8 +465,8 @@ bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
   // If this node would clobber any "live" register, then it's not ready.
   for (SDep &Pred : SU->Preds) {
     if (Pred.isAssignedRegDep()) {
-      CheckForLiveRegDef(Pred.getSUnit(), Pred.getReg(), LiveRegDefs,
-                         RegAdded, LRegs, TRI);
+      CheckForLiveRegDef(Pred.getSUnit(), Pred.getReg(), LiveRegDefs, RegAdded,
+                         LRegs, TRI);
     }
   }
 
@@ -481,8 +475,8 @@ bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
         Node->getOpcode() == ISD::INLINEASM_BR) {
       // Inline asm can clobber physical defs.
       unsigned NumOps = Node->getNumOperands();
-      if (Node->getOperand(NumOps-1).getValueType() == MVT::Glue)
-        --NumOps;  // Ignore the glue operand.
+      if (Node->getOperand(NumOps - 1).getValueType() == MVT::Glue)
+        --NumOps; // Ignore the glue operand.
 
       for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
         unsigned Flags = Node->getConstantOperandVal(i);
@@ -521,7 +515,6 @@ bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
   return !LRegs.empty();
 }
 
-
 /// ListScheduleBottomUp - The main loop of list scheduling for bottom-up
 /// schedulers.
 void ScheduleDAGFast::ListScheduleBottomUp() {
@@ -540,8 +533,8 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
 
   // While Available queue is not empty, grab the node with the highest
   // priority. If it is not ready put it back.  Schedule the node.
-  SmallVector<SUnit*, 4> NotReady;
-  DenseMap<SUnit*, SmallVector<unsigned, 4> > LRegsMap;
+  SmallVector<SUnit *, 4> NotReady;
+  DenseMap<SUnit *, SmallVector<unsigned, 4>> LRegsMap;
   Sequence.reserve(SUnits.size());
   while (!AvailableQueue.empty()) {
     bool Delayed = false;
@@ -554,7 +547,7 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
       Delayed = true;
       LRegsMap.insert(std::make_pair(CurSU, LRegs));
 
-      CurSU->isPending = true;  // This SU is not in AvailableQueue right now.
+      CurSU->isPending = true; // This SU is not in AvailableQueue right now.
       NotReady.push_back(CurSU);
       CurSU = AvailableQueue.pop();
     }
@@ -573,8 +566,7 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
         unsigned Reg = LRegs[0];
         SUnit *LRDef = LiveRegDefs[Reg];
         MVT VT = getPhysicalRegisterVT(LRDef->getNode(), Reg, TII);
-        const TargetRegisterClass *RC =
-          TRI->getMinimalPhysRegClass(Reg, VT);
+        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
         const TargetRegisterClass *DestRC = TRI->getCrossCopyRegClass(RC);
 
         // If cross copy register class is the same as RC, then it must be
@@ -593,7 +585,7 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
         }
         if (!NewDef) {
           // Issue copies, these can be expensive cross register class copies.
-          SmallVector<SUnit*, 2> Copies;
+          SmallVector<SUnit *, 2> Copies;
           InsertCopiesAndMoveSuccs(LRDef, Reg, DestRC, RC, Copies);
           LLVM_DEBUG(dbgs() << "Adding an edge from SU # " << TrySU->NodeNum
                             << " to SU #" << Copies.front()->NodeNum << "\n");
@@ -610,7 +602,8 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
       }
 
       if (!CurSU) {
-        llvm_unreachable("Unable to resolve live physical register dependencies!");
+        llvm_unreachable(
+            "Unable to resolve live physical register dependencies!");
       }
     }
 
@@ -636,7 +629,6 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
 #endif
 }
 
-
 namespace {
 //===----------------------------------------------------------------------===//
 // ScheduleDAGLinearize - No scheduling scheduler, it simply linearize the
@@ -650,11 +642,11 @@ public:
   void Schedule() override;
 
   MachineBasicBlock *
-    EmitSchedule(MachineBasicBlock::iterator &InsertPos) override;
+  EmitSchedule(MachineBasicBlock::iterator &InsertPos) override;
 
 private:
-  std::vector<SDNode*> Sequence;
-  DenseMap<SDNode*, SDNode*> GluedMap;  // Cache glue to its user
+  std::vector<SDNode *> Sequence;
+  DenseMap<SDNode *, SDNode *> GluedMap; // Cache glue to its user
 
   void ScheduleNode(SDNode *N);
 };
@@ -677,7 +669,7 @@ void ScheduleDAGLinearize::ScheduleNode(SDNode *N) {
   if (unsigned NumLeft = NumOps) {
     SDNode *GluedOpN = nullptr;
     do {
-      const SDValue &Op = N->getOperand(NumLeft-1);
+      const SDValue &Op = N->getOperand(NumLeft - 1);
       SDNode *OpN = Op.getNode();
 
       if (NumLeft == NumOps && Op.getValueType() == MVT::Glue) {
@@ -693,7 +685,7 @@ void ScheduleDAGLinearize::ScheduleNode(SDNode *N) {
         // Glue operand is already scheduled.
         continue;
 
-      DenseMap<SDNode*, SDNode*>::iterator DI = GluedMap.find(OpN);
+      DenseMap<SDNode *, SDNode *>::iterator DI = GluedMap.find(OpN);
       if (DI != GluedMap.end() && DI->second != N)
         // Users of glues are counted against the glued users.
         OpN = DI->second;
@@ -718,7 +710,7 @@ static SDNode *findGluedUser(SDNode *N) {
 void ScheduleDAGLinearize::Schedule() {
   LLVM_DEBUG(dbgs() << "********** DAG Linearization **********\n");
 
-  SmallVector<SDNode*, 8> Glues;
+  SmallVector<SDNode *, 8> Glues;
   unsigned DAGSize = 0;
   for (SDNode &Node : DAG->allnodes()) {
     SDNode *N = &Node;
@@ -727,8 +719,8 @@ void ScheduleDAGLinearize::Schedule() {
     unsigned Degree = N->use_size();
     N->setNodeId(Degree);
     unsigned NumVals = N->getNumValues();
-    if (NumVals && N->getValueType(NumVals-1) == MVT::Glue &&
-        N->hasAnyUseOfValue(NumVals-1)) {
+    if (NumVals && N->getValueType(NumVals - 1) == MVT::Glue &&
+        N->hasAnyUseOfValue(NumVals - 1)) {
       SDNode *User = findGluedUser(N);
       if (User) {
         Glues.push_back(N);
@@ -760,7 +752,7 @@ void ScheduleDAGLinearize::Schedule() {
   ScheduleNode(DAG->getRoot().getNode());
 }
 
-MachineBasicBlock*
+MachineBasicBlock *
 ScheduleDAGLinearize::EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
   InstrEmitter::VRBaseMapType VRBaseMap;
@@ -770,7 +762,7 @@ ScheduleDAGLinearize::EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   unsigned NumNodes = Sequence.size();
   MachineBasicBlock *BB = Emitter.getBlock();
   for (unsigned i = 0; i != NumNodes; ++i) {
-    SDNode *N = Sequence[NumNodes-i-1];
+    SDNode *N = Sequence[NumNodes - i - 1];
     LLVM_DEBUG(N->dump(DAG));
     Emitter.EmitNode(N, false, false, VRBaseMap);
 

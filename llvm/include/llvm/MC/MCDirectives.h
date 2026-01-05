@@ -51,18 +51,18 @@ enum MCSymbolAttr {
 };
 
 enum MCDataRegionType {
-  MCDR_DataRegion,            ///< .data_region
-  MCDR_DataRegionJT8,         ///< .data_region jt8
-  MCDR_DataRegionJT16,        ///< .data_region jt16
-  MCDR_DataRegionJT32,        ///< .data_region jt32
-  MCDR_DataRegionEnd          ///< .end_data_region
+  MCDR_DataRegion,     ///< .data_region
+  MCDR_DataRegionJT8,  ///< .data_region jt8
+  MCDR_DataRegionJT16, ///< .data_region jt16
+  MCDR_DataRegionJT32, ///< .data_region jt32
+  MCDR_DataRegionEnd   ///< .end_data_region
 };
 
 enum MCVersionMinType {
-  MCVM_IOSVersionMin,         ///< .ios_version_min
-  MCVM_OSXVersionMin,         ///< .macosx_version_min
-  MCVM_TvOSVersionMin,        ///< .tvos_version_min
-  MCVM_WatchOSVersionMin,     ///< .watchos_version_min
+  MCVM_IOSVersionMin,     ///< .ios_version_min
+  MCVM_OSXVersionMin,     ///< .macosx_version_min
+  MCVM_TvOSVersionMin,    ///< .tvos_version_min
+  MCVM_WatchOSVersionMin, ///< .watchos_version_min
 };
 
 } // end namespace llvm

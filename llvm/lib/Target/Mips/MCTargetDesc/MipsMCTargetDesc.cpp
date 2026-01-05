@@ -249,7 +249,7 @@ public:
     }
   }
 };
-}
+} // namespace
 
 static MCInstrAnalysis *createMipsMCInstrAnalysis(const MCInstrInfo *Info) {
   return new MipsMCInstrAnalysis(Info);

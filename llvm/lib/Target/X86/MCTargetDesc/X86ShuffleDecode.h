@@ -161,7 +161,7 @@ void DecodeVPERMVMask(ArrayRef<uint64_t> RawMask, const APInt &UndefElts,
 
 /// Decode a VPERMT2 W/D/Q/PS/PD mask from a raw array of constants.
 void DecodeVPERMV3Mask(ArrayRef<uint64_t> RawMask, const APInt &UndefElts,
-                      SmallVectorImpl<int> &ShuffleMask);
-} // llvm namespace
+                       SmallVectorImpl<int> &ShuffleMask);
+} // namespace llvm
 
 #endif

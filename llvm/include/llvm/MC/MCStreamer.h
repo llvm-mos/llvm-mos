@@ -61,7 +61,7 @@ struct DefRangeRegisterRelHeader;
 struct DefRangeSubfieldRegisterHeader;
 struct DefRangeRegisterHeader;
 struct DefRangeFramePointerRelHeader;
-}
+} // namespace codeview
 
 using MCSectionSubPair = std::pair<MCSection *, uint32_t>;
 
@@ -277,9 +277,7 @@ protected:
   virtual void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
   virtual void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame);
 
-  WinEH::FrameInfo *getCurrentWinFrameInfo() {
-    return CurrentWinFrameInfo;
-  }
+  WinEH::FrameInfo *getCurrentWinFrameInfo() { return CurrentWinFrameInfo; }
 
   virtual void emitWindowsUnwindTables(WinEH::FrameInfo *Frame);
 
@@ -298,9 +296,7 @@ public:
   void visitUsedExpr(const MCExpr &Expr);
   virtual void visitUsedSymbol(const MCSymbol &Sym);
 
-  void setTargetStreamer(MCTargetStreamer *TS) {
-    TargetStreamer.reset(TS);
-  }
+  void setTargetStreamer(MCTargetStreamer *TS) { TargetStreamer.reset(TS); }
 
   void setStartTokLocPtr(const SMLoc *Loc) { StartTokLocPtr = Loc; }
   SMLoc getStartTokLoc() const {
@@ -321,9 +317,7 @@ public:
   void setUseAssemblerInfoForParsing(bool v) { UseAssemblerInfoForParsing = v; }
   bool getUseAssemblerInfoForParsing() { return UseAssemblerInfoForParsing; }
 
-  MCTargetStreamer *getTargetStreamer() {
-    return TargetStreamer.get();
-  }
+  MCTargetStreamer *getTargetStreamer() { return TargetStreamer.get(); }
 
   void setAllowAutoPadding(bool v) { AllowAutoPadding = v; }
   bool getAllowAutoPadding() const { return AllowAutoPadding; }
@@ -418,9 +412,7 @@ public:
       return SectionStack.back().first;
     return MCSectionSubPair();
   }
-  MCSection *getCurrentSectionOnly() const {
-    return CurFrag->getParent();
-  }
+  MCSection *getCurrentSectionOnly() const { return CurFrag->getParent(); }
 
   /// Return the previous section that the streamer is emitting code to.
   MCSectionSubPair getPreviousSection() const {
@@ -633,9 +625,9 @@ public:
   /// \param Lang - The language code for the exception entry.
   /// \param Reason - The reason code for the exception entry.
   virtual void emitXCOFFExceptDirective(const MCSymbol *Symbol,
-                                        const MCSymbol *Trap,
-                                        unsigned Lang, unsigned Reason,
-                                        unsigned FunctionSize, bool hasDebug);
+                                        const MCSymbol *Trap, unsigned Lang,
+                                        unsigned Reason, unsigned FunctionSize,
+                                        bool hasDebug);
 
   /// Emit a XCOFF .ref directive which creates R_REF type entry in the
   /// relocation table for one or more symbols.
@@ -800,7 +792,7 @@ public:
                         SMLoc Loc = SMLoc());
 
   virtual void emitNops(int64_t NumBytes, int64_t ControlledNopLength,
-                        SMLoc Loc, const MCSubtargetInfo& STI);
+                        SMLoc Loc, const MCSubtargetInfo &STI);
 
   /// Emit NumBytes worth of zeros.
   /// This function properly handles data in virtual sections.
@@ -870,9 +862,8 @@ public:
       unsigned FileNo, StringRef Directory, StringRef Filename,
       std::optional<MD5::MD5Result> Checksum = std::nullopt,
       std::optional<StringRef> Source = std::nullopt, unsigned CUID = 0) {
-    return cantFail(
-        tryEmitDwarfFileDirective(FileNo, Directory, Filename, Checksum,
-                                  Source, CUID));
+    return cantFail(tryEmitDwarfFileDirective(FileNo, Directory, Filename,
+                                              Checksum, Source, CUID));
   }
 
   /// Associate a filename with a specified logical file number.

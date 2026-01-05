@@ -19,99 +19,103 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-  class raw_ostream;
+class raw_ostream;
 
-  /// Enables dumping a "pretty" stack trace when the program crashes.
-  ///
-  /// \see PrettyStackTraceEntry
-  LLVM_ABI void EnablePrettyStackTrace();
+/// Enables dumping a "pretty" stack trace when the program crashes.
+///
+/// \see PrettyStackTraceEntry
+LLVM_ABI void EnablePrettyStackTrace();
 
-  /// Enables (or disables) dumping a "pretty" stack trace when the user sends
-  /// SIGINFO or SIGUSR1 to the current process.
-  ///
-  /// This is a per-thread decision so that a program can choose to print stack
-  /// traces only on a primary thread, or on all threads that use
-  /// PrettyStackTraceEntry.
-  ///
-  /// \see EnablePrettyStackTrace
-  /// \see PrettyStackTraceEntry
-  LLVM_ABI void
-  EnablePrettyStackTraceOnSigInfoForThisThread(bool ShouldEnable = true);
+/// Enables (or disables) dumping a "pretty" stack trace when the user sends
+/// SIGINFO or SIGUSR1 to the current process.
+///
+/// This is a per-thread decision so that a program can choose to print stack
+/// traces only on a primary thread, or on all threads that use
+/// PrettyStackTraceEntry.
+///
+/// \see EnablePrettyStackTrace
+/// \see PrettyStackTraceEntry
+LLVM_ABI void
+EnablePrettyStackTraceOnSigInfoForThisThread(bool ShouldEnable = true);
 
-  /// Replaces the generic bug report message that is output upon
-  /// a crash.
-  LLVM_ABI void setBugReportMsg(const char *Msg);
+/// Replaces the generic bug report message that is output upon
+/// a crash.
+LLVM_ABI void setBugReportMsg(const char *Msg);
 
-  /// Get the bug report message that will be output upon a crash.
-  LLVM_ABI const char *getBugReportMsg();
+/// Get the bug report message that will be output upon a crash.
+LLVM_ABI const char *getBugReportMsg();
 
-  /// PrettyStackTraceEntry - This class is used to represent a frame of the
-  /// "pretty" stack trace that is dumped when a program crashes. You can define
-  /// subclasses of this and declare them on the program stack: when they are
-  /// constructed and destructed, they will add their symbolic frames to a
-  /// virtual stack trace.  This gets dumped out if the program crashes.
-  class LLVM_ABI PrettyStackTraceEntry {
-    LLVM_ABI friend PrettyStackTraceEntry *
-    ReverseStackTrace(PrettyStackTraceEntry *);
+/// PrettyStackTraceEntry - This class is used to represent a frame of the
+/// "pretty" stack trace that is dumped when a program crashes. You can define
+/// subclasses of this and declare them on the program stack: when they are
+/// constructed and destructed, they will add their symbolic frames to a
+/// virtual stack trace.  This gets dumped out if the program crashes.
+class LLVM_ABI PrettyStackTraceEntry {
+  LLVM_ABI friend PrettyStackTraceEntry *
+  ReverseStackTrace(PrettyStackTraceEntry *);
 
-    PrettyStackTraceEntry *NextEntry;
-    PrettyStackTraceEntry(const PrettyStackTraceEntry &) = delete;
-    void operator=(const PrettyStackTraceEntry &) = delete;
-  public:
-    PrettyStackTraceEntry();
-    virtual ~PrettyStackTraceEntry();
+  PrettyStackTraceEntry *NextEntry;
+  PrettyStackTraceEntry(const PrettyStackTraceEntry &) = delete;
+  void operator=(const PrettyStackTraceEntry &) = delete;
 
-    /// print - Emit information about this stack frame to OS.
-    virtual void print(raw_ostream &OS) const = 0;
+public:
+  PrettyStackTraceEntry();
+  virtual ~PrettyStackTraceEntry();
 
-    /// getNextEntry - Return the next entry in the list of frames.
-    const PrettyStackTraceEntry *getNextEntry() const { return NextEntry; }
-  };
+  /// print - Emit information about this stack frame to OS.
+  virtual void print(raw_ostream &OS) const = 0;
 
-  /// PrettyStackTraceString - This object prints a specified string (which
-  /// should not contain newlines) to the stream as the stack trace when a crash
-  /// occurs.
-  class LLVM_ABI PrettyStackTraceString : public PrettyStackTraceEntry {
-    const char *Str;
-  public:
-    PrettyStackTraceString(const char *str) : Str(str) {}
-    void print(raw_ostream &OS) const override;
-  };
+  /// getNextEntry - Return the next entry in the list of frames.
+  const PrettyStackTraceEntry *getNextEntry() const { return NextEntry; }
+};
 
-  /// PrettyStackTraceFormat - This object prints a string (which may use
-  /// printf-style formatting but should not contain newlines) to the stream
-  /// as the stack trace when a crash occurs.
-  class LLVM_ABI PrettyStackTraceFormat : public PrettyStackTraceEntry {
-    llvm::SmallVector<char, 32> Str;
-  public:
-    PrettyStackTraceFormat(const char *Format, ...);
-    void print(raw_ostream &OS) const override;
-  };
+/// PrettyStackTraceString - This object prints a specified string (which
+/// should not contain newlines) to the stream as the stack trace when a crash
+/// occurs.
+class LLVM_ABI PrettyStackTraceString : public PrettyStackTraceEntry {
+  const char *Str;
 
-  /// PrettyStackTraceProgram - This object prints a specified program arguments
-  /// to the stream as the stack trace when a crash occurs.
-  class LLVM_ABI PrettyStackTraceProgram : public PrettyStackTraceEntry {
-    int ArgC;
-    const char *const *ArgV;
-  public:
-    PrettyStackTraceProgram(int argc, const char * const*argv)
+public:
+  PrettyStackTraceString(const char *str) : Str(str) {}
+  void print(raw_ostream &OS) const override;
+};
+
+/// PrettyStackTraceFormat - This object prints a string (which may use
+/// printf-style formatting but should not contain newlines) to the stream
+/// as the stack trace when a crash occurs.
+class LLVM_ABI PrettyStackTraceFormat : public PrettyStackTraceEntry {
+  llvm::SmallVector<char, 32> Str;
+
+public:
+  PrettyStackTraceFormat(const char *Format, ...);
+  void print(raw_ostream &OS) const override;
+};
+
+/// PrettyStackTraceProgram - This object prints a specified program arguments
+/// to the stream as the stack trace when a crash occurs.
+class LLVM_ABI PrettyStackTraceProgram : public PrettyStackTraceEntry {
+  int ArgC;
+  const char *const *ArgV;
+
+public:
+  PrettyStackTraceProgram(int argc, const char *const *argv)
       : ArgC(argc), ArgV(argv) {
-      EnablePrettyStackTrace();
-    }
-    void print(raw_ostream &OS) const override;
-  };
+    EnablePrettyStackTrace();
+  }
+  void print(raw_ostream &OS) const override;
+};
 
-  /// Returns the topmost element of the "pretty" stack state.
-  LLVM_ABI const void *SavePrettyStackState();
+/// Returns the topmost element of the "pretty" stack state.
+LLVM_ABI const void *SavePrettyStackState();
 
-  /// Restores the topmost element of the "pretty" stack state to State, which
-  /// should come from a previous call to SavePrettyStackState().  This is
-  /// useful when using a CrashRecoveryContext in code that also uses
-  /// PrettyStackTraceEntries, to make sure the stack that's printed if a crash
-  /// happens after a crash that's been recovered by CrashRecoveryContext
-  /// doesn't have frames on it that were added in code unwound by the
-  /// CrashRecoveryContext.
-  LLVM_ABI void RestorePrettyStackState(const void *State);
+/// Restores the topmost element of the "pretty" stack state to State, which
+/// should come from a previous call to SavePrettyStackState().  This is
+/// useful when using a CrashRecoveryContext in code that also uses
+/// PrettyStackTraceEntries, to make sure the stack that's printed if a crash
+/// happens after a crash that's been recovered by CrashRecoveryContext
+/// doesn't have frames on it that were added in code unwound by the
+/// CrashRecoveryContext.
+LLVM_ABI void RestorePrettyStackState(const void *State);
 
 } // end namespace llvm
 

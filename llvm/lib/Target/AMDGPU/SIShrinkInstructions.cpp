@@ -97,7 +97,8 @@ bool SIShrinkInstructions::foldImmediates(MachineInstr &MI,
                                           bool TryToCommute) const {
   assert(TII->isVOP1(MI) || TII->isVOP2(MI) || TII->isVOPC(MI));
 
-  int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
+  int Src0Idx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
 
   // Try to fold Src0
   MachineOperand &Src0 = MI.getOperand(Src0Idx);
@@ -269,8 +270,8 @@ void SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
     bool HasUImm;
     if (isKImmOrKUImmOperand(Src1, HasUImm)) {
       if (!HasUImm) {
-        SOPKOpc = (SOPKOpc == AMDGPU::S_CMPK_EQ_U32) ?
-          AMDGPU::S_CMPK_EQ_I32 : AMDGPU::S_CMPK_LG_I32;
+        SOPKOpc = (SOPKOpc == AMDGPU::S_CMPK_EQ_U32) ? AMDGPU::S_CMPK_EQ_I32
+                                                     : AMDGPU::S_CMPK_LG_I32;
         Src1.setImm(SignExtend32(Src1.getImm(), 32));
       }
 
@@ -587,8 +588,7 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
       const bool IsUndef = SrcReg->isUndef();
       const bool IsKill = SrcReg->isKill();
       TII->mutateAndCleanupImplicit(MI, TII->get(Opc));
-      if (Opc == AMDGPU::S_BITSET0_B32 ||
-          Opc == AMDGPU::S_BITSET1_B32) {
+      if (Opc == AMDGPU::S_BITSET0_B32 || Opc == AMDGPU::S_BITSET1_B32) {
         Src0->ChangeToImmediate(NewImm);
         // Remove the immediate and add the tied input.
         MI.getOperand(2).ChangeToRegister(Dest->getReg(), /*IsDef*/ false,
@@ -816,7 +816,7 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
       dropInstructionKeepingImpDefs(MovT);
     } else {
       Xop.setIsKill(false);
-      for (int I = MovT.getNumImplicitOperands() - 1; I >= 0; --I ) {
+      for (int I = MovT.getNumImplicitOperands() - 1; I >= 0; --I) {
         unsigned OpNo = MovT.getNumExplicitOperands() + I;
         const MachineOperand &Op = MovT.getOperand(OpNo);
         if (Op.isKill() && TRI->regsOverlap(X, Op.getReg()))
@@ -916,8 +916,9 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
         if (Src0->isReg() && Src0->getReg() == Dest->getReg()) {
           if (Src1->isImm() && isKImmOperand(*Src1)) {
-            unsigned Opc = (MI.getOpcode() == AMDGPU::S_ADD_I32) ?
-              AMDGPU::S_ADDK_I32 : AMDGPU::S_MULK_I32;
+            unsigned Opc = (MI.getOpcode() == AMDGPU::S_ADD_I32)
+                               ? AMDGPU::S_ADDK_I32
+                               : AMDGPU::S_MULK_I32;
 
             Src1->setImm(SignExtend64(Src1->getImm(), 32));
             MI.setDesc(TII->get(Opc));
@@ -1045,8 +1046,8 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
       }
 
       // Check for the bool flag output for instructions like V_ADD_I32_e64.
-      const MachineOperand *SDst = TII->getNamedOperand(MI,
-                                                        AMDGPU::OpName::sdst);
+      const MachineOperand *SDst =
+          TII->getNamedOperand(MI, AMDGPU::OpName::sdst);
 
       if (SDst) {
         bool Next = false;
@@ -1059,8 +1060,8 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
         // All of the instructions with carry outs also have an SGPR input in
         // src2.
-        const MachineOperand *Src2 = TII->getNamedOperand(MI,
-                                                          AMDGPU::OpName::src2);
+        const MachineOperand *Src2 =
+            TII->getNamedOperand(MI, AMDGPU::OpName::src2);
         if (Src2 && Src2->getReg() != VCCReg) {
           if (Src2->getReg().isVirtual())
             MRI->setRegAllocationHint(Src2->getReg(), 0, VCCReg);

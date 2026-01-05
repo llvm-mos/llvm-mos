@@ -56,6 +56,6 @@ public:
 private:
   void runInternal(Function &F, AAResults &AA);
 };
-}
+} // namespace llvm
 
 #endif

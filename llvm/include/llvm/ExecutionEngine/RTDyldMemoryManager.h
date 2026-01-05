@@ -27,7 +27,7 @@ namespace llvm {
 class ExecutionEngine;
 
 namespace object {
-  class ObjectFile;
+class ObjectFile;
 } // end namespace object
 
 class LLVM_ABI MCJITMemoryManager : public RuntimeDyld::MemoryManager {
@@ -62,8 +62,8 @@ class LLVM_ABI RTDyldMemoryManager : public MCJITMemoryManager,
                                      public LegacyJITSymbolResolver {
 public:
   RTDyldMemoryManager() = default;
-  RTDyldMemoryManager(const RTDyldMemoryManager&) = delete;
-  void operator=(const RTDyldMemoryManager&) = delete;
+  RTDyldMemoryManager(const RTDyldMemoryManager &) = delete;
+  void operator=(const RTDyldMemoryManager &) = delete;
   ~RTDyldMemoryManager() override;
 
   /// Register EH frames in the current process.
@@ -97,7 +97,8 @@ public:
   ///
   /// Clients writing custom RTDyldMemoryManagers are encouraged to override
   /// this method and return a SymbolInfo with the flags set correctly. This is
-  /// necessary for RuntimeDyld to correctly handle weak and non-exported symbols.
+  /// necessary for RuntimeDyld to correctly handle weak and non-exported
+  /// symbols.
   JITSymbol findSymbol(const std::string &Name) override {
     return JITSymbol(getSymbolAddress(Name), JITSymbolFlags::Exported);
   }
@@ -119,11 +120,11 @@ public:
   ///
   /// Clients writing custom RTDyldMemoryManagers are encouraged to override
   /// this method and return a SymbolInfo with the flags set correctly. This is
-  /// necessary for RuntimeDyld to correctly handle weak and non-exported symbols.
-  JITSymbol
-  findSymbolInLogicalDylib(const std::string &Name) override {
+  /// necessary for RuntimeDyld to correctly handle weak and non-exported
+  /// symbols.
+  JITSymbol findSymbolInLogicalDylib(const std::string &Name) override {
     return JITSymbol(getSymbolAddressInLogicalDylib(Name),
-                          JITSymbolFlags::Exported);
+                     JITSymbolFlags::Exported);
   }
 
   /// This method returns the address of the specified function. As such it is
@@ -151,8 +152,8 @@ private:
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
-DEFINE_SIMPLE_CONVERSION_FUNCTIONS(
-    RTDyldMemoryManager, LLVMMCJITMemoryManagerRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(RTDyldMemoryManager,
+                                   LLVMMCJITMemoryManagerRef)
 
 } // end namespace llvm
 

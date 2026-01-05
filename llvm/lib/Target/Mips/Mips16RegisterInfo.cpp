@@ -31,17 +31,17 @@ using namespace llvm;
 Mips16RegisterInfo::Mips16RegisterInfo(const MipsSubtarget &STI)
     : MipsRegisterInfo(STI) {}
 
-bool Mips16RegisterInfo::requiresRegisterScavenging
-  (const MachineFunction &MF) const {
+bool Mips16RegisterInfo::requiresRegisterScavenging(
+    const MachineFunction &MF) const {
   return false;
 }
-bool Mips16RegisterInfo::requiresFrameIndexScavenging
-  (const MachineFunction &MF) const {
+bool Mips16RegisterInfo::requiresFrameIndexScavenging(
+    const MachineFunction &MF) const {
   return false;
 }
 
-bool Mips16RegisterInfo::useFPForScavengingIndex
-  (const MachineFunction &MF) const {
+bool Mips16RegisterInfo::useFPForScavengingIndex(
+    const MachineFunction &MF) const {
   return false;
 }
 
@@ -94,10 +94,9 @@ void Mips16RegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
     const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
     if (TFI->hasFP(MF)) {
       FrameReg = Mips::S0;
-    }
-    else {
-      if ((MI.getNumOperands()> OpNo+2) && MI.getOperand(OpNo+2).isReg())
-        FrameReg = MI.getOperand(OpNo+2).getReg();
+    } else {
+      if ((MI.getNumOperands() > OpNo + 2) && MI.getOperand(OpNo + 2).isReg())
+        FrameReg = MI.getOperand(OpNo + 2).getReg();
       else
         FrameReg = Mips::SP;
     }
@@ -132,6 +131,4 @@ void Mips16RegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
   }
   MI.getOperand(OpNo).ChangeToRegister(FrameReg, false, false, IsKill);
   MI.getOperand(OpNo + 1).ChangeToImmediate(Offset);
-
-
 }

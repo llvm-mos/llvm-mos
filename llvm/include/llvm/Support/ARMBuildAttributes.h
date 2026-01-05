@@ -113,12 +113,12 @@ enum CPUArch {
   v9_A = 22,        // v9_A AArch32
 };
 
-enum CPUArchProfile {               // (=7), uleb128
-  Not_Applicable          = 0,      // pre v7, or cross-profile code
-  ApplicationProfile      = (0x41), // 'A' (e.g. for Cortex A8)
-  RealTimeProfile         = (0x52), // 'R' (e.g. for Cortex R4)
-  MicroControllerProfile  = (0x4D), // 'M' (e.g. for Cortex M3)
-  SystemProfile           = (0x53)  // 'S' Application or real-time profile
+enum CPUArchProfile {              // (=7), uleb128
+  Not_Applicable = 0,              // pre v7, or cross-profile code
+  ApplicationProfile = (0x41),     // 'A' (e.g. for Cortex A8)
+  RealTimeProfile = (0x52),        // 'R' (e.g. for Cortex R4)
+  MicroControllerProfile = (0x4D), // 'M' (e.g. for Cortex M3)
+  SystemProfile = (0x53)           // 'S' Application or real-time profile
 };
 
 // The following have a lot of common use cases
@@ -129,32 +129,33 @@ enum {
   // Tag_ARM_ISA_use (=8), uleb128
 
   // Tag_THUMB_ISA_use, (=9), uleb128
-  AllowThumb32 = 2, // 32-bit Thumb (implies 16-bit instructions)
+  AllowThumb32 = 2,      // 32-bit Thumb (implies 16-bit instructions)
   AllowThumbDerived = 3, // Thumb allowed, derived from arch/profile
 
   // Tag_FP_arch (=10), uleb128 (formerly Tag_VFP_arch = 10)
-  AllowFPv2  = 2,     // v2 FP ISA permitted (implies use of the v1 FP ISA)
-  AllowFPv3A = 3,     // v3 FP ISA permitted (implies use of the v2 FP ISA)
-  AllowFPv3B = 4,     // v3 FP ISA permitted, but only D0-D15, S0-S31
-  AllowFPv4A = 5,     // v4 FP ISA permitted (implies use of v3 FP ISA)
-  AllowFPv4B = 6,     // v4 FP ISA was permitted, but only D0-D15, S0-S31
-  AllowFPARMv8A = 7,  // Use of the ARM v8-A FP ISA was permitted
-  AllowFPARMv8B = 8,  // Use of the ARM v8-A FP ISA was permitted, but only
-                      // D0-D15, S0-S31
+  AllowFPv2 = 2,     // v2 FP ISA permitted (implies use of the v1 FP ISA)
+  AllowFPv3A = 3,    // v3 FP ISA permitted (implies use of the v2 FP ISA)
+  AllowFPv3B = 4,    // v3 FP ISA permitted, but only D0-D15, S0-S31
+  AllowFPv4A = 5,    // v4 FP ISA permitted (implies use of v3 FP ISA)
+  AllowFPv4B = 6,    // v4 FP ISA was permitted, but only D0-D15, S0-S31
+  AllowFPARMv8A = 7, // Use of the ARM v8-A FP ISA was permitted
+  AllowFPARMv8B = 8, // Use of the ARM v8-A FP ISA was permitted, but only
+                     // D0-D15, S0-S31
 
   // Tag_WMMX_arch, (=11), uleb128
-  AllowWMMXv1 = 1,  // The user permitted this entity to use WMMX v1
-  AllowWMMXv2 = 2,  // The user permitted this entity to use WMMX v2
+  AllowWMMXv1 = 1, // The user permitted this entity to use WMMX v1
+  AllowWMMXv2 = 2, // The user permitted this entity to use WMMX v2
 
   // Tag_Advanced_SIMD_arch, (=12), uleb128
-  AllowNeon = 1,      // SIMDv1 was permitted
-  AllowNeon2 = 2,     // SIMDv2 was permitted (Half-precision FP, MAC operations)
-  AllowNeonARMv8 = 3, // ARM v8-A SIMD was permitted
-  AllowNeonARMv8_1a = 4,// ARM v8.1-A SIMD was permitted (RDMA)
+  AllowNeon = 1,  // SIMDv1 was permitted
+  AllowNeon2 = 2, // SIMDv2 was permitted (Half-precision FP, MAC operations)
+  AllowNeonARMv8 = 3,    // ARM v8-A SIMD was permitted
+  AllowNeonARMv8_1a = 4, // ARM v8.1-A SIMD was permitted (RDMA)
 
   // Tag_MVE_arch, (=48), uleb128
   AllowMVEInteger = 1, // integer-only MVE was permitted
-  AllowMVEIntegerAndFloat = 2, // both integer and floating point MVE were permitted
+  AllowMVEIntegerAndFloat =
+      2, // both integer and floating point MVE were permitted
 
   // Tag_ABI_PCS_R9_use, (=14), uleb128
   R9IsGPR = 0,        // R9 used as v6 (just another callee-saved register)
@@ -165,15 +166,15 @@ enum {
   // Tag_ABI_PCS_RW_data, (=15), uleb128
   AddressRWPCRel = 1, // Address RW static data PC-relative
   AddressRWSBRel = 2, // Address RW static data SB-relative
-  AddressRWNone = 3, // No RW static data permitted
+  AddressRWNone = 3,  // No RW static data permitted
 
   // Tag_ABI_PCS_RO_data, (=14), uleb128
   AddressROPCRel = 1, // Address RO static data PC-relative
-  AddressRONone = 2, // No RO static data permitted
+  AddressRONone = 2,  // No RO static data permitted
 
   // Tag_ABI_PCS_GOT_use, (=17), uleb128
   AddressDirect = 1, // Address imported data directly
-  AddressGOT = 2, // Address imported data indirectly (via GOT)
+  AddressGOT = 2,    // Address imported data indirectly (via GOT)
 
   // Tag_ABI_PCS_wchar_t, (=18), uleb128
   WCharProhibited = 0,  // wchar_t is not used
@@ -197,7 +198,7 @@ enum {
 
   // Tag_ABI_FP_number_model, (=23), uleb128
   AllowIEEENormal = 1,
-  AllowRTABI = 2,  // numbers, infinities, and one quiet NaN (see [RTABI])
+  AllowRTABI = 2,   // numbers, infinities, and one quiet NaN (see [RTABI])
   AllowIEEE754 = 3, // this code to use all the IEEE 754-defined FP encodings
 
   // Tag_ABI_enum_size, (=26), uleb128
@@ -211,8 +212,8 @@ enum {
                       // it; other enums can be containerized.
 
   // Tag_ABI_HardFP_use, (=27), uleb128
-  HardFPImplied = 0,          // FP use should be implied by Tag_FP_arch
-  HardFPSinglePrecision = 1,  // Single-precision only
+  HardFPImplied = 0,         // FP use should be implied by Tag_FP_arch
+  HardFPSinglePrecision = 1, // Single-precision only
 
   // Tag_ABI_VFP_args, (=28), uleb128
   BaseAAPCS = 0,

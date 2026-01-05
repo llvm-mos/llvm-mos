@@ -218,17 +218,16 @@ static unsigned getIntegerExtensionOperandEEW(unsigned Factor,
 }
 
 #define VSEG_CASES(Prefix, EEW)                                                \
-  RISCV::Prefix##SEG2E##EEW##_V:                                               \
-  case RISCV::Prefix##SEG3E##EEW##_V:                                          \
+  RISCV::Prefix##SEG2E##EEW##_V : case RISCV::Prefix##SEG3E##EEW##_V:          \
   case RISCV::Prefix##SEG4E##EEW##_V:                                          \
   case RISCV::Prefix##SEG5E##EEW##_V:                                          \
   case RISCV::Prefix##SEG6E##EEW##_V:                                          \
   case RISCV::Prefix##SEG7E##EEW##_V:                                          \
   case RISCV::Prefix##SEG8E##EEW##_V
-#define VSSEG_CASES(EEW)    VSEG_CASES(VS, EEW)
-#define VSSSEG_CASES(EEW)   VSEG_CASES(VSS, EEW)
-#define VSUXSEG_CASES(EEW)  VSEG_CASES(VSUX, I##EEW)
-#define VSOXSEG_CASES(EEW)  VSEG_CASES(VSOX, I##EEW)
+#define VSSEG_CASES(EEW) VSEG_CASES(VS, EEW)
+#define VSSSEG_CASES(EEW) VSEG_CASES(VSS, EEW)
+#define VSUXSEG_CASES(EEW) VSEG_CASES(VSUX, I##EEW)
+#define VSOXSEG_CASES(EEW) VSEG_CASES(VSOX, I##EEW)
 
 static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   const MachineInstr &MI = *MO.getParent();

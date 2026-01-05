@@ -79,7 +79,7 @@ void BlockExtractor::loadFile() {
                /*KeepEmpty=*/false);
     if (LineSplit.empty())
       continue;
-    if (LineSplit.size()!=2)
+    if (LineSplit.size() != 2)
       reportFatalUsageError(
           "Invalid line format, expecting lines like: 'funcname bb1[;bb2..]'");
     SmallVector<StringRef, 4> BBNames;

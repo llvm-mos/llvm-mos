@@ -96,17 +96,13 @@ public:
     return *this;
   }
 
-  bool operator<(BlockFrequency RHS) const {
-    return Frequency < RHS.Frequency;
-  }
+  bool operator<(BlockFrequency RHS) const { return Frequency < RHS.Frequency; }
 
   bool operator<=(BlockFrequency RHS) const {
     return Frequency <= RHS.Frequency;
   }
 
-  bool operator>(BlockFrequency RHS) const {
-    return Frequency > RHS.Frequency;
-  }
+  bool operator>(BlockFrequency RHS) const { return Frequency > RHS.Frequency; }
 
   bool operator>=(BlockFrequency RHS) const {
     return Frequency >= RHS.Frequency;

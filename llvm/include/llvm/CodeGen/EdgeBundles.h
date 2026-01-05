@@ -74,7 +74,7 @@ public:
 private:
   std::unique_ptr<EdgeBundles> Impl;
   bool runOnMachineFunction(MachineFunction &MF) override;
-  void getAnalysisUsage(AnalysisUsage&) const override;
+  void getAnalysisUsage(AnalysisUsage &) const override;
 };
 
 class EdgeBundlesAnalysis : public AnalysisInfoMixin<EdgeBundlesAnalysis> {

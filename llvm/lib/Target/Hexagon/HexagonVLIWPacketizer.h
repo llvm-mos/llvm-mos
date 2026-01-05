@@ -51,7 +51,7 @@ class HexagonPacketizerList : public VLIWPacketizerList {
   bool MemShufDisabled = false;
 
   // Track MIs with ignored dependence.
-  std::vector<MachineInstr*> IgnoreDepMIs;
+  std::vector<MachineInstr *> IgnoreDepMIs;
 
   // Set to true if the packet contains an instruction that stalls with an
   // instruction from the previous packet.
@@ -110,12 +110,8 @@ public:
   void unpacketizeSoloInstrs(MachineFunction &MF);
 
 protected:
-  bool getmemShufDisabled() {
-    return MemShufDisabled;
-  };
-  void setmemShufDisabled(bool val) {
-    MemShufDisabled = val;
-  };
+  bool getmemShufDisabled() { return MemShufDisabled; };
+  void setmemShufDisabled(bool val) { MemShufDisabled = val; };
   bool isCallDependent(const MachineInstr &MI, SDep::Kind DepType,
                        unsigned DepReg);
   bool promoteToDotCur(MachineInstr &MI, SDep::Kind DepType,
@@ -142,14 +138,12 @@ protected:
   bool updateOffset(SUnit *SUI, SUnit *SUJ);
   void undoChangedOffset(MachineInstr &MI);
   bool arePredicatesComplements(MachineInstr &MI1, MachineInstr &MI2);
-  bool restrictingDepExistInPacket(MachineInstr&, unsigned);
+  bool restrictingDepExistInPacket(MachineInstr &, unsigned);
   bool isNewifiable(const MachineInstr &MI, const TargetRegisterClass *NewRC);
   bool isCurifiable(MachineInstr &MI);
   bool cannotCoexist(const MachineInstr &MI, const MachineInstr &MJ);
 
-  bool isPromotedToDotNew() const {
-    return PromotedToDotNew;
-  }
+  bool isPromotedToDotNew() const { return PromotedToDotNew; }
 
   bool tryAllocateResourcesForConstExt(bool Reserve);
   bool canReserveResourcesForConstExt();

@@ -1,4 +1,5 @@
-//===-- AMDGPULowerKernelArguments.cpp ------------------------------------------===//
+//===-- AMDGPULowerKernelArguments.cpp
+//------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,7 +39,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
     AU.setPreservesAll();
- }
+  }
 };
 
 } // end anonymous namespace
@@ -192,19 +193,17 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
       uint64_t DerefBytes = Arg.getDereferenceableBytes();
       if (DerefBytes != 0) {
         Load->setMetadata(
-          LLVMContext::MD_dereferenceable,
-          MDNode::get(Ctx,
-                      MDB.createConstant(
-                        ConstantInt::get(Builder.getInt64Ty(), DerefBytes))));
+            LLVMContext::MD_dereferenceable,
+            MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
+                                 Builder.getInt64Ty(), DerefBytes))));
       }
 
       uint64_t DerefOrNullBytes = Arg.getDereferenceableOrNullBytes();
       if (DerefOrNullBytes != 0) {
         Load->setMetadata(
-          LLVMContext::MD_dereferenceable_or_null,
-          MDNode::get(Ctx,
-                      MDB.createConstant(ConstantInt::get(Builder.getInt64Ty(),
-                                                          DerefOrNullBytes))));
+            LLVMContext::MD_dereferenceable_or_null,
+            MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
+                                 Builder.getInt64Ty(), DerefOrNullBytes))));
       }
 
       if (MaybeAlign ParamAlign = Arg.getParamAlign()) {
@@ -218,13 +217,13 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     // TODO: Convert noalias arg to !noalias
 
     if (DoShiftOpt) {
-      Value *ExtractBits = OffsetDiff == 0 ?
-        Load : Builder.CreateLShr(Load, OffsetDiff * 8);
+      Value *ExtractBits =
+          OffsetDiff == 0 ? Load : Builder.CreateLShr(Load, OffsetDiff * 8);
 
       IntegerType *ArgIntTy = Builder.getIntNTy(Size);
       Value *Trunc = Builder.CreateTrunc(ExtractBits, ArgIntTy);
-      Value *NewVal = Builder.CreateBitCast(Trunc, ArgTy,
-                                            Arg.getName() + ".load");
+      Value *NewVal =
+          Builder.CreateBitCast(Trunc, ArgTy, Arg.getName() + ".load");
       Arg.replaceAllUsesWith(NewVal);
     } else if (IsV3) {
       Value *Shuf = Builder.CreateShuffleVector(Load, ArrayRef<int>{0, 1, 2},
@@ -250,8 +249,8 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
 
 INITIALIZE_PASS_BEGIN(AMDGPULowerKernelArguments, DEBUG_TYPE,
                       "AMDGPU Lower Kernel Arguments", false, false)
-INITIALIZE_PASS_END(AMDGPULowerKernelArguments, DEBUG_TYPE, "AMDGPU Lower Kernel Arguments",
-                    false, false)
+INITIALIZE_PASS_END(AMDGPULowerKernelArguments, DEBUG_TYPE,
+                    "AMDGPU Lower Kernel Arguments", false, false)
 
 char AMDGPULowerKernelArguments::ID = 0;
 

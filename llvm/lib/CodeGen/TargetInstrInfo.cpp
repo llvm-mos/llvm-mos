@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -41,8 +40,8 @@
 using namespace llvm;
 
 static cl::opt<bool> DisableHazardRecognizer(
-  "disable-sched-hazard", cl::Hidden, cl::init(false),
-  cl::desc("Disable hazard detection during preRA scheduling"));
+    "disable-sched-hazard", cl::Hidden, cl::init(false),
+    cl::desc("Disable hazard detection during preRA scheduling"));
 
 static cl::opt<bool> EnableAccReassociation(
     "acc-reassoc", cl::Hidden, cl::init(true),
@@ -114,9 +113,9 @@ static bool isAsmComment(const char *Str, const MCAsmInfo &MAI) {
 /// simple--i.e. not a logical or arithmetic expression--size values without
 /// the optional fill value. This is primarily used for creating arbitrary
 /// sized inline asm blocks for testing purposes.
-unsigned TargetInstrInfo::getInlineAsmLength(
-  const char *Str,
-  const MCAsmInfo &MAI, const TargetSubtargetInfo *STI) const {
+unsigned
+TargetInstrInfo::getInlineAsmLength(const char *Str, const MCAsmInfo &MAI,
+                                    const TargetSubtargetInfo *STI) const {
   // Count the number of instructions in the asm.
   bool AtInsnStart = true;
   unsigned Length = 0;
@@ -154,9 +153,8 @@ unsigned TargetInstrInfo::getInlineAsmLength(
 
 /// ReplaceTailWithBranchTo - Delete the instruction OldInst and everything
 /// after it, replacing it with an unconditional branch to NewDest.
-void
-TargetInstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
-                                         MachineBasicBlock *NewDest) const {
+void TargetInstrInfo::ReplaceTailWithBranchTo(
+    MachineBasicBlock::iterator Tail, MachineBasicBlock *NewDest) const {
   MachineBasicBlock *MBB = Tail->getParent();
 
   // Remove all the old successors of MBB from the CFG.
@@ -190,8 +188,10 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
     // No idea how to commute this instruction. Target should implement its own.
     return nullptr;
 
-  unsigned CommutableOpIdx1 = Idx1; (void)CommutableOpIdx1;
-  unsigned CommutableOpIdx2 = Idx2; (void)CommutableOpIdx2;
+  unsigned CommutableOpIdx1 = Idx1;
+  (void)CommutableOpIdx1;
+  unsigned CommutableOpIdx2 = Idx2;
+  (void)CommutableOpIdx2;
   assert(findCommutedOpIndices(MI, CommutableOpIdx1, CommutableOpIdx2) &&
          CommutableOpIdx1 == Idx1 && CommutableOpIdx2 == Idx2 &&
          "TargetInstrInfo::CommuteInstructionImpl(): not commutable operands.");
@@ -340,8 +340,8 @@ bool TargetInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   // is not true, then the target must implement this.
   unsigned CommutableOpIdx1 = MCID.getNumDefs();
   unsigned CommutableOpIdx2 = CommutableOpIdx1 + 1;
-  if (!fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2,
-                            CommutableOpIdx1, CommutableOpIdx2))
+  if (!fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, CommutableOpIdx1,
+                            CommutableOpIdx2))
     return false;
 
   if (!MI.getOperand(SrcOpIdx1).isReg() || !MI.getOperand(SrcOpIdx2).isReg())
@@ -351,7 +351,8 @@ bool TargetInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
 }
 
 bool TargetInstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {
-  if (!MI.isTerminator()) return false;
+  if (!MI.isTerminator())
+    return false;
 
   // Conditional branch is a special case.
   if (MI.isBranch() && !MI.isBarrier())
@@ -486,7 +487,7 @@ TargetInstrInfo::canFoldCopy(const MachineInstr &MI, const TargetInstrInfo &TII,
   assert(TII.isCopyInstr(MI) && "MI must be a COPY instruction");
   if (MI.getNumOperands() != 2)
     return nullptr;
-  assert(FoldIdx<2 && "FoldIdx refers no nonexistent operand");
+  assert(FoldIdx < 2 && "FoldIdx refers no nonexistent operand");
 
   const MachineOperand &FoldOp = MI.getOperand(FoldIdx);
   const MachineOperand &LiveOp = MI.getOperand(1 - FoldIdx);
@@ -615,8 +616,7 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
       unsigned SpillSize;
       unsigned SpillOffset;
       // Compute the spill slot size and offset.
-      const TargetRegisterClass *RC =
-        MF.getRegInfo().getRegClass(MO.getReg());
+      const TargetRegisterClass *RC = MF.getRegInfo().getRegClass(MO.getReg());
       bool Valid =
           TII.getStackSlotRange(RC, MO.getSubReg(), SpillSize, SpillOffset, MF);
       if (!Valid)
@@ -760,11 +760,9 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
   if (NewMI) {
     NewMI->setMemRefs(MF, MI.memoperands());
     // Add a memory operand, foldMemoryOperandImpl doesn't do that.
-    assert((!(Flags & MachineMemOperand::MOStore) ||
-            NewMI->mayStore()) &&
+    assert((!(Flags & MachineMemOperand::MOStore) || NewMI->mayStore()) &&
            "Folded a def to a non-store!");
-    assert((!(Flags & MachineMemOperand::MOLoad) ||
-            NewMI->mayLoad()) &&
+    assert((!(Flags & MachineMemOperand::MOLoad) || NewMI->mayLoad()) &&
            "Folded a use to a non-load!");
     assert(MFI.getObjectOffset(FI) != -1);
     MachineMemOperand *MMO =
@@ -1591,8 +1589,7 @@ MachineTraceStrategy TargetInstrInfo::getMachineCombinerTraceStrategy() const {
   return MachineTraceStrategy::TS_MinInstrCount;
 }
 
-bool TargetInstrInfo::isReMaterializableImpl(
-    const MachineInstr &MI) const {
+bool TargetInstrInfo::isReMaterializableImpl(const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -1634,7 +1631,8 @@ bool TargetInstrInfo::isReMaterializableImpl(
   // If any of the registers accessed are non-constant, conservatively assume
   // the instruction is not rematerializable.
   for (const MachineOperand &MO : MI.operands()) {
-    if (!MO.isReg()) continue;
+    if (!MO.isReg())
+      continue;
     Register Reg = MO.getReg();
     if (Reg == 0)
       continue;
@@ -1668,7 +1666,7 @@ int TargetInstrInfo::getSPAdjust(const MachineInstr &MI) const {
   const MachineFunction *MF = MI.getMF();
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
   bool StackGrowsDown =
-    TFI->getStackGrowthDirection() == TargetFrameLowering::StackGrowsDown;
+      TFI->getStackGrowthDirection() == TargetFrameLowering::StackGrowsDown;
 
   unsigned FrameSetupOpcode = getCallFrameSetupOpcode();
   unsigned FrameDestroyOpcode = getCallFrameDestroyOpcode();
@@ -1715,9 +1713,9 @@ bool TargetInstrInfo::usePreRAHazardRecognizer() const {
 }
 
 // Default implementation of CreateTargetRAHazardRecognizer.
-ScheduleHazardRecognizer *TargetInstrInfo::
-CreateTargetHazardRecognizer(const TargetSubtargetInfo *STI,
-                             const ScheduleDAG *DAG) const {
+ScheduleHazardRecognizer *
+TargetInstrInfo::CreateTargetHazardRecognizer(const TargetSubtargetInfo *STI,
+                                              const ScheduleDAG *DAG) const {
   // Dummy hazard recognizer allows all instructions to issue.
   return new ScheduleHazardRecognizer();
 }
@@ -1729,9 +1727,8 @@ ScheduleHazardRecognizer *TargetInstrInfo::CreateTargetMIHazardRecognizer(
 }
 
 // Default implementation of CreateTargetPostRAHazardRecognizer.
-ScheduleHazardRecognizer *TargetInstrInfo::
-CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
-                                   const ScheduleDAG *DAG) const {
+ScheduleHazardRecognizer *TargetInstrInfo::CreateTargetPostRAHazardRecognizer(
+    const InstrItineraryData *II, const ScheduleDAG *DAG) const {
   return new ScoreboardHazardRecognizer(II, DAG, "post-RA-sched");
 }
 
@@ -1913,7 +1910,8 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     // TODO: Can currently only handle mem instructions with a single define.
     // An example from the x86 target:
     //    ...
-    //    DIV64m $rsp, 1, $noreg, 24, $noreg, implicit-def dead $rax, implicit-def $rdx
+    //    DIV64m $rsp, 1, $noreg, 24, $noreg, implicit-def dead $rax,
+    //    implicit-def $rdx
     //    ...
     //
     if (MI.getNumExplicitDefs() != 1)
@@ -1962,8 +1960,8 @@ std::optional<unsigned> TargetInstrInfo::getOperandLatency(
 bool TargetInstrInfo::getRegSequenceInputs(
     const MachineInstr &MI, unsigned DefIdx,
     SmallVectorImpl<RegSubRegPairAndIdx> &InputRegs) const {
-  assert((MI.isRegSequence() ||
-          MI.isRegSequenceLike()) && "Instruction do not have the proper type");
+  assert((MI.isRegSequence() || MI.isRegSequenceLike()) &&
+         "Instruction do not have the proper type");
 
   if (!MI.isRegSequence())
     return getRegSequenceLikeInputs(MI, DefIdx, InputRegs);
@@ -1989,8 +1987,8 @@ bool TargetInstrInfo::getRegSequenceInputs(
 bool TargetInstrInfo::getExtractSubregInputs(
     const MachineInstr &MI, unsigned DefIdx,
     RegSubRegPairAndIdx &InputReg) const {
-  assert((MI.isExtractSubreg() ||
-      MI.isExtractSubregLike()) && "Instruction do not have the proper type");
+  assert((MI.isExtractSubreg() || MI.isExtractSubregLike()) &&
+         "Instruction do not have the proper type");
 
   if (!MI.isExtractSubreg())
     return getExtractSubregLikeInputs(MI, DefIdx, InputReg);
@@ -2012,10 +2010,10 @@ bool TargetInstrInfo::getExtractSubregInputs(
 }
 
 bool TargetInstrInfo::getInsertSubregInputs(
-    const MachineInstr &MI, unsigned DefIdx,
-    RegSubRegPair &BaseReg, RegSubRegPairAndIdx &InsertedReg) const {
-  assert((MI.isInsertSubreg() ||
-      MI.isInsertSubregLike()) && "Instruction do not have the proper type");
+    const MachineInstr &MI, unsigned DefIdx, RegSubRegPair &BaseReg,
+    RegSubRegPairAndIdx &InsertedReg) const {
+  assert((MI.isInsertSubreg() || MI.isInsertSubregLike()) &&
+         "Instruction do not have the proper type");
 
   if (!MI.isInsertSubreg())
     return getInsertSubregLikeInputs(MI, DefIdx, BaseReg, InsertedReg);
@@ -2142,13 +2140,13 @@ TargetInstrInfo::getOutliningType(const MachineModuleInfo &MMI,
 
   // Some other special cases.
   switch (MI.getOpcode()) {
-    case TargetOpcode::IMPLICIT_DEF:
-    case TargetOpcode::KILL:
-    case TargetOpcode::LIFETIME_START:
-    case TargetOpcode::LIFETIME_END:
-      return outliner::InstrType::Invisible;
-    default:
-      break;
+  case TargetOpcode::IMPLICIT_DEF:
+  case TargetOpcode::KILL:
+  case TargetOpcode::LIFETIME_START:
+  case TargetOpcode::LIFETIME_END:
+    return outliner::InstrType::Invisible;
+  default:
+    break;
   }
 
   // Is this a terminator for a basic block?

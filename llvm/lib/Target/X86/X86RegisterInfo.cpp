@@ -40,9 +40,9 @@ using namespace llvm;
 #define GET_REGINFO_TARGET_DESC
 #include "X86GenRegisterInfo.inc"
 
-static cl::opt<bool>
-EnableBasePointer("x86-use-base-pointer", cl::Hidden, cl::init(true),
-          cl::desc("Enable use of a base pointer for complex stack frames"));
+static cl::opt<bool> EnableBasePointer(
+    "x86-use-base-pointer", cl::Hidden, cl::init(true),
+    cl::desc("Enable use of a base pointer for complex stack frames"));
 
 static cl::opt<bool>
     DisableRegAllocNDDHints("x86-disable-regalloc-hints-for-ndd", cl::Hidden,
@@ -215,9 +215,8 @@ X86RegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   return RC;
 }
 
-unsigned
-X86RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
-                                     MachineFunction &MF) const {
+unsigned X86RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
+                                              MachineFunction &MF) const {
   const X86FrameLowering *TFI = getFrameLowering(MF);
 
   unsigned FPDiff = TFI->hasFP(MF) ? 1 : 0;
@@ -277,8 +276,9 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_64_NoneRegs_SaveList;
   case CallingConv::CXX_FAST_TLS:
     if (Is64Bit)
-      return MF->getInfo<X86MachineFunctionInfo>()->isSplitCSR() ?
-             CSR_64_CXX_TLS_Darwin_PE_SaveList : CSR_64_TLS_Darwin_SaveList;
+      return MF->getInfo<X86MachineFunctionInfo>()->isSplitCSR()
+                 ? CSR_64_CXX_TLS_Darwin_PE_SaveList
+                 : CSR_64_TLS_Darwin_SaveList;
     break;
   case CallingConv::Intel_OCL_BI: {
     if (HasAVX512 && IsWin64)
@@ -296,15 +296,14 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
       if (IsWin64) {
-        return (HasSSE ? CSR_Win64_RegCall_SaveList :
-                         CSR_Win64_RegCall_NoSSE_SaveList);
+        return (HasSSE ? CSR_Win64_RegCall_SaveList
+                       : CSR_Win64_RegCall_NoSSE_SaveList);
       } else {
-        return (HasSSE ? CSR_SysV64_RegCall_SaveList :
-                         CSR_SysV64_RegCall_NoSSE_SaveList);
+        return (HasSSE ? CSR_SysV64_RegCall_SaveList
+                       : CSR_SysV64_RegCall_NoSSE_SaveList);
       }
     } else {
-      return (HasSSE ? CSR_32_RegCall_SaveList :
-                       CSR_32_RegCall_NoSSE_SaveList);
+      return (HasSSE ? CSR_32_RegCall_SaveList : CSR_32_RegCall_NoSSE_SaveList);
     }
   case CallingConv::CFGuard_Check:
     assert(!Is64Bit && "CFGuard check mechanism only used on 32-bit X86");
@@ -370,8 +369,8 @@ X86RegisterInfo::getIPRACSRegs(const MachineFunction *MF) const {
   return Is64Bit ? CSR_IPRA_64_SaveList : CSR_IPRA_32_SaveList;
 }
 
-const MCPhysReg *X86RegisterInfo::getCalleeSavedRegsViaCopy(
-    const MachineFunction *MF) const {
+const MCPhysReg *
+X86RegisterInfo::getCalleeSavedRegsViaCopy(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
   if (MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
       MF->getInfo<X86MachineFunctionInfo>()->isSplitCSR())
@@ -423,15 +422,14 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
       if (IsWin64) {
-        return (HasSSE ? CSR_Win64_RegCall_RegMask :
-                         CSR_Win64_RegCall_NoSSE_RegMask);
+        return (HasSSE ? CSR_Win64_RegCall_RegMask
+                       : CSR_Win64_RegCall_NoSSE_RegMask);
       } else {
-        return (HasSSE ? CSR_SysV64_RegCall_RegMask :
-                         CSR_SysV64_RegCall_NoSSE_RegMask);
+        return (HasSSE ? CSR_SysV64_RegCall_RegMask
+                       : CSR_SysV64_RegCall_NoSSE_RegMask);
       }
     } else {
-      return (HasSSE ? CSR_32_RegCall_RegMask :
-                       CSR_32_RegCall_NoSSE_RegMask);
+      return (HasSSE ? CSR_32_RegCall_RegMask : CSR_32_RegCall_NoSSE_RegMask);
     }
   case CallingConv::CFGuard_Check:
     assert(!Is64Bit && "CFGuard check mechanism only used on 32-bit X86");
@@ -486,8 +484,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   return CSR_32_RegMask;
 }
 
-const uint32_t*
-X86RegisterInfo::getNoPreservedMask() const {
+const uint32_t *X86RegisterInfo::getNoPreservedMask() const {
   return CSR_NoRegs_RegMask;
 }
 
@@ -846,16 +843,15 @@ void X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
 }
 
-bool
-X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
-                                     int SPAdj, unsigned FIOperandNum,
-                                     RegScavenger *RS) const {
+bool X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+                                          int SPAdj, unsigned FIOperandNum,
+                                          RegScavenger *RS) const {
   MachineInstr &MI = *II;
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
-  bool IsEHFuncletEpilogue = MBBI == MBB.end() ? false
-                                               : isFuncletReturnInstr(*MBBI);
+  bool IsEHFuncletEpilogue =
+      MBBI == MBB.end() ? false : isFuncletReturnInstr(*MBBI);
   const X86FrameLowering *TFI = getFrameLowering(MF);
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
@@ -910,7 +906,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     return false;
   }
 
-  if (MI.getOperand(FIOperandNum+3).isImm()) {
+  if (MI.getOperand(FIOperandNum + 3).isImm()) {
     const X86InstrInfo *TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
     const DebugLoc &DL = MI.getDebugLoc();
     int64_t Imm = MI.getOperand(FIOperandNum + 3).getImm();
@@ -950,8 +946,8 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       MI.getOperand(FIOperandNum + 3).ChangeToImmediate(Offset);
   } else {
     // Offset is symbolic. This is extremely rare.
-    uint64_t Offset = FIOffset +
-      (uint64_t)MI.getOperand(FIOperandNum+3).getOffset();
+    uint64_t Offset =
+        FIOffset + (uint64_t)MI.getOperand(FIOperandNum + 3).getOffset();
     MI.getOperand(FIOperandNum + 3).setOffset(Offset);
   }
   return false;

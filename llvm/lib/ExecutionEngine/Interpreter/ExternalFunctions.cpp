@@ -80,23 +80,37 @@ static Interpreter *TheInterpreter;
 
 static char getTypeID(Type *Ty) {
   switch (Ty->getTypeID()) {
-  case Type::VoidTyID:    return 'V';
+  case Type::VoidTyID:
+    return 'V';
   case Type::IntegerTyID:
     switch (cast<IntegerType>(Ty)->getBitWidth()) {
-      case 1:  return 'o';
-      case 8:  return 'B';
-      case 16: return 'S';
-      case 32: return 'I';
-      case 64: return 'L';
-      default: return 'N';
+    case 1:
+      return 'o';
+    case 8:
+      return 'B';
+    case 16:
+      return 'S';
+    case 32:
+      return 'I';
+    case 64:
+      return 'L';
+    default:
+      return 'N';
     }
-  case Type::FloatTyID:   return 'F';
-  case Type::DoubleTyID:  return 'D';
-  case Type::PointerTyID: return 'P';
-  case Type::FunctionTyID:return 'M';
-  case Type::StructTyID:  return 'T';
-  case Type::ArrayTyID:   return 'A';
-  default: return 'U';
+  case Type::FloatTyID:
+    return 'F';
+  case Type::DoubleTyID:
+    return 'D';
+  case Type::PointerTyID:
+    return 'P';
+  case Type::FunctionTyID:
+    return 'M';
+  case Type::StructTyID:
+    return 'T';
+  case Type::ArrayTyID:
+    return 'A';
+  default:
+    return 'U';
   }
 }
 
@@ -120,7 +134,7 @@ static ExFunc lookupFunction(const Function *F) {
   ExFunc FnPtr = Fns.FuncNames[ExtName];
   if (!FnPtr)
     FnPtr = Fns.FuncNames[("lle_X_" + F->getName()).str()];
-  if (!FnPtr)  // Try calling a generic function... if it exists...
+  if (!FnPtr) // Try calling a generic function... if it exists...
     FnPtr = (ExFunc)(intptr_t)sys::DynamicLibrary::SearchForAddressOfSymbol(
         ("lle_X_" + F->getName()).str());
   if (FnPtr)
@@ -131,68 +145,77 @@ static ExFunc lookupFunction(const Function *F) {
 #ifdef USE_LIBFFI
 static ffi_type *ffiTypeFor(Type *Ty) {
   switch (Ty->getTypeID()) {
-    case Type::VoidTyID: return &ffi_type_void;
-    case Type::IntegerTyID:
-      switch (cast<IntegerType>(Ty)->getBitWidth()) {
-        case 8:  return &ffi_type_sint8;
-        case 16: return &ffi_type_sint16;
-        case 32: return &ffi_type_sint32;
-        case 64: return &ffi_type_sint64;
-      }
-      llvm_unreachable("Unhandled integer type bitwidth");
-    case Type::FloatTyID:   return &ffi_type_float;
-    case Type::DoubleTyID:  return &ffi_type_double;
-    case Type::PointerTyID: return &ffi_type_pointer;
-    default: break;
+  case Type::VoidTyID:
+    return &ffi_type_void;
+  case Type::IntegerTyID:
+    switch (cast<IntegerType>(Ty)->getBitWidth()) {
+    case 8:
+      return &ffi_type_sint8;
+    case 16:
+      return &ffi_type_sint16;
+    case 32:
+      return &ffi_type_sint32;
+    case 64:
+      return &ffi_type_sint64;
+    }
+    llvm_unreachable("Unhandled integer type bitwidth");
+  case Type::FloatTyID:
+    return &ffi_type_float;
+  case Type::DoubleTyID:
+    return &ffi_type_double;
+  case Type::PointerTyID:
+    return &ffi_type_pointer;
+  default:
+    break;
   }
   // TODO: Support other types such as StructTyID, ArrayTyID, OpaqueTyID, etc.
   report_fatal_error("Type could not be mapped for use with libffi.");
   return NULL;
 }
 
-static void *ffiValueFor(Type *Ty, const GenericValue &AV,
-                         void *ArgDataPtr) {
+static void *ffiValueFor(Type *Ty, const GenericValue &AV, void *ArgDataPtr) {
   switch (Ty->getTypeID()) {
-    case Type::IntegerTyID:
-      switch (cast<IntegerType>(Ty)->getBitWidth()) {
-        case 8: {
-          int8_t *I8Ptr = (int8_t *) ArgDataPtr;
-          *I8Ptr = (int8_t) AV.IntVal.getZExtValue();
-          return ArgDataPtr;
-        }
-        case 16: {
-          int16_t *I16Ptr = (int16_t *) ArgDataPtr;
-          *I16Ptr = (int16_t) AV.IntVal.getZExtValue();
-          return ArgDataPtr;
-        }
-        case 32: {
-          int32_t *I32Ptr = (int32_t *) ArgDataPtr;
-          *I32Ptr = (int32_t) AV.IntVal.getZExtValue();
-          return ArgDataPtr;
-        }
-        case 64: {
-          int64_t *I64Ptr = (int64_t *) ArgDataPtr;
-          *I64Ptr = (int64_t) AV.IntVal.getZExtValue();
-          return ArgDataPtr;
-        }
-      }
-      llvm_unreachable("Unhandled integer type bitwidth");
-    case Type::FloatTyID: {
-      float *FloatPtr = (float *) ArgDataPtr;
-      *FloatPtr = AV.FloatVal;
+  case Type::IntegerTyID:
+    switch (cast<IntegerType>(Ty)->getBitWidth()) {
+    case 8: {
+      int8_t *I8Ptr = (int8_t *)ArgDataPtr;
+      *I8Ptr = (int8_t)AV.IntVal.getZExtValue();
       return ArgDataPtr;
     }
-    case Type::DoubleTyID: {
-      double *DoublePtr = (double *) ArgDataPtr;
-      *DoublePtr = AV.DoubleVal;
+    case 16: {
+      int16_t *I16Ptr = (int16_t *)ArgDataPtr;
+      *I16Ptr = (int16_t)AV.IntVal.getZExtValue();
       return ArgDataPtr;
     }
-    case Type::PointerTyID: {
-      void **PtrPtr = (void **) ArgDataPtr;
-      *PtrPtr = GVTOP(AV);
+    case 32: {
+      int32_t *I32Ptr = (int32_t *)ArgDataPtr;
+      *I32Ptr = (int32_t)AV.IntVal.getZExtValue();
       return ArgDataPtr;
     }
-    default: break;
+    case 64: {
+      int64_t *I64Ptr = (int64_t *)ArgDataPtr;
+      *I64Ptr = (int64_t)AV.IntVal.getZExtValue();
+      return ArgDataPtr;
+    }
+    }
+    llvm_unreachable("Unhandled integer type bitwidth");
+  case Type::FloatTyID: {
+    float *FloatPtr = (float *)ArgDataPtr;
+    *FloatPtr = AV.FloatVal;
+    return ArgDataPtr;
+  }
+  case Type::DoubleTyID: {
+    double *DoublePtr = (double *)ArgDataPtr;
+    *DoublePtr = AV.DoubleVal;
+    return ArgDataPtr;
+  }
+  case Type::PointerTyID: {
+    void **PtrPtr = (void **)ArgDataPtr;
+    *PtrPtr = GVTOP(AV);
+    return ArgDataPtr;
+  }
+  default:
+    break;
   }
   // TODO: Support other types such as StructTyID, ArrayTyID, OpaqueTyID, etc.
   report_fatal_error("Type value could not be mapped for use with libffi.");
@@ -208,13 +231,13 @@ static bool ffiInvoke(RawFunc Fn, Function *F, ArrayRef<GenericValue> ArgVals,
   // TODO: We don't have type information about the remaining arguments, because
   // this information is never passed into ExecutionEngine::runFunction().
   if (ArgVals.size() > NumArgs && F->isVarArg()) {
-    report_fatal_error("Calling external var arg function '" + F->getName()
-                      + "' is not supported by the Interpreter.");
+    report_fatal_error("Calling external var arg function '" + F->getName() +
+                       "' is not supported by the Interpreter.");
   }
 
   unsigned ArgBytes = 0;
 
-  std::vector<ffi_type*> args(NumArgs);
+  std::vector<ffi_type *> args(NumArgs);
   for (Function::const_arg_iterator A = F->arg_begin(), E = F->arg_end();
        A != E; ++A) {
     const unsigned ArgNo = A->getArgNo();
@@ -226,7 +249,7 @@ static bool ffiInvoke(RawFunc Fn, Function *F, ArrayRef<GenericValue> ArgVals,
   SmallVector<uint8_t, 128> ArgData;
   ArgData.resize(ArgBytes);
   uint8_t *ArgDataPtr = ArgData.data();
-  SmallVector<void*, 16> values(NumArgs);
+  SmallVector<void *, 16> values(NumArgs);
   for (Function::const_arg_iterator A = F->arg_begin(), E = F->arg_end();
        A != E; ++A) {
     const unsigned ArgNo = A->getArgNo();
@@ -245,18 +268,33 @@ static bool ffiInvoke(RawFunc Fn, Function *F, ArrayRef<GenericValue> ArgVals,
       ret.resize(TD.getTypeStoreSize(RetTy));
     ffi_call(&cif, Fn, ret.data(), values.data());
     switch (RetTy->getTypeID()) {
-      case Type::IntegerTyID:
-        switch (cast<IntegerType>(RetTy)->getBitWidth()) {
-          case 8:  Result.IntVal = APInt(8 , *(int8_t *) ret.data()); break;
-          case 16: Result.IntVal = APInt(16, *(int16_t*) ret.data()); break;
-          case 32: Result.IntVal = APInt(32, *(int32_t*) ret.data()); break;
-          case 64: Result.IntVal = APInt(64, *(int64_t*) ret.data()); break;
-        }
+    case Type::IntegerTyID:
+      switch (cast<IntegerType>(RetTy)->getBitWidth()) {
+      case 8:
+        Result.IntVal = APInt(8, *(int8_t *)ret.data());
         break;
-      case Type::FloatTyID:   Result.FloatVal   = *(float *) ret.data(); break;
-      case Type::DoubleTyID:  Result.DoubleVal  = *(double*) ret.data(); break;
-      case Type::PointerTyID: Result.PointerVal = *(void **) ret.data(); break;
-      default: break;
+      case 16:
+        Result.IntVal = APInt(16, *(int16_t *)ret.data());
+        break;
+      case 32:
+        Result.IntVal = APInt(32, *(int32_t *)ret.data());
+        break;
+      case 64:
+        Result.IntVal = APInt(64, *(int64_t *)ret.data());
+        break;
+      }
+      break;
+    case Type::FloatTyID:
+      Result.FloatVal = *(float *)ret.data();
+      break;
+    case Type::DoubleTyID:
+      Result.DoubleVal = *(double *)ret.data();
+      break;
+    case Type::PointerTyID:
+      Result.PointerVal = *(void **)ret.data();
+      break;
+    default:
+      break;
     }
     return true;
   }
@@ -286,8 +324,8 @@ GenericValue Interpreter::callExternalFunction(Function *F,
   std::map<const Function *, RawFunc>::iterator RF = Fns.RawFunctions.find(F);
   RawFunc RawFn;
   if (RF == Fns.RawFunctions.end()) {
-    RawFn = (RawFunc)(intptr_t)
-      sys::DynamicLibrary::SearchForAddressOfSymbol(std::string(F->getName()));
+    RawFn = (RawFunc)(intptr_t)sys::DynamicLibrary::SearchForAddressOfSymbol(
+        std::string(F->getName()));
     if (!RawFn)
       RawFn = (RawFunc)(intptr_t)getPointerToGlobalIfAvailable(F);
     if (RawFn != 0)
@@ -304,8 +342,8 @@ GenericValue Interpreter::callExternalFunction(Function *F,
 #endif // USE_LIBFFI
 
   if (F->getName() == "__main")
-    errs() << "Tried to execute an unknown external function: "
-      << *F->getType() << " __main\n";
+    errs() << "Tried to execute an unknown external function: " << *F->getType()
+           << " __main\n";
   else
     report_fatal_error("Tried to execute an unknown external function: " +
                        F->getName());
@@ -323,7 +361,7 @@ GenericValue Interpreter::callExternalFunction(Function *F,
 static GenericValue lle_X_atexit(FunctionType *FT,
                                  ArrayRef<GenericValue> Args) {
   assert(Args.size() == 1);
-  TheInterpreter->addAtExitHandler((Function*)GVTOP(Args[0]));
+  TheInterpreter->addAtExitHandler((Function *)GVTOP(Args[0]));
   GenericValue GV;
   GV.IntVal = 0;
   return GV;
@@ -337,9 +375,9 @@ static GenericValue lle_X_exit(FunctionType *FT, ArrayRef<GenericValue> Args) {
 
 // void abort(void)
 static GenericValue lle_X_abort(FunctionType *FT, ArrayRef<GenericValue> Args) {
-  //FIXME: should we report or raise here?
-  //report_fatal_error("Interpreted program raised SIGABRT");
-  raise (SIGABRT);
+  // FIXME: should we report or raise here?
+  // report_fatal_error("Interpreted program raised SIGABRT");
+  raise(SIGABRT);
   return GenericValue();
 }
 
@@ -363,16 +401,18 @@ static GenericValue lle_X_sprintf(FunctionType *FT,
   GV.IntVal = APInt(32, strlen(FmtStr));
   while (true) {
     switch (*FmtStr) {
-    case 0: return GV;             // Null terminator...
-    default:                       // Normal nonspecial character
+    case 0:
+      return GV; // Null terminator...
+    default:     // Normal nonspecial character
       sprintf(OutputBuffer++, "%c", *FmtStr++);
       break;
-    case '\\': {                   // Handle escape codes
-      sprintf(OutputBuffer, "%c%c", *FmtStr, *(FmtStr+1));
-      FmtStr += 2; OutputBuffer += 2;
+    case '\\': { // Handle escape codes
+      sprintf(OutputBuffer, "%c%c", *FmtStr, *(FmtStr + 1));
+      FmtStr += 2;
+      OutputBuffer += 2;
       break;
     }
-    case '%': {                    // Handle format specifiers
+    case '%': { // Handle format specifiers
       char FmtBuf[100] = "", Buffer[1000] = "";
       char *FB = FmtBuf;
       *FB++ = *FmtStr++;
@@ -382,20 +422,25 @@ static GenericValue lle_X_sprintf(FunctionType *FT,
              Last != 'o' && Last != 'x' && Last != 'X' && Last != 'e' &&
              Last != 'E' && Last != 'g' && Last != 'G' && Last != 'f' &&
              Last != 'p' && Last != 's' && Last != '%') {
-        if (Last == 'l' || Last == 'L') HowLong++;  // Keep track of l's
+        if (Last == 'l' || Last == 'L')
+          HowLong++; // Keep track of l's
         Last = *FB++ = *FmtStr++;
       }
       *FB = 0;
 
       switch (Last) {
       case '%':
-        memcpy(Buffer, "%", 2); break;
+        memcpy(Buffer, "%", 2);
+        break;
       case 'c':
         sprintf(Buffer, FmtBuf, uint32_t(Args[ArgNo++].IntVal.getZExtValue()));
         break;
-      case 'd': case 'i':
-      case 'u': case 'o':
-      case 'x': case 'X':
+      case 'd':
+      case 'i':
+      case 'u':
+      case 'o':
+      case 'x':
+      case 'X':
         if (HowLong >= 1) {
           if (HowLong == 1 &&
               TheInterpreter->getDataLayout().getPointerSizeInBits() == 64 &&
@@ -403,29 +448,37 @@ static GenericValue lle_X_sprintf(FunctionType *FT,
             // Make sure we use %lld with a 64 bit argument because we might be
             // compiling LLI on a 32 bit compiler.
             unsigned Size = strlen(FmtBuf);
-            FmtBuf[Size] = FmtBuf[Size-1];
-            FmtBuf[Size+1] = 0;
-            FmtBuf[Size-1] = 'l';
+            FmtBuf[Size] = FmtBuf[Size - 1];
+            FmtBuf[Size + 1] = 0;
+            FmtBuf[Size - 1] = 'l';
           }
           sprintf(Buffer, FmtBuf, Args[ArgNo++].IntVal.getZExtValue());
         } else
-          sprintf(Buffer, FmtBuf,uint32_t(Args[ArgNo++].IntVal.getZExtValue()));
+          sprintf(Buffer, FmtBuf,
+                  uint32_t(Args[ArgNo++].IntVal.getZExtValue()));
         break;
-      case 'e': case 'E': case 'g': case 'G': case 'f':
-        sprintf(Buffer, FmtBuf, Args[ArgNo++].DoubleVal); break;
+      case 'e':
+      case 'E':
+      case 'g':
+      case 'G':
+      case 'f':
+        sprintf(Buffer, FmtBuf, Args[ArgNo++].DoubleVal);
+        break;
       case 'p':
-        sprintf(Buffer, FmtBuf, (void*)GVTOP(Args[ArgNo++])); break;
+        sprintf(Buffer, FmtBuf, (void *)GVTOP(Args[ArgNo++]));
+        break;
       case 's':
-        sprintf(Buffer, FmtBuf, (char*)GVTOP(Args[ArgNo++])); break;
+        sprintf(Buffer, FmtBuf, (char *)GVTOP(Args[ArgNo++]));
+        break;
       default:
         errs() << "<unknown printf code '" << *FmtStr << "'!>";
-        ArgNo++; break;
+        ArgNo++;
+        break;
       }
       size_t Len = strlen(Buffer);
       memcpy(OutputBuffer, Buffer, Len + 1);
       OutputBuffer += Len;
-      }
-      break;
+    } break;
     }
   }
   return GV;
@@ -440,7 +493,7 @@ static GenericValue lle_X_printf(FunctionType *FT,
                                  ArrayRef<GenericValue> Args) {
   char Buffer[10000];
   std::vector<GenericValue> NewArgs;
-  NewArgs.push_back(PTOGV((void*)&Buffer[0]));
+  NewArgs.push_back(PTOGV((void *)&Buffer[0]));
   llvm::append_range(NewArgs, Args);
   GenericValue GV = lle_X_sprintf(FT, NewArgs);
   outs() << Buffer;
@@ -454,11 +507,11 @@ static GenericValue lle_X_sscanf(FunctionType *FT,
 
   char *Args[10];
   for (unsigned i = 0; i < args.size(); ++i)
-    Args[i] = (char*)GVTOP(args[i]);
+    Args[i] = (char *)GVTOP(args[i]);
 
   GenericValue GV;
   GV.IntVal = APInt(32, sscanf(Args[0], Args[1], Args[2], Args[3], Args[4],
-                    Args[5], Args[6], Args[7], Args[8], Args[9]));
+                               Args[5], Args[6], Args[7], Args[8], Args[9]));
   return GV;
 }
 
@@ -468,11 +521,11 @@ static GenericValue lle_X_scanf(FunctionType *FT, ArrayRef<GenericValue> args) {
 
   char *Args[10];
   for (unsigned i = 0; i < args.size(); ++i)
-    Args[i] = (char*)GVTOP(args[i]);
+    Args[i] = (char *)GVTOP(args[i]);
 
   GenericValue GV;
-  GV.IntVal = APInt(32, scanf( Args[0], Args[1], Args[2], Args[3], Args[4],
-                    Args[5], Args[6], Args[7], Args[8], Args[9]));
+  GV.IntVal = APInt(32, scanf(Args[0], Args[1], Args[2], Args[3], Args[4],
+                              Args[5], Args[6], Args[7], Args[8], Args[9]));
   return GV;
 }
 
@@ -487,7 +540,7 @@ static GenericValue lle_X_fprintf(FunctionType *FT,
   llvm::append_range(NewArgs, llvm::drop_begin(Args));
   GenericValue GV = lle_X_sprintf(FT, NewArgs);
 
-  fputs(Buffer, (FILE *) GVTOP(Args[0]));
+  fputs(Buffer, (FILE *)GVTOP(Args[0]));
   return GV;
 }
 
@@ -518,15 +571,15 @@ static GenericValue lle_X_memcpy(FunctionType *FT,
 void Interpreter::initializeExternalFunctions() {
   auto &Fns = getFunctions();
   sys::ScopedLock Writer(Fns.Lock);
-  Fns.FuncNames["lle_X_atexit"]       = lle_X_atexit;
-  Fns.FuncNames["lle_X_exit"]         = lle_X_exit;
-  Fns.FuncNames["lle_X_abort"]        = lle_X_abort;
+  Fns.FuncNames["lle_X_atexit"] = lle_X_atexit;
+  Fns.FuncNames["lle_X_exit"] = lle_X_exit;
+  Fns.FuncNames["lle_X_abort"] = lle_X_abort;
 
-  Fns.FuncNames["lle_X_printf"]       = lle_X_printf;
-  Fns.FuncNames["lle_X_sprintf"]      = lle_X_sprintf;
-  Fns.FuncNames["lle_X_sscanf"]       = lle_X_sscanf;
-  Fns.FuncNames["lle_X_scanf"]        = lle_X_scanf;
-  Fns.FuncNames["lle_X_fprintf"]      = lle_X_fprintf;
-  Fns.FuncNames["lle_X_memset"]       = lle_X_memset;
-  Fns.FuncNames["lle_X_memcpy"]       = lle_X_memcpy;
+  Fns.FuncNames["lle_X_printf"] = lle_X_printf;
+  Fns.FuncNames["lle_X_sprintf"] = lle_X_sprintf;
+  Fns.FuncNames["lle_X_sscanf"] = lle_X_sscanf;
+  Fns.FuncNames["lle_X_scanf"] = lle_X_scanf;
+  Fns.FuncNames["lle_X_fprintf"] = lle_X_fprintf;
+  Fns.FuncNames["lle_X_memset"] = lle_X_memset;
+  Fns.FuncNames["lle_X_memcpy"] = lle_X_memcpy;
 }

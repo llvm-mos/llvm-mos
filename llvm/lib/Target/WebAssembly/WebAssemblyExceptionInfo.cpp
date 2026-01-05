@@ -207,7 +207,7 @@ void WebAssemblyExceptionInfo::recalculate(
     auto *SrcWE = P.first;
     auto *DstWE = P.second;
 
-    SrcWE->getBlocksSet().remove_if([&](MachineBasicBlock *MBB){
+    SrcWE->getBlocksSet().remove_if([&](MachineBasicBlock *MBB) {
       if (MBB->isEHPad()) {
         assert(!isReachableAmongDominated(DstWE->getEHPad(), MBB,
                                           SrcWE->getEHPad(), MDT) &&
@@ -247,7 +247,7 @@ void WebAssemblyExceptionInfo::recalculate(
       WE->addToBlocksVector(MBB);
   }
 
-  SmallVector<WebAssemblyException*, 8> ExceptionPointers;
+  SmallVector<WebAssemblyException *, 8> ExceptionPointers;
   ExceptionPointers.reserve(Exceptions.size());
 
   // Add subexceptions to exceptions

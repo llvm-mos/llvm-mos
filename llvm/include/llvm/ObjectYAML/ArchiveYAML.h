@@ -14,9 +14,9 @@
 #ifndef LLVM_OBJECTYAML_ARCHIVEYAML_H
 #define LLVM_OBJECTYAML_ARCHIVEYAML_H
 
-#include "llvm/Support/YAMLTraits.h"
-#include "llvm/ObjectYAML/YAML.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/YAMLTraits.h"
 #include <optional>
 
 namespace llvm {

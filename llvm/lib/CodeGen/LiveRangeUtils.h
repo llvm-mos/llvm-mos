@@ -22,7 +22,7 @@ namespace llvm {
 /// created live ranges \p SplitLRs. \p VNIClasses maps each value number in \p
 /// LR to 0 meaning it should stay or to 1..N meaning it should go to a specific
 /// live range in the \p SplitLRs array.
-template<typename LiveRangeT, typename EqClassesT>
+template <typename LiveRangeT, typename EqClassesT>
 static void DistributeRange(LiveRangeT &LR, LiveRangeT *SplitLRs[],
                             EqClassesT VNIClasses) {
   // Move segments to new intervals.
@@ -31,9 +31,10 @@ static void DistributeRange(LiveRangeT &LR, LiveRangeT *SplitLRs[],
     ++J;
   for (typename LiveRangeT::iterator I = J; I != E; ++I) {
     if (unsigned eq = VNIClasses[I->valno->id]) {
-      assert((SplitLRs[eq-1]->empty() || SplitLRs[eq-1]->expiredAt(I->start)) &&
+      assert((SplitLRs[eq - 1]->empty() ||
+              SplitLRs[eq - 1]->expiredAt(I->start)) &&
              "New intervals should be empty");
-      SplitLRs[eq-1]->segments.push_back(*I);
+      SplitLRs[eq - 1]->segments.push_back(*I);
     } else
       *J++ = *I;
   }
@@ -46,8 +47,8 @@ static void DistributeRange(LiveRangeT &LR, LiveRangeT *SplitLRs[],
   for (unsigned i = j; i != e; ++i) {
     VNInfo *VNI = LR.getValNumInfo(i);
     if (unsigned eq = VNIClasses[i]) {
-      VNI->id = SplitLRs[eq-1]->getNumValNums();
-      SplitLRs[eq-1]->valnos.push_back(VNI);
+      VNI->id = SplitLRs[eq - 1]->getNumValNums();
+      SplitLRs[eq - 1]->valnos.push_back(VNI);
     } else {
       VNI->id = j;
       LR.valnos[j++] = VNI;
@@ -56,6 +57,6 @@ static void DistributeRange(LiveRangeT &LR, LiveRangeT *SplitLRs[],
   LR.valnos.resize(j);
 }
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

@@ -21,35 +21,35 @@ using namespace llvm::object;
 // This must be kept in sync with gdb/gdb/jit.h .
 extern "C" {
 
-  typedef enum {
-    JIT_NOACTION = 0,
-    JIT_REGISTER_FN,
-    JIT_UNREGISTER_FN
-  } jit_actions_t;
+typedef enum {
+  JIT_NOACTION = 0,
+  JIT_REGISTER_FN,
+  JIT_UNREGISTER_FN
+} jit_actions_t;
 
-  struct jit_code_entry {
-    struct jit_code_entry *next_entry;
-    struct jit_code_entry *prev_entry;
-    const char *symfile_addr;
-    uint64_t symfile_size;
-  };
+struct jit_code_entry {
+  struct jit_code_entry *next_entry;
+  struct jit_code_entry *prev_entry;
+  const char *symfile_addr;
+  uint64_t symfile_size;
+};
 
-  struct jit_descriptor {
-    uint32_t version;
-    // This should be jit_actions_t, but we want to be specific about the
-    // bit-width.
-    uint32_t action_flag;
-    struct jit_code_entry *relevant_entry;
-    struct jit_code_entry *first_entry;
-  };
+struct jit_descriptor {
+  uint32_t version;
+  // This should be jit_actions_t, but we want to be specific about the
+  // bit-width.
+  uint32_t action_flag;
+  struct jit_code_entry *relevant_entry;
+  struct jit_code_entry *first_entry;
+};
 
-  // We put information about the JITed function in this global, which the
-  // debugger reads.  Make sure to specify the version statically, because the
-  // debugger checks the version before we can set it during runtime.
-  extern struct jit_descriptor __jit_debug_descriptor;
+// We put information about the JITed function in this global, which the
+// debugger reads.  Make sure to specify the version statically, because the
+// debugger checks the version before we can set it during runtime.
+extern struct jit_descriptor __jit_debug_descriptor;
 
-  // Debuggers puts a breakpoint in this function.
-  extern "C" void __jit_debug_register_code();
+// Debuggers puts a breakpoint in this function.
+extern "C" void __jit_debug_register_code();
 }
 
 namespace {
@@ -73,7 +73,7 @@ struct RegisteredObjectInfo {
 
   RegisteredObjectInfo(std::size_t Size, jit_code_entry *Entry,
                        OwningBinary<ObjectFile> Obj)
-    : Size(Size), Entry(Entry), Obj(std::move(Obj)) {}
+      : Size(Size), Entry(Entry), Obj(std::move(Obj)) {}
 
   std::size_t Size;
   jit_code_entry *Entry;
@@ -133,12 +133,12 @@ private:
 };
 
 /// Do the registration.
-void NotifyDebugger(jit_code_entry* JITCodeEntry) {
+void NotifyDebugger(jit_code_entry *JITCodeEntry) {
   __jit_debug_descriptor.action_flag = JIT_REGISTER_FN;
 
   // Insert this entry at the head of the list.
   JITCodeEntry->prev_entry = nullptr;
-  jit_code_entry* NextEntry = __jit_debug_descriptor.first_entry;
+  jit_code_entry *NextEntry = __jit_debug_descriptor.first_entry;
   JITCodeEntry->next_entry = NextEntry;
   if (NextEntry) {
     NextEntry->prev_entry = JITCodeEntry;
@@ -171,17 +171,18 @@ void GDBJITRegistrationListener::notifyObjectLoaded(
   if (!DebugObj.getBinary())
     return;
 
-  const char *Buffer = DebugObj.getBinary()->getMemoryBufferRef().getBufferStart();
-  size_t      Size = DebugObj.getBinary()->getMemoryBufferRef().getBufferSize();
+  const char *Buffer =
+      DebugObj.getBinary()->getMemoryBufferRef().getBufferStart();
+  size_t Size = DebugObj.getBinary()->getMemoryBufferRef().getBufferSize();
 
   std::lock_guard<llvm::sys::Mutex> locked(JITDebugLock);
   assert(!ObjectBufferMap.contains(K) &&
          "Second attempt to perform debug registration.");
-  jit_code_entry* JITCodeEntry = new jit_code_entry();
+  jit_code_entry *JITCodeEntry = new jit_code_entry();
 
   if (!JITCodeEntry) {
     llvm::report_fatal_error(
-      "Allocation failed when registering a JIT entry!\n");
+        "Allocation failed when registering a JIT entry!\n");
   } else {
     JITCodeEntry->symfile_addr = Buffer;
     JITCodeEntry->symfile_size = Size;
@@ -205,23 +206,22 @@ void GDBJITRegistrationListener::notifyFreeingObject(ObjectKey K) {
 void GDBJITRegistrationListener::deregisterObjectInternal(
     RegisteredObjectBufferMap::iterator I) {
 
-  jit_code_entry*& JITCodeEntry = I->second.Entry;
+  jit_code_entry *&JITCodeEntry = I->second.Entry;
 
   // Do the unregistration.
   {
     __jit_debug_descriptor.action_flag = JIT_UNREGISTER_FN;
 
     // Remove the jit_code_entry from the linked list.
-    jit_code_entry* PrevEntry = JITCodeEntry->prev_entry;
-    jit_code_entry* NextEntry = JITCodeEntry->next_entry;
+    jit_code_entry *PrevEntry = JITCodeEntry->prev_entry;
+    jit_code_entry *NextEntry = JITCodeEntry->next_entry;
 
     if (NextEntry) {
       NextEntry->prev_entry = PrevEntry;
     }
     if (PrevEntry) {
       PrevEntry->next_entry = NextEntry;
-    }
-    else {
+    } else {
       assert(__jit_debug_descriptor.first_entry == JITCodeEntry);
       __jit_debug_descriptor.first_entry = NextEntry;
     }
@@ -239,13 +239,12 @@ void GDBJITRegistrationListener::deregisterObjectInternal(
 
 namespace llvm {
 
-JITEventListener* JITEventListener::createGDBRegistrationListener() {
+JITEventListener *JITEventListener::createGDBRegistrationListener() {
   return &GDBJITRegistrationListener::instance();
 }
 
 } // namespace llvm
 
-LLVMJITEventListenerRef LLVMCreateGDBRegistrationListener(void)
-{
+LLVMJITEventListenerRef LLVMCreateGDBRegistrationListener(void) {
   return wrap(JITEventListener::createGDBRegistrationListener());
 }

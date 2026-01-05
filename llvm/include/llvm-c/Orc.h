@@ -311,8 +311,7 @@ typedef struct LLVMOrcOpaqueResourceTracker *LLVMOrcResourceTrackerRef;
 /**
  * A reference to an orc::DefinitionGenerator.
  */
-typedef struct LLVMOrcOpaqueDefinitionGenerator
-    *LLVMOrcDefinitionGeneratorRef;
+typedef struct LLVMOrcOpaqueDefinitionGenerator *LLVMOrcDefinitionGeneratorRef;
 
 /**
  * An opaque lookup state object. Instances of this type can be captured to
@@ -714,12 +713,14 @@ LLVMOrcAbsoluteSymbols(LLVMOrcCSymbolMapPairs Syms, size_t NumPairs);
  *   LLVMOrcMaterializationUnitRef MU =
  *      LLVMOrcLazyReexports(LCTM, ISM, JD, CallableAliases, NumPairs);
  *
- * ... without requiring cleanup of the elements of the CallableAliases array afterwards.
+ * ... without requiring cleanup of the elements of the CallableAliases array
+ * afterwards.
  *
- * The client is still responsible for deleting the CallableAliases array itself.
+ * The client is still responsible for deleting the CallableAliases array
+ * itself.
  *
- * If a client wishes to reuse elements of the CallableAliases array after this call they
- * must explicitly retain each of the elements for themselves.
+ * If a client wishes to reuse elements of the CallableAliases array after this
+ * call they must explicitly retain each of the elements for themselves.
  */
 LLVM_C_ABI LLVMOrcMaterializationUnitRef LLVMOrcLazyReexports(
     LLVMOrcLazyCallThroughManagerRef LCTM, LLVMOrcIndirectStubsManagerRef ISM,
@@ -1045,9 +1046,9 @@ LLVM_C_ABI LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
  * be visible to JIT'd code. Note that the symbol name passed to the Filter
  * function is the full mangled symbol: The client is responsible for stripping
  * the global prefix if present.
- * 
+ *
  * THIS API IS EXPERIMENTAL AND LIKELY TO CHANGE IN THE NEAR FUTURE!
- * 
+ *
  */
 LLVM_C_ABI LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForPath(
     LLVMOrcDefinitionGeneratorRef *Result, const char *FileName,
@@ -1065,7 +1066,7 @@ LLVM_C_ABI LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForPath(
  * return an error.
  *
  * THIS API IS EXPERIMENTAL AND LIKELY TO CHANGE IN THE NEAR FUTURE!
- * 
+ *
  */
 LLVM_C_ABI LLVMErrorRef LLVMOrcCreateStaticLibrarySearchGeneratorForPath(
     LLVMOrcDefinitionGeneratorRef *Result, LLVMOrcObjectLayerRef ObjLayer,

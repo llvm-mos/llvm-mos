@@ -451,8 +451,8 @@ checkClobberSanity(const MemoryAccess *Start, MemoryAccess *ClobberAt,
 
       if (const auto *MU = dyn_cast<MemoryUse>(MA)) {
         (void)MU;
-        assert (MU == Start &&
-                "Can only find use in def chain if Start is a use");
+        assert(MU == Start &&
+               "Can only find use in def chain if Start is a use");
         continue;
       }
 
@@ -1109,7 +1109,7 @@ void MemorySSA::renameSuccessorPhis(BasicBlock *BB, MemoryAccess *IncomingVal,
           Phi->setIncomingValue(I, IncomingVal);
           ReplacementDone = true;
         }
-      (void) ReplacementDone;
+      (void)ReplacementDone;
       assert(ReplacementDone && "Incomplete phi during partial rename");
     } else
       Phi->addIncoming(IncomingVal, BB);
@@ -1609,8 +1609,7 @@ MemorySSAWalker *MemorySSA::getSkipSelfWalker() {
 
   SkipWalker = std::make_unique<SkipSelfWalker>(this, WalkerBase.get());
   return SkipWalker.get();
- }
-
+}
 
 // This is a helper function used by the creation routines. It places NewAccess
 // into the access and defs lists for a given basic block, at the given
@@ -1928,14 +1927,14 @@ void MemorySSA::verifyMemorySSA(VerificationLevel VL) const {
 #endif
   // Previously, the verification used to also verify that the clobberingAccess
   // cached by MemorySSA is the same as the clobberingAccess found at a later
-  // query to AA. This does not hold true in general due to the current fragility
-  // of BasicAA which has arbitrary caps on the things it analyzes before giving
-  // up. As a result, transformations that are correct, will lead to BasicAA
-  // returning different Alias answers before and after that transformation.
-  // Invalidating MemorySSA is not an option, as the results in BasicAA can be so
-  // random, in the worst case we'd need to rebuild MemorySSA from scratch after
-  // every transformation, which defeats the purpose of using it. For such an
-  // example, see test4 added in D51960.
+  // query to AA. This does not hold true in general due to the current
+  // fragility of BasicAA which has arbitrary caps on the things it analyzes
+  // before giving up. As a result, transformations that are correct, will lead
+  // to BasicAA returning different Alias answers before and after that
+  // transformation. Invalidating MemorySSA is not an option, as the results in
+  // BasicAA can be so random, in the worst case we'd need to rebuild MemorySSA
+  // from scratch after every transformation, which defeats the purpose of using
+  // it. For such an example, see test4 added in D51960.
 }
 
 template <typename IterT>
@@ -2210,9 +2209,12 @@ void MemorySSA::ensureOptimizedUses() {
 
 void MemoryAccess::print(raw_ostream &OS) const {
   switch (getValueID()) {
-  case MemoryPhiVal: return static_cast<const MemoryPhi *>(this)->print(OS);
-  case MemoryDefVal: return static_cast<const MemoryDef *>(this)->print(OS);
-  case MemoryUseVal: return static_cast<const MemoryUse *>(this)->print(OS);
+  case MemoryPhiVal:
+    return static_cast<const MemoryPhi *>(this)->print(OS);
+  case MemoryDefVal:
+    return static_cast<const MemoryDef *>(this)->print(OS);
+  case MemoryUseVal:
+    return static_cast<const MemoryUse *>(this)->print(OS);
   }
   llvm_unreachable("invalid value id");
 }

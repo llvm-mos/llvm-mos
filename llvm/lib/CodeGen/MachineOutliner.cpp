@@ -100,8 +100,7 @@ STATISTIC(NumLegalInUnsignedVec, "Outlinable instructions mapped");
 STATISTIC(NumIllegalInUnsignedVec,
           "Unoutlinable instructions mapped + number of sentinel values");
 STATISTIC(NumSentinels, "Sentinel values inserted during mapping");
-STATISTIC(NumInvisible,
-          "Invisible instructions skipped during mapping");
+STATISTIC(NumInvisible, "Invisible instructions skipped during mapping");
 STATISTIC(UnsignedVecSize,
           "Total number of instructions mapped and saved to mapping vector");
 STATISTIC(StableHashAttempts,
@@ -769,8 +768,7 @@ void MachineOutliner::findCandidates(
   // 2.
   std::vector<Candidate> CandidatesForRepeatedSeq;
   LLVM_DEBUG(dbgs() << "*** Discarding overlapping candidates *** \n");
-  LLVM_DEBUG(
-      dbgs() << "Searching for overlaps in all repeated sequences...\n");
+  LLVM_DEBUG(dbgs() << "Searching for overlaps in all repeated sequences...\n");
   for (SuffixTree::RepeatedSubstring &RS : ST) {
     CandidatesForRepeatedSeq.clear();
     unsigned StringLen = RS.Length;
@@ -832,8 +830,7 @@ void MachineOutliner::findCandidates(
                                             Mapper.MBBFlagsMap[MBB]);
     }
 #ifndef NDEBUG
-    LLVM_DEBUG(dbgs() << "    Candidates discarded: " << NumDiscarded
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "    Candidates discarded: " << NumDiscarded << "\n");
     LLVM_DEBUG(dbgs() << "    Candidates kept: " << NumKept << "\n\n");
 #endif
     unsigned MinRepeats = 2;

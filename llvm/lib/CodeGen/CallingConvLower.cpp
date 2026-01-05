@@ -36,7 +36,7 @@ CCState::CCState(CallingConv::ID CC, bool IsVarArg, MachineFunction &MF,
   StackSize = 0;
 
   clearByValRegsInfo();
-  UsedRegs.resize((TRI.getNumRegs()+31)/32);
+  UsedRegs.resize((TRI.getNumRegs() + 31) / 32);
 }
 
 /// Allocate space on the stack large enough to pass an argument by value.
@@ -46,7 +46,7 @@ void CCState::HandleByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
                           CCValAssign::LocInfo LocInfo, int MinSize,
                           Align MinAlign, ISD::ArgFlagsTy ArgFlags) {
   Align Alignment = ArgFlags.getNonZeroByValAlign();
-  unsigned Size  = ArgFlags.getByValSize();
+  unsigned Size = ArgFlags.getByValSize();
   if (MinSize > (int)Size)
     Size = MinSize;
   if (MinAlign > Alignment)
@@ -81,9 +81,8 @@ bool CCState::IsShadowAllocatedReg(MCRegister Reg) const {
 
 /// Analyze an array of argument values,
 /// incorporating info about the formals into this state.
-void
-CCState::AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
-                                CCAssignFn Fn) {
+void CCState::AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
+                                     CCAssignFn Fn) {
   unsigned NumArgs = Ins.size();
 
   for (unsigned i = 0; i != NumArgs; ++i) {
@@ -132,8 +131,8 @@ void CCState::AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
     if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, Outs[i].OrigTy,
            *this)) {
 #ifndef NDEBUG
-      dbgs() << "Call operand #" << i << " has unhandled type "
-             << ArgVT << '\n';
+      dbgs() << "Call operand #" << i << " has unhandled type " << ArgVT
+             << '\n';
 #endif
       llvm_unreachable(nullptr);
     }
@@ -151,8 +150,8 @@ void CCState::AnalyzeCallOperands(SmallVectorImpl<MVT> &ArgVTs,
     ISD::ArgFlagsTy ArgFlags = Flags[i];
     if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, OrigTys[i], *this)) {
 #ifndef NDEBUG
-      dbgs() << "Call operand #" << i << " has unhandled type "
-             << ArgVT << '\n';
+      dbgs() << "Call operand #" << i << " has unhandled type " << ArgVT
+             << '\n';
 #endif
       llvm_unreachable(nullptr);
     }
@@ -168,8 +167,7 @@ void CCState::AnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
     ISD::ArgFlagsTy Flags = Ins[i].Flags;
     if (Fn(i, VT, VT, CCValAssign::Full, Flags, Ins[i].OrigTy, *this)) {
 #ifndef NDEBUG
-      dbgs() << "Call result #" << i << " has unhandled type "
-             << VT << '\n';
+      dbgs() << "Call result #" << i << " has unhandled type " << VT << '\n';
 #endif
       llvm_unreachable(nullptr);
     }
@@ -180,8 +178,7 @@ void CCState::AnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
 void CCState::AnalyzeCallResult(MVT VT, Type *OrigTy, CCAssignFn Fn) {
   if (Fn(0, VT, VT, CCValAssign::Full, ISD::ArgFlagsTy(), OrigTy, *this)) {
 #ifndef NDEBUG
-    dbgs() << "Call result has unhandled type "
-           << VT << '\n';
+    dbgs() << "Call result has unhandled type " << VT << '\n';
 #endif
     llvm_unreachable(nullptr);
   }

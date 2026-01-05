@@ -55,10 +55,12 @@ protected:
   enum RemarkKind { RK_Store, RK_Unknown, RK_IntrinsicCall, RK_Call };
   virtual StringRef remarkName(RemarkKind RK) const;
 
-  virtual DiagnosticKind diagnosticKind() const { return DK_OptimizationRemarkAnalysis; }
+  virtual DiagnosticKind diagnosticKind() const {
+    return DK_OptimizationRemarkAnalysis;
+  }
 
 private:
-  template<typename ...Ts>
+  template <typename... Ts>
   std::unique_ptr<DiagnosticInfoIROptimization> makeRemark(Ts... Args);
 
   /// Emit a remark using information from the store's destination, size, etc.

@@ -294,9 +294,7 @@ const BasicBlock &LoopNest::skipEmptyBlockUntil(const BasicBlock *From,
   if (From == End || !From->getUniqueSuccessor())
     return *From;
 
-  auto IsEmpty = [](const BasicBlock *BB) {
-    return (BB->size() == 1);
-  };
+  auto IsEmpty = [](const BasicBlock *BB) { return (BB->size() == 1); };
 
   // Visited is used to avoid running into an infinite loop.
   SmallPtrSet<const BasicBlock *, 4> Visited;

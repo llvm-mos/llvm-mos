@@ -104,9 +104,7 @@ bool isCurrentDebugType(const char *DebugType, int Level) {
 ///
 void setCurrentDebugTypes(const char **Types, unsigned Count);
 
-void setCurrentDebugType(const char *Type) {
-  setCurrentDebugTypes(&Type, 1);
-}
+void setCurrentDebugType(const char *Type) { setCurrentDebugTypes(&Type, 1); }
 
 void setCurrentDebugTypes(const char **Types, unsigned Count) {
   CurrentDebugType->clear();
@@ -129,7 +127,7 @@ struct CreateDebug {
 };
 
 // -debug-buffer-size - Buffer the last N characters of debug output
-//until program termination.
+// until program termination.
 struct CreateDebugBufferSize {
   static void *call() {
     return new cl::opt<unsigned>(
@@ -227,11 +225,9 @@ raw_ostream &llvm::dbgs() {
 #else
 // Avoid "has no symbols" warning.
 namespace llvm {
-  /// dbgs - Return errs().
-  raw_ostream &dbgs() {
-    return errs();
-  }
-}
+/// dbgs - Return errs().
+raw_ostream &dbgs() { return errs(); }
+} // namespace llvm
 void llvm::initDebugOptions() {}
 #endif
 

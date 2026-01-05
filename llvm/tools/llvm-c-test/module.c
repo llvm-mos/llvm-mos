@@ -89,8 +89,7 @@ int llvm_module_list_functions(void) {
       printf("FunctionDefinition: %s [#bb=%u]\n", LLVMGetValueName(f),
              LLVMCountBasicBlocks(f));
 
-      for (bb = LLVMGetFirstBasicBlock(f); bb;
-           bb = LLVMGetNextBasicBlock(bb)) {
+      for (bb = LLVMGetFirstBasicBlock(f); bb; bb = LLVMGetNextBasicBlock(bb)) {
         nbb++;
         for (isn = LLVMGetFirstInstruction(bb); isn;
              isn = LLVMGetNextInstruction(isn)) {

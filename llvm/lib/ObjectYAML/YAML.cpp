@@ -19,8 +19,8 @@
 
 using namespace llvm;
 
-void yaml::ScalarTraits<yaml::BinaryRef>::output(
-    const yaml::BinaryRef &Val, void *, raw_ostream &Out) {
+void yaml::ScalarTraits<yaml::BinaryRef>::output(const yaml::BinaryRef &Val,
+                                                 void *, raw_ostream &Out) {
   Val.writeAsHex(Out);
 }
 

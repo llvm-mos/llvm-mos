@@ -102,24 +102,33 @@ void adjustColumnWidths(ArrayRef<StringRef> Files,
 
 /// Prints a horizontal divider long enough to cover the given column
 /// widths.
-void renderDivider(raw_ostream &OS, const CoverageViewOptions &Options, bool isFileReport) {
+void renderDivider(raw_ostream &OS, const CoverageViewOptions &Options,
+                   bool isFileReport) {
   size_t Length;
   if (isFileReport) {
-    Length = std::accumulate(std::begin(FileReportColumns), std::end(FileReportColumns), 0);
+    Length = std::accumulate(std::begin(FileReportColumns),
+                             std::end(FileReportColumns), 0);
     if (!Options.ShowRegionSummary)
-      Length -= (FileReportColumns[1] + FileReportColumns[2] + FileReportColumns[3]);
+      Length -=
+          (FileReportColumns[1] + FileReportColumns[2] + FileReportColumns[3]);
     if (!Options.ShowInstantiationSummary)
-      Length -= (FileReportColumns[7] + FileReportColumns[8] + FileReportColumns[9]);
+      Length -=
+          (FileReportColumns[7] + FileReportColumns[8] + FileReportColumns[9]);
     if (!Options.ShowBranchSummary)
-      Length -= (FileReportColumns[13] + FileReportColumns[14] + FileReportColumns[15]);
+      Length -= (FileReportColumns[13] + FileReportColumns[14] +
+                 FileReportColumns[15]);
     if (!Options.ShowMCDCSummary)
-      Length -= (FileReportColumns[16] + FileReportColumns[17] + FileReportColumns[18]);
+      Length -= (FileReportColumns[16] + FileReportColumns[17] +
+                 FileReportColumns[18]);
   } else {
-    Length = std::accumulate(std::begin(FunctionReportColumns), std::end(FunctionReportColumns), 0);
+    Length = std::accumulate(std::begin(FunctionReportColumns),
+                             std::end(FunctionReportColumns), 0);
     if (!Options.ShowBranchSummary)
-      Length -= (FunctionReportColumns[7] + FunctionReportColumns[8] + FunctionReportColumns[9]);
+      Length -= (FunctionReportColumns[7] + FunctionReportColumns[8] +
+                 FunctionReportColumns[9]);
     if (!Options.ShowMCDCSummary)
-      Length -= (FunctionReportColumns[10] + FunctionReportColumns[11] + FunctionReportColumns[12]);
+      Length -= (FunctionReportColumns[10] + FunctionReportColumns[11] +
+                 FunctionReportColumns[12]);
   }
   for (size_t I = 0; I < Length; ++I)
     OS << '-';
@@ -281,9 +290,10 @@ void CoverageReport::render(const FileCoverageSummary &File,
 
   OS << format("%*u", FileReportColumns[10],
                (unsigned)File.LineCoverage.getNumLines());
-  Options.colored_ostream(OS, LineCoverageColor) << format(
-      "%*u", FileReportColumns[11], (unsigned)(File.LineCoverage.getNumLines() -
-                                               File.LineCoverage.getCovered()));
+  Options.colored_ostream(OS, LineCoverageColor)
+      << format("%*u", FileReportColumns[11],
+                (unsigned)(File.LineCoverage.getNumLines() -
+                           File.LineCoverage.getCovered()));
   if (File.LineCoverage.getNumLines())
     Options.colored_ostream(OS, LineCoverageColor)
         << format("%*.2f", FileReportColumns[12] - 1,
@@ -328,8 +338,7 @@ void CoverageReport::render(const FileCoverageSummary &File,
 }
 
 void CoverageReport::render(const FunctionCoverageSummary &Function,
-                            const DemangleCache &DC,
-                            raw_ostream &OS) const {
+                            const DemangleCache &DC, raw_ostream &OS) const {
   auto FuncCoverageColor =
       determineCoveragePercentageColor(Function.RegionCoverage);
   auto LineCoverageColor =
@@ -442,8 +451,8 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
   }
 }
 
-void CoverageReport::prepareSingleFileReport(const StringRef Filename,
-    const coverage::CoverageMapping *Coverage,
+void CoverageReport::prepareSingleFileReport(
+    const StringRef Filename, const coverage::CoverageMapping *Coverage,
     const CoverageViewOptions &Options, const unsigned LCP,
     FileCoverageSummary *FileReport, const CoverageFilter *Filters) {
   for (const auto &Group : Coverage->getInstantiationGroups(Filename)) {
@@ -489,8 +498,8 @@ std::vector<FileCoverageSummary> CoverageReport::prepareFileReports(
 
   for (StringRef Filename : Files) {
     FileReports.emplace_back(Filename.drop_front(LCP));
-    Pool.async(&CoverageReport::prepareSingleFileReport, Filename,
-               &Coverage, Options, LCP, &FileReports.back(), &Filters);
+    Pool.async(&CoverageReport::prepareSingleFileReport, Filename, &Coverage,
+               Options, LCP, &FileReports.back(), &Filters);
   }
   Pool.wait();
 
@@ -511,8 +520,8 @@ void CoverageReport::renderFileReports(
   renderFileReports(OS, UniqueSourceFiles);
 }
 
-void CoverageReport::renderFileReports(
-    raw_ostream &OS, ArrayRef<std::string> Files) const {
+void CoverageReport::renderFileReports(raw_ostream &OS,
+                                       ArrayRef<std::string> Files) const {
   renderFileReports(OS, Files, CoverageFiltersMatchAll());
 }
 

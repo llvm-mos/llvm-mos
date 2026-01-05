@@ -57,11 +57,10 @@ class MCSymbol;
 /// GCPoint - Metadata for a collector-safe point in machine code.
 ///
 struct GCPoint {
-  MCSymbol *Label;    ///< A label.
+  MCSymbol *Label; ///< A label.
   DebugLoc Loc;
 
-  GCPoint(MCSymbol *L, DebugLoc DL)
-      : Label(L), Loc(std::move(DL)) {}
+  GCPoint(MCSymbol *L, DebugLoc DL) : Label(L), Loc(std::move(DL)) {}
 };
 
 /// GCRoot - Metadata for a pointer to an object managed by the garbage
@@ -238,7 +237,7 @@ class GCModuleInfo : public ImmutablePass {
   /// An owning list of all GCStrategies which have been created
   SmallVector<std::unique_ptr<GCStrategy>, 1> GCStrategyList;
   /// A helper map to speedup lookups into the above list
-  StringMap<GCStrategy*> GCStrategyMap;
+  StringMap<GCStrategy *> GCStrategyMap;
 
 public:
   /// Lookup the GCStrategy object associated with the given gc name.

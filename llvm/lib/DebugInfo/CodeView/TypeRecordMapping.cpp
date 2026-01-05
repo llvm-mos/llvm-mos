@@ -737,8 +737,7 @@ Error TypeRecordMapping::visitKnownMember(CVMemberRecord &CVR,
   return Error::success();
 }
 
-Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
-                                          PrecompRecord &Precomp) {
+Error TypeRecordMapping::visitKnownRecord(CVType &CVR, PrecompRecord &Precomp) {
   error(IO.mapInteger(Precomp.StartTypeIndex, "StartIndex"));
   error(IO.mapInteger(Precomp.TypesCount, "Count"));
   error(IO.mapInteger(Precomp.Signature, "Signature"));

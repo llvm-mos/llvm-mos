@@ -50,13 +50,16 @@ private:
   bool legalizeAddSub(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
   bool legalizeDivRem(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                      MachineInstr &MI, LostDebugLocObserver &LocObserver) const;
+                      MachineInstr &MI,
+                      LostDebugLocObserver &LocObserver) const;
   bool legalizeXor(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                    MachineInstr &MI) const;
   bool legalizeShiftRotate(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                           MachineInstr &MI, LostDebugLocObserver &LocObserver) const;
+                           MachineInstr &MI,
+                           LostDebugLocObserver &LocObserver) const;
   bool shiftRotateLibcall(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                          MachineInstr &MI, LostDebugLocObserver &LocObserver) const;
+                          MachineInstr &MI,
+                          LostDebugLocObserver &LocObserver) const;
   bool legalizeICmp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
   bool legalizeSelect(LegalizerHelper &Helper, MachineRegisterInfo &MRI,

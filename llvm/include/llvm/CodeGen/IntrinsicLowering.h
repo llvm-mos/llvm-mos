@@ -41,6 +41,6 @@ public:
   /// false if the call is not a simple integer bswap.
   static bool LowerToByteSwap(CallInst *CI);
 };
-}
+} // namespace llvm
 
 #endif

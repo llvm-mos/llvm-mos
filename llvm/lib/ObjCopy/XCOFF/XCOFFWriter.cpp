@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Errc.h"
 #include "XCOFFWriter.h"
+#include "llvm/Support/Errc.h"
 
 namespace llvm {
 namespace objcopy {

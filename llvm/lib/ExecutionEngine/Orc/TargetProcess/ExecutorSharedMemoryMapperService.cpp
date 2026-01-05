@@ -32,8 +32,7 @@ namespace rt_bootstrap {
 static DWORD getWindowsProtectionFlags(MemProt MP) {
   if (MP == MemProt::Read)
     return PAGE_READONLY;
-  if (MP == MemProt::Write ||
-      MP == (MemProt::Write | MemProt::Read)) {
+  if (MP == MemProt::Write || MP == (MemProt::Write | MemProt::Read)) {
     // Note: PAGE_WRITE is not supported by VirtualProtect
     return PAGE_READWRITE;
   }
@@ -151,7 +150,7 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 #if defined(LLVM_ON_UNIX)
 
 #if defined(__MVS__)
-      // TODO Is it possible to change the protection level?
+    // TODO Is it possible to change the protection level?
 #else
     int NativeProt = 0;
     if ((Segment.RAG.Prot & MemProt::Read) == MemProt::Read)

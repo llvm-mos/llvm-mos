@@ -52,9 +52,7 @@ class SystemZPostRASchedStrategy : public MachineSchedStrategy {
     bool operator<(const Candidate &other);
 
     // Check if this node is free of cost ("as good as any").
-    bool noCost() const {
-      return (GroupingCost <= 0 && !ResourcesCost);
-    }
+    bool noCost() const { return (GroupingCost <= 0 && !ResourcesCost); }
 
 #ifndef NDEBUG
     void dumpCosts() {
@@ -69,7 +67,7 @@ class SystemZPostRASchedStrategy : public MachineSchedStrategy {
   // A sorter for the Available set that makes sure that SUs are considered
   // in the best order.
   struct SUSorter {
-    bool operator() (SUnit *lhs, SUnit *rhs) const {
+    bool operator()(SUnit *lhs, SUnit *rhs) const {
       if (lhs->isScheduleHigh && !rhs->isScheduleHigh)
         return true;
       if (!lhs->isScheduleHigh && rhs->isScheduleHigh)
@@ -84,10 +82,10 @@ class SystemZPostRASchedStrategy : public MachineSchedStrategy {
     }
   };
   // A set of SUs with a sorter and dump method.
-  struct SUSet : std::set<SUnit*, SUSorter> {
-    #ifndef NDEBUG
+  struct SUSet : std::set<SUnit *, SUSorter> {
+#ifndef NDEBUG
     void dump(SystemZHazardRecognizer &HazardRec) const;
-    #endif
+#endif
   };
 
   /// The set of available SUs to schedule next.
@@ -98,7 +96,7 @@ class SystemZPostRASchedStrategy : public MachineSchedStrategy {
 
   /// Maintain hazard recognizers for all blocks, so that the scheduler state
   /// can be maintained past BB boundaries when appropariate.
-  typedef std::map<MachineBasicBlock*, SystemZHazardRecognizer*> MBB2HazRec;
+  typedef std::map<MachineBasicBlock *, SystemZHazardRecognizer *> MBB2HazRec;
   MBB2HazRec SchedStates;
 
   /// Pointer to the HazardRecognizer that tracks the scheduler state for

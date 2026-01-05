@@ -25,6 +25,7 @@ class XCoreSubtarget;
 class XCoreInstrInfo : public XCoreGenInstrInfo {
   const XCoreRegisterInfo RI;
   virtual void anchor();
+
 public:
   explicit XCoreInstrInfo(const XCoreSubtarget &ST);
 
@@ -82,8 +83,8 @@ public:
       Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  bool reverseBranchCondition(
-                          SmallVectorImpl<MachineOperand> &Cond) const override;
+  bool
+  reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 
   // Emit code before MBBI to load immediate value into physical register Reg.
   // Returns an iterator to the new instruction.
@@ -92,6 +93,6 @@ public:
                                             unsigned Reg, uint64_t Value) const;
 };
 
-}
+} // namespace llvm
 
 #endif

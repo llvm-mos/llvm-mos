@@ -22,48 +22,44 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips-os16"
 
-static cl::opt<std::string> Mips32FunctionMask(
-  "mips32-function-mask",
-  cl::init(""),
-  cl::desc("Force function to be mips32"),
-  cl::Hidden);
+static cl::opt<std::string>
+    Mips32FunctionMask("mips32-function-mask", cl::init(""),
+                       cl::desc("Force function to be mips32"), cl::Hidden);
 
 namespace {
-  class MipsOs16 : public ModulePass {
-  public:
-    static char ID;
+class MipsOs16 : public ModulePass {
+public:
+  static char ID;
 
-    MipsOs16() : ModulePass(ID) {}
+  MipsOs16() : ModulePass(ID) {}
 
-    StringRef getPassName() const override { return "MIPS Os16 Optimization"; }
+  StringRef getPassName() const override { return "MIPS Os16 Optimization"; }
 
-    bool runOnModule(Module &M) override;
-  };
+  bool runOnModule(Module &M) override;
+};
 
-  char MipsOs16::ID = 0;
-}
+char MipsOs16::ID = 0;
+} // namespace
 
 // Figure out if we need float point based on the function signature.
 // We need to move variables in and/or out of floating point
 // registers because of the ABI
 //
-static  bool needsFPFromSig(Function &F) {
-  Type* RetType = F.getReturnType();
+static bool needsFPFromSig(Function &F) {
+  Type *RetType = F.getReturnType();
   switch (RetType->getTypeID()) {
   case Type::FloatTyID:
   case Type::DoubleTyID:
     return true;
-  default:
-    ;
+  default:;
   }
-  if (F.arg_size() >=1) {
+  if (F.arg_size() >= 1) {
     Argument &Arg = *F.arg_begin();
     switch (Arg.getType()->getTypeID()) {
     case Type::FloatTyID:
     case Type::DoubleTyID:
       return true;
-    default:
-      ;
+    default:;
     }
   }
   return false;
@@ -75,8 +71,8 @@ static bool needsFP(Function &F) {
   if (needsFPFromSig(F))
     return true;
   for (Function::const_iterator BB = F.begin(), E = F.end(); BB != E; ++BB)
-    for (BasicBlock::const_iterator I = BB->begin(), E = BB->end();
-         I != E; ++I) {
+    for (BasicBlock::const_iterator I = BB->begin(), E = BB->end(); I != E;
+         ++I) {
       const Instruction &Inst = *I;
       switch (Inst.getOpcode()) {
       case Instruction::FAdd:
@@ -92,20 +88,18 @@ static bool needsFP(Function &F) {
       case Instruction::FPExt:
       case Instruction::FCmp:
         return true;
-      default:
-        ;
+      default:;
       }
       if (const CallInst *CI = dyn_cast<CallInst>(I)) {
         LLVM_DEBUG(dbgs() << "Working on call"
                           << "\n");
-        Function &F_ =  *CI->getCalledFunction();
+        Function &F_ = *CI->getCalledFunction();
         if (needsFPFromSig(F_))
           return true;
       }
     }
   return false;
 }
-
 
 bool MipsOs16::runOnModule(Module &M) {
   bool usingMask = Mips32FunctionMask.length() > 0;
@@ -141,13 +135,11 @@ bool MipsOs16::runOnModule(Module &M) {
         }
         functionIndex++;
       }
-    }
-    else {
+    } else {
       if (needsFP(F)) {
         LLVM_DEBUG(dbgs() << "os16 forced mips32: " << F.getName() << "\n");
         F.addFnAttr("nomips16");
-      }
-      else {
+      } else {
         LLVM_DEBUG(dbgs() << "os16 forced mips16: " << F.getName() << "\n");
         F.addFnAttr("mips16");
       }

@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_LIB_TARGET_MSP430_MSP430TARGETMACHINE_H
 #define LLVM_LIB_TARGET_MSP430_MSP430TARGETMACHINE_H
 

@@ -23,8 +23,7 @@ using namespace llvm;
 
 namespace {
 
-template <class ELFT>
-class ELFDumper {
+template <class ELFT> class ELFDumper {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
   ArrayRef<Elf_Shdr> Sections;
@@ -108,7 +107,7 @@ public:
   Expected<ELFYAML::Object *> dump();
 };
 
-}
+} // namespace
 
 template <class ELFT>
 ELFDumper<ELFT>::ELFDumper(const object::ELFFile<ELFT> &O,
@@ -1403,8 +1402,7 @@ ELFDumper<ELFT>::dumpGnuHashSection(const Elf_Shdr *Shdr) {
   // Set just the raw binary content if we were unable to read the header
   // or when the section data is truncated or malformed.
   uint64_t Size = Data.getData().size() - Cur.tell();
-  if (!Cur || (Size < MaskWords * AddrSize + NBuckets * 4) ||
-      (Size % 4 != 0)) {
+  if (!Cur || (Size < MaskWords * AddrSize + NBuckets * 4) || (Size % 4 != 0)) {
     consumeError(Cur.takeError());
     S->Content = yaml::BinaryRef(Content);
     return S.release();
@@ -1595,7 +1593,8 @@ ELFDumper<ELFT>::dumpGroupSection(const Elf_Shdr *Shdr) {
   if (Error E = dumpCommonSection(Shdr, *S))
     return std::move(E);
 
-  // Get symbol with index sh_info. This symbol's name is the signature of the group.
+  // Get symbol with index sh_info. This symbol's name is the signature of the
+  // group.
   Expected<StringRef> SymbolName = getSymbolName(Shdr->sh_link, Shdr->sh_info);
   if (!SymbolName)
     return SymbolName.takeError();

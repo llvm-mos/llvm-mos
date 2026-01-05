@@ -27,7 +27,7 @@ public:
   explicit RecordPrinter(raw_ostream &O, std::string D)
       : OS(O), Delim(std::move(D)) {}
 
-  explicit RecordPrinter(raw_ostream &O) : RecordPrinter(O, ""){};
+  explicit RecordPrinter(raw_ostream &O) : RecordPrinter(O, "") {};
 
   Error visit(BufferExtents &) override;
   Error visit(WallclockRecord &) override;

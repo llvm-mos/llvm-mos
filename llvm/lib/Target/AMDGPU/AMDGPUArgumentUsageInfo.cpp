@@ -47,12 +47,10 @@ char AMDGPUArgumentUsageInfo::ID = 0;
 const AMDGPUFunctionArgInfo AMDGPUArgumentUsageInfo::ExternFunctionInfo{};
 
 // Hardcoded registers from fixed function ABI
-const AMDGPUFunctionArgInfo AMDGPUArgumentUsageInfo::FixedABIFunctionInfo
-  = AMDGPUFunctionArgInfo::fixedABILayout();
+const AMDGPUFunctionArgInfo AMDGPUArgumentUsageInfo::FixedABIFunctionInfo =
+    AMDGPUFunctionArgInfo::fixedABILayout();
 
-bool AMDGPUArgumentUsageInfo::doInitialization(Module &M) {
-  return false;
-}
+bool AMDGPUArgumentUsageInfo::doInitialization(Module &M) { return false; }
 
 bool AMDGPUArgumentUsageInfo::doFinalization(Module &M) {
   ArgInfoMap.clear();
@@ -76,13 +74,11 @@ void AMDGPUArgumentUsageInfo::print(raw_ostream &OS, const Module *M) const {
        << "  WorkGroupInfo: " << FI.second.WorkGroupInfo
        << "  LDSKernelId: " << FI.second.LDSKernelId
        << "  PrivateSegmentWaveByteOffset: "
-          << FI.second.PrivateSegmentWaveByteOffset
+       << FI.second.PrivateSegmentWaveByteOffset
        << "  ImplicitBufferPtr: " << FI.second.ImplicitBufferPtr
-       << "  ImplicitArgPtr: " << FI.second.ImplicitArgPtr
-       << "  WorkItemIDX " << FI.second.WorkItemIDX
-       << "  WorkItemIDY " << FI.second.WorkItemIDY
-       << "  WorkItemIDZ " << FI.second.WorkItemIDZ
-       << '\n';
+       << "  ImplicitArgPtr: " << FI.second.ImplicitArgPtr << "  WorkItemIDX "
+       << FI.second.WorkItemIDX << "  WorkItemIDY " << FI.second.WorkItemIDY
+       << "  WorkItemIDZ " << FI.second.WorkItemIDZ << '\n';
   }
 }
 
@@ -161,8 +157,8 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
 
 AMDGPUFunctionArgInfo AMDGPUFunctionArgInfo::fixedABILayout() {
   AMDGPUFunctionArgInfo AI;
-  AI.PrivateSegmentBuffer
-    = ArgDescriptor::createRegister(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3);
+  AI.PrivateSegmentBuffer =
+      ArgDescriptor::createRegister(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3);
   AI.DispatchPtr = ArgDescriptor::createRegister(AMDGPU::SGPR4_SGPR5);
   AI.QueuePtr = ArgDescriptor::createRegister(AMDGPU::SGPR6_SGPR7);
 

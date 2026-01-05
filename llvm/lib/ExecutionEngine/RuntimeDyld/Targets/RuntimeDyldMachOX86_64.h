@@ -18,7 +18,6 @@ namespace llvm {
 class RuntimeDyldMachOX86_64
     : public RuntimeDyldMachOCRTPBase<RuntimeDyldMachOX86_64> {
 public:
-
   typedef uint64_t TargetPtrT;
 
   RuntimeDyldMachOX86_64(RuntimeDyld::MemoryManager &MM,
@@ -29,13 +28,10 @@ public:
 
   Align getStubAlignment() override { return Align(8); }
 
-  Expected<relocation_iterator>
-  processRelocationRef(unsigned SectionID, relocation_iterator RelI,
-                       const ObjectFile &BaseObjT,
-                       ObjSectionToIDMap &ObjSectionToID,
-                       StubMap &Stubs) override {
-    const MachOObjectFile &Obj =
-      static_cast<const MachOObjectFile &>(BaseObjT);
+  Expected<relocation_iterator> processRelocationRef(
+      unsigned SectionID, relocation_iterator RelI, const ObjectFile &BaseObjT,
+      ObjSectionToIDMap &ObjSectionToID, StubMap &Stubs) override {
+    const MachOObjectFile &Obj = static_cast<const MachOObjectFile &>(BaseObjT);
     MachO::any_relocation_info RelInfo =
         Obj.getRelocation(RelI->getRawDataRefImpl());
     uint32_t RelType = Obj.getAnyRelocationType(RelInfo);
@@ -59,12 +55,13 @@ public:
       makeValueAddendPCRel(Value, RelI, 1 << RE.Size);
 
     switch (RelType) {
-    UNIMPLEMENTED_RELOC(MachO::X86_64_RELOC_TLV);
+      UNIMPLEMENTED_RELOC(MachO::X86_64_RELOC_TLV);
     default:
       if (RelType > MachO::X86_64_RELOC_TLV)
         return make_error<RuntimeDyldError>(("MachO X86_64 relocation type " +
                                              Twine(RelType) +
-                                             " is out of range").str());
+                                             " is out of range")
+                                                .str());
       break;
     }
 
@@ -166,13 +163,13 @@ private:
     uint8_t *LocalAddress = Sections[SectionID].getAddressWithOffset(Offset);
     unsigned NumBytes = 1 << Size;
     int64_t Addend =
-      SignExtend64(readBytesUnaligned(LocalAddress, NumBytes), NumBytes * 8);
+        SignExtend64(readBytesUnaligned(LocalAddress, NumBytes), NumBytes * 8);
 
     unsigned SectionBID = ~0U;
     uint64_t SectionBOffset = 0;
 
     MachO::any_relocation_info RelInfo =
-      Obj.getRelocation(RelI->getRawDataRefImpl());
+        Obj.getRelocation(RelI->getRawDataRefImpl());
 
     bool AIsExternal = BaseObj.getPlainRelocationExternal(RelInfo);
 
@@ -187,7 +184,7 @@ private:
       SectionRef SecB = Obj.getAnyRelocationSection(RelInfo);
       bool IsCode = SecB.isText();
       Expected<unsigned> SectionBIDOrErr =
-        findOrEmitSection(Obj, SecB, IsCode, ObjSectionToID);
+          findOrEmitSection(Obj, SecB, IsCode, ObjSectionToID);
       if (!SectionBIDOrErr)
         return SectionBIDOrErr.takeError();
       SectionBID = *SectionBIDOrErr;
@@ -213,24 +210,23 @@ private:
       SectionRef SecA = Obj.getAnyRelocationSection(RelInfo);
       bool IsCode = SecA.isText();
       Expected<unsigned> SectionAIDOrErr =
-        findOrEmitSection(Obj, SecA, IsCode, ObjSectionToID);
+          findOrEmitSection(Obj, SecA, IsCode, ObjSectionToID);
       if (!SectionAIDOrErr)
         return SectionAIDOrErr.takeError();
       SectionAID = *SectionAIDOrErr;
       Addend -= SecA.getAddress();
     }
 
-    RelocationEntry R(SectionID, Offset, MachO::X86_64_RELOC_SUBTRACTOR, (uint64_t)Addend,
-                      SectionAID, SectionAOffset, SectionBID, SectionBOffset,
-                      false, Size);
+    RelocationEntry R(SectionID, Offset, MachO::X86_64_RELOC_SUBTRACTOR,
+                      (uint64_t)Addend, SectionAID, SectionAOffset, SectionBID,
+                      SectionBOffset, false, Size);
 
     addRelocationForSection(R, SectionAID);
 
     return ++RelI;
   }
-
 };
-}
+} // namespace llvm
 
 #undef DEBUG_TYPE
 

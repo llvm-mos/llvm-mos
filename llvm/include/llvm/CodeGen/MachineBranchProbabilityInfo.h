@@ -94,7 +94,6 @@ public:
   MachineBranchProbabilityInfo &getMBPI() { return MBPI; }
   const MachineBranchProbabilityInfo &getMBPI() const { return MBPI; }
 };
-}
-
+} // namespace llvm
 
 #endif

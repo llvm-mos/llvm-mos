@@ -22,6 +22,6 @@ namespace llvm {
 ///   DAG.addMutation(createPowerPCMacroFusionDAGMutation());
 /// to PPCTargetMachine::createMachineScheduler() to have an effect.
 std::unique_ptr<ScheduleDAGMutation> createPowerPCMacroFusionDAGMutation();
-} // llvm
+} // namespace llvm
 
 #endif // LLVM_LIB_TARGET_POWERPC_PPCMACROFUSION_H

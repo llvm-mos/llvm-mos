@@ -153,9 +153,9 @@ bool TargetMachine::isPositionIndependent() const {
 // b) these target options should be passed only on the function
 //    and not on the TargetMachine (via TargetOptions) at all.
 void TargetMachine::resetTargetOptions(const Function &F) const {
-#define RESET_OPTION(X, Y)                                              \
-  do {                                                                  \
-    Options.X = F.getFnAttribute(Y).getValueAsBool();     \
+#define RESET_OPTION(X, Y)                                                     \
+  do {                                                                         \
+    Options.X = F.getFnAttribute(Y).getValueAsBool();                          \
   } while (0)
 
   RESET_OPTION(NoInfsFPMath, "no-infs-fp-math");

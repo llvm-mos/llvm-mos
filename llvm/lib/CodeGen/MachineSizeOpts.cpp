@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineSizeOpts.h"
-#include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 
 using namespace llvm;
@@ -44,8 +44,7 @@ bool llvm::shouldOptimizeForSize(const MachineBasicBlock *MBB,
 }
 
 bool llvm::shouldOptimizeForSize(const MachineBasicBlock *MBB,
-                                 ProfileSummaryInfo *PSI,
-                                 MBFIWrapper *MBFIW,
+                                 ProfileSummaryInfo *PSI, MBFIWrapper *MBFIW,
                                  PGSOQueryType QueryType) {
   assert(MBB);
   if (MBB->getParent()->getFunction().hasOptSize())

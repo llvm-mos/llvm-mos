@@ -255,6 +255,6 @@ private:
                               bool IsFunclet) const;
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

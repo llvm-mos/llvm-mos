@@ -45,7 +45,7 @@ public:
   FORWARD_SYMBOL_METHOD(getSourceFileName)
 };
 
+} // namespace pdb
 } // namespace llvm
-}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLCOMPILANDDETAILS_H

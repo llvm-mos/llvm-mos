@@ -469,29 +469,31 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_FMAD).lower();
 
   for (unsigned Op : {G_SEXTLOAD, G_ZEXTLOAD}) {
-    auto &Actions =  getActionDefinitionsBuilder(Op);
+    auto &Actions = getActionDefinitionsBuilder(Op);
 
     if (Op == G_SEXTLOAD)
-      Actions.lowerIf(atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Unordered));
+      Actions.lowerIf(
+          atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Unordered));
 
     // Atomics have zero extending behavior.
     Actions
-      .legalForTypesWithMemDesc({{s32, p0, s8, 8},
-                                 {s32, p0, s16, 8},
-                                 {s32, p0, s32, 8},
-                                 {s64, p0, s8, 2},
-                                 {s64, p0, s16, 2},
-                                 {s64, p0, s32, 4},
-                                 {s64, p0, s64, 8},
-                                 {p0, p0, s64, 8},
-                                 {v2s32, p0, s64, 8}})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, s64)
-      // TODO: We could support sum-of-pow2's but the lowering code doesn't know
-      //       how to do that yet.
-      .unsupportedIfMemSizeNotPow2()
-      // Lower anything left over into G_*EXT and G_LOAD
-      .lower();
+        .legalForTypesWithMemDesc({{s32, p0, s8, 8},
+                                   {s32, p0, s16, 8},
+                                   {s32, p0, s32, 8},
+                                   {s64, p0, s8, 2},
+                                   {s64, p0, s16, 2},
+                                   {s64, p0, s32, 4},
+                                   {s64, p0, s64, 8},
+                                   {p0, p0, s64, 8},
+                                   {v2s32, p0, s64, 8}})
+        .widenScalarToNextPow2(0)
+        .clampScalar(0, s32, s64)
+        // TODO: We could support sum-of-pow2's but the lowering code doesn't
+        // know
+        //       how to do that yet.
+        .unsupportedIfMemSizeNotPow2()
+        // Lower anything left over into G_*EXT and G_LOAD
+        .lower();
   }
 
   auto IsPtrVecPred = [=](const LegalityQuery &Query) {
@@ -984,9 +986,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   // Control-flow
   getActionDefinitionsBuilder(G_BR).alwaysLegal();
-  getActionDefinitionsBuilder(G_BRCOND)
-    .legalFor({s32})
-    .clampScalar(0, s32, s32);
+  getActionDefinitionsBuilder(G_BRCOND).legalFor({s32}).clampScalar(0, s32,
+                                                                    s32);
   getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({p0});
 
   getActionDefinitionsBuilder(G_SELECT)
@@ -1055,8 +1056,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarToNextPow2(0, /*Min*/ 8);
 
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS)
-      .lowerIf(
-          all(typeInSet(0, {s8, s16, s32, s64, s128}), typeIs(2, p0)));
+      .lowerIf(all(typeInSet(0, {s8, s16, s32, s64, s128}), typeIs(2, p0)));
 
   bool UseOutlineAtomics = ST.outlineAtomics() && !ST.hasLSE();
 
@@ -1608,7 +1608,7 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   // Don't modify an intrinsic call.
   if (GlobalOp.isSymbol())
     return true;
-  const auto* GV = GlobalOp.getGlobal();
+  const auto *GV = GlobalOp.getGlobal();
   if (GV->isThreadLocal())
     return true; // Don't want to modify TLS vars.
 
@@ -1682,10 +1682,10 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   switch (IntrinsicID) {
   case Intrinsic::vacopy: {
     unsigned PtrSize = ST->isTargetILP32() ? 4 : 8;
-    unsigned VaListSize =
-      (ST->isTargetDarwin() || ST->isTargetWindows())
-          ? PtrSize
-          : ST->isTargetILP32() ? 20 : 32;
+    unsigned VaListSize = (ST->isTargetDarwin() || ST->isTargetWindows())
+                              ? PtrSize
+                          : ST->isTargetILP32() ? 20
+                                                : 32;
 
     MachineFunction &MF = *MI.getMF();
     auto Val = MF.getRegInfo().createGenericVirtualRegister(
@@ -2124,7 +2124,8 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   // v8s16,v4s32,v2s64 -> v16i8
   LLT VTy = Size == 128 ? LLT::fixed_vector(16, 8) : LLT::fixed_vector(8, 8);
   if (Ty.isScalar()) {
-    assert((Size == 32 || Size == 64 || Size == 128) && "Expected only 32, 64, or 128 bit scalars!");
+    assert((Size == 32 || Size == 64 || Size == 128) &&
+           "Expected only 32, 64, or 128 bit scalars!");
     if (Size == 32) {
       Val = MIRBuilder.buildZExt(LLT::scalar(64), Val).getReg(0);
     }

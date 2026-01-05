@@ -116,7 +116,7 @@ static const SCEV *computeTripCount(const Loop &L, const SCEV &ElemSize,
 
   if (!TripCount) {
     LLVM_DEBUG(dbgs() << "Trip count of loop " << L.getName()
-               << " could not be computed, using DefaultTripCount\n");
+                      << " could not be computed, using DefaultTripCount\n");
     TripCount = SE.getConstant(ElemSize.getType(), DefaultTripCount);
   }
 
@@ -152,8 +152,8 @@ IndexedReference::IndexedReference(Instruction &StoreOrLoadInst,
 
   IsValid = delinearize(LI);
   if (IsValid)
-    LLVM_DEBUG(dbgs().indent(2) << "Succesfully delinearized: " << *this
-                                << "\n");
+    LLVM_DEBUG(dbgs().indent(2)
+               << "Succesfully delinearized: " << *this << "\n");
 }
 
 std::optional<bool>
@@ -327,7 +327,8 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
       assert(AR && AR->getLoop() && "Expecting valid loop");
       const SCEV *TripCount =
           computeTripCount(*AR->getLoop(), *Sizes.back(), SE);
-      Type *WiderType = SE.getWiderType(RefCost->getType(), TripCount->getType());
+      Type *WiderType =
+          SE.getWiderType(RefCost->getType(), TripCount->getType());
       // For the multiplication result to fit, request a type twice as wide.
       WiderType = WiderType->getExtendedType();
       RefCost = SE.getMulExpr(SE.getNoopOrZeroExtend(RefCost, WiderType),
@@ -368,8 +369,7 @@ bool IndexedReference::tryDelinearizeFixedSize(
 
   LLVM_DEBUG({
     dbgs() << "Delinearized subscripts of fixed-size array\n"
-           << "GEP:" << *getLoadStorePointerOperand(&StoreOrLoadInst)
-           << "\n";
+           << "GEP:" << *getLoadStorePointerOperand(&StoreOrLoadInst) << "\n";
   });
   return true;
 }
@@ -433,7 +433,8 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
       // In this case, reconstruct the access function using the absolute value
       // of the step recurrence.
       const SCEVAddRecExpr *AccessFnAR = dyn_cast<SCEVAddRecExpr>(AccessFn);
-      const SCEV *StepRec = AccessFnAR ? AccessFnAR->getStepRecurrence(SE) : nullptr;
+      const SCEV *StepRec =
+          AccessFnAR ? AccessFnAR->getStepRecurrence(SE) : nullptr;
 
       if (StepRec && SE.isKnownNegative(StepRec))
         AccessFn = SE.getAddRecExpr(
@@ -598,7 +599,8 @@ CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
     return nullptr;
   }
 
-  return std::make_unique<CacheCost>(Loops, AR.LI, AR.SE, AR.TTI, AR.AA, DI, TRT);
+  return std::make_unique<CacheCost>(Loops, AR.LI, AR.SE, AR.TTI, AR.AA, DI,
+                                     TRT);
 }
 
 void CacheCost::calculateCacheFootprint() {
@@ -646,18 +648,17 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
           dbgs().indent(2) << Representative << "\n";
         });
 
-
-       // FIXME: Both positive and negative access functions will be placed
-       // into the same reference group, resulting in a bi-directional array
-       // access such as:
-       //   for (i = N; i > 0; i--)
-       //     A[i] = A[N - i];
-       // having the same cost calculation as a single dimention access pattern
-       //   for (i = 0; i < N; i++)
-       //     A[i] = A[i];
-       // when in actuality, depending on the array size, the first example
-       // should have a cost closer to 2x the second due to the two cache
-       // access per iteration from opposite ends of the array
+        // FIXME: Both positive and negative access functions will be placed
+        // into the same reference group, resulting in a bi-directional array
+        // access such as:
+        //   for (i = N; i > 0; i--)
+        //     A[i] = A[N - i];
+        // having the same cost calculation as a single dimention access pattern
+        //   for (i = 0; i < N; i++)
+        //     A[i] = A[i];
+        // when in actuality, depending on the array size, the first example
+        // should have a cost closer to 2x the second due to the two cache
+        // access per iteration from opposite ends of the array
         std::optional<bool> HasTemporalReuse =
             R->hasTemporalReuse(Representative, *TRT, *InnerMostLoop, DI, AA);
         std::optional<bool> HasSpacialReuse =
@@ -720,8 +721,8 @@ CacheCost::computeLoopCacheCost(const Loop &L,
     LoopCost += RefGroupCost * TripCountsProduct;
   }
 
-  LLVM_DEBUG(dbgs().indent(2) << "Loop '" << L.getName()
-                              << "' has cost=" << LoopCost << "\n");
+  LLVM_DEBUG(dbgs().indent(2)
+             << "Loop '" << L.getName() << "' has cost=" << LoopCost << "\n");
 
   return LoopCost;
 }

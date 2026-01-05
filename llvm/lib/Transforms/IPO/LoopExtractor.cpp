@@ -93,7 +93,7 @@ INITIALIZE_PASS_END(LoopExtractorLegacyPass, "loop-extract",
                     "Extract loops into new functions", false, false)
 
 namespace {
-  /// SingleLoopExtractor - For bugpoint.
+/// SingleLoopExtractor - For bugpoint.
 struct SingleLoopExtractor : public LoopExtractorLegacyPass {
   static char ID; // Pass identification, replacement for typeid
   SingleLoopExtractor() : LoopExtractorLegacyPass(1) {}

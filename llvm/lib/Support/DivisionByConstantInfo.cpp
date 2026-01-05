@@ -39,14 +39,14 @@ SignedDivisionByConstantInfo SignedDivisionByConstantInfo::get(const APInt &D) {
   APInt::udivrem(SignedMin, AD, Q2, R2);
   do {
     P = P + 1;
-    Q1 <<= 1;      // update Q1 = 2P/abs(NC)
-    R1 <<= 1;      // update R1 = rem(2P/abs(NC))
+    Q1 <<= 1;          // update Q1 = 2P/abs(NC)
+    R1 <<= 1;          // update R1 = rem(2P/abs(NC))
     if (R1.uge(ANC)) { // must be unsigned comparison
       ++Q1;
       R1 -= ANC;
     }
-    Q2 <<= 1;     // update Q2 = 2P/abs(D)
-    R2 <<= 1;     // update R2 = rem(2P/abs(D))
+    Q2 <<= 1;         // update Q2 = 2P/abs(D)
+    R2 <<= 1;         // update R2 = rem(2P/abs(D))
     if (R2.uge(AD)) { // must be unsigned comparison
       ++Q2;
       R2 -= AD;
@@ -142,7 +142,7 @@ UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
     return Retval;
   }
 
-  Retval.Magic = std::move(Q2);             // resulting magic number
+  Retval.Magic = std::move(Q2); // resulting magic number
   ++Retval.Magic;
   Retval.PostShift = P - D.getBitWidth(); // resulting shift
   // Reduce shift amount for IsAdd.

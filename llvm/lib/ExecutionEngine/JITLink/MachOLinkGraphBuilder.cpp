@@ -507,7 +507,7 @@ Error MachOLinkGraphBuilder::graphifyRegularSymbols() {
       while (!SecNSymStack.empty() &&
              (isAltEntry(*SecNSymStack.back()) ||
               SecNSymStack.back()->Value == BlockSyms.back()->Value ||
-             !SubsectionsViaSymbols)) {
+              !SubsectionsViaSymbols)) {
         BlockSyms.push_back(SecNSymStack.back());
         SecNSymStack.pop_back();
       }
@@ -671,10 +671,17 @@ Error MachOLinkGraphBuilder::graphifyCStringSection(
                << ", align-ofs = " << B.getAlignmentOffset() << " for \"";
         for (size_t J = 0; J != std::min(B.getSize(), size_t(16)); ++J)
           switch (B.getContent()[J]) {
-          case '\0': break;
-          case '\n': dbgs() << "\\n"; break;
-          case '\t': dbgs() << "\\t"; break;
-          default:   dbgs() << B.getContent()[J]; break;
+          case '\0':
+            break;
+          case '\n':
+            dbgs() << "\\n";
+            break;
+          case '\t':
+            dbgs() << "\\t";
+            break;
+          default:
+            dbgs() << B.getContent()[J];
+            break;
           }
         if (B.getSize() > 16)
           dbgs() << "...";

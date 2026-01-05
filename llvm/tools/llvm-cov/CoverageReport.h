@@ -46,13 +46,12 @@ public:
                      const CoverageViewOptions &Options,
                      const CoverageFilter &Filters = CoverageFiltersMatchAll());
 
-  static void
-  prepareSingleFileReport(const StringRef Filename,
-                          const coverage::CoverageMapping *Coverage,
-                          const CoverageViewOptions &Options,
-                          const unsigned LCP,
-                          FileCoverageSummary *FileReport,
-                          const CoverageFilter *Filters);
+  static void prepareSingleFileReport(const StringRef Filename,
+                                      const coverage::CoverageMapping *Coverage,
+                                      const CoverageViewOptions &Options,
+                                      const unsigned LCP,
+                                      FileCoverageSummary *FileReport,
+                                      const CoverageFilter *Filters);
 
   /// Render file reports for every unique file in the coverage mapping.
   void renderFileReports(raw_ostream &OS,

@@ -37,9 +37,7 @@ public:
   }
 
   /// Return true if the filename passes the requirements of this filter.
-  virtual bool matchesFilename(StringRef Filename) const {
-    return true;
-  }
+  virtual bool matchesFilename(StringRef Filename) const { return true; }
 };
 
 /// Matches functions that contain a specific string in their name.

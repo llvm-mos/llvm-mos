@@ -86,9 +86,9 @@ void PhysicalRegisterUsageInfo::print(raw_ostream &OS, const Module *M) const {
   for (const FuncPtrRegMaskPair *FPRMPair : FPRMPairVector) {
     OS << FPRMPair->first->getName() << " "
        << "Clobbered Registers: ";
-    const TargetRegisterInfo *TRI
-        = TM->getSubtarget<TargetSubtargetInfo>(*(FPRMPair->first))
-          .getRegisterInfo();
+    const TargetRegisterInfo *TRI =
+        TM->getSubtarget<TargetSubtargetInfo>(*(FPRMPair->first))
+            .getRegisterInfo();
 
     for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg) {
       if (MachineOperand::clobbersPhysReg(&(FPRMPair->second[0]), PReg))

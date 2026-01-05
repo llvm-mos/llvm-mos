@@ -136,7 +136,8 @@ Error DWARFDebugArangeSet::extract(DWARFDataExtractor data,
   uint64_t end_offset = Offset + full_length;
   while (*offset_ptr < end_offset) {
     uint64_t EntryOffset = *offset_ptr;
-    arangeDescriptor.Address = data.getUnsigned(offset_ptr, HeaderData.AddrSize);
+    arangeDescriptor.Address =
+        data.getUnsigned(offset_ptr, HeaderData.AddrSize);
     arangeDescriptor.Length = data.getUnsigned(offset_ptr, HeaderData.AddrSize);
 
     // Each set of tuples is terminated by a 0 for the address and 0

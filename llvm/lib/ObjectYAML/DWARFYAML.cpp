@@ -155,7 +155,7 @@ void MappingTraits<DWARFYAML::AttributeAbbrev>::mapping(
     IO &IO, DWARFYAML::AttributeAbbrev &AttAbbrev) {
   IO.mapRequired("Attribute", AttAbbrev.Attribute);
   IO.mapRequired("Form", AttAbbrev.Form);
-  if(AttAbbrev.Form == dwarf::DW_FORM_implicit_const)
+  if (AttAbbrev.Form == dwarf::DW_FORM_implicit_const)
     IO.mapRequired("Value", AttAbbrev.Value);
 }
 
@@ -282,7 +282,7 @@ void MappingTraits<DWARFYAML::LineTable>::mapping(
   IO.mapRequired("Version", LineTable.Version);
   IO.mapOptional("PrologueLength", LineTable.PrologueLength);
   IO.mapRequired("MinInstLength", LineTable.MinInstLength);
-  if(LineTable.Version >= 4)
+  if (LineTable.Version >= 4)
     IO.mapRequired("MaxOpsPerInst", LineTable.MaxOpsPerInst);
   IO.mapRequired("DefaultIsStmt", LineTable.DefaultIsStmt);
   IO.mapRequired("LineBase", LineTable.LineBase);

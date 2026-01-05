@@ -94,7 +94,7 @@ private:
 
 public:
   template <class... Mods>
-  explicit DebugCounterList(Mods &&... Ms) : Base(std::forward<Mods>(Ms)...) {}
+  explicit DebugCounterList(Mods &&...Ms) : Base(std::forward<Mods>(Ms)...) {}
 
 private:
   void printOptionInfo(size_t GlobalWidth) const override {
@@ -270,7 +270,5 @@ bool DebugCounter::shouldExecuteImpl(unsigned CounterName) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void DebugCounter::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void DebugCounter::dump() const { print(dbgs()); }
 #endif

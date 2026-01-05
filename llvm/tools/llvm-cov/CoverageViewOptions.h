@@ -17,11 +17,7 @@ namespace llvm {
 
 /// The options for displaying the code coverage information.
 struct CoverageViewOptions {
-  enum class OutputFormat {
-    Text,
-    HTML,
-    Lcov
-  };
+  enum class OutputFormat { Text, HTML, Lcov };
 
   enum class BranchOutputType { Count, Percent, Off };
 
@@ -84,6 +80,6 @@ struct CoverageViewOptions {
     return VersionString;
   }
 };
-}
+} // namespace llvm
 
 #endif // LLVM_COV_COVERAGEVIEWOPTIONS_H

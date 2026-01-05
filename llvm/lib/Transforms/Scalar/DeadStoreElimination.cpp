@@ -110,15 +110,14 @@ STATISTIC(NumDomMemDefChecks,
 DEBUG_COUNTER(MemorySSACounter, "dse-memoryssa",
               "Controls which MemoryDefs are eliminated.");
 
-static cl::opt<bool>
-EnablePartialOverwriteTracking("enable-dse-partial-overwrite-tracking",
-  cl::init(true), cl::Hidden,
-  cl::desc("Enable partial-overwrite tracking in DSE"));
+static cl::opt<bool> EnablePartialOverwriteTracking(
+    "enable-dse-partial-overwrite-tracking", cl::init(true), cl::Hidden,
+    cl::desc("Enable partial-overwrite tracking in DSE"));
 
 static cl::opt<bool>
-EnablePartialStoreMerging("enable-dse-partial-store-merging",
-  cl::init(true), cl::Hidden,
-  cl::desc("Enable partial store merging in DSE"));
+    EnablePartialStoreMerging("enable-dse-partial-store-merging",
+                              cl::init(true), cl::Hidden,
+                              cl::desc("Enable partial store merging in DSE"));
 
 static cl::opt<unsigned>
     MemorySSAScanLimit("dse-memoryssa-scanlimit", cl::init(150), cl::Hidden,
@@ -188,14 +187,15 @@ static bool isShortenableAtTheEnd(Instruction *I) {
 
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
-      default: return false;
-      case Intrinsic::memset:
-      case Intrinsic::memcpy:
-      case Intrinsic::memcpy_element_unordered_atomic:
-      case Intrinsic::memset_element_unordered_atomic:
-        // Do shorten memory intrinsics.
-        // FIXME: Add memmove if it's also safe to transform.
-        return true;
+    default:
+      return false;
+    case Intrinsic::memset:
+    case Intrinsic::memcpy:
+    case Intrinsic::memcpy_element_unordered_atomic:
+    case Intrinsic::memset_element_unordered_atomic:
+      // Do shorten memory intrinsics.
+      // FIXME: Add memmove if it's also safe to transform.
+      return true;
     }
   }
 
@@ -413,14 +413,13 @@ static OverwriteResult isPartialOverwrite(const MemoryLocation &KillingLoc,
   return OW_Unknown;
 }
 
-/// Returns true if the memory which is accessed by the second instruction is not
-/// modified between the first and the second instruction.
-/// Precondition: Second instruction must be dominated by the first
-/// instruction.
-static bool
-memoryIsNotModifiedBetween(Instruction *FirstI, Instruction *SecondI,
-                           BatchAAResults &AA, const DataLayout &DL,
-                           DominatorTree *DT) {
+/// Returns true if the memory which is accessed by the second instruction is
+/// not modified between the first and the second instruction. Precondition:
+/// Second instruction must be dominated by the first instruction.
+static bool memoryIsNotModifiedBetween(Instruction *FirstI,
+                                       Instruction *SecondI, BatchAAResults &AA,
+                                       const DataLayout &DL,
+                                       DominatorTree *DT) {
   // Do a backwards scan through the CFG from SecondI to FirstI. Look for
   // instructions which can modify the memory location accessed by SecondI.
   //
@@ -462,7 +461,8 @@ memoryIsNotModifiedBetween(Instruction *FirstI, Instruction *SecondI,
 
     BasicBlock::iterator EI;
     if (isFirstBlock) {
-      // Ignore instructions after SecondI if this is the first visit of SecondBB.
+      // Ignore instructions after SecondI if this is the first visit of
+      // SecondBB.
       assert(B == SecondBB && "first block is not the store block");
       EI = SecondBBI;
       isFirstBlock = false;
@@ -478,7 +478,8 @@ memoryIsNotModifiedBetween(Instruction *FirstI, Instruction *SecondI,
           return false;
     }
     if (B != FirstBB) {
-      assert(B != &FirstBB->getParent()->getEntryBlock() &&
+      assert(
+          B != &FirstBB->getParent()->getEntryBlock() &&
           "Should not hit the entry block because SI must be dominated by LI");
       for (BasicBlock *Pred : predecessors(B)) {
         PHITransAddr PredAddr = Addr;
@@ -971,8 +972,8 @@ struct DSEState {
   // accesses are executed before another access.
   DenseMap<BasicBlock *, unsigned> PostOrderNumbers;
 
-  /// Keep track of instructions (partly) overlapping with killing MemoryDefs per
-  /// basic block.
+  /// Keep track of instructions (partly) overlapping with killing MemoryDefs
+  /// per basic block.
   MapVector<BasicBlock *, InstOverlapIntervalsTy> IOLs;
   // Check if there are root nodes that are terminated by UnreachableInst.
   // Those roots pessimize post-dominance queries. If there are such roots,
@@ -1095,8 +1096,8 @@ struct DSEState {
         return OW_Complete;
     }
 
-    // FIXME: Vet that this works for size upper-bounds. Seems unlikely that we'll
-    // get imprecise values here, though (except for unknown sizes).
+    // FIXME: Vet that this works for size upper-bounds. Seems unlikely that
+    // we'll get imprecise values here, though (except for unknown sizes).
     if (!KillingLocSize.isPrecise() || !DeadLoc.Size.isPrecise()) {
       // In case no constant size is known, try to an IR values for the number
       // of bytes written and check if they match.
@@ -1126,8 +1127,8 @@ struct DSEState {
     // Query the alias information
     AliasResult AAR = BatchAA.alias(KillingLoc, DeadLoc);
 
-    // If the start pointers are the same, we just have to compare sizes to see if
-    // the killing store was larger than the dead store.
+    // If the start pointers are the same, we just have to compare sizes to see
+    // if the killing store was larger than the dead store.
     if (AAR == AliasResult::MustAlias) {
       // Make sure that the KillingSize size is >= the DeadSize size.
       if (KillingSize >= DeadSize)
@@ -1626,7 +1627,8 @@ struct DSEState {
           // which are less likely to be removable in the end.
           if (PartialLimit <= 1) {
             WalkerStepLimit -= 1;
-            LLVM_DEBUG(dbgs() << "   ... reached partial limit ... continue with next access\n");
+            LLVM_DEBUG(dbgs() << "   ... reached partial limit ... continue "
+                                 "with next access\n");
             continue;
           }
           PartialLimit -= 1;
@@ -2043,8 +2045,7 @@ struct DSEState {
     auto shouldCreateCalloc = [](CallInst *Malloc, CallInst *Memset) {
       // Check for br(icmp ptr, null), truebb, falsebb) pattern at the end
       // of malloc block
-      auto *MallocBB = Malloc->getParent(),
-        *MemsetBB = Memset->getParent();
+      auto *MallocBB = Malloc->getParent(), *MemsetBB = Memset->getParent();
       if (MallocBB == MemsetBB)
         return true;
       auto *Ptr = Memset->getArgOperand(0);
@@ -2092,9 +2093,8 @@ struct DSEState {
       return false;
 
     MemorySSAUpdater Updater(&MSSA);
-    auto *NewAccess =
-      Updater.createMemoryAccessAfter(cast<Instruction>(Calloc), nullptr,
-                                      MallocDef);
+    auto *NewAccess = Updater.createMemoryAccessAfter(cast<Instruction>(Calloc),
+                                                      nullptr, MallocDef);
     auto *NewAccessMD = cast<MemoryDef>(NewAccess);
     Updater.insertDef(NewAccessMD, /*RenameUses=*/true);
     Malloc->replaceAllUsesWith(Calloc);

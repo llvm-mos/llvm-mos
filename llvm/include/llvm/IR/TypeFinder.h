@@ -31,12 +31,12 @@ class Value;
 class TypeFinder {
   // To avoid walking constant expressions multiple times and other IR
   // objects, we keep several helper maps.
-  DenseSet<const Value*> VisitedConstants;
+  DenseSet<const Value *> VisitedConstants;
   DenseSet<const MDNode *> VisitedMetadata;
   DenseSet<AttributeList> VisitedAttributes;
-  DenseSet<Type*> VisitedTypes;
+  DenseSet<Type *> VisitedTypes;
 
-  std::vector<StructType*> StructTypes;
+  std::vector<StructType *> StructTypes;
   bool OnlyNamed = false;
 
 public:
@@ -45,8 +45,8 @@ public:
   void run(const Module &M, bool onlyNamed);
   void clear();
 
-  using iterator = std::vector<StructType*>::iterator;
-  using const_iterator = std::vector<StructType*>::const_iterator;
+  using iterator = std::vector<StructType *>::iterator;
+  using const_iterator = std::vector<StructType *>::const_iterator;
 
   iterator begin() { return StructTypes.begin(); }
   iterator end() { return StructTypes.end(); }

@@ -94,8 +94,7 @@ private:
   std::vector<std::pair<uint32_t, StringRef>> FileSymbols;
 
   SymbolizableObjectFile(const object::ObjectFile *Obj,
-                         std::unique_ptr<DIContext> DICtx,
-                         bool UntagAddresses);
+                         std::unique_ptr<DIContext> DICtx, bool UntagAddresses);
 };
 
 } // end namespace symbolize

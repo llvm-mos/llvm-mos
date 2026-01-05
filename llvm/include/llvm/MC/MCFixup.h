@@ -109,7 +109,8 @@ public:
   /// is an error to pass an unsupported size.
   static MCFixupKind getDataKindForSize(unsigned Size) {
     switch (Size) {
-    default: llvm_unreachable("Invalid generic fixup size!");
+    default:
+      llvm_unreachable("Invalid generic fixup size!");
     case 1:
       return FK_Data_1;
     case 2:
@@ -137,6 +138,6 @@ inline bool isRelocRelocation(MCFixupKind FixupKind) {
 }
 } // namespace mc
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

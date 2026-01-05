@@ -1,4 +1,5 @@
-//===- LowerWidenableCondition.cpp - Lower the guard intrinsic ---------------===//
+//===- LowerWidenableCondition.cpp - Lower the guard intrinsic
+//---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -49,8 +50,8 @@ static bool lowerWidenableCondition(Function &F) {
   return true;
 }
 
-PreservedAnalyses LowerWidenableConditionPass::run(Function &F,
-                                               FunctionAnalysisManager &AM) {
+PreservedAnalyses
+LowerWidenableConditionPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (lowerWidenableCondition(F))
     return PreservedAnalyses::none();
 

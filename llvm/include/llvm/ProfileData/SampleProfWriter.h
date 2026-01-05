@@ -177,9 +177,7 @@ protected:
     return sampleprof_error::success;
   }
 
-  void setUseCtxSplitLayout() override {
-    MarkFlatProfiles = true;
-  }
+  void setUseCtxSplitLayout() override { MarkFlatProfiles = true; }
 
 private:
   /// Indent level to use when writing.
@@ -275,6 +273,7 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
 class LLVM_ABI SampleProfileWriterExtBinaryBase
     : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
+
 public:
   std::error_code write(const SampleProfileMap &ProfileMap) override;
 

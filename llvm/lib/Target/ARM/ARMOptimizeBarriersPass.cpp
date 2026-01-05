@@ -1,5 +1,5 @@
 //===-- ARMOptimizeBarriersPass - two DMBs without a memory access in between,
-//removed one -===//
+// removed one -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,17 +32,14 @@ public:
   StringRef getPassName() const override { return "optimise barriers pass"; }
 };
 char ARMOptimizeBarriersPass::ID = 0;
-}
+} // namespace
 
 // Returns whether the instruction can safely move past a DMB instruction
 // The current implementation allows this iif MI does not have any possible
 // memory access
 static bool CanMovePastDMB(const MachineInstr *MI) {
-  return !(MI->mayLoad() ||
-          MI->mayStore() ||
-          MI->hasUnmodeledSideEffects() ||
-          MI->isCall() ||
-          MI->isReturn());
+  return !(MI->mayLoad() || MI->mayStore() || MI->hasUnmodeledSideEffects() ||
+           MI->isCall() || MI->isReturn());
 }
 
 bool ARMOptimizeBarriersPass::runOnMachineFunction(MachineFunction &MF) {

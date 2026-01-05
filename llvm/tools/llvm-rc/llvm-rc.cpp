@@ -132,7 +132,7 @@ std::string createTempFile(const Twine &Prefix, StringRef Suffix) {
 
 ErrorOr<std::string> findClang(const char *Argv0, StringRef Triple) {
   // This just needs to be some symbol in the binary.
-  void *P = (void*) (intptr_t) findClang;
+  void *P = (void *)(intptr_t)findClang;
   std::string MainExecPath = llvm::sys::fs::getMainExecutable(Argv0, P);
   if (MainExecPath.empty())
     MainExecPath = Argv0;
@@ -142,9 +142,8 @@ ErrorOr<std::string> findClang(const char *Argv0, StringRef Triple) {
   std::string VersionedClang = ("clang-" + Twine(LLVM_VERSION_MAJOR)).str();
   for (const auto *Name :
        {TargetClang.c_str(), VersionedClang.c_str(), "clang", "clang-cl"}) {
-    for (const StringRef Parent :
-         {llvm::sys::path::parent_path(MainExecPath),
-          llvm::sys::path::parent_path(Argv0)}) {
+    for (const StringRef Parent : {llvm::sys::path::parent_path(MainExecPath),
+                                   llvm::sys::path::parent_path(Argv0)}) {
       // Look for various versions of "clang" first in the MainExecPath parent
       // directory and then in the argv[0] parent directory.
       // On Windows (but not Unix) argv[0] is overwritten with the eqiuvalent
@@ -182,9 +181,7 @@ bool isUsableArch(Triple::ArchType Arch) {
   }
 }
 
-Triple::ArchType getDefaultFallbackArch() {
-  return Triple::x86_64;
-}
+Triple::ArchType getDefaultFallbackArch() { return Triple::x86_64; }
 
 std::string getClangClTriple() {
   Triple T(sys::getDefaultTargetTriple());
@@ -297,7 +294,8 @@ static std::pair<bool, std::string> isWindres(llvm::StringRef Argv0) {
   StringRef ProgName = llvm::sys::path::stem(Argv0);
   // x86_64-w64-mingw32-windres -> x86_64-w64-mingw32, windres
   // llvm-rc -> "", llvm-rc
-  // aarch64-w64-mingw32-llvm-windres-10.exe -> aarch64-w64-mingw32, llvm-windres
+  // aarch64-w64-mingw32-llvm-windres-10.exe -> aarch64-w64-mingw32,
+  // llvm-windres
   ProgName = ProgName.rtrim("0123456789.-");
   if (!ProgName.consume_back_insensitive("windres"))
     return std::make_pair<bool, std::string>(false, "");

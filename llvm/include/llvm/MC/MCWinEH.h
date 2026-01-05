@@ -27,7 +27,7 @@ struct Instruction {
   unsigned Operation;
 
   Instruction(unsigned Op, MCSymbol *L, unsigned Reg, unsigned Off)
-    : Label(L), Offset(Off), Register(Reg), Operation(Op) {}
+      : Label(L), Offset(Off), Register(Reg), Operation(Op) {}
 
   bool operator==(const Instruction &I) const {
     // Check whether two instructions refer to the same operation
@@ -113,7 +113,7 @@ public:
   virtual void EmitUnwindInfo(MCStreamer &Streamer, FrameInfo *FI,
                               bool HandlerData) const = 0;
 };
-}
-}
+} // namespace WinEH
+} // namespace llvm
 
 #endif

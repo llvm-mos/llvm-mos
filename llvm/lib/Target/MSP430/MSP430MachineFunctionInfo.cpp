@@ -10,7 +10,7 @@
 
 using namespace llvm;
 
-void MSP430MachineFunctionInfo::anchor() { }
+void MSP430MachineFunctionInfo::anchor() {}
 
 MachineFunctionInfo *MSP430MachineFunctionInfo::clone(
     BumpPtrAllocator &Allocator, MachineFunction &DestMF,

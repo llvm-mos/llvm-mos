@@ -39,7 +39,7 @@ public:
   enum { IDPos, NBytesPos };
 
 private:
-  const MachineInstr* MI;
+  const MachineInstr *MI;
 
 public:
   LLVM_ABI explicit StackMapOpers(const MachineInstr *MI);
@@ -102,19 +102,13 @@ public:
   uint64_t getID() const { return getMetaOper(IDPos).getImm(); }
 
   /// Return the number of patchable bytes the given patchpoint should emit.
-  uint32_t getNumPatchBytes() const {
-    return getMetaOper(NBytesPos).getImm();
-  }
+  uint32_t getNumPatchBytes() const { return getMetaOper(NBytesPos).getImm(); }
 
   /// Returns the target of the underlying call.
-  const MachineOperand &getCallTarget() const {
-    return getMetaOper(TargetPos);
-  }
+  const MachineOperand &getCallTarget() const { return getMetaOper(TargetPos); }
 
   /// Returns the calling convention
-  CallingConv::ID getCallingConv() const {
-    return getMetaOper(CCPos).getImm();
-  }
+  CallingConv::ID getCallingConv() const { return getMetaOper(CCPos).getImm(); }
 
   unsigned getArgIdx() const { return getMetaIdx() + MetaEnd; }
 
@@ -390,10 +384,9 @@ private:
   /// STACKMAP, and PATCHPOINT the label is expected to immediately *preceed*
   /// lowering of the MI to MCInsts.  For STATEPOINT, it expected to
   /// immediately *follow*.  It's not clear this difference was intentional,
-  /// but it exists today.  
-  void recordStackMapOpers(const MCSymbol &L,
-                           const MachineInstr &MI, uint64_t ID,
-                           MachineInstr::const_mop_iterator MOI,
+  /// but it exists today.
+  void recordStackMapOpers(const MCSymbol &L, const MachineInstr &MI,
+                           uint64_t ID, MachineInstr::const_mop_iterator MOI,
                            MachineInstr::const_mop_iterator MOE,
                            bool recordResult = false);
 

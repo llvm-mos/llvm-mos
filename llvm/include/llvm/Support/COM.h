@@ -31,7 +31,7 @@ private:
   InitializeCOMRAII(const InitializeCOMRAII &) = delete;
   void operator=(const InitializeCOMRAII &) = delete;
 };
-}
-}
+} // namespace sys
+} // namespace llvm
 
 #endif

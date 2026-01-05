@@ -77,10 +77,7 @@ public:
   SetVector() = default;
 
   /// Initialize a SetVector with a range of elements
-  template<typename It>
-  SetVector(It Start, It End) {
-    insert(Start, End);
-  }
+  template <typename It> SetVector(It Start, It End) { insert(Start, End); }
 
   template <typename Range>
   SetVector(llvm::from_range_t, Range &&R)
@@ -165,8 +162,7 @@ public:
   }
 
   /// Insert a range of elements into the SetVector.
-  template<typename It>
-  void insert(It Start, It End) {
+  template <typename It> void insert(It Start, It End) {
     for (; Start != End; ++Start)
       insert(*Start);
   }
@@ -176,7 +172,7 @@ public:
   }
 
   /// Remove an item from the set vector.
-  bool remove(const value_type& X) {
+  bool remove(const value_type &X) {
     if constexpr (canBeSmall())
       if (isSmall()) {
         typename vector_type::iterator I = find(vector_, X);
@@ -224,8 +220,7 @@ public:
   /// algorithm like remove_if impossible to use.
   ///
   /// \returns true if any element is removed.
-  template <typename UnaryPredicate>
-  bool remove_if(UnaryPredicate P) {
+  template <typename UnaryPredicate> bool remove_if(UnaryPredicate P) {
     typename vector_type::iterator I = [this, P] {
       if constexpr (canBeSmall())
         if (isSmall())
@@ -291,8 +286,7 @@ public:
   /// Compute This := This u S, return whether 'This' changed.
   /// TODO: We should be able to use set_union from SetOperations.h, but
   ///       SetVector interface is inconsistent with DenseSet.
-  template <class STy>
-  bool set_union(const STy &S) {
+  template <class STy> bool set_union(const STy &S) {
     bool Changed = false;
 
     for (const auto &Elem : S)
@@ -305,8 +299,7 @@ public:
   /// Compute This := This - B
   /// TODO: We should be able to use set_subtract from SetOperations.h, but
   ///       SetVector interface is inconsistent with DenseSet.
-  template <class STy>
-  void set_subtract(const STy &S) {
+  template <class STy> void set_subtract(const STy &S) {
     for (const auto &Elem : S)
       remove(Elem);
   }
@@ -327,8 +320,8 @@ private:
         set_.insert(entry);
   }
 
-  set_type set_;         ///< The set.
-  vector_type vector_;   ///< The vector.
+  set_type set_;       ///< The set.
+  vector_type vector_; ///< The vector.
 };
 
 /// A SetVector that performs no allocations if smaller than
@@ -351,9 +344,9 @@ inline void swap(llvm::SetVector<T, V, S, N> &LHS,
 }
 
 /// Implement std::swap in terms of SmallSetVector swap.
-template<typename T, unsigned N>
-inline void
-swap(llvm::SmallSetVector<T, N> &LHS, llvm::SmallSetVector<T, N> &RHS) {
+template <typename T, unsigned N>
+inline void swap(llvm::SmallSetVector<T, N> &LHS,
+                 llvm::SmallSetVector<T, N> &RHS) {
   LHS.swap(RHS);
 }
 

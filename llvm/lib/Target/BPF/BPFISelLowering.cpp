@@ -35,9 +35,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "bpf-lower"
 
-static cl::opt<bool> BPFExpandMemcpyInOrder("bpf-expand-memcpy-in-order",
-  cl::Hidden, cl::init(false),
-  cl::desc("Expand memcpy into load/store pairs in order"));
+static cl::opt<bool> BPFExpandMemcpyInOrder(
+    "bpf-expand-memcpy-in-order", cl::Hidden, cl::init(false),
+    cl::desc("Expand memcpy into load/store pairs in order"));
 
 static cl::opt<unsigned> BPFMinimumJumpTableEntries(
     "bpf-min-jump-table-entries", cl::init(13), cl::Hidden,
@@ -110,7 +110,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_STORE, VT, Custom);
   }
 
-  for (auto VT : { MVT::i32, MVT::i64 }) {
+  for (auto VT : {MVT::i32, MVT::i64}) {
     if (VT == MVT::i32 && !STI.getHasAlu32())
       continue;
 
@@ -193,7 +193,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   } else {
     // inline memcpy() for kernel to see explicit copy
     unsigned CommonMaxStores =
-      STI.getSelectionDAGInfo()->getCommonMaxStoresPerMemFunc();
+        STI.getSelectionDAGInfo()->getCommonMaxStoresPerMemFunc();
 
     MaxStoresPerMemset = MaxStoresPerMemsetOptSize = CommonMaxStores;
     MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = CommonMaxStores;
@@ -228,7 +228,8 @@ bool BPFTargetLowering::allowsMisalignedMemoryAccesses(EVT VT, unsigned, Align,
   return true;
 }
 
-bool BPFTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
+bool BPFTargetLowering::isOffsetFoldingLegal(
+    const GlobalAddressSDNode *GA) const {
   return false;
 }
 
@@ -315,8 +316,9 @@ BPFTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
 
-void BPFTargetLowering::ReplaceNodeResults(
-  SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
+void BPFTargetLowering::ReplaceNodeResults(SDNode *N,
+                                           SmallVectorImpl<SDValue> &Results,
+                                           SelectionDAG &DAG) const {
   const char *Msg;
   uint32_t Opcode = N->getOpcode();
   switch (Opcode) {
@@ -688,8 +690,9 @@ SDValue BPFTargetLowering::LowerCallResult(
 
   // Copy all of the result registers out of their specified physreg.
   for (auto &Val : RVLocs) {
-    Chain = DAG.getCopyFromReg(Chain, DL, Val.getLocReg(),
-                               Val.getValVT(), InGlue).getValue(1);
+    Chain =
+        DAG.getCopyFromReg(Chain, DL, Val.getLocReg(), Val.getValVT(), InGlue)
+            .getValue(1);
     InGlue = Chain.getValue(2);
     InVals.push_back(Chain.getValue(0));
   }
@@ -880,9 +883,9 @@ SDValue BPFTargetLowering::LowerBlockAddress(SDValue Op,
   return SDValue(DAG.getMachineNode(BPF::LDIMM64, DL, MVT::i64, Addr), 0);
 }
 
-unsigned
-BPFTargetLowering::EmitSubregExt(MachineInstr &MI, MachineBasicBlock *BB,
-                                 unsigned Reg, bool isSigned) const {
+unsigned BPFTargetLowering::EmitSubregExt(MachineInstr &MI,
+                                          MachineBasicBlock *BB, unsigned Reg,
+                                          bool isSigned) const {
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
   const TargetRegisterClass *RC = getRegClassFor(MVT::i64);
   int RShiftOp = isSigned ? BPF::SRA_ri : BPF::SRL_ri;
@@ -904,18 +907,18 @@ BPFTargetLowering::EmitSubregExt(MachineInstr &MI, MachineBasicBlock *BB,
   } else {
     BuildMI(BB, DL, TII.get(BPF::MOV_32_64), PromotedReg0).addReg(Reg);
     BuildMI(BB, DL, TII.get(BPF::SLL_ri), PromotedReg1)
-      .addReg(PromotedReg0).addImm(32);
+        .addReg(PromotedReg0)
+        .addImm(32);
     BuildMI(BB, DL, TII.get(RShiftOp), PromotedReg2)
-      .addReg(PromotedReg1).addImm(32);
+        .addReg(PromotedReg1)
+        .addImm(32);
   }
 
   return PromotedReg2;
 }
 
-MachineBasicBlock *
-BPFTargetLowering::EmitInstrWithCustomInserterMemcpy(MachineInstr &MI,
-                                                     MachineBasicBlock *BB)
-                                                     const {
+MachineBasicBlock *BPFTargetLowering::EmitInstrWithCustomInserterMemcpy(
+    MachineInstr &MI, MachineBasicBlock *BB) const {
   MachineFunction *MF = MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   MachineInstrBuilder MIB(*MF, MI);
@@ -1029,19 +1032,15 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
   unsigned Opc = MI.getOpcode();
-  bool isSelectRROp = (Opc == BPF::Select ||
-                       Opc == BPF::Select_64_32 ||
-                       Opc == BPF::Select_32 ||
-                       Opc == BPF::Select_32_64);
+  bool isSelectRROp = (Opc == BPF::Select || Opc == BPF::Select_64_32 ||
+                       Opc == BPF::Select_32 || Opc == BPF::Select_32_64);
 
   bool isMemcpyOp = Opc == BPF::MEMCPY;
   bool isLDimm64Op = Opc == BPF::LDIMM64;
 
 #ifndef NDEBUG
-  bool isSelectRIOp = (Opc == BPF::Select_Ri ||
-                       Opc == BPF::Select_Ri_64_32 ||
-                       Opc == BPF::Select_Ri_32 ||
-                       Opc == BPF::Select_Ri_32_64);
+  bool isSelectRIOp = (Opc == BPF::Select_Ri || Opc == BPF::Select_Ri_64_32 ||
+                       Opc == BPF::Select_Ri_32 || Opc == BPF::Select_Ri_32_64);
 
   if (!(isSelectRROp || isSelectRIOp || isMemcpyOp || isLDimm64Op))
     report_fatal_error("unhandled instruction type: " + Twine(Opc));
@@ -1053,10 +1052,8 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   if (isLDimm64Op)
     return EmitInstrWithCustomInserterLDimm64(MI, BB);
 
-  bool is32BitCmp = (Opc == BPF::Select_32 ||
-                     Opc == BPF::Select_32_64 ||
-                     Opc == BPF::Select_Ri_32 ||
-                     Opc == BPF::Select_Ri_32_64);
+  bool is32BitCmp = (Opc == BPF::Select_32 || Opc == BPF::Select_32_64 ||
+                     Opc == BPF::Select_Ri_32 || Opc == BPF::Select_Ri_32_64);
 
   // To "insert" a SELECT instruction, we actually have to insert the diamond
   // control-flow pattern.  The incoming instruction knows the destination vreg
@@ -1090,32 +1087,30 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   int CC = MI.getOperand(3).getImm();
   int NewCC;
   switch (CC) {
-#define SET_NEWCC(X, Y) \
-  case ISD::X: \
-    if (is32BitCmp && HasJmp32) \
-      NewCC = isSelectRROp ? BPF::Y##_rr_32 : BPF::Y##_ri_32; \
-    else \
-      NewCC = isSelectRROp ? BPF::Y##_rr : BPF::Y##_ri; \
+#define SET_NEWCC(X, Y)                                                        \
+  case ISD::X:                                                                 \
+    if (is32BitCmp && HasJmp32)                                                \
+      NewCC = isSelectRROp ? BPF::Y##_rr_32 : BPF::Y##_ri_32;                  \
+    else                                                                       \
+      NewCC = isSelectRROp ? BPF::Y##_rr : BPF::Y##_ri;                        \
     break
-  SET_NEWCC(SETGT, JSGT);
-  SET_NEWCC(SETUGT, JUGT);
-  SET_NEWCC(SETGE, JSGE);
-  SET_NEWCC(SETUGE, JUGE);
-  SET_NEWCC(SETEQ, JEQ);
-  SET_NEWCC(SETNE, JNE);
-  SET_NEWCC(SETLT, JSLT);
-  SET_NEWCC(SETULT, JULT);
-  SET_NEWCC(SETLE, JSLE);
-  SET_NEWCC(SETULE, JULE);
+    SET_NEWCC(SETGT, JSGT);
+    SET_NEWCC(SETUGT, JUGT);
+    SET_NEWCC(SETGE, JSGE);
+    SET_NEWCC(SETUGE, JUGE);
+    SET_NEWCC(SETEQ, JEQ);
+    SET_NEWCC(SETNE, JNE);
+    SET_NEWCC(SETLT, JSLT);
+    SET_NEWCC(SETULT, JULT);
+    SET_NEWCC(SETLE, JSLE);
+    SET_NEWCC(SETULE, JULE);
   default:
     report_fatal_error("unimplemented select CondCode " + Twine(CC));
   }
 
   Register LHS = MI.getOperand(1).getReg();
-  bool isSignedCmp = (CC == ISD::SETGT ||
-                      CC == ISD::SETGE ||
-                      CC == ISD::SETLT ||
-                      CC == ISD::SETLE);
+  bool isSignedCmp = (CC == ISD::SETGT || CC == ISD::SETGE ||
+                      CC == ISD::SETLT || CC == ISD::SETLE);
 
   // eBPF at the moment only has 64-bit comparison. Any 32-bit comparison need
   // to be promoted, however if the 32-bit comparison operands are destination
@@ -1139,8 +1134,7 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // Check before we build J*_ri instruction.
     if (!isInt<32>(imm32))
       report_fatal_error("immediate overflows 32 bits: " + Twine(imm32));
-    BuildMI(BB, DL, TII.get(NewCC))
-        .addReg(LHS).addImm(imm32).addMBB(Copy1MBB);
+    BuildMI(BB, DL, TII.get(NewCC)).addReg(LHS).addImm(imm32).addMBB(Copy1MBB);
   }
 
   // Copy0MBB:

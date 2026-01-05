@@ -313,9 +313,9 @@ static bool matches(const ValueMapping &LM, const ValueMapping &RM) {
   // get serialized.  However, checking if users are constant and calling
   // isConstantUsed() on every one is very expensive.  Instead, just check if
   // the user is mapped.
-  auto skipUnmappedUsers =
-      [&](Value::const_use_iterator &U, Value::const_use_iterator E,
-          const ValueMapping &M) {
+  auto skipUnmappedUsers = [&](Value::const_use_iterator &U,
+                               Value::const_use_iterator E,
+                               const ValueMapping &M) {
     while (U != E && !M.lookup(U->getUser()))
       ++U;
   };
@@ -418,8 +418,9 @@ static void shuffleValueUseLists(Value *V, std::minstd_rand0 &Gen,
   LLVM_DEBUG(dbgs() << "V = "; V->dump());
   std::uniform_int_distribution<short> Dist(10, 99);
   SmallDenseMap<const Use *, short, 16> Order;
-  auto compareUses =
-      [&Order](const Use &L, const Use &R) { return Order[&L] < Order[&R]; };
+  auto compareUses = [&Order](const Use &L, const Use &R) {
+    return Order[&L] < Order[&R];
+  };
   do {
     for (const Use &U : V->uses()) {
       auto I = Dist(Gen);

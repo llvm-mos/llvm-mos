@@ -198,7 +198,7 @@ void MCStreamer::emitFill(uint64_t NumBytes, uint8_t FillValue) {
 }
 
 void llvm::MCStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLen,
-                                llvm::SMLoc, const MCSubtargetInfo& STI) {}
+                                llvm::SMLoc, const MCSubtargetInfo &STI) {}
 
 /// The implementation in this class just redirects to emitFill.
 void MCStreamer::emitZeros(uint64_t NumBytes) { emitFill(NumBytes, 0); }
@@ -385,8 +385,7 @@ void MCStreamer::emitCVDefRangeDirective(
 }
 
 void MCStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
-                                     MCSymbol *EHSymbol) {
-}
+                                     MCSymbol *EHSymbol) {}
 
 void MCStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
   switchSectionNoPrint(getContext().getObjectFileInfo()->getTextSection());
@@ -426,9 +425,9 @@ void MCStreamer::emitCFIStartProc(bool IsSimple, SMLoc Loc) {
   Frame.IsSimple = IsSimple;
   emitCFIStartProcImpl(Frame);
 
-  const MCAsmInfo* MAI = Context.getAsmInfo();
+  const MCAsmInfo *MAI = Context.getAsmInfo();
   if (MAI) {
-    for (const MCCFIInstruction& Inst : MAI->getInitialFrameState()) {
+    for (const MCCFIInstruction &Inst : MAI->getInitialFrameState()) {
       if (Inst.getOperation() == MCCFIInstruction::OpDefCfa ||
           Inst.getOperation() == MCCFIInstruction::OpDefCfaRegister ||
           Inst.getOperation() == MCCFIInstruction::OpLLVMDefAspaceCfa) {
@@ -441,8 +440,7 @@ void MCStreamer::emitCFIStartProc(bool IsSimple, SMLoc Loc) {
   DwarfFrameInfos.push_back(std::move(Frame));
 }
 
-void MCStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
-}
+void MCStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {}
 
 void MCStreamer::emitCFIEndProc() {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
@@ -552,8 +550,7 @@ void MCStreamer::emitCFIRelOffset(int64_t Register, int64_t Offset, SMLoc Loc) {
   CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
-void MCStreamer::emitCFIPersonality(const MCSymbol *Sym,
-                                    unsigned Encoding) {
+void MCStreamer::emitCFIPersonality(const MCSymbol *Sym, unsigned Encoding) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
@@ -1159,8 +1156,7 @@ void MCTargetStreamer::prettyPrintAsm(MCInstPrinter &InstPrinter,
   InstPrinter.printInst(&Inst, Address, "", STI, OS);
 }
 
-void MCStreamer::visitUsedSymbol(const MCSymbol &Sym) {
-}
+void MCStreamer::visitUsedSymbol(const MCSymbol &Sym) {}
 
 void MCStreamer::visitUsedExpr(const MCExpr &Expr) {
   switch (Expr.getKind()) {
@@ -1291,8 +1287,8 @@ void MCStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
 }
 
 void MCStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
-                                          const MCSymbol *Trap,
-                                          unsigned Lang, unsigned Reason,
+                                          const MCSymbol *Trap, unsigned Lang,
+                                          unsigned Reason,
                                           unsigned FunctionSize,
                                           bool hasDebug) {
   report_fatal_error("emitXCOFFExceptDirective is only supported on "

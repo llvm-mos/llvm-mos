@@ -49,8 +49,8 @@ void LiveStacks::init(MachineFunction &MF) {
   // register allocators to provide the information.
 }
 
-LiveInterval &
-LiveStacks::getOrCreateInterval(int Slot, const TargetRegisterClass *RC) {
+LiveInterval &LiveStacks::getOrCreateInterval(int Slot,
+                                              const TargetRegisterClass *RC) {
   assert(Slot >= 0 && "Spill slot indice must be >= 0");
   SS2IntervalMap::iterator I = S2IMap.find(Slot);
   if (I == S2IMap.end()) {
@@ -96,7 +96,7 @@ void LiveStacksWrapperLegacy::print(raw_ostream &OS, const Module *) const {
 }
 
 /// print - Implement the dump method.
-void LiveStacks::print(raw_ostream &OS, const Module*) const {
+void LiveStacks::print(raw_ostream &OS, const Module *) const {
 
   OS << "********** INTERVALS **********\n";
   for (const_iterator I = begin(), E = end(); I != E; ++I) {

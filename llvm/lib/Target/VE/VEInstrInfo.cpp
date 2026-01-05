@@ -234,8 +234,7 @@ unsigned VEInstrInfo::insertBranch(MachineBasicBlock &MBB,
   if (Cond.empty()) {
     // Uncondition branch
     assert(!FBB && "Unconditional branch with multiple successors!");
-    BuildMI(&MBB, DL, get(VE::BRCFLa_t))
-        .addMBB(TBB);
+    BuildMI(&MBB, DL, get(VE::BRCFLa_t)).addMBB(TBB);
     return 1;
   }
 
@@ -266,24 +265,23 @@ unsigned VEInstrInfo::insertBranch(MachineBasicBlock &MBB,
     }
   }
   if (Cond[1].isImm()) {
-      BuildMI(&MBB, DL, get(opc[0]))
-          .add(Cond[0]) // condition code
-          .add(Cond[1]) // lhs
-          .add(Cond[2]) // rhs
-          .addMBB(TBB);
+    BuildMI(&MBB, DL, get(opc[0]))
+        .add(Cond[0]) // condition code
+        .add(Cond[1]) // lhs
+        .add(Cond[2]) // rhs
+        .addMBB(TBB);
   } else {
-      BuildMI(&MBB, DL, get(opc[1]))
-          .add(Cond[0])
-          .add(Cond[1])
-          .add(Cond[2])
-          .addMBB(TBB);
+    BuildMI(&MBB, DL, get(opc[1]))
+        .add(Cond[0])
+        .add(Cond[1])
+        .add(Cond[2])
+        .addMBB(TBB);
   }
 
   if (!FBB)
     return 1;
 
-  BuildMI(&MBB, DL, get(VE::BRCFLa_t))
-      .addMBB(FBB);
+  BuildMI(&MBB, DL, get(VE::BRCFLa_t)).addMBB(FBB);
   return 2;
 }
 
@@ -1048,9 +1046,7 @@ bool VEInstrInfo::expandExtendStackPseudo(MachineInstr &MI) const {
       .addReg(VE::SX14)
       .addImm(0)
       .addImm(0x18);
-  BuildMI(BB, dl, TII.get(VE::ORri), VE::SX62)
-      .addReg(VE::SX0)
-      .addImm(0);
+  BuildMI(BB, dl, TII.get(VE::ORri), VE::SX62).addReg(VE::SX0).addImm(0);
   BuildMI(BB, dl, TII.get(VE::LEAzii), VE::SX63)
       .addImm(0)
       .addImm(0)
@@ -1069,9 +1065,7 @@ bool VEInstrInfo::expandExtendStackPseudo(MachineInstr &MI) const {
       .addReg(VE::SX11);
   BuildMI(BB, dl, TII.get(VE::MONC));
 
-  BuildMI(BB, dl, TII.get(VE::ORri), VE::SX0)
-      .addReg(VE::SX62)
-      .addImm(0);
+  BuildMI(BB, dl, TII.get(VE::ORri), VE::SX0).addReg(VE::SX62).addImm(0);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return true;

@@ -358,9 +358,9 @@ static bool tryInterleave(Instruction *Start,
     Value *Shuffle = Builder.CreateShuffleVector(I->getOperand(0), LeafMask);
     bool FPext = isa<FPExtInst>(I);
     bool Sext = isa<SExtInst>(I);
-    Value *Ext = FPext ? Builder.CreateFPExt(Shuffle, I->getType())
-                       : Sext ? Builder.CreateSExt(Shuffle, I->getType())
-                              : Builder.CreateZExt(Shuffle, I->getType());
+    Value *Ext = FPext  ? Builder.CreateFPExt(Shuffle, I->getType())
+                 : Sext ? Builder.CreateSExt(Shuffle, I->getType())
+                        : Builder.CreateZExt(Shuffle, I->getType());
     I->replaceAllUsesWith(Ext);
     LLVM_DEBUG(dbgs() << "  with " << *Shuffle << "\n");
   }

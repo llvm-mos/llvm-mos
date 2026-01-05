@@ -43,7 +43,7 @@ class SSAUpdaterBulk {
     StringRef Name;
     Type *Ty;
     RewriteInfo() = default;
-    RewriteInfo(StringRef &N, Type *T) : Name(N), Ty(T){};
+    RewriteInfo(StringRef &N, Type *T) : Name(N), Ty(T) {};
   };
   SmallVector<RewriteInfo, 4> Rewrites;
 

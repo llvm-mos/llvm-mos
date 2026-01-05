@@ -37,7 +37,7 @@ ScoreboardHazardRecognizer::ScoreboardHazardRecognizer(
   // avoid dealing with the boundary condition.
   unsigned ScoreboardDepth = 1;
   if (ItinData && !ItinData->isEmpty()) {
-    for (unsigned idx = 0; ; ++idx) {
+    for (unsigned idx = 0;; ++idx) {
       if (ItinData->isEndMarker(idx))
         break;
 
@@ -47,7 +47,8 @@ ScoreboardHazardRecognizer::ScoreboardHazardRecognizer(
       unsigned ItinDepth = 0;
       for (; IS != E; ++IS) {
         unsigned StageDepth = CurCycle + IS->getCycles();
-        if (ItinDepth < StageDepth) ItinDepth = StageDepth;
+        if (ItinDepth < StageDepth)
+          ItinDepth = StageDepth;
         CurCycle += IS->getNextCycles();
       }
 
@@ -93,8 +94,8 @@ LLVM_DUMP_METHOD void ScoreboardHazardRecognizer::Scoreboard::dump() const {
   for (unsigned i = 0; i <= last; i++) {
     InstrStage::FuncUnits FUs = (*this)[i];
     dbgs() << "\t";
-    for (int j = std::numeric_limits<InstrStage::FuncUnits>::digits - 1;
-         j >= 0; j--)
+    for (int j = std::numeric_limits<InstrStage::FuncUnits>::digits - 1; j >= 0;
+         j--)
       dbgs() << ((FUs & (1ULL << j)) ? '1' : '0');
     dbgs() << '\n';
   }
@@ -126,7 +127,8 @@ ScoreboardHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   }
   unsigned idx = MCID->getSchedClass();
   for (const InstrStage *IS = ItinData->beginStage(idx),
-         *E = ItinData->endStage(idx); IS != E; ++IS) {
+                        *E = ItinData->endStage(idx);
+       IS != E; ++IS) {
     // We must find one of the stage's units free for every cycle the
     // stage is occupied. FIXME it would be more accurate to find the
     // same unit free in all the cycles.
@@ -185,7 +187,8 @@ void ScoreboardHazardRecognizer::EmitInstruction(SUnit *SU) {
 
   unsigned idx = MCID->getSchedClass();
   for (const InstrStage *IS = ItinData->beginStage(idx),
-         *E = ItinData->endStage(idx); IS != E; ++IS) {
+                        *E = ItinData->endStage(idx);
+       IS != E; ++IS) {
     // We must reserve one of the stage's units for every cycle the
     // stage is occupied. FIXME it would be more accurate to reserve
     // the same unit free in all the cycles.
@@ -228,14 +231,16 @@ void ScoreboardHazardRecognizer::EmitInstruction(SUnit *SU) {
 
 void ScoreboardHazardRecognizer::AdvanceCycle() {
   IssueCount = 0;
-  ReservedScoreboard[0] = 0; ReservedScoreboard.advance();
-  RequiredScoreboard[0] = 0; RequiredScoreboard.advance();
+  ReservedScoreboard[0] = 0;
+  ReservedScoreboard.advance();
+  RequiredScoreboard[0] = 0;
+  RequiredScoreboard.advance();
 }
 
 void ScoreboardHazardRecognizer::RecedeCycle() {
   IssueCount = 0;
-  ReservedScoreboard[ReservedScoreboard.getDepth()-1] = 0;
+  ReservedScoreboard[ReservedScoreboard.getDepth() - 1] = 0;
   ReservedScoreboard.recede();
-  RequiredScoreboard[RequiredScoreboard.getDepth()-1] = 0;
+  RequiredScoreboard[RequiredScoreboard.getDepth() - 1] = 0;
   RequiredScoreboard.recede();
 }

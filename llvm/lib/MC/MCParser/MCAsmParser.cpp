@@ -40,9 +40,7 @@ void MCAsmParser::setTargetParser(MCTargetAsmParser &P) {
   TargetParser->Initialize(*this);
 }
 
-const AsmToken &MCAsmParser::getTok() const {
-  return getLexer().getTok();
-}
+const AsmToken &MCAsmParser::getTok() const { return getLexer().getTok(); }
 
 bool MCAsmParser::parseTokenLoc(SMLoc &Loc) {
   Loc = getTok().getLoc();

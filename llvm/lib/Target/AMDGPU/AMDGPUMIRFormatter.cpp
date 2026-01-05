@@ -17,7 +17,8 @@
 using namespace llvm;
 
 void AMDGPUMIRFormatter::printImm(raw_ostream &OS, const MachineInstr &MI,
-                      std::optional<unsigned int> OpIdx, int64_t Imm) const {
+                                  std::optional<unsigned int> OpIdx,
+                                  int64_t Imm) const {
 
   switch (MI.getOpcode()) {
   case AMDGPU::S_DELAY_ALU:
@@ -32,11 +33,9 @@ void AMDGPUMIRFormatter::printImm(raw_ostream &OS, const MachineInstr &MI,
 
 /// Implement target specific parsing of immediate mnemonics. The mnemonic is
 /// a string with a leading dot.
-bool AMDGPUMIRFormatter::parseImmMnemonic(const unsigned OpCode,
-                              const unsigned OpIdx,
-                              StringRef Src, int64_t &Imm,
-                              ErrorCallbackType ErrorCallback) const
-{
+bool AMDGPUMIRFormatter::parseImmMnemonic(
+    const unsigned OpCode, const unsigned OpIdx, StringRef Src, int64_t &Imm,
+    ErrorCallbackType ErrorCallback) const {
 
   switch (OpCode) {
   case AMDGPU::S_DELAY_ALU:
@@ -92,8 +91,7 @@ void AMDGPUMIRFormatter::printSDelayAluImm(int64_t Imm,
 
 bool AMDGPUMIRFormatter::parseSDelayAluImmMnemonic(
     const unsigned int OpIdx, int64_t &Imm, llvm::StringRef &Src,
-    llvm::MIRFormatter::ErrorCallbackType &ErrorCallback) const
-{
+    llvm::MIRFormatter::ErrorCallbackType &ErrorCallback) const {
   assert(OpIdx == 0);
 
   Imm = 0;
@@ -128,7 +126,6 @@ bool AMDGPUMIRFormatter::parseSDelayAluImmMnemonic(
   if (Delay0 == -1)
     return ErrorCallback(Src.begin(), "Could not decode delay0");
 
-
   // Set the Imm so far, to that early return has the correct value.
   Imm = Delay0;
 
@@ -140,7 +137,6 @@ bool AMDGPUMIRFormatter::parseSDelayAluImmMnemonic(
   Expected = Src.consume_front("_skip_");
   if (!Expected)
     return ErrorCallback(Src.begin(), "Expected _skip_");
-
 
   if (Src.consume_front("SAME")) {
     Skip = 0;

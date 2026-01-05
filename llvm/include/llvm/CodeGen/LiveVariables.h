@@ -86,7 +86,7 @@ public:
     /// Kills - List of MachineInstruction's which are the last use of this
     /// virtual register (kill it) in their basic block.
     ///
-    std::vector<MachineInstr*> Kills;
+    std::vector<MachineInstr *> Kills;
 
     /// removeKill - Delete a kill corresponding to the specified
     /// machine instruction. Returns true if there was a kill
@@ -119,7 +119,7 @@ private:
   ///
   IndexedMap<VarInfo, VirtReg2IndexFunctor> VirtRegInfo;
 
-private:   // Intermediate data structures
+private: // Intermediate data structures
   MachineFunction *MF = nullptr;
 
   MachineRegisterInfo *MRI = nullptr;
@@ -140,7 +140,7 @@ private:   // Intermediate data structures
 
   // DistanceMap - Keep track the distance of a MI from the start of the
   // current basic block.
-  DenseMap<MachineInstr*, unsigned> DistanceMap;
+  DenseMap<MachineInstr *, unsigned> DistanceMap;
 
   // For legacy pass.
   LiveVariables() = default;
@@ -152,7 +152,8 @@ private:   // Intermediate data structures
   /// the last use of the whole register.
   bool HandlePhysRegKill(Register Reg, MachineInstr *MI);
 
-  /// HandleRegMask - Call HandlePhysRegKill for all registers clobbered by Mask.
+  /// HandleRegMask - Call HandlePhysRegKill for all registers clobbered by
+  /// Mask.
   void HandleRegMask(const MachineOperand &, unsigned);
 
   void HandlePhysRegUse(Register Reg, MachineInstr &MI);
@@ -172,7 +173,7 @@ private:   // Intermediate data structures
   /// particular, we want to map the variable information of a virtual
   /// register which is used in a PHI node. We map that to the BB the vreg
   /// is coming from.
-  void analyzePHINodes(const MachineFunction& Fn);
+  void analyzePHINodes(const MachineFunction &Fn);
 
   void runOnInstr(MachineInstr &MI, SmallVectorImpl<Register> &Defs,
                   unsigned NumRegs);
@@ -343,6 +344,6 @@ public:
   LiveVariables &getLV() { return LV; }
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

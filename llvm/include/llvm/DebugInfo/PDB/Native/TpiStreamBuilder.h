@@ -33,7 +33,7 @@ template <> struct BinaryItemTraits<llvm::codeview::CVType> {
 namespace msf {
 class MSFBuilder;
 struct MSFLayout;
-}
+} // namespace msf
 namespace pdb {
 struct TpiStreamHeader;
 
@@ -85,6 +85,6 @@ private:
   uint32_t Idx;
 };
 } // namespace pdb
-}
+} // namespace llvm
 
 #endif

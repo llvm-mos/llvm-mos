@@ -115,9 +115,8 @@ private:
 
     const SmallVectorImpl<std::pair<MachineOperand *, int64_t>> &Consts =
         TII->getSrcs(MI);
-    assert(
-        (TII->isALUInstr(MI.getOpcode()) || MI.getOpcode() == R600::DOT_4) &&
-        "Can't assign Const");
+    assert((TII->isALUInstr(MI.getOpcode()) || MI.getOpcode() == R600::DOT_4) &&
+           "Can't assign Const");
     for (auto &[Op, Sel] : Consts) {
       if (Op->getReg() != R600::ALU_CONST)
         continue;
@@ -168,12 +167,11 @@ private:
   }
 
   bool canClauseLocalKillFitInClause(
-                        unsigned AluInstCount,
-                        std::vector<std::pair<unsigned, unsigned>> KCacheBanks,
-                        MachineBasicBlock::iterator Def,
-                        MachineBasicBlock::iterator BBEnd) {
+      unsigned AluInstCount,
+      std::vector<std::pair<unsigned, unsigned>> KCacheBanks,
+      MachineBasicBlock::iterator Def, MachineBasicBlock::iterator BBEnd) {
     const R600RegisterInfo &TRI = TII->getRegisterInfo();
-    //TODO: change this to defs?
+    // TODO: change this to defs?
     for (MachineOperand &MO : Def->all_defs()) {
       if (TRI.isPhysRegLiveAcrossClauses(MO.getReg()))
         continue;
@@ -213,8 +211,8 @@ private:
     return true;
   }
 
-  MachineBasicBlock::iterator
-  MakeALUClause(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) {
+  MachineBasicBlock::iterator MakeALUClause(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator I) {
     MachineBasicBlock::iterator ClauseHead = I;
     std::vector<std::pair<unsigned, unsigned>> KCacheBanks;
     bool PushBeforeModifier = false;
@@ -237,7 +235,7 @@ private:
           break;
         if (TII->getFlagOp(*I).getImm() & MO_FLAG_PUSH)
           PushBeforeModifier = true;
-        AluInstCount ++;
+        AluInstCount++;
         continue;
       }
       // XXX: GROUP_BARRIER instructions cannot be in the same ALU clause as:
@@ -261,22 +259,23 @@ private:
         break;
       AluInstCount += OccupiedDwords(*I);
     }
-    unsigned Opcode = PushBeforeModifier ?
-        R600::CF_ALU_PUSH_BEFORE : R600::CF_ALU;
+    unsigned Opcode =
+        PushBeforeModifier ? R600::CF_ALU_PUSH_BEFORE : R600::CF_ALU;
     BuildMI(MBB, ClauseHead, MBB.findDebugLoc(ClauseHead), TII->get(Opcode))
-    // We don't use the ADDR field until R600ControlFlowFinalizer pass, where
-    // it is safe to assume it is 0. However if we always put 0 here, the ifcvt
-    // pass may assume that identical ALU clause starter at the beginning of a
-    // true and false branch can be factorized which is not the case.
-        .addImm(Address++) // ADDR
-        .addImm(KCacheBanks.empty()?0:KCacheBanks[0].first) // KB0
-        .addImm((KCacheBanks.size() < 2)?0:KCacheBanks[1].first) // KB1
-        .addImm(KCacheBanks.empty()?0:2) // KM0
-        .addImm((KCacheBanks.size() < 2)?0:2) // KM1
-        .addImm(KCacheBanks.empty()?0:KCacheBanks[0].second) // KLINE0
-        .addImm((KCacheBanks.size() < 2)?0:KCacheBanks[1].second) // KLINE1
-        .addImm(AluInstCount) // COUNT
-        .addImm(1); // Enabled
+        // We don't use the ADDR field until R600ControlFlowFinalizer pass,
+        // where it is safe to assume it is 0. However if we always put 0 here,
+        // the ifcvt pass may assume that identical ALU clause starter at the
+        // beginning of a true and false branch can be factorized which is not
+        // the case.
+        .addImm(Address++)                                            // ADDR
+        .addImm(KCacheBanks.empty() ? 0 : KCacheBanks[0].first)       // KB0
+        .addImm((KCacheBanks.size() < 2) ? 0 : KCacheBanks[1].first)  // KB1
+        .addImm(KCacheBanks.empty() ? 0 : 2)                          // KM0
+        .addImm((KCacheBanks.size() < 2) ? 0 : 2)                     // KM1
+        .addImm(KCacheBanks.empty() ? 0 : KCacheBanks[0].second)      // KLINE0
+        .addImm((KCacheBanks.size() < 2) ? 0 : KCacheBanks[1].second) // KLINE1
+        .addImm(AluInstCount)                                         // COUNT
+        .addImm(1);                                                   // Enabled
     return I;
   }
 

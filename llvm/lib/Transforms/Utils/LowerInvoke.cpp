@@ -74,9 +74,7 @@ static bool runImpl(Function &F) {
   return Changed;
 }
 
-bool LowerInvokeLegacyPass::runOnFunction(Function &F) {
-  return runImpl(F);
-}
+bool LowerInvokeLegacyPass::runOnFunction(Function &F) { return runImpl(F); }
 
 char &llvm::LowerInvokePassID = LowerInvokeLegacyPass::ID;
 

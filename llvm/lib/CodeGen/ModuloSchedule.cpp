@@ -1887,9 +1887,10 @@ MachineBasicBlock *PeelingModuloScheduleExpander::CreateLCSSAExitingBlock() {
     for (MachineInstr *Use : Uses)
       Use->substituteRegister(OldR, R, /*SubIdx=*/0,
                               *MRI.getTargetRegisterInfo());
-    MachineInstr *NI = BuildMI(NewBB, DebugLoc(), TII->get(TargetOpcode::PHI), R)
-        .addReg(OldR)
-        .addMBB(BB);
+    MachineInstr *NI =
+        BuildMI(NewBB, DebugLoc(), TII->get(TargetOpcode::PHI), R)
+            .addReg(OldR)
+            .addMBB(BB);
     BlockMIs[{NewBB, &MI}] = NI;
     CanonicalMIs[NI] = &MI;
   }

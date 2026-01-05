@@ -499,8 +499,8 @@ HexagonMCCodeEmitter::getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
       for (auto I = Instrs.begin(), N = Instrs.end(); I != N; ++I) {
         if (I->getInst() != &MI)
           continue;
-        assert(I+1 != N && "Extender cannot be last in packet");
-        const MCInst &NextI = *(I+1)->getInst();
+        assert(I + 1 != N && "Extender cannot be last in packet");
+        const MCInst &NextI = *(I + 1)->getInst();
         const MCInstrDesc &NextD = HexagonMCInstrInfo::getDesc(MCII, NextI);
         if (NextD.isBranch() || NextD.isCall() ||
             HexagonMCInstrInfo::getType(MCII, NextI) == HexagonII::TypeCR)
@@ -557,27 +557,27 @@ HexagonMCCodeEmitter::getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
   };
 
   switch (MCID.getOpcode()) {
-    case Hexagon::LO:
-    case Hexagon::A2_tfril: {
-      auto F = RelocsLo.find(VarKind);
-      if (F != RelocsLo.end())
-        return Hexagon::Fixups(F->second);
-      break;
-    }
-    case Hexagon::HI:
-    case Hexagon::A2_tfrih: {
-      auto F = RelocsHi.find(VarKind);
-      if (F != RelocsHi.end())
-        return Hexagon::Fixups(F->second);
-      break;
-    }
+  case Hexagon::LO:
+  case Hexagon::A2_tfril: {
+    auto F = RelocsLo.find(VarKind);
+    if (F != RelocsLo.end())
+      return Hexagon::Fixups(F->second);
+    break;
+  }
+  case Hexagon::HI:
+  case Hexagon::A2_tfrih: {
+    auto F = RelocsHi.find(VarKind);
+    if (F != RelocsHi.end())
+      return Hexagon::Fixups(F->second);
+    break;
+  }
   }
 
   raise_relocation_error(0, VarKind);
 }
 
 static bool isPCRel(unsigned Kind) {
-  switch (Kind){
+  switch (Kind) {
   case fixup_Hexagon_B22_PCREL:
   case fixup_Hexagon_B15_PCREL:
   case fixup_Hexagon_B7_PCREL:
@@ -602,9 +602,9 @@ static bool isPCRel(unsigned Kind) {
   }
 }
 
-unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
-      const MCOperand &MO, const MCExpr *ME, SmallVectorImpl<MCFixup> &Fixups,
-      const MCSubtargetInfo &STI) const {
+unsigned HexagonMCCodeEmitter::getExprOpValue(
+    const MCInst &MI, const MCOperand &MO, const MCExpr *ME,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
   if (isa<HexagonMCExpr>(ME))
     ME = &HexagonMCInstrInfo::getExpr(*ME);
   int64_t Value;
@@ -631,8 +631,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
     }
     return Value;
   }
-  assert(ME->getKind() == MCExpr::SymbolRef ||
-         ME->getKind() == MCExpr::Binary);
+  assert(ME->getKind() == MCExpr::SymbolRef || ME->getKind() == MCExpr::Binary);
   if (ME->getKind() == MCExpr::Binary) {
     MCBinaryExpr const *Binary = cast<MCBinaryExpr>(ME);
     getExprOpValue(MI, MO, Binary->getLHS(), Fixups, STI);
@@ -668,9 +667,8 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
         // Look for GP-relative fixups.
         unsigned Shift = HexagonMCInstrInfo::getExtentAlignment(MCII, MI);
         static const Hexagon::Fixups GPRelFixups[] = {
-          Hexagon::fixup_Hexagon_GPREL16_0, Hexagon::fixup_Hexagon_GPREL16_1,
-          Hexagon::fixup_Hexagon_GPREL16_2, Hexagon::fixup_Hexagon_GPREL16_3
-        };
+            Hexagon::fixup_Hexagon_GPREL16_0, Hexagon::fixup_Hexagon_GPREL16_1,
+            Hexagon::fixup_Hexagon_GPREL16_2, Hexagon::fixup_Hexagon_GPREL16_3};
         assert(Shift < std::size(GPRelFixups));
         auto UsesGP = [](const MCInstrDesc &D) {
           return is_contained(D.implicit_uses(), Hexagon::GP);
@@ -688,24 +686,24 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
   } else {
     bool BranchOrCR = MCID.isBranch() || IType == HexagonII::TypeCR;
     switch (FixupWidth) {
-      case 9:
-        if (BranchOrCR)
-          FixupKind = State.Extended ? Hexagon::fixup_Hexagon_B9_PCREL_X
-                                     : Hexagon::fixup_Hexagon_B9_PCREL;
-        break;
-      case 8:
-      case 7:
-        if (State.Extended && VarKind == HexagonMCExpr::VK_GOT)
-          FixupKind = HexagonMCInstrInfo::isExtentSigned(MCII, MI)
+    case 9:
+      if (BranchOrCR)
+        FixupKind = State.Extended ? Hexagon::fixup_Hexagon_B9_PCREL_X
+                                   : Hexagon::fixup_Hexagon_B9_PCREL;
+      break;
+    case 8:
+    case 7:
+      if (State.Extended && VarKind == HexagonMCExpr::VK_GOT)
+        FixupKind = HexagonMCInstrInfo::isExtentSigned(MCII, MI)
                         ? Hexagon::fixup_Hexagon_GOT_16_X
                         : Hexagon::fixup_Hexagon_GOT_11_X;
-        else if (FixupWidth == 7 && BranchOrCR)
-          FixupKind = State.Extended ? Hexagon::fixup_Hexagon_B7_PCREL_X
-                                     : Hexagon::fixup_Hexagon_B7_PCREL;
-        break;
-      case 0:
-        FixupKind = getFixupNoBits(MCII, MI, MO, VarKind);
-        break;
+      else if (FixupWidth == 7 && BranchOrCR)
+        FixupKind = State.Extended ? Hexagon::fixup_Hexagon_B7_PCREL_X
+                                   : Hexagon::fixup_Hexagon_B7_PCREL;
+      break;
+    case 0:
+      FixupKind = getFixupNoBits(MCII, MI, MO, VarKind);
+      break;
     }
   }
 
@@ -787,8 +785,8 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
         break;
     }
     // Hexagon PRM 10.11 Construct Nt from distance
-    unsigned Offset = HexagonMCInstrInfo::isVector(MCII, MI) ? VOffset
-                                                             : SOffset;
+    unsigned Offset =
+        HexagonMCInstrInfo::isVector(MCII, MI) ? VOffset : SOffset;
     Offset <<= 1;
     Offset |= HexagonMCInstrInfo::SubregisterBit(UseReg, DefReg1, DefReg2);
     return Offset;

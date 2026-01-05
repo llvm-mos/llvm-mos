@@ -38,10 +38,9 @@ public:
 
   bool runOnModule(Module &M) override { return false; }
 };
-}
+} // namespace
 
 ModulePass *llvm::createBarrierNoopPass() { return new BarrierNoop(); }
 
 char BarrierNoop::ID = 0;
-INITIALIZE_PASS(BarrierNoop, "barrier", "A No-Op Barrier Pass",
-                false, false)
+INITIALIZE_PASS(BarrierNoop, "barrier", "A No-Op Barrier Pass", false, false)

@@ -30,7 +30,7 @@ PDBContext::PDBContext(const COFFObjectFile &Object,
     Session->setLoadAddress(ImageBase.get());
 }
 
-void PDBContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts){}
+void PDBContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {}
 
 std::optional<DILineInfo>
 PDBContext::getLineInfoForAddress(object::SectionedAddress Address,

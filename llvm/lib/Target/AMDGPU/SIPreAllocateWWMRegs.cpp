@@ -200,7 +200,8 @@ bool SIPreAllocateWWMRegsLegacy::runOnMachineFunction(MachineFunction &MF) {
 }
 
 bool SIPreAllocateWWMRegs::run(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << "SIPreAllocateWWMRegs: function " << MF.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "SIPreAllocateWWMRegs: function " << MF.getName()
+                    << "\n");
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
@@ -221,7 +222,7 @@ bool SIPreAllocateWWMRegs::run(MachineFunction &MF) {
   // expressions are guaranteed to never involve phi nodes, and we can only
   // escape WWM through the special WWM instruction, this means that this is a
   // perfect elimination order, so we can never do any better.
-  ReversePostOrderTraversal<MachineFunction*> RPOT(&MF);
+  ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
 
   for (MachineBasicBlock *MBB : RPOT) {
     bool InWWM = false;

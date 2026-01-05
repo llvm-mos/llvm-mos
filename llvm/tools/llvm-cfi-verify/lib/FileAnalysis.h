@@ -160,7 +160,7 @@ public:
   // instruction. The result is undefined if the provided graph does not fall
   // under either the FAIL_REGISTER_CLOBBERED or PROTECTED status (see
   // CFIProtectionStatus).
-  uint64_t indirectCFOperandClobber(const GraphResult& Graph) const;
+  uint64_t indirectCFOperandClobber(const GraphResult &Graph) const;
 
   // Prints an instruction to the provided stream using this object's pretty-
   // printers.

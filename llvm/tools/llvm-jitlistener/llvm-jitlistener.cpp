@@ -34,56 +34,52 @@ using namespace llvm;
 
 namespace {
 
-typedef std::vector<std::pair<std::string, unsigned int> > SourceLocations;
+typedef std::vector<std::pair<std::string, unsigned int>> SourceLocations;
 typedef std::map<uint64_t, SourceLocations> NativeCodeMap;
 
-NativeCodeMap  ReportedDebugFuncs;
+NativeCodeMap ReportedDebugFuncs;
 
 int NotifyEvent(iJIT_JVM_EVENT EventType, void *EventSpecificData) {
   switch (EventType) {
-    case iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED: {
-      if (!EventSpecificData) {
-        errs() <<
-          "Error: The JIT event listener did not provide a event data.";
+  case iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED: {
+    if (!EventSpecificData) {
+      errs() << "Error: The JIT event listener did not provide a event data.";
+      return -1;
+    }
+    iJIT_Method_Load *msg = static_cast<iJIT_Method_Load *>(EventSpecificData);
+
+    ReportedDebugFuncs[msg->method_id];
+
+    outs() << "Method load [" << msg->method_id << "]: " << msg->method_name
+           << ", Size = " << msg->method_size << "\n";
+
+    for (unsigned int i = 0; i < msg->line_number_size; ++i) {
+      if (!msg->line_number_table) {
+        errs() << "A function with a non-zero line count had no line table.";
         return -1;
       }
-      iJIT_Method_Load* msg = static_cast<iJIT_Method_Load*>(EventSpecificData);
-
-      ReportedDebugFuncs[msg->method_id];
-
-      outs() << "Method load [" << msg->method_id << "]: " << msg->method_name
-             << ", Size = " << msg->method_size << "\n";
-
-      for(unsigned int i = 0; i < msg->line_number_size; ++i) {
-        if (!msg->line_number_table) {
-          errs() << "A function with a non-zero line count had no line table.";
-          return -1;
-        }
-        std::pair<std::string, unsigned int> loc(
+      std::pair<std::string, unsigned int> loc(
           std::string(msg->source_file_name),
           msg->line_number_table[i].LineNumber);
-        ReportedDebugFuncs[msg->method_id].push_back(loc);
-        outs() << "  Line info @ " << msg->line_number_table[i].Offset
-               << ": " << msg->source_file_name
-               << ", line " << msg->line_number_table[i].LineNumber << "\n";
-      }
-      outs() << "\n";
+      ReportedDebugFuncs[msg->method_id].push_back(loc);
+      outs() << "  Line info @ " << msg->line_number_table[i].Offset << ": "
+             << msg->source_file_name << ", line "
+             << msg->line_number_table[i].LineNumber << "\n";
     }
-    break;
-    case iJVM_EVENT_TYPE_METHOD_UNLOAD_START: {
-      if (!EventSpecificData) {
-        errs() <<
-          "Error: The JIT event listener did not provide a event data.";
-        return -1;
-      }
-      unsigned int UnloadId
-        = *reinterpret_cast<unsigned int*>(EventSpecificData);
-      assert(1 == ReportedDebugFuncs.erase(UnloadId));
-      outs() << "Method unload [" << UnloadId << "]\n";
+    outs() << "\n";
+  } break;
+  case iJVM_EVENT_TYPE_METHOD_UNLOAD_START: {
+    if (!EventSpecificData) {
+      errs() << "Error: The JIT event listener did not provide a event data.";
+      return -1;
     }
+    unsigned int UnloadId =
+        *reinterpret_cast<unsigned int *>(EventSpecificData);
+    assert(1 == ReportedDebugFuncs.erase(UnloadId));
+    outs() << "Method unload [" << UnloadId << "]\n";
+  } break;
+  default:
     break;
-    default:
-      break;
   }
   return 0;
 }
@@ -173,18 +169,17 @@ protected:
 
     // Compile the IR
     std::string Error;
-    TheJIT.reset(EngineBuilder(std::move(TheModule))
-      .setEngineKind(EngineKind::JIT)
-      .setErrorStr(&Error)
-      .setMCJITMemoryManager(std::unique_ptr<RTDyldMemoryManager>(MemMgr))
-      .create());
+    TheJIT.reset(
+        EngineBuilder(std::move(TheModule))
+            .setEngineKind(EngineKind::JIT)
+            .setErrorStr(&Error)
+            .setMCJITMemoryManager(std::unique_ptr<RTDyldMemoryManager>(MemMgr))
+            .create());
     if (Error.empty() == false)
       errs() << Error;
   }
 
-  void DestroyEE() {
-    TheJIT.reset();
-  }
+  void DestroyEE() { TheJIT.reset(); }
 
   LLVMContext Context; // Global ownership
   std::unique_ptr<ExecutionEngine> TheJIT;
@@ -207,17 +202,15 @@ public:
   }
 };
 
-
-
 } // end anonymous namespace
 
 static cl::opt<std::string>
-InputFilename(cl::Positional, cl::desc("<input IR file>"),
-               cl::Required);
+    InputFilename(cl::Positional, cl::desc("<input IR file>"), cl::Required);
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
-  cl::ParseCommandLineOptions(argc, argv, "llvm jit event listener test utility\n");
+  cl::ParseCommandLineOptions(argc, argv,
+                              "llvm jit event listener test utility\n");
 
   JitEventListenerTest Test;
   Test.ProcessInput(InputFilename);

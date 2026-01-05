@@ -210,7 +210,6 @@ public:
   bool operator<(const Candidate &RHS) const {
     return getStartIdx() > RHS.getStartIdx();
   }
-
 };
 
 /// The information necessary to create an outlined function for some

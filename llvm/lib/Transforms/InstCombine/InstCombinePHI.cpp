@@ -27,9 +27,9 @@ using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
-static cl::opt<unsigned>
-MaxNumPhis("instcombine-max-num-phis", cl::init(512),
-           cl::desc("Maximum number phis to handle in intptr/ptrint folding"));
+static cl::opt<unsigned> MaxNumPhis(
+    "instcombine-max-num-phis", cl::init(512),
+    cl::desc("Maximum number phis to handle in intptr/ptrint folding"));
 
 STATISTIC(NumPHIsOfInsertValues,
           "Number of phi-of-insertvalue turned into insertvalue-of-phis");
@@ -463,8 +463,10 @@ Instruction *InstCombinerImpl::foldPHIArgBinOpIntoPHI(PHINode &PN) {
         return nullptr;
 
     // Keep track of which operand needs a phi node.
-    if (I->getOperand(0) != LHSVal) LHSVal = nullptr;
-    if (I->getOperand(1) != RHSVal) RHSVal = nullptr;
+    if (I->getOperand(0) != LHSVal)
+      LHSVal = nullptr;
+    if (I->getOperand(1) != RHSVal)
+      RHSVal = nullptr;
   }
 
   // If both LHS and RHS would need a PHI, don't do this transformation,
@@ -521,7 +523,7 @@ Instruction *InstCombinerImpl::foldPHIArgBinOpIntoPHI(PHINode &PN) {
 
   BinaryOperator *BinOp = cast<BinaryOperator>(FirstInst);
   BinaryOperator *NewBinOp =
-    BinaryOperator::Create(BinOp->getOpcode(), LHSVal, RHSVal);
+      BinaryOperator::Create(BinOp->getOpcode(), LHSVal, RHSVal);
 
   NewBinOp->copyIRFlags(PN.getIncomingValue(0));
 
@@ -533,10 +535,11 @@ Instruction *InstCombinerImpl::foldPHIArgBinOpIntoPHI(PHINode &PN) {
 }
 
 Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
-  GetElementPtrInst *FirstInst =cast<GetElementPtrInst>(PN.getIncomingValue(0));
+  GetElementPtrInst *FirstInst =
+      cast<GetElementPtrInst>(PN.getIncomingValue(0));
 
-  SmallVector<Value*, 16> FixedOperands(FirstInst->op_begin(),
-                                        FirstInst->op_end());
+  SmallVector<Value *, 16> FixedOperands(FirstInst->op_begin(),
+                                         FirstInst->op_end());
   // This is true if all GEP bases are allocas and if all indices into them are
   // constants.
   bool AllBasePointersAreAllocas = true;
@@ -561,8 +564,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
 
     // Keep track of whether or not all GEPs are of alloca pointers.
     if (AllBasePointersAreAllocas &&
-        (!isa<AllocaInst>(GEP->getOperand(0)) ||
-         !GEP->hasAllConstantIndices()))
+        (!isa<AllocaInst>(GEP->getOperand(0)) || !GEP->hasAllConstantIndices()))
       AllBasePointersAreAllocas = false;
 
     // Compare the operand lists.
@@ -606,7 +608,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
 
   // Otherwise, this is safe to transform.  Insert PHI nodes for each operand
   // that is variable.
-  SmallVector<PHINode*, 16> OperandPhis(FixedOperands.size());
+  SmallVector<PHINode *, 16> OperandPhis(FixedOperands.size());
 
   bool HasAnyPHIs = false;
   for (unsigned I = 0, E = FixedOperands.size(); I != E; ++I) {
@@ -669,10 +671,12 @@ static bool isSafeAndProfitableToSinkLoad(LoadInst *L) {
   if (AllocaInst *AI = dyn_cast<AllocaInst>(L->getOperand(0))) {
     bool IsAddressTaken = false;
     for (User *U : AI->users()) {
-      if (isa<LoadInst>(U)) continue;
+      if (isa<LoadInst>(U))
+        continue;
       if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
         // If storing TO the alloca, then the address isn't taken.
-        if (SI->getOperand(1) == AI) continue;
+        if (SI->getOperand(1) == AI)
+          continue;
       }
       IsAddressTaken = true;
       break;
@@ -758,9 +762,9 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
 
   // Okay, they are all the same operation.  Create a new PHI node of the
   // correct type, and PHI together all of the LHS's of the instructions.
-  PHINode *NewPN = PHINode::Create(FirstLI->getOperand(0)->getType(),
-                                   PN.getNumIncomingValues(),
-                                   PN.getName()+".in");
+  PHINode *NewPN =
+      PHINode::Create(FirstLI->getOperand(0)->getType(),
+                      PN.getNumIncomingValues(), PN.getName() + ".in");
 
   Value *InVal = FirstLI->getOperand(0);
   NewPN->addIncoming(InVal, PN.getIncomingBlock(0));
@@ -865,8 +869,8 @@ Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
   // All incoming values are zexts or constants that are safe to truncate.
   // Create a new phi node of the narrow type, phi together all of the new
   // operands, and zext the result back to the original type.
-  PHINode *NewPhi = PHINode::Create(NarrowType, NumIncomingValues,
-                                    Phi.getName() + ".shrunk");
+  PHINode *NewPhi =
+      PHINode::Create(NarrowType, NumIncomingValues, Phi.getName() + ".shrunk");
   for (unsigned I = 0; I != NumIncomingValues; ++I)
     NewPhi->addIncoming(NewIncoming[I], Phi.getIncomingBlock(I));
 
@@ -925,7 +929,7 @@ Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
     if (!ConstantOp)
       return foldPHIArgBinOpIntoPHI(PN);
   } else {
-    return nullptr;  // Cannot fold this operation.
+    return nullptr; // Cannot fold this operation.
   }
 
   // Check to see if all arguments are the same operation.
@@ -943,9 +947,9 @@ Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
 
   // Okay, they are all the same operation.  Create a new PHI node of the
   // correct type, and PHI together all of the LHS's of the instructions.
-  PHINode *NewPN = PHINode::Create(FirstInst->getOperand(0)->getType(),
-                                   PN.getNumIncomingValues(),
-                                   PN.getName()+".in");
+  PHINode *NewPN =
+      PHINode::Create(FirstInst->getOperand(0)->getType(),
+                      PN.getNumIncomingValues(), PN.getName() + ".in");
 
   Value *InVal = FirstInst->getOperand(0);
   NewPN->addIncoming(InVal, PN.getIncomingBlock(0));
@@ -973,8 +977,8 @@ Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
 
   // Insert and return the new operation.
   if (CastInst *FirstCI = dyn_cast<CastInst>(FirstInst)) {
-    CastInst *NewCI = CastInst::Create(FirstCI->getOpcode(), PhiVal,
-                                       PN.getType());
+    CastInst *NewCI =
+        CastInst::Create(FirstCI->getOpcode(), PhiVal, PN.getType());
     PHIArgMergedDebugLoc(NewCI, PN);
     return NewCI;
   }
@@ -1039,27 +1043,31 @@ static ConstantInt *getAnyNonZeroConstInt(PHINode &PN) {
 
 namespace {
 struct PHIUsageRecord {
-  unsigned PHIId;     // The ID # of the PHI (something determinstic to sort on)
-  unsigned Shift;     // The amount shifted.
-  Instruction *Inst;  // The trunc instruction.
+  unsigned PHIId;    // The ID # of the PHI (something determinstic to sort on)
+  unsigned Shift;    // The amount shifted.
+  Instruction *Inst; // The trunc instruction.
 
   PHIUsageRecord(unsigned Pn, unsigned Sh, Instruction *User)
       : PHIId(Pn), Shift(Sh), Inst(User) {}
 
   bool operator<(const PHIUsageRecord &RHS) const {
-    if (PHIId < RHS.PHIId) return true;
-    if (PHIId > RHS.PHIId) return false;
-    if (Shift < RHS.Shift) return true;
-    if (Shift > RHS.Shift) return false;
+    if (PHIId < RHS.PHIId)
+      return true;
+    if (PHIId > RHS.PHIId)
+      return false;
+    if (Shift < RHS.Shift)
+      return true;
+    if (Shift > RHS.Shift)
+      return false;
     return Inst->getType()->getPrimitiveSizeInBits() <
            RHS.Inst->getType()->getPrimitiveSizeInBits();
   }
 };
 
 struct LoweredPHIRecord {
-  PHINode *PN;        // The PHI that was lowered.
-  unsigned Shift;     // The amount shifted.
-  unsigned Width;     // The width extracted.
+  PHINode *PN;    // The PHI that was lowered.
+  unsigned Shift; // The amount shifted.
+  unsigned Width; // The width extracted.
 
   LoweredPHIRecord(PHINode *Phi, unsigned Sh, Type *Ty)
       : PN(Phi), Shift(Sh), Width(Ty->getPrimitiveSizeInBits()) {}
@@ -1103,8 +1111,8 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
   // nodes which are extracted from. PHIsToSlice is a set we use to avoid
   // revisiting PHIs, PHIsInspected is a ordered list of PHIs that we need to
   // check the uses of (to ensure they are all extracts).
-  SmallVector<PHINode*, 8> PHIsToSlice;
-  SmallPtrSet<PHINode*, 8> PHIsInspected;
+  SmallVector<PHINode *, 8> PHIsToSlice;
+  SmallPtrSet<PHINode *, 8> PHIsInspected;
 
   PHIsToSlice.push_back(&FirstPhi);
   PHIsInspected.insert(&FirstPhi);
@@ -1155,8 +1163,8 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
       }
 
       // Otherwise it must be a lshr which can only be used by one trunc.
-      if (UserI->getOpcode() != Instruction::LShr ||
-          !UserI->hasOneUse() || !isa<TruncInst>(UserI->user_back()) ||
+      if (UserI->getOpcode() != Instruction::LShr || !UserI->hasOneUse() ||
+          !isa<TruncInst>(UserI->user_back()) ||
           !isa<ConstantInt>(UserI->getOperand(1)))
         return nullptr;
 
@@ -1184,11 +1192,11 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
 
   // PredValues - This is a temporary used when rewriting PHI nodes.  It is
   // hoisted out here to avoid construction/destruction thrashing.
-  DenseMap<BasicBlock*, Value*> PredValues;
+  DenseMap<BasicBlock *, Value *> PredValues;
 
   // ExtractedVals - Each new PHI we introduce is saved here so we don't
   // introduce redundant PHIs.
-  DenseMap<LoweredPHIRecord, PHINode*> ExtractedVals;
+  DenseMap<LoweredPHIRecord, PHINode *> ExtractedVals;
 
   for (unsigned UserI = 0, UserE = PHIUsers.size(); UserI != UserE; ++UserI) {
     unsigned PHIId = PHIUsers[UserI].PHIId;

@@ -292,8 +292,8 @@ private:
       auto RelHI20 = getRISCVPCRelHi20(E);
       if (!RelHI20)
         return RelHI20.takeError();
-      int64_t Value = RelHI20->getTarget().getAddress() +
-                      RelHI20->getAddend() - E.getTarget().getAddress();
+      int64_t Value = RelHI20->getTarget().getAddress() + RelHI20->getAddend() -
+                      E.getTarget().getAddress();
       int64_t Lo = Value & 0xFFF;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
       *(little32_t *)FixupPtr =
@@ -307,8 +307,8 @@ private:
       auto RelHI20 = getRISCVPCRelHi20(E);
       if (!RelHI20)
         return RelHI20.takeError();
-      int64_t Value = RelHI20->getTarget().getAddress() +
-                      RelHI20->getAddend() - E.getTarget().getAddress();
+      int64_t Value = RelHI20->getTarget().getAddress() + RelHI20->getAddend() -
+                      E.getTarget().getAddress();
       int64_t Lo = Value & 0xFFF;
       uint32_t Imm11_5 = extractBits(Lo, 5, 7) << 25;
       uint32_t Imm4_0 = extractBits(Lo, 0, 5) << 7;

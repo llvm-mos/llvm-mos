@@ -28,12 +28,7 @@ class R600SchedStrategy final : public MachineSchedStrategy {
   const R600RegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
 
-  enum InstKind {
-    IDAlu,
-    IDFetch,
-    IDOther,
-    IDLast
-  };
+  enum InstKind { IDAlu, IDFetch, IDOther, IDLast };
 
   enum AluKind {
     AluAny,
@@ -82,13 +77,13 @@ private:
   AluKind getAluKind(SUnit *SU) const;
   void LoadAlu();
   unsigned AvailablesAluCount() const;
-  SUnit *AttemptFillSlot (unsigned Slot, bool AnyAlu);
+  SUnit *AttemptFillSlot(unsigned Slot, bool AnyAlu);
   void PrepareNextSlot();
-  SUnit *PopInst(std::vector<SUnit*> &Q, bool AnyALU);
+  SUnit *PopInst(std::vector<SUnit *> &Q, bool AnyALU);
 
   void AssignSlot(MachineInstr *MI, unsigned Slot);
-  SUnit* pickAlu();
-  SUnit* pickOther(int QID);
+  SUnit *pickAlu();
+  SUnit *pickOther(int QID);
   void MoveUnits(std::vector<SUnit *> &QSrc, std::vector<SUnit *> &QDst);
 };
 

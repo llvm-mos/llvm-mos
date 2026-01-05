@@ -30,9 +30,7 @@ public:
   AArch64RegisterInfo(const Triple &TT, unsigned HwMode);
 
   // FIXME: This should be tablegen'd like getDwarfRegNum is
-  int getSEHRegNum(unsigned i) const {
-    return getEncodingValue(i);
-  }
+  int getSEHRegNum(unsigned i) const { return getEncodingValue(i); }
 
   bool isReservedReg(const MachineFunction &MF, MCRegister Reg) const;
   bool isUserReservedReg(const MachineFunction &MF, MCRegister Reg) const;
@@ -46,8 +44,7 @@ public:
 
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
-  const MCPhysReg *
-  getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
+  const MCPhysReg *getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
   const uint32_t *getDarwinCallPreservedMask(const MachineFunction &MF,
@@ -99,7 +96,7 @@ public:
   explainReservedReg(const MachineFunction &MF,
                      MCRegister PhysReg) const override;
   bool isAsmClobberable(const MachineFunction &MF,
-                       MCRegister PhysReg) const override;
+                        MCRegister PhysReg) const override;
   const TargetRegisterClass *
   getPointerRegClass(unsigned Kind = 0) const override;
   const TargetRegisterClass *

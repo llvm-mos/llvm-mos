@@ -38,9 +38,9 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
     return Error::success();
 
   LLVM_DEBUG({
-      dbgs() << "EPCDynamicLibrarySearchGenerator trying to generate "
-             << Symbols << "\n";
-    });
+    dbgs() << "EPCDynamicLibrarySearchGenerator trying to generate " << Symbols
+           << "\n";
+  });
 
   // If there's no handle then resolve all requested symbols to null.
   if (!H) {

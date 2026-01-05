@@ -59,8 +59,8 @@ public:
                PDB_NameSearchFlags Flags) const = 0;
   virtual std::unique_ptr<IPDBEnumSymbols>
   findChildrenByAddr(PDB_SymType Type, StringRef Name,
-                     PDB_NameSearchFlags Flags,
-                     uint32_t Section, uint32_t Offset) const = 0;
+                     PDB_NameSearchFlags Flags, uint32_t Section,
+                     uint32_t Offset) const = 0;
   virtual std::unique_ptr<IPDBEnumSymbols>
   findChildrenByVA(PDB_SymType Type, StringRef Name, PDB_NameSearchFlags Flags,
                    uint64_t VA) const = 0;
@@ -131,8 +131,7 @@ public:
   virtual uint32_t getSizeInUdt() const = 0;
   virtual uint32_t getSlot() const = 0;
   virtual std::string getSourceFileName() const = 0;
-  virtual std::unique_ptr<IPDBLineNumber>
-  getSrcLineOnTypeDefn() const = 0;
+  virtual std::unique_ptr<IPDBLineNumber> getSrcLineOnTypeDefn() const = 0;
   virtual uint32_t getStride() const = 0;
   virtual SymIndexId getSubTypeId() const = 0;
   virtual std::string getSymbolsFileName() const = 0;

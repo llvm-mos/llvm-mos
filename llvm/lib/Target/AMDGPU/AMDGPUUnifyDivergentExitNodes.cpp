@@ -147,8 +147,8 @@ BasicBlock *AMDGPUUnifyDivergentExitNodesImpl::unifyReturnBlockSet(
     B.CreateRetVoid();
   } else {
     // If the function doesn't return void... add a PHI node to the block...
-    PN = B.CreatePHI(F.getReturnType(), ReturningBlocks.size(),
-                     "UnifiedRetVal");
+    PN =
+        B.CreatePHI(F.getReturnType(), ReturningBlocks.size(), "UnifiedRetVal");
     B.CreateRet(PN);
   }
 
@@ -291,8 +291,8 @@ bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
     if (UnreachableBlocks.size() == 1) {
       UnreachableBlock = UnreachableBlocks.front();
     } else {
-      UnreachableBlock = BasicBlock::Create(F.getContext(),
-                                            "UnifiedUnreachableBlock", &F);
+      UnreachableBlock =
+          BasicBlock::Create(F.getContext(), "UnifiedUnreachableBlock", &F);
       new UnreachableInst(F.getContext(), UnreachableBlock);
 
       Updates.reserve(Updates.size() + UnreachableBlocks.size());

@@ -591,14 +591,17 @@ static bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
     return true;
 
   Instruction *I = dyn_cast<Instruction>(V);
-  if (!I) return false;
+  if (!I)
+    return false;
 
   // We can't mutate something that has multiple uses: doing so would
   // require duplicating the instruction in general, which isn't profitable.
-  if (!I->hasOneUse()) return false;
+  if (!I->hasOneUse())
+    return false;
 
   switch (I->getOpcode()) {
-  default: return false;
+  default:
+    return false;
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
@@ -715,7 +718,8 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
   IC.addToWorklist(I);
 
   switch (I->getOpcode()) {
-  default: llvm_unreachable("Inconsistency with CanEvaluateShifted");
+  default:
+    llvm_unreachable("Inconsistency with CanEvaluateShifted");
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
@@ -753,8 +757,8 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
     IC.InsertNewInstWith(Neg, I->getIterator());
     unsigned TypeWidth = I->getType()->getScalarSizeInBits();
     APInt Mask = APInt::getLowBitsSet(TypeWidth, TypeWidth - NumBits);
-    auto *And = BinaryOperator::CreateAnd(Neg,
-                                          ConstantInt::get(I->getType(), Mask));
+    auto *And =
+        BinaryOperator::CreateAnd(Neg, ConstantInt::get(I->getType(), Mask));
     And->takeName(I);
     return IC.InsertNewInstWith(And, I->getIterator());
   }

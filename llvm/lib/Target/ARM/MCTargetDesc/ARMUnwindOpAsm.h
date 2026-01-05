@@ -30,9 +30,7 @@ private:
   bool HasPersonality = false;
 
 public:
-  UnwindOpcodeAssembler() {
-    OpBegins.push_back(0);
-  }
+  UnwindOpcodeAssembler() { OpBegins.push_back(0); }
 
   /// Reset the unwind opcode assembler.
   void Reset() {
@@ -43,9 +41,7 @@ public:
   }
 
   /// Set the personality
-  void setPersonality(const MCSymbol *Per) {
-    HasPersonality = true;
-  }
+  void setPersonality(const MCSymbol *Per) { HasPersonality = true; }
 
   /// Emit unwind opcodes for .save directives
   void EmitRegSave(uint32_t RegSave);
@@ -66,8 +62,7 @@ public:
   }
 
   /// Finalize the unwind opcode sequence for emitBytes()
-  void Finalize(unsigned &PersonalityIndex,
-                SmallVectorImpl<uint8_t> &Result);
+  void Finalize(unsigned &PersonalityIndex, SmallVectorImpl<uint8_t> &Result);
 
 private:
   void EmitInt8(unsigned Opcode) {

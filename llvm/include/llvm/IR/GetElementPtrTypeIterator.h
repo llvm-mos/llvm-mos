@@ -168,41 +168,39 @@ public:
   }
 };
 
-  using gep_type_iterator = generic_gep_type_iterator<>;
+using gep_type_iterator = generic_gep_type_iterator<>;
 
-  inline gep_type_iterator gep_type_begin(const User *GEP) {
-    auto *GEPOp = cast<GEPOperator>(GEP);
-    return gep_type_iterator::begin(
-        GEPOp->getSourceElementType(),
-        GEP->op_begin() + 1);
-  }
+inline gep_type_iterator gep_type_begin(const User *GEP) {
+  auto *GEPOp = cast<GEPOperator>(GEP);
+  return gep_type_iterator::begin(GEPOp->getSourceElementType(),
+                                  GEP->op_begin() + 1);
+}
 
-  inline gep_type_iterator gep_type_end(const User *GEP) {
-    return gep_type_iterator::end(GEP->op_end());
-  }
+inline gep_type_iterator gep_type_end(const User *GEP) {
+  return gep_type_iterator::end(GEP->op_end());
+}
 
-  inline gep_type_iterator gep_type_begin(const User &GEP) {
-    auto &GEPOp = cast<GEPOperator>(GEP);
-    return gep_type_iterator::begin(
-        GEPOp.getSourceElementType(),
-        GEP.op_begin() + 1);
-  }
+inline gep_type_iterator gep_type_begin(const User &GEP) {
+  auto &GEPOp = cast<GEPOperator>(GEP);
+  return gep_type_iterator::begin(GEPOp.getSourceElementType(),
+                                  GEP.op_begin() + 1);
+}
 
-  inline gep_type_iterator gep_type_end(const User &GEP) {
-    return gep_type_iterator::end(GEP.op_end());
-  }
+inline gep_type_iterator gep_type_end(const User &GEP) {
+  return gep_type_iterator::end(GEP.op_end());
+}
 
-  template<typename T>
-  inline generic_gep_type_iterator<const T *>
-  gep_type_begin(Type *Op0, ArrayRef<T> A) {
-    return generic_gep_type_iterator<const T *>::begin(Op0, A.begin());
-  }
+template <typename T>
+inline generic_gep_type_iterator<const T *> gep_type_begin(Type *Op0,
+                                                           ArrayRef<T> A) {
+  return generic_gep_type_iterator<const T *>::begin(Op0, A.begin());
+}
 
-  template<typename T>
-  inline generic_gep_type_iterator<const T *>
-  gep_type_end(Type * /*Op0*/, ArrayRef<T> A) {
-    return generic_gep_type_iterator<const T *>::end(A.end());
-  }
+template <typename T>
+inline generic_gep_type_iterator<const T *> gep_type_end(Type * /*Op0*/,
+                                                         ArrayRef<T> A) {
+  return generic_gep_type_iterator<const T *>::end(A.end());
+}
 
 } // end namespace llvm
 

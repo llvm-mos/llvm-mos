@@ -39,7 +39,7 @@ public:
                   FunctionSamples *FSamples = nullptr,
                   LineLocation CallLoc = {0, 0})
       : ParentContext(Parent), FuncName(FName), FuncSamples(FSamples),
-        CallSiteLoc(CallLoc){};
+        CallSiteLoc(CallLoc) {};
   LLVM_ABI ContextTrieNode *getChildContext(const LineLocation &CallSite,
                                             FunctionId ChildName);
   LLVM_ABI ContextTrieNode *
@@ -146,8 +146,8 @@ public:
       return nullptr;
     return I->second;
   }
-  HashKeyMap<std::unordered_map, FunctionId, ContextSamplesTy>
-      &getFuncToCtxtProfiles() {
+  HashKeyMap<std::unordered_map, FunctionId, ContextSamplesTy> &
+  getFuncToCtxtProfiles() {
     return FuncToCtxtProfiles;
   }
 

@@ -48,7 +48,7 @@ using namespace llvm;
 #define DEBUG_TYPE "sccp"
 
 STATISTIC(NumInstRemoved, "Number of instructions removed");
-STATISTIC(NumDeadBlocks , "Number of basic blocks unreachable");
+STATISTIC(NumDeadBlocks, "Number of basic blocks unreachable");
 STATISTIC(NumInstReplaced,
           "Number of instructions replaced with (simpler) instruction");
 

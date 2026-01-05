@@ -45,7 +45,7 @@ static cl::opt<unsigned> MaxInterleaveGroupFactor(
 /// isVectorIntrinsicWithScalarOpAtArg).
 bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   switch (ID) {
-  case Intrinsic::abs:   // Begin integer bit-manipulation.
+  case Intrinsic::abs: // Begin integer bit-manipulation.
   case Intrinsic::bswap:
   case Intrinsic::bitreverse:
   case Intrinsic::ctpop:
@@ -350,7 +350,8 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
 
   // Extract a value from a vector add operation with a constant zero.
   // TODO: Use getBinOpIdentity() to generalize this.
-  Value *Val; Constant *C;
+  Value *Val;
+  Constant *C;
   if (match(V, m_Add(m_Value(Val), m_Constant(C))))
     if (Constant *Elt = C->getAggregateElement(EltNo))
       if (Elt->isNullValue())
@@ -395,9 +396,8 @@ Value *llvm::getSplatValue(const Value *V) {
 
   // shuf (inselt ?, Splat, 0), ?, <0, undef, 0, ...>
   Value *Splat;
-  if (match(V,
-            m_Shuffle(m_InsertElt(m_Value(), m_Value(Splat), m_ZeroInt()),
-                      m_Value(), m_ZeroMask())))
+  if (match(V, m_Shuffle(m_InsertElt(m_Value(), m_Value(Splat), m_ZeroInt()),
+                         m_Value(), m_ZeroMask())))
     return Splat;
 
   return nullptr;
@@ -923,7 +923,8 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     // We don't modify the types of PHIs. Reductions will already have been
     // truncated if possible, and inductions' sizes will have been chosen by
     // indvars.
-    // If we are required to shrink a PHI, abandon this entire equivalence class.
+    // If we are required to shrink a PHI, abandon this entire equivalence
+    // class.
     bool Abort = false;
     for (Value *M : ECs.members(*E))
       if (isa<PHINode>(M) && MinBW < M->getType()->getScalarSizeInBits()) {
@@ -1356,7 +1357,7 @@ bool InterleavedAccessInfo::isStrided(int Stride) {
 
 void InterleavedAccessInfo::collectConstStrideAccesses(
     MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-    const DenseMap<Value*, const SCEV*> &Strides) {
+    const DenseMap<Value *, const SCEV *> &Strides) {
   auto &DL = TheLoop->getHeader()->getDataLayout();
 
   // Since it's desired that the load/store instructions be maintained in
@@ -1392,8 +1393,8 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
                            .value_or(0);
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
-      AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
-                                              getLoadStoreAlignment(&I));
+      AccessStrideInfo[&I] =
+          StrideDescriptor(Stride, Scev, Size, getLoadStoreAlignment(&I));
     }
 }
 
@@ -1434,7 +1435,7 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
 // with other accesses that may precede it in program order. Note that a
 // bottom-up order does not imply that WAW dependences should not be checked.
 void InterleavedAccessInfo::analyzeInterleaving(
-                                 bool EnablePredicatedInterleavedMemAccesses) {
+    bool EnablePredicatedInterleavedMemAccesses) {
   LLVM_DEBUG(dbgs() << "LV: Analyzing interleaved accesses...\n");
   const auto &Strides = LAI->getSymbolicStrides();
 
@@ -1476,8 +1477,8 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // create a group for B, we continue with the bottom-up algorithm to ensure
     // we don't break any of B's dependences.
     InterleaveGroup<Instruction> *GroupB = nullptr;
-    if (isStrided(DesB.Stride) &&
-        (!isPredicated(B->getParent()) || EnablePredicatedInterleavedMemAccesses)) {
+    if (isStrided(DesB.Stride) && (!isPredicated(B->getParent()) ||
+                                   EnablePredicatedInterleavedMemAccesses)) {
       GroupB = getInterleaveGroup(B);
       if (!GroupB) {
         LLVM_DEBUG(dbgs() << "LV: Creating an interleave group with:" << *B
@@ -1609,8 +1610,8 @@ void InterleavedAccessInfo::analyzeInterleaving(
       if (DistanceToB % static_cast<int64_t>(DesB.Size))
         continue;
 
-      // All members of a predicated interleave-group must have the same predicate,
-      // and currently must reside in the same BB.
+      // All members of a predicated interleave-group must have the same
+      // predicate, and currently must reside in the same BB.
       BasicBlock *BlockA = A->getParent();
       BasicBlock *BlockB = B->getParent();
       if ((isPredicated(BlockA) || isPredicated(BlockB)) &&
@@ -1634,7 +1635,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
           GroupB->setInsertPos(A);
       }
     } // Iteration over A accesses.
-  }   // Iteration over B accesses.
+  } // Iteration over B accesses.
 
   auto InvalidateGroupIfMemberMayWrap = [&](InterleaveGroup<Instruction> *Group,
                                             int Index,

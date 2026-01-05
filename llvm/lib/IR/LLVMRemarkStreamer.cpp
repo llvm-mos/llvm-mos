@@ -80,7 +80,7 @@ LLVMRemarkStreamer::toRemark(const DiagnosticInfoOptimizationBase &Diag) const {
 
 void LLVMRemarkStreamer::emit(const DiagnosticInfoOptimizationBase &Diag) {
   if (!RS.matchesFilter(Diag.getPassName()))
-      return;
+    return;
 
   // First, convert the diagnostic to a remark.
   remarks::Remark R = toRemark(Diag);
@@ -97,7 +97,7 @@ Expected<LLVMRemarkFileHandle> llvm::setupLLVMOptimizationRemarks(
     StringRef RemarksFormat, bool RemarksWithHotness,
     std::optional<uint64_t> RemarksHotnessThreshold) {
   if (RemarksWithHotness || RemarksHotnessThreshold.value_or(1))
-      Context.setDiagnosticsHotnessRequested(true);
+    Context.setDiagnosticsHotnessRequested(true);
 
   Context.setDiagnosticsHotnessThreshold(RemarksHotnessThreshold);
 

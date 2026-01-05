@@ -32,21 +32,21 @@
 #include "llvm/Support/Signals.h"
 
 namespace {
-  struct ForceVMCoreLinking {
-    ForceVMCoreLinking() {
-      // We must reference VMCore in such a way that compilers will not
-      // delete it all as dead code, even with whole program optimization.
-      // This is so that globals in the translation units where these functions
-      // are defined are forced to be initialized, populating various
-      // registries.
-      if (llvm::getNonFoldableAlwaysTrue())
-        return;
-      llvm::LLVMContext Context;
-      (void)new llvm::Module("", Context);
-      (void)new llvm::UnreachableInst(Context);
-      (void)    llvm::createVerifierPass();
-    }
-  } ForceVMCoreLinking;
-}
+struct ForceVMCoreLinking {
+  ForceVMCoreLinking() {
+    // We must reference VMCore in such a way that compilers will not
+    // delete it all as dead code, even with whole program optimization.
+    // This is so that globals in the translation units where these functions
+    // are defined are forced to be initialized, populating various
+    // registries.
+    if (llvm::getNonFoldableAlwaysTrue())
+      return;
+    llvm::LLVMContext Context;
+    (void)new llvm::Module("", Context);
+    (void)new llvm::UnreachableInst(Context);
+    (void)llvm::createVerifierPass();
+  }
+} ForceVMCoreLinking;
+} // namespace
 
 #endif

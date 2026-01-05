@@ -1006,8 +1006,7 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_BitCast(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::BITCAST, Op);
 }
 
-template <typename Opnd>
-inline UnaryOpc_match<Opnd> m_BSwap(const Opnd &Op) {
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_BSwap(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::BSWAP, Op);
 }
 

@@ -40,73 +40,72 @@ using namespace llvm;
 #define DEBUG_TYPE "x86-vzeroupper"
 
 static cl::opt<bool>
-UseVZeroUpper("x86-use-vzeroupper", cl::Hidden,
-  cl::desc("Minimize AVX to SSE transition penalty"),
-  cl::init(true));
+    UseVZeroUpper("x86-use-vzeroupper", cl::Hidden,
+                  cl::desc("Minimize AVX to SSE transition penalty"),
+                  cl::init(true));
 
 STATISTIC(NumVZU, "Number of vzeroupper instructions inserted");
 
 namespace {
 
-  class VZeroUpperInserter : public MachineFunctionPass {
-  public:
-    VZeroUpperInserter() : MachineFunctionPass(ID) {}
+class VZeroUpperInserter : public MachineFunctionPass {
+public:
+  VZeroUpperInserter() : MachineFunctionPass(ID) {}
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
-    }
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
 
-    StringRef getPassName() const override { return "X86 vzeroupper inserter"; }
+  StringRef getPassName() const override { return "X86 vzeroupper inserter"; }
 
-  private:
-    void processBasicBlock(MachineBasicBlock &MBB);
-    void insertVZeroUpper(MachineBasicBlock::iterator I,
-                          MachineBasicBlock &MBB);
-    void addDirtySuccessor(MachineBasicBlock &MBB);
+private:
+  void processBasicBlock(MachineBasicBlock &MBB);
+  void insertVZeroUpper(MachineBasicBlock::iterator I, MachineBasicBlock &MBB);
+  void addDirtySuccessor(MachineBasicBlock &MBB);
 
-    enum BlockExitState { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
+  enum BlockExitState { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
 
-    static const char* getBlockExitStateName(BlockExitState ST);
+  static const char *getBlockExitStateName(BlockExitState ST);
 
-    // Core algorithm state:
-    // BlockState - Each block is either:
-    //   - PASS_THROUGH: There are neither YMM/ZMM dirtying instructions nor
-    //                   vzeroupper instructions in this block.
-    //   - EXITS_CLEAN: There is (or will be) a vzeroupper instruction in this
-    //                  block that will ensure that YMM/ZMM is clean on exit.
-    //   - EXITS_DIRTY: An instruction in the block dirties YMM/ZMM and no
-    //                  subsequent vzeroupper in the block clears it.
-    //
-    // AddedToDirtySuccessors - This flag is raised when a block is added to the
-    //                          DirtySuccessors list to ensure that it's not
-    //                          added multiple times.
-    //
-    // FirstUnguardedCall - Records the location of the first unguarded call in
-    //                      each basic block that may need to be guarded by a
-    //                      vzeroupper. We won't know whether it actually needs
-    //                      to be guarded until we discover a predecessor that
-    //                      is DIRTY_OUT.
-    struct BlockState {
-      BlockExitState ExitState = PASS_THROUGH;
-      bool AddedToDirtySuccessors = false;
-      MachineBasicBlock::iterator FirstUnguardedCall;
+  // Core algorithm state:
+  // BlockState - Each block is either:
+  //   - PASS_THROUGH: There are neither YMM/ZMM dirtying instructions nor
+  //                   vzeroupper instructions in this block.
+  //   - EXITS_CLEAN: There is (or will be) a vzeroupper instruction in this
+  //                  block that will ensure that YMM/ZMM is clean on exit.
+  //   - EXITS_DIRTY: An instruction in the block dirties YMM/ZMM and no
+  //                  subsequent vzeroupper in the block clears it.
+  //
+  // AddedToDirtySuccessors - This flag is raised when a block is added to the
+  //                          DirtySuccessors list to ensure that it's not
+  //                          added multiple times.
+  //
+  // FirstUnguardedCall - Records the location of the first unguarded call in
+  //                      each basic block that may need to be guarded by a
+  //                      vzeroupper. We won't know whether it actually needs
+  //                      to be guarded until we discover a predecessor that
+  //                      is DIRTY_OUT.
+  struct BlockState {
+    BlockExitState ExitState = PASS_THROUGH;
+    bool AddedToDirtySuccessors = false;
+    MachineBasicBlock::iterator FirstUnguardedCall;
 
-      BlockState() = default;
-    };
-
-    using BlockStateMap = SmallVector<BlockState, 8>;
-    using DirtySuccessorsWorkList = SmallVector<MachineBasicBlock *, 8>;
-
-    BlockStateMap BlockStates;
-    DirtySuccessorsWorkList DirtySuccessors;
-    bool EverMadeChange;
-    bool IsX86INTR;
-    const TargetInstrInfo *TII;
-
-    static char ID;
+    BlockState() = default;
   };
+
+  using BlockStateMap = SmallVector<BlockState, 8>;
+  using DirtySuccessorsWorkList = SmallVector<MachineBasicBlock *, 8>;
+
+  BlockStateMap BlockStates;
+  DirtySuccessorsWorkList DirtySuccessors;
+  bool EverMadeChange;
+  bool IsX86INTR;
+  const TargetInstrInfo *TII;
+
+  static char ID;
+};
 
 } // end anonymous namespace
 
@@ -117,11 +116,14 @@ FunctionPass *llvm::createX86IssueVZeroUpperPass() {
 }
 
 #ifndef NDEBUG
-const char* VZeroUpperInserter::getBlockExitStateName(BlockExitState ST) {
+const char *VZeroUpperInserter::getBlockExitStateName(BlockExitState ST) {
   switch (ST) {
-    case PASS_THROUGH: return "Pass-through";
-    case EXITS_DIRTY: return "Exits-dirty";
-    case EXITS_CLEAN: return "Exits-clean";
+  case PASS_THROUGH:
+    return "Pass-through";
+  case EXITS_DIRTY:
+    return "Exits-dirty";
+  case EXITS_CLEAN:
+    return "Exits-clean";
   }
   llvm_unreachable("Invalid block exit state.");
 }

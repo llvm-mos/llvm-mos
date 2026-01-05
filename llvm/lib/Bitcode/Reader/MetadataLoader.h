@@ -93,6 +93,6 @@ public:
   /// Perform bitcode upgrades on llvm.dbg.* calls.
   void upgradeDebugIntrinsics(Function &F);
 };
-}
+} // namespace llvm
 
 #endif // LLVM_LIB_BITCODE_READER_METADATALOADER_H

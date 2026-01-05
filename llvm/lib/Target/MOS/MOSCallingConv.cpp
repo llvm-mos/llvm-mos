@@ -1,4 +1,5 @@
-//===-- MOSCallingConv.cpp - MOS Calling Convention ------------------------===//
+//===-- MOSCallingConv.cpp - MOS Calling Convention
+//------------------------===//
 //
 // Part of LLVM-MOS, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

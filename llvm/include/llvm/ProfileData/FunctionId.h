@@ -60,12 +60,10 @@ public:
 
   /// Constructor from a StringRef.
   explicit FunctionId(StringRef Str)
-      : Data(Str.data()), LengthOrHashCode(Str.size()) {
-  }
+      : Data(Str.data()), LengthOrHashCode(Str.size()) {}
 
   /// Constructor from a hash code.
-  explicit FunctionId(uint64_t HashCode)
-      : LengthOrHashCode(HashCode) {
+  explicit FunctionId(uint64_t HashCode) : LengthOrHashCode(HashCode) {
     assert(HashCode != 0);
   }
 
@@ -164,13 +162,9 @@ inline raw_ostream &operator<<(raw_ostream &OS, const FunctionId &Obj) {
   return OS;
 }
 
-inline uint64_t MD5Hash(const FunctionId &Obj) {
-  return Obj.getHashCode();
-}
+inline uint64_t MD5Hash(const FunctionId &Obj) { return Obj.getHashCode(); }
 
-inline uint64_t hash_value(const FunctionId &Obj) {
-  return Obj.getHashCode();
-}
+inline uint64_t hash_value(const FunctionId &Obj) { return Obj.getHashCode(); }
 
 } // end namespace sampleprof
 

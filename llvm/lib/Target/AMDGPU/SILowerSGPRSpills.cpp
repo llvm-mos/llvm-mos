@@ -273,7 +273,7 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
 
       if (SavedRegs.test(Reg)) {
         const TargetRegisterClass *RC =
-          TRI->getMinimalPhysRegClass(Reg, MVT::i32);
+            TRI->getMinimalPhysRegClass(Reg, MVT::i32);
         int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
                                            TRI->getSpillAlign(*RC), true);
 
@@ -424,8 +424,8 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
 
   // TODO: CSR VGPRs will never be spilled to AGPRs. These can probably be
   // handled as SpilledToReg in regular PrologEpilogInserter.
-  const bool HasSGPRSpillToVGPR = TRI->spillSGPRToVGPR() &&
-                                  (HasCSRs || FuncInfo->hasSpilledSGPRs());
+  const bool HasSGPRSpillToVGPR =
+      TRI->spillSGPRToVGPR() && (HasCSRs || FuncInfo->hasSpilledSGPRs());
   if (HasSGPRSpillToVGPR) {
     // Process all SGPR spills before frame offsets are finalized. Ideally SGPRs
     // are spilled to VGPRs, in which case we can eliminate the stack usage.

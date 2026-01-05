@@ -12,23 +12,24 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-  class AsmPrinter;
-  class MCContext;
-  class MCInst;
-  class MCOperand;
-  class MCSymbol;
-  class MachineInstr;
-  class MachineOperand;
+class AsmPrinter;
+class MCContext;
+class MCInst;
+class MCOperand;
+class MCSymbol;
+class MachineInstr;
+class MachineOperand;
 
-  /// MSP430MCInstLower - This class is used to lower an MachineInstr
-  /// into an MCInst.
+/// MSP430MCInstLower - This class is used to lower an MachineInstr
+/// into an MCInst.
 class LLVM_LIBRARY_VISIBILITY MSP430MCInstLower {
   MCContext &Ctx;
 
   AsmPrinter &Printer;
+
 public:
   MSP430MCInstLower(MCContext &ctx, AsmPrinter &printer)
-    : Ctx(ctx), Printer(printer) {}
+      : Ctx(ctx), Printer(printer) {}
   void Lower(const MachineInstr *MI, MCInst &OutMI) const;
 
   MCOperand LowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;
@@ -40,6 +41,6 @@ public:
   MCSymbol *GetBlockAddressSymbol(const MachineOperand &MO) const;
 };
 
-}
+} // namespace llvm
 
 #endif

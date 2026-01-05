@@ -143,8 +143,7 @@ std::string CompleteNodeLabelString(
     const BasicBlockT *Node,
     function_ref<void(raw_string_ostream &, const BasicBlockT &)>
         HandleBasicBlock,
-    function_ref<void(std::string &, unsigned &, unsigned)>
-        HandleComment) {
+    function_ref<void(std::string &, unsigned &, unsigned)> HandleComment) {
 
   enum { MaxColumns = 80 };
   std::string OutStr;

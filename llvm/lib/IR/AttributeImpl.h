@@ -121,7 +121,8 @@ public:
 
   static void Profile(FoldingSetNodeID &ID, StringRef Kind, StringRef Values) {
     ID.AddString(Kind);
-    if (!Values.empty()) ID.AddString(Values);
+    if (!Values.empty())
+      ID.AddString(Values);
   }
 
   static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
@@ -181,8 +182,7 @@ class IntAttributeImpl : public EnumAttributeImpl {
 public:
   IntAttributeImpl(Attribute::AttrKind Kind, uint64_t Val)
       : EnumAttributeImpl(IntAttrEntry, Kind), Val(Val) {
-    assert(Attribute::isIntAttrKind(Kind) &&
-           "Wrong kind for int attribute!");
+    assert(Attribute::isIntAttrKind(Kind) && "Wrong kind for int attribute!");
   }
 
   uint64_t getValue() const { return Val; }
@@ -295,7 +295,7 @@ class AttributeSetNode final
       private TrailingObjects<AttributeSetNode, Attribute> {
   friend TrailingObjects;
 
-  unsigned NumAttrs; ///< Number of attributes in this node.
+  unsigned NumAttrs;              ///< Number of attributes in this node.
   AttributeBitSet AvailableAttrs; ///< Available enum attributes.
 
   DenseMap<StringRef, Attribute> StringAttrs;
@@ -333,8 +333,8 @@ public:
   MaybeAlign getStackAlignment() const;
   uint64_t getDereferenceableBytes() const;
   uint64_t getDereferenceableOrNullBytes() const;
-  std::optional<std::pair<unsigned, std::optional<unsigned>>> getAllocSizeArgs()
-      const;
+  std::optional<std::pair<unsigned, std::optional<unsigned>>>
+  getAllocSizeArgs() const;
   unsigned getVScaleRangeMin() const;
   std::optional<unsigned> getVScaleRangeMax() const;
   UWTableKind getUWTableKind() const;

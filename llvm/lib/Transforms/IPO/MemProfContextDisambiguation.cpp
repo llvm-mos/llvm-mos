@@ -2074,15 +2074,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     DenseMap<const FuncTy *, unsigned> FuncToIndex;
     for (const auto &[Idx, CallCtxInfo] : enumerate(Calls))
       FuncToIndex.insert({CallCtxInfo.Func, Idx});
-    llvm::stable_sort(
-        Calls,
-        [&FuncToIndex](const CallContextInfo &A, const CallContextInfo &B) {
-          return A.StackIds.size() > B.StackIds.size() ||
-                 (A.StackIds.size() == B.StackIds.size() &&
-                  (A.StackIds < B.StackIds ||
-                   (A.StackIds == B.StackIds &&
-                    FuncToIndex[A.Func] < FuncToIndex[B.Func])));
-        });
+    llvm::stable_sort(Calls, [&FuncToIndex](const CallContextInfo &A,
+                                            const CallContextInfo &B) {
+      return A.StackIds.size() > B.StackIds.size() ||
+             (A.StackIds.size() == B.StackIds.size() &&
+              (A.StackIds < B.StackIds ||
+               (A.StackIds == B.StackIds &&
+                FuncToIndex[A.Func] < FuncToIndex[B.Func])));
+    });
 
     // Find the node for the last stack id, which should be the same
     // across all calls recorded for this id, and is the id for this
@@ -4850,29 +4849,29 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
 
       // Assign callsite version CallsiteClone to function version FuncClone,
       // and also assign (possibly cloned) Call to CallsiteClone.
-      auto AssignCallsiteCloneToFuncClone = [&](const FuncInfo &FuncClone,
-                                                CallInfo &Call,
-                                                ContextNode *CallsiteClone,
-                                                bool IsAlloc) {
-        // Record the clone of callsite node assigned to this function clone.
-        FuncCloneToCurNodeCloneMap[FuncClone] = CallsiteClone;
+      auto AssignCallsiteCloneToFuncClone =
+          [&](const FuncInfo &FuncClone, CallInfo &Call,
+              ContextNode *CallsiteClone, bool IsAlloc) {
+            // Record the clone of callsite node assigned to this function
+            // clone.
+            FuncCloneToCurNodeCloneMap[FuncClone] = CallsiteClone;
 
-        assert(FuncCloneInfos.size() > FuncClone.cloneNo());
-        DenseMap<CallInfo, CallInfo> &CallMap =
-            FuncCloneInfos[FuncClone.cloneNo()].CallMap;
-        CallInfo CallClone(Call);
-        if (auto It = CallMap.find(Call); It != CallMap.end())
-          CallClone = It->second;
-        CallsiteClone->setCall(CallClone);
-        // Need to do the same for all matching calls.
-        for (auto &MatchingCall : Node->MatchingCalls) {
-          CallInfo CallClone(MatchingCall);
-          if (auto It = CallMap.find(MatchingCall); It != CallMap.end())
-            CallClone = It->second;
-          // Updates the call in the list.
-          MatchingCall = CallClone;
-        }
-      };
+            assert(FuncCloneInfos.size() > FuncClone.cloneNo());
+            DenseMap<CallInfo, CallInfo> &CallMap =
+                FuncCloneInfos[FuncClone.cloneNo()].CallMap;
+            CallInfo CallClone(Call);
+            if (auto It = CallMap.find(Call); It != CallMap.end())
+              CallClone = It->second;
+            CallsiteClone->setCall(CallClone);
+            // Need to do the same for all matching calls.
+            for (auto &MatchingCall : Node->MatchingCalls) {
+              CallInfo CallClone(MatchingCall);
+              if (auto It = CallMap.find(MatchingCall); It != CallMap.end())
+                CallClone = It->second;
+              // Updates the call in the list.
+              MatchingCall = CallClone;
+            }
+          };
 
       // Invokes moveEdgeToNewCalleeClone which creates a new clone, and then
       // performs the necessary fixups (removing none type edges, and

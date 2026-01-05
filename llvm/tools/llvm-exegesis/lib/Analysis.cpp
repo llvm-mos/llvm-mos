@@ -68,9 +68,8 @@ void writeEscaped<kEscapeHtmlString>(raw_ostream &OS, const StringRef S) {
 } // namespace
 
 template <EscapeTag Tag>
-static void
-writeClusterId(raw_ostream &OS,
-               const BenchmarkClustering::ClusterId &CID) {
+static void writeClusterId(raw_ostream &OS,
+                           const BenchmarkClustering::ClusterId &CID) {
   if (CID.isNoise())
     writeEscaped<Tag>(OS, "[noise]");
   else if (CID.isError())
@@ -230,8 +229,8 @@ Analysis::makePointsPerSchedClass() const {
 // Parallel benchmarks repeat the same opcode multiple times. Just show this
 // opcode and show the whole snippet only on hover.
 static void writeParallelSnippetHtml(raw_ostream &OS,
-                                 const std::vector<MCInst> &Instructions,
-                                 const MCInstrInfo &InstrInfo) {
+                                     const std::vector<MCInst> &Instructions,
+                                     const MCInstrInfo &InstrInfo) {
   if (Instructions.empty())
     return;
   writeEscaped<kEscapeHtml>(OS, InstrInfo.getName(Instructions[0].getOpcode()));
@@ -576,8 +575,7 @@ Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
     OS << "</div>";
   }
 
-  printClusterRawHtml(BenchmarkClustering::ClusterId::noise(),
-                      "[noise]", OS);
+  printClusterRawHtml(BenchmarkClustering::ClusterId::noise(), "[noise]", OS);
 
   OS << "</body></html>";
   return Error::success();

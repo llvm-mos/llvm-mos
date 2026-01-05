@@ -638,5 +638,3 @@ SymbolCache::getOrCreateSourceFile(const FileChecksumEntry &Checksums) const {
   Iter->second = Id;
   return Id;
 }
-
-

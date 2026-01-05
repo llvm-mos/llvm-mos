@@ -28,17 +28,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "arc-inst-info"
 
-enum AddrIncType {
-    NoAddInc = 0,
-    PreInc   = 1,
-    PostInc  = 2,
-    Scaled   = 3
-};
+enum AddrIncType { NoAddInc = 0, PreInc = 1, PostInc = 2, Scaled = 3 };
 
-enum TSFlagsConstants {
-    TSF_AddrModeOff = 0,
-    TSF_AddModeMask = 3
-};
+enum TSFlagsConstants { TSF_AddrModeOff = 0, TSF_AddModeMask = 3 };
 
 // Pin the vtable to this file.
 void ARCInstrInfo::anchor() {}
@@ -423,8 +415,8 @@ bool ARCInstrInfo::isPreIncrement(const MachineInstr &MI) const {
 }
 
 bool ARCInstrInfo::getBaseAndOffsetPosition(const MachineInstr &MI,
-                                        unsigned &BasePos,
-                                        unsigned &OffsetPos) const {
+                                            unsigned &BasePos,
+                                            unsigned &OffsetPos) const {
   if (!MI.mayLoad() && !MI.mayStore())
     return false;
 

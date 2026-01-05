@@ -146,8 +146,8 @@ inline bool IsNullOrUndef(const Value *V) {
 
 inline bool IsNoopInstruction(const Instruction *I) {
   return isa<BitCastInst>(I) ||
-    (isa<GetElementPtrInst>(I) &&
-     cast<GetElementPtrInst>(I)->hasAllZeroIndices());
+         (isa<GetElementPtrInst>(I) &&
+          cast<GetElementPtrInst>(I)->hasAllZeroIndices());
 }
 
 /// Test whether the given value is possible a retainable object pointer.
@@ -195,14 +195,12 @@ inline bool IsObjCIdentifiedObject(const Value *V) {
   // Assume that call results and arguments have their own "provenance".
   // Constants (including GlobalVariables) and Allocas are never
   // reference-counted.
-  if (isa<CallInst>(V) || isa<InvokeInst>(V) ||
-      isa<Argument>(V) || isa<Constant>(V) ||
-      isa<AllocaInst>(V))
+  if (isa<CallInst>(V) || isa<InvokeInst>(V) || isa<Argument>(V) ||
+      isa<Constant>(V) || isa<AllocaInst>(V))
     return true;
 
   if (const LoadInst *LI = dyn_cast<LoadInst>(V)) {
-    const Value *Pointer =
-      GetRCIdentityRoot(LI->getPointerOperand());
+    const Value *Pointer = GetRCIdentityRoot(LI->getPointerOperand());
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Pointer)) {
       // A constant pointer can't be pointing to an object on the heap. It may
       // be reference-counted, but it won't be deleted.

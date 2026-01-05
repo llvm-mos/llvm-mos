@@ -111,7 +111,7 @@ class SelectOptimizeImpl {
 
 public:
   SelectOptimizeImpl() = default;
-  SelectOptimizeImpl(const TargetMachine *TM) : TM(TM){};
+  SelectOptimizeImpl(const TargetMachine *TM) : TM(TM) {};
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
   bool runOnFunction(Function &F, Pass &P);
 

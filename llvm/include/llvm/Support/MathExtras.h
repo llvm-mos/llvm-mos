@@ -108,7 +108,7 @@ static const unsigned char BitReverseTable256[256] = {
 #define R2(n) n, n + 2 * 64, n + 1 * 64, n + 3 * 64
 #define R4(n) R2(n), R2(n + 2 * 16), R2(n + 1 * 16), R2(n + 3 * 16)
 #define R6(n) R4(n), R4(n + 2 * 4), R4(n + 1 * 4), R4(n + 3 * 4)
-  R6(0), R6(2), R6(1), R6(3)
+    R6(0), R6(2), R6(1), R6(3)
 #undef R2
 #undef R4
 #undef R6
@@ -178,8 +178,7 @@ template <unsigned N> constexpr bool isInt(int64_t x) {
 }
 
 /// Checks if a signed integer is an N bit number shifted left by S.
-template <unsigned N, unsigned S>
-constexpr bool isShiftedInt(int64_t x) {
+template <unsigned N, unsigned S> constexpr bool isShiftedInt(int64_t x) {
   static_assert(S < 64, "isShiftedInt<N, S> with S >= 64 is too much.");
   static_assert(N + S <= 64, "isShiftedInt<N, S> with N + S > 64 is too wide.");
   return isInt<N + S>(x) && (x % (UINT64_C(1) << S) == 0);
@@ -194,8 +193,7 @@ template <unsigned N> constexpr bool isUInt(uint64_t x) {
 }
 
 /// Checks if a unsigned integer is an N bit number shifted left by S.
-template <unsigned N, unsigned S>
-constexpr bool isShiftedUInt(uint64_t x) {
+template <unsigned N, unsigned S> constexpr bool isShiftedUInt(uint64_t x) {
   static_assert(S < 64, "isShiftedUInt<N, S> with S >= 64 is too much.");
   static_assert(N + S <= 64,
                 "isShiftedUInt<N, S> with N + S > 64 is too wide.");

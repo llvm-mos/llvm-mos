@@ -34,24 +34,24 @@ class Type;
 
 namespace ARMCP {
 
-  enum ARMCPKind {
-    CPValue,
-    CPExtSymbol,
-    CPBlockAddress,
-    CPLSDA,
-    CPMachineBasicBlock,
-    CPPromotedGlobal
-  };
+enum ARMCPKind {
+  CPValue,
+  CPExtSymbol,
+  CPBlockAddress,
+  CPLSDA,
+  CPMachineBasicBlock,
+  CPPromotedGlobal
+};
 
-  enum ARMCPModifier {
-    no_modifier, /// None
-    TLSGD,       /// Thread Local Storage (General Dynamic Mode)
-    GOT_PREL,    /// Global Offset Table, PC Relative
-    GOTTPOFF,    /// Global Offset Table, Thread Pointer Offset
-    TPOFF,       /// Thread Pointer Offset
-    SECREL,      /// Section Relative (Windows TLS)
-    SBREL,       /// Static Base Relative (RWPI)
-  };
+enum ARMCPModifier {
+  no_modifier, /// None
+  TLSGD,       /// Thread Local Storage (General Dynamic Mode)
+  GOT_PREL,    /// Global Offset Table, PC Relative
+  GOTTPOFF,    /// Global Offset Table, Thread Pointer Offset
+  TPOFF,       /// Thread Pointer Offset
+  SECREL,      /// Section Relative (Windows TLS)
+  SBREL,       /// Static Base Relative (RWPI)
+};
 
 } // end namespace ARMCP
 
@@ -59,11 +59,11 @@ namespace ARMCP {
 /// represent PC-relative displacement between the address of the load
 /// instruction and the constant being loaded, i.e. (&GV-(LPIC+8)).
 class ARMConstantPoolValue : public MachineConstantPoolValue {
-  unsigned LabelId;        // Label id of the load.
-  ARMCP::ARMCPKind Kind;   // Kind of constant.
-  unsigned char PCAdjust;  // Extra adjustment if constantpool is pc-relative.
-                           // 8 for ARM, 4 for Thumb.
-  ARMCP::ARMCPModifier Modifier;   // GV modifier i.e. (&GV(modifier)-(LPIC+8))
+  unsigned LabelId;       // Label id of the load.
+  ARMCP::ARMCPKind Kind;  // Kind of constant.
+  unsigned char PCAdjust; // Extra adjustment if constantpool is pc-relative.
+                          // 8 for ARM, 4 for Thumb.
+  ARMCP::ARMCPModifier Modifier; // GV modifier i.e. (&GV(modifier)-(LPIC+8))
   bool AddCurrentAddress;
 
 protected:
@@ -82,7 +82,7 @@ protected:
       if (Constants[i].isMachineConstantPoolEntry() &&
           Constants[i].getAlign() >= Alignment) {
         auto *CPV =
-          static_cast<ARMConstantPoolValue*>(Constants[i].Val.MachineCPVal);
+            static_cast<ARMConstantPoolValue *>(Constants[i].Val.MachineCPVal);
         if (Derived *APC = dyn_cast<Derived>(CPV))
           if (cast<Derived>(this)->equals(APC))
             return i;
@@ -108,8 +108,10 @@ public:
   bool isExtSymbol() const { return Kind == ARMCP::CPExtSymbol; }
   bool isBlockAddress() const { return Kind == ARMCP::CPBlockAddress; }
   bool isLSDA() const { return Kind == ARMCP::CPLSDA; }
-  bool isMachineBasicBlock() const{ return Kind == ARMCP::CPMachineBasicBlock; }
-  bool isPromotedGlobal() const{ return Kind == ARMCP::CPPromotedGlobal; }
+  bool isMachineBasicBlock() const {
+    return Kind == ARMCP::CPMachineBasicBlock;
+  }
+  bool isPromotedGlobal() const { return Kind == ARMCP::CPPromotedGlobal; }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
                                 Align Alignment) override;
@@ -121,13 +123,15 @@ public:
   virtual bool hasSameValue(ARMConstantPoolValue *ACPV);
 
   bool equals(const ARMConstantPoolValue *A) const {
-    return this->LabelId == A->LabelId &&
-      this->PCAdjust == A->PCAdjust &&
-      this->Modifier == A->Modifier;
+    return this->LabelId == A->LabelId && this->PCAdjust == A->PCAdjust &&
+           this->Modifier == A->Modifier;
   }
 
   void print(raw_ostream &O) const override;
-  void print(raw_ostream *O) const { if (O) print(*O); }
+  void print(raw_ostream *O) const {
+    if (O)
+      print(*O);
+  }
   void dump() const;
 };
 
@@ -139,19 +143,14 @@ inline raw_ostream &operator<<(raw_ostream &O, const ARMConstantPoolValue &V) {
 /// ARMConstantPoolConstant - ARM-specific constant pool values for Constants,
 /// Functions, and BlockAddresses.
 class ARMConstantPoolConstant : public ARMConstantPoolValue {
-  const Constant *CVal;         // Constant being loaded.
-  SmallPtrSet<const GlobalVariable*, 1> GVars;
+  const Constant *CVal; // Constant being loaded.
+  SmallPtrSet<const GlobalVariable *, 1> GVars;
 
-  ARMConstantPoolConstant(const Constant *C,
-                          unsigned ID,
-                          ARMCP::ARMCPKind Kind,
-                          unsigned char PCAdj,
-                          ARMCP::ARMCPModifier Modifier,
+  ARMConstantPoolConstant(const Constant *C, unsigned ID, ARMCP::ARMCPKind Kind,
+                          unsigned char PCAdj, ARMCP::ARMCPModifier Modifier,
                           bool AddCurrentAddress);
-  ARMConstantPoolConstant(Type *Ty, const Constant *C,
-                          unsigned ID,
-                          ARMCP::ARMCPKind Kind,
-                          unsigned char PCAdj,
+  ARMConstantPoolConstant(Type *Ty, const Constant *C, unsigned ID,
+                          ARMCP::ARMCPKind Kind, unsigned char PCAdj,
                           ARMCP::ARMCPModifier Modifier,
                           bool AddCurrentAddress);
   ARMConstantPoolConstant(const GlobalVariable *GV, const Constant *Init);
@@ -178,9 +177,7 @@ public:
 
   iterator_range<promoted_iterator> promotedGlobals() { return GVars; }
 
-  const Constant *getPromotedGlobalInit() const {
-    return CVal;
-  }
+  const Constant *getPromotedGlobalInit() const { return CVal; }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
                                 Align Alignment) override;
@@ -206,7 +203,7 @@ public:
 /// ARMConstantPoolSymbol - ARM-specific constantpool values for external
 /// symbols.
 class ARMConstantPoolSymbol : public ARMConstantPoolValue {
-  const std::string S;          // ExtSymbol being loaded.
+  const std::string S; // ExtSymbol being loaded.
 
   ARMConstantPoolSymbol(LLVMContext &C, StringRef s, unsigned id,
                         unsigned char PCAdj, ARMCP::ARMCPModifier Modifier,
@@ -249,8 +246,8 @@ class ARMConstantPoolMBB : public ARMConstantPoolValue {
 
 public:
   static ARMConstantPoolMBB *Create(LLVMContext &C,
-                                    const MachineBasicBlock *mbb,
-                                    unsigned ID, unsigned char PCAdj);
+                                    const MachineBasicBlock *mbb, unsigned ID,
+                                    unsigned char PCAdj);
 
   const MachineBasicBlock *getMBB() const { return MBB; }
 

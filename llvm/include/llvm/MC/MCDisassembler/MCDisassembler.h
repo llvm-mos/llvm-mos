@@ -106,14 +106,10 @@ public:
   ///
   /// An easy way of encoding this is as 0b11, 0b01, 0b00 for
   /// Success, SoftFail, Fail respectively.
-  enum DecodeStatus {
-    Fail = 0,
-    SoftFail = 1,
-    Success = 3
-  };
+  enum DecodeStatus { Fail = 0, SoftFail = 1, Success = 3 };
 
   MCDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
-    : Ctx(Ctx), STI(STI) {}
+      : Ctx(Ctx), STI(STI) {}
 
   virtual ~MCDisassembler();
 
@@ -225,9 +221,9 @@ public:
   /// This takes ownership of \p Symzer, and deletes the previously set one.
   void setSymbolizer(std::unique_ptr<MCSymbolizer> Symzer);
 
-  MCContext& getContext() const { return Ctx; }
+  MCContext &getContext() const { return Ctx; }
 
-  const MCSubtargetInfo& getSubtargetInfo() const { return STI; }
+  const MCSubtargetInfo &getSubtargetInfo() const { return STI; }
 
   /// ELF-specific, set the ABI version from the object header.
   virtual void setABIVersion(unsigned Version) {}

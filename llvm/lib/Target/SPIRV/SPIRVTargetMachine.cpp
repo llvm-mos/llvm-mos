@@ -90,41 +90,41 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
   setRequiresStructuredCFG(false);
 }
 
-void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "SPIRVPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 }
 
 namespace {
-// SPIR-V Code Generator Pass Configuration Options.
-class SPIRVPassConfig : public TargetPassConfig {
-public:
-  SPIRVPassConfig(SPIRVTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM), TM(TM) {}
+  // SPIR-V Code Generator Pass Configuration Options.
+  class SPIRVPassConfig : public TargetPassConfig {
+  public:
+    SPIRVPassConfig(SPIRVTargetMachine &TM, PassManagerBase &PM)
+        : TargetPassConfig(TM, PM), TM(TM) {}
 
-  SPIRVTargetMachine &getSPIRVTargetMachine() const {
-    return getTM<SPIRVTargetMachine>();
-  }
-  void addMachineSSAOptimization() override;
-  void addIRPasses() override;
-  void addISelPrepare() override;
+    SPIRVTargetMachine &getSPIRVTargetMachine() const {
+      return getTM<SPIRVTargetMachine>();
+    }
+    void addMachineSSAOptimization() override;
+    void addIRPasses() override;
+    void addISelPrepare() override;
 
-  bool addIRTranslator() override;
-  void addPreLegalizeMachineIR() override;
-  bool addLegalizeMachineIR() override;
-  bool addRegBankSelect() override;
-  bool addGlobalInstructionSelect() override;
+    bool addIRTranslator() override;
+    void addPreLegalizeMachineIR() override;
+    bool addLegalizeMachineIR() override;
+    bool addRegBankSelect() override;
+    bool addGlobalInstructionSelect() override;
 
-  FunctionPass *createTargetRegisterAllocator(bool) override;
-  void addFastRegAlloc() override {}
-  void addOptimizedRegAlloc() override {}
+    FunctionPass *createTargetRegisterAllocator(bool) override;
+    void addFastRegAlloc() override {}
+    void addOptimizedRegAlloc() override {}
 
-  void addPostRegAlloc() override;
-  void addPreEmitPass() override;
+    void addPostRegAlloc() override;
+    void addPreEmitPass() override;
 
-private:
-  const SPIRVTargetMachine &TM;
-};
+  private:
+    const SPIRVTargetMachine &TM;
+  };
 } // namespace
 
 // We do not use physical registers, and maintain virtual registers throughout

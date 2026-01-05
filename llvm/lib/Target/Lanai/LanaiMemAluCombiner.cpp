@@ -300,13 +300,12 @@ bool isSuitableAluInstr(bool IsSpls, const MbbIterator &AluIter,
     if (Offset.isReg() && Offset.getReg() == Lanai::R0)
       return true;
 
-    if (Offset.isImm() &&
-        ((Offset.getImm() == 0 &&
-          // Check that the Op2 would fit in the immediate field of the
-          // memory operation.
-          ((IsSpls && isInt<10>(Op2.getImm())) ||
-           (!IsSpls && isInt<16>(Op2.getImm())))) ||
-         Offset.getImm() == Op2.getImm()))
+    if (Offset.isImm() && ((Offset.getImm() == 0 &&
+                            // Check that the Op2 would fit in the immediate
+                            // field of the memory operation.
+                            ((IsSpls && isInt<10>(Op2.getImm())) ||
+                             (!IsSpls && isInt<16>(Op2.getImm())))) ||
+                           Offset.getImm() == Op2.getImm()))
       return true;
   } else if (Op2.isReg()) {
     // The Offset and 2nd operand are both registers and equal

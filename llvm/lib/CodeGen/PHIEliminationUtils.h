@@ -12,13 +12,13 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 
 namespace llvm {
-    /// findPHICopyInsertPoint - Find a safe place in MBB to insert a copy from
-    /// SrcReg when following the CFG edge to SuccMBB. This needs to be after
-    /// any def of SrcReg, but before any subsequent point where control flow
-    /// might jump out of the basic block.
-    MachineBasicBlock::iterator
-    findPHICopyInsertPoint(MachineBasicBlock* MBB, MachineBasicBlock* SuccMBB,
-                           Register SrcReg);
-}
+/// findPHICopyInsertPoint - Find a safe place in MBB to insert a copy from
+/// SrcReg when following the CFG edge to SuccMBB. This needs to be after
+/// any def of SrcReg, but before any subsequent point where control flow
+/// might jump out of the basic block.
+MachineBasicBlock::iterator findPHICopyInsertPoint(MachineBasicBlock *MBB,
+                                                   MachineBasicBlock *SuccMBB,
+                                                   Register SrcReg);
+} // namespace llvm
 
 #endif

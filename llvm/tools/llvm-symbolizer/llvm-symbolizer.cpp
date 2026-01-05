@@ -463,7 +463,8 @@ static object::BuildID parseBuildIDArg(const opt::InputArgList &Args, int ID) {
 }
 
 // Symbolize markup from stdin and write the result to stdout.
-static void filterMarkup(const opt::InputArgList &Args, LLVMSymbolizer &Symbolizer) {
+static void filterMarkup(const opt::InputArgList &Args,
+                         LLVMSymbolizer &Symbolizer) {
   MarkupFilter Filter(outs(), Symbolizer, parseColorArg(Args));
   std::string InputString;
   while (std::getline(std::cin, InputString)) {

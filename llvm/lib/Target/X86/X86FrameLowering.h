@@ -182,7 +182,8 @@ public:
   /// Emit a series of instructions to increment / decrement the stack
   /// pointer by a constant value.
   void emitSPUpdate(MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
-                    const DebugLoc &DL, int64_t NumBytes, bool InEpilogue) const;
+                    const DebugLoc &DL, int64_t NumBytes,
+                    bool InEpilogue) const;
 
   /// Check that LEA can be used on SP in an epilogue sequence for \p MF.
   bool canUseLEAForSPInEpilogue(const MachineFunction &MF) const;
@@ -211,8 +212,9 @@ public:
   /// We want to place the local stack objects in some sort of sensible order.
   /// The heuristic we use is to try and pack them according to static number
   /// of uses and size in order to minimize code size.
-  void orderFrameObjects(const MachineFunction &MF,
-                         SmallVectorImpl<int> &ObjectsToAllocate) const override;
+  void
+  orderFrameObjects(const MachineFunction &MF,
+                    SmallVectorImpl<int> &ObjectsToAllocate) const override;
 
   /// Wraps up getting a CFI index and building a MachineInstr for it.
   void BuildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
@@ -236,7 +238,7 @@ public:
 
   /// Return true if the function has a redzone (accessible bytes past the
   /// frame of the top of stack function) as part of it's ABI.
-  bool has128ByteRedZone(const MachineFunction& MF) const;
+  bool has128ByteRedZone(const MachineFunction &MF) const;
 
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
@@ -339,6 +341,6 @@ private:
                      MachineBasicBlock::reverse_iterator &MI) const;
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

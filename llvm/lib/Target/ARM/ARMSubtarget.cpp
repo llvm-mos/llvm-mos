@@ -46,14 +46,10 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "ARMGenSubtargetInfo.inc"
 
-static cl::opt<bool>
-UseFusedMulOps("arm-use-mulops",
-               cl::init(true), cl::Hidden);
+static cl::opt<bool> UseFusedMulOps("arm-use-mulops", cl::init(true),
+                                    cl::Hidden);
 
-enum ITMode {
-  DefaultIT,
-  RestrictedIT
-};
+enum ITMode { DefaultIT, RestrictedIT };
 
 static cl::opt<ITMode>
     IT(cl::desc("IT block support"), cl::Hidden, cl::init(DefaultIT),
@@ -64,9 +60,8 @@ static cl::opt<ITMode>
 
 /// ForceFastISel - Use the fast-isel, even for subtargets where it is not
 /// currently supported (for testing only).
-static cl::opt<bool>
-ForceFastISel("arm-force-fast-isel",
-               cl::init(false), cl::Hidden);
+static cl::opt<bool> ForceFastISel("arm-force-fast-isel", cl::init(false),
+                                   cl::Hidden);
 
 /// initializeSubtargetDependencies - Initializes using a CPU and feature string
 /// so that we can use initializer lists for subtarget initialization.
@@ -232,7 +227,8 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
        TargetTriple.isOSVersionLT(3, 0)))
     ReserveR9 = true;
 
-  // If MVEVectorCostFactor is still 0 (has not been set to anything else), default it to 2
+  // If MVEVectorCostFactor is still 0 (has not been set to anything else),
+  // default it to 2
   if (MVEVectorCostFactor == 0)
     MVEVectorCostFactor = 2;
 
@@ -378,8 +374,7 @@ bool ARMSubtarget::useStride4VFPs() const {
   // For general targets, the prologue can grow when VFPs are allocated with
   // stride 4 (more vpush instructions). But WatchOS uses a compact unwind
   // format which it's more important to get right.
-  return isTargetWatchABI() ||
-         (useWideStrideVFP() && !OptMinSize);
+  return isTargetWatchABI() || (useWideStrideVFP() && !OptMinSize);
 }
 
 bool ARMSubtarget::useMovt() const {

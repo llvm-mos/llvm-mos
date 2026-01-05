@@ -155,9 +155,10 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
   SmallVector<MachineInstrBuilder, 4> MIBS;
   for (auto I = Insn.begin(), E = Insn.end(); I != E; ++I) {
     bool LastItem = std::next(I) == E;
-    switch (I->Opcode)
-    {
-    default: llvm_unreachable("unhandled!"); break;
+    switch (I->Opcode) {
+    default:
+      llvm_unreachable("unhandled!");
+      break;
 
     case AArch64::ORRWri:
     case AArch64::ORRXri:
@@ -215,26 +216,27 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
     case AArch64::MOVZWi:
     case AArch64::MOVZXi: {
       bool DstIsDead = MI.getOperand(0).isDead();
-      MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
-        .addReg(DstReg, RegState::Define |
-                getDeadRegState(DstIsDead && LastItem) |
-                RenamableState)
-        .addImm(I->Op1)
-        .addImm(I->Op2));
-      } break;
+      MIBS.push_back(
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
+              .addReg(DstReg, RegState::Define |
+                                  getDeadRegState(DstIsDead && LastItem) |
+                                  RenamableState)
+              .addImm(I->Op1)
+              .addImm(I->Op2));
+    } break;
     case AArch64::MOVKWi:
     case AArch64::MOVKXi: {
       Register DstReg = MI.getOperand(0).getReg();
       bool DstIsDead = MI.getOperand(0).isDead();
-      MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
-        .addReg(DstReg,
-                RegState::Define |
-                getDeadRegState(DstIsDead && LastItem) |
-                RenamableState)
-        .addReg(DstReg)
-        .addImm(I->Op1)
-        .addImm(I->Op2));
-      } break;
+      MIBS.push_back(
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
+              .addReg(DstReg, RegState::Define |
+                                  getDeadRegState(DstIsDead && LastItem) |
+                                  RenamableState)
+              .addReg(DstReg)
+              .addImm(I->Op1)
+              .addImm(I->Op2));
+    } break;
     }
   }
   transferImpOps(MI, MIBS.front(), MIBS.back());
@@ -274,9 +276,9 @@ bool AArch64ExpandPseudo::expandCMP_SWAP(
   //     b.ne .Ldone
   if (!StatusDead)
     BuildMI(LoadCmpBB, MIMD, TII->get(AArch64::MOVZWi), StatusReg)
-      .addImm(0).addImm(0);
-  BuildMI(LoadCmpBB, MIMD, TII->get(LdarOp), Dest.getReg())
-      .addReg(AddrReg);
+        .addImm(0)
+        .addImm(0);
+  BuildMI(LoadCmpBB, MIMD, TII->get(LdarOp), Dest.getReg()).addReg(AddrReg);
   BuildMI(LoadCmpBB, MIMD, TII->get(CmpOp), ZeroReg)
       .addReg(Dest.getReg(), getKillRegState(Dest.isDead()))
       .addReg(DesiredReg)
@@ -388,9 +390,9 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
       .addReg(DesiredLoReg)
       .addImm(0);
   BuildMI(LoadCmpBB, MIMD, TII->get(AArch64::CSINCWr), StatusReg)
-    .addUse(AArch64::WZR)
-    .addUse(AArch64::WZR)
-    .addImm(AArch64CC::EQ);
+      .addUse(AArch64::WZR)
+      .addUse(AArch64::WZR)
+      .addImm(AArch64CC::EQ);
   BuildMI(LoadCmpBB, MIMD, TII->get(AArch64::SUBSXrs), AArch64::XZR)
       .addReg(DestHi.getReg(), getKillRegState(DestHi.isDead()))
       .addReg(DesiredHiReg)
@@ -497,9 +499,8 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
 /// swapping of operands is illegal because the operation is not
 /// (or cannot be emulated to be) fully commutative.
 bool AArch64ExpandPseudo::expand_DestructiveOp(
-                            MachineInstr &MI,
-                            MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI) {
+    MachineInstr &MI, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator MBBI) {
   unsigned Opcode = AArch64::getSVEPseudoMap(MI.getOpcode());
   uint64_t DType = TII->get(Opcode).TSFlags & AArch64::DestructiveInstTypeMask;
   uint64_t FalseLanes = MI.getDesc().TSFlags & AArch64::FalseLanesMask;
@@ -558,8 +559,8 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   case AArch64::DestructiveBinaryComm:
   case AArch64::DestructiveBinaryCommWithRev:
     DOPRegIsUnique =
-      DstReg != MI.getOperand(DOPIdx).getReg() ||
-      MI.getOperand(DOPIdx).getReg() != MI.getOperand(SrcIdx).getReg();
+        DstReg != MI.getOperand(DOPIdx).getReg() ||
+        MI.getOperand(DOPIdx).getReg() != MI.getOperand(SrcIdx).getReg();
     break;
   case AArch64::DestructiveUnaryPassthru:
   case AArch64::DestructiveBinaryImm:
@@ -667,7 +668,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   // Create the destructive operation
   //
   DOP = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opcode))
-    .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead));
+            .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead));
   DOPRegState = DOPRegState | RegState::Kill;
 
   switch (DType) {
@@ -1022,8 +1023,7 @@ AArch64ExpandPseudo::expandConditionalPseudo(MachineBasicBlock &MBB,
 
   // Add the SMBB label to the branch instruction & create a branch to EndBB.
   Branch.addMBB(CondBB);
-  BuildMI(&MBB, DL, TII->get(AArch64::B))
-      .addMBB(EndBB);
+  BuildMI(&MBB, DL, TII->get(AArch64::B)).addMBB(EndBB);
   MBB.addSuccessor(EndBB);
 
   // Create branch from CondBB to EndBB. Users of this helper should insert new
@@ -1102,14 +1102,13 @@ MachineBasicBlock *
 AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
-  // In the case of a smstart/smstop before a unreachable, just remove the pseudo.
-  // Exception handling code generated by Clang may introduce unreachables and it
-  // seems unnecessary to restore pstate.sm when that happens. Note that it is
-  // not just an optimisation, the code below expects a successor instruction/block
-  // in order to split the block at MBBI.
-  if (std::next(MBBI) == MBB.end() &&
-      MI.getParent()->successors().begin() ==
-          MI.getParent()->successors().end()) {
+  // In the case of a smstart/smstop before a unreachable, just remove the
+  // pseudo. Exception handling code generated by Clang may introduce
+  // unreachables and it seems unnecessary to restore pstate.sm when that
+  // happens. Note that it is not just an optimisation, the code below expects a
+  // successor instruction/block in order to split the block at MBBI.
+  if (std::next(MBBI) == MBB.end() && MI.getParent()->successors().begin() ==
+                                          MI.getParent()->successors().end()) {
     MI.eraseFromParent();
     return &MBB;
   }
@@ -1355,30 +1354,78 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     switch (MI.getOpcode()) {
     default:
       return false;
-    case AArch64::ADDWrr:      Opcode = AArch64::ADDWrs; break;
-    case AArch64::SUBWrr:      Opcode = AArch64::SUBWrs; break;
-    case AArch64::ADDXrr:      Opcode = AArch64::ADDXrs; break;
-    case AArch64::SUBXrr:      Opcode = AArch64::SUBXrs; break;
-    case AArch64::ADDSWrr:     Opcode = AArch64::ADDSWrs; break;
-    case AArch64::SUBSWrr:     Opcode = AArch64::SUBSWrs; break;
-    case AArch64::ADDSXrr:     Opcode = AArch64::ADDSXrs; break;
-    case AArch64::SUBSXrr:     Opcode = AArch64::SUBSXrs; break;
-    case AArch64::ANDWrr:      Opcode = AArch64::ANDWrs; break;
-    case AArch64::ANDXrr:      Opcode = AArch64::ANDXrs; break;
-    case AArch64::BICWrr:      Opcode = AArch64::BICWrs; break;
-    case AArch64::BICXrr:      Opcode = AArch64::BICXrs; break;
-    case AArch64::ANDSWrr:     Opcode = AArch64::ANDSWrs; break;
-    case AArch64::ANDSXrr:     Opcode = AArch64::ANDSXrs; break;
-    case AArch64::BICSWrr:     Opcode = AArch64::BICSWrs; break;
-    case AArch64::BICSXrr:     Opcode = AArch64::BICSXrs; break;
-    case AArch64::EONWrr:      Opcode = AArch64::EONWrs; break;
-    case AArch64::EONXrr:      Opcode = AArch64::EONXrs; break;
-    case AArch64::EORWrr:      Opcode = AArch64::EORWrs; break;
-    case AArch64::EORXrr:      Opcode = AArch64::EORXrs; break;
-    case AArch64::ORNWrr:      Opcode = AArch64::ORNWrs; break;
-    case AArch64::ORNXrr:      Opcode = AArch64::ORNXrs; break;
-    case AArch64::ORRWrr:      Opcode = AArch64::ORRWrs; break;
-    case AArch64::ORRXrr:      Opcode = AArch64::ORRXrs; break;
+    case AArch64::ADDWrr:
+      Opcode = AArch64::ADDWrs;
+      break;
+    case AArch64::SUBWrr:
+      Opcode = AArch64::SUBWrs;
+      break;
+    case AArch64::ADDXrr:
+      Opcode = AArch64::ADDXrs;
+      break;
+    case AArch64::SUBXrr:
+      Opcode = AArch64::SUBXrs;
+      break;
+    case AArch64::ADDSWrr:
+      Opcode = AArch64::ADDSWrs;
+      break;
+    case AArch64::SUBSWrr:
+      Opcode = AArch64::SUBSWrs;
+      break;
+    case AArch64::ADDSXrr:
+      Opcode = AArch64::ADDSXrs;
+      break;
+    case AArch64::SUBSXrr:
+      Opcode = AArch64::SUBSXrs;
+      break;
+    case AArch64::ANDWrr:
+      Opcode = AArch64::ANDWrs;
+      break;
+    case AArch64::ANDXrr:
+      Opcode = AArch64::ANDXrs;
+      break;
+    case AArch64::BICWrr:
+      Opcode = AArch64::BICWrs;
+      break;
+    case AArch64::BICXrr:
+      Opcode = AArch64::BICXrs;
+      break;
+    case AArch64::ANDSWrr:
+      Opcode = AArch64::ANDSWrs;
+      break;
+    case AArch64::ANDSXrr:
+      Opcode = AArch64::ANDSXrs;
+      break;
+    case AArch64::BICSWrr:
+      Opcode = AArch64::BICSWrs;
+      break;
+    case AArch64::BICSXrr:
+      Opcode = AArch64::BICSXrs;
+      break;
+    case AArch64::EONWrr:
+      Opcode = AArch64::EONWrs;
+      break;
+    case AArch64::EONXrr:
+      Opcode = AArch64::EONXrs;
+      break;
+    case AArch64::EORWrr:
+      Opcode = AArch64::EORWrs;
+      break;
+    case AArch64::EORXrr:
+      Opcode = AArch64::EORXrs;
+      break;
+    case AArch64::ORNWrr:
+      Opcode = AArch64::ORNWrs;
+      break;
+    case AArch64::ORNXrr:
+      Opcode = AArch64::ORNXrs;
+      break;
+    case AArch64::ORRWrr:
+      Opcode = AArch64::ORRWrs;
+      break;
+    case AArch64::ORRXrr:
+      Opcode = AArch64::ORRXrs;
+      break;
     }
     MachineFunction &MF = *MBB.getParent();
     // Try to create new inst without implicit operands added.
@@ -1577,7 +1624,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     // liveness checks.
     MachineInstrBuilder MIB =
         BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::RET))
-          .addReg(AArch64::LR, RegState::Undef);
+            .addReg(AArch64::LR, RegState::Undef);
     transferImpOps(MI, MIB, MIB);
     MI.eraseFromParent();
     return true;
@@ -1593,15 +1640,13 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                           AArch64_AM::getArithExtendImm(AArch64_AM::UXTH, 0),
                           AArch64::WZR, NextMBBI);
   case AArch64::CMP_SWAP_32:
-    return expandCMP_SWAP(MBB, MBBI, AArch64::LDAXRW, AArch64::STLXRW,
-                          AArch64::SUBSWrs,
-                          AArch64_AM::getShifterImm(AArch64_AM::LSL, 0),
-                          AArch64::WZR, NextMBBI);
+    return expandCMP_SWAP(
+        MBB, MBBI, AArch64::LDAXRW, AArch64::STLXRW, AArch64::SUBSWrs,
+        AArch64_AM::getShifterImm(AArch64_AM::LSL, 0), AArch64::WZR, NextMBBI);
   case AArch64::CMP_SWAP_64:
-    return expandCMP_SWAP(MBB, MBBI,
-                          AArch64::LDAXRX, AArch64::STLXRX, AArch64::SUBSXrs,
-                          AArch64_AM::getShifterImm(AArch64_AM::LSL, 0),
-                          AArch64::XZR, NextMBBI);
+    return expandCMP_SWAP(
+        MBB, MBBI, AArch64::LDAXRX, AArch64::STLXRX, AArch64::SUBSXrs,
+        AArch64_AM::getShifterImm(AArch64_AM::LSL, 0), AArch64::XZR, NextMBBI);
   case AArch64::CMP_SWAP_128:
   case AArch64::CMP_SWAP_128_RELEASE:
   case AArch64::CMP_SWAP_128_ACQUIRE:
@@ -1611,251 +1656,251 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case AArch64::AESMCrrTied:
   case AArch64::AESIMCrrTied: {
     MachineInstrBuilder MIB =
-    BuildMI(MBB, MBBI, MI.getDebugLoc(),
-            TII->get(Opcode == AArch64::AESMCrrTied ? AArch64::AESMCrr :
-                                                      AArch64::AESIMCrr))
-      .add(MI.getOperand(0))
-      .add(MI.getOperand(1));
+        BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                TII->get(Opcode == AArch64::AESMCrrTied ? AArch64::AESMCrr
+                                                        : AArch64::AESIMCrr))
+            .add(MI.getOperand(0))
+            .add(MI.getOperand(1));
     transferImpOps(MI, MIB, MIB);
     MI.eraseFromParent();
     return true;
-   }
-   case AArch64::IRGstack: {
-     MachineFunction &MF = *MBB.getParent();
-     const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-     const AArch64FrameLowering *TFI =
-         MF.getSubtarget<AArch64Subtarget>().getFrameLowering();
+  }
+  case AArch64::IRGstack: {
+    MachineFunction &MF = *MBB.getParent();
+    const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+    const AArch64FrameLowering *TFI =
+        MF.getSubtarget<AArch64Subtarget>().getFrameLowering();
 
-     // IRG does not allow immediate offset. getTaggedBasePointerOffset should
-     // almost always point to SP-after-prologue; if not, emit a longer
-     // instruction sequence.
-     int BaseOffset = -AFI->getTaggedBasePointerOffset();
-     Register FrameReg;
-     StackOffset FrameRegOffset = TFI->resolveFrameOffsetReference(
-         MF, BaseOffset, false /*isFixed*/, TargetStackID::Default /*StackID*/,
-         FrameReg,
-         /*PreferFP=*/false,
-         /*ForSimm=*/true);
-     Register SrcReg = FrameReg;
-     if (FrameRegOffset) {
-       // Use output register as temporary.
-       SrcReg = MI.getOperand(0).getReg();
-       emitFrameOffset(MBB, &MI, MI.getDebugLoc(), SrcReg, FrameReg,
-                       FrameRegOffset, TII);
-     }
-     BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::IRG))
-         .add(MI.getOperand(0))
-         .addUse(SrcReg)
-         .add(MI.getOperand(2));
-     MI.eraseFromParent();
-     return true;
-   }
-   case AArch64::TAGPstack: {
-     int64_t Offset = MI.getOperand(2).getImm();
-     BuildMI(MBB, MBBI, MI.getDebugLoc(),
-             TII->get(Offset >= 0 ? AArch64::ADDG : AArch64::SUBG))
-         .add(MI.getOperand(0))
-         .add(MI.getOperand(1))
-         .addImm(std::abs(Offset))
-         .add(MI.getOperand(4));
-     MI.eraseFromParent();
-     return true;
-   }
-   case AArch64::STGloop_wback:
-   case AArch64::STZGloop_wback:
-     return expandSetTagLoop(MBB, MBBI, NextMBBI);
-   case AArch64::STGloop:
-   case AArch64::STZGloop:
-     report_fatal_error(
-         "Non-writeback variants of STGloop / STZGloop should not "
-         "survive past PrologEpilogInserter.");
-   case AArch64::STR_ZZZZXI:
-   case AArch64::STR_ZZZZXI_STRIDED_CONTIGUOUS:
-     return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 4);
-   case AArch64::STR_ZZZXI:
-     return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 3);
-   case AArch64::STR_ZZXI:
-   case AArch64::STR_ZZXI_STRIDED_CONTIGUOUS:
-     return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 2);
-   case AArch64::STR_PPXI:
-     return expandSVESpillFill(MBB, MBBI, AArch64::STR_PXI, 2);
-   case AArch64::LDR_ZZZZXI:
-   case AArch64::LDR_ZZZZXI_STRIDED_CONTIGUOUS:
-     return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 4);
-   case AArch64::LDR_ZZZXI:
-     return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 3);
-   case AArch64::LDR_ZZXI:
-   case AArch64::LDR_ZZXI_STRIDED_CONTIGUOUS:
-     return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 2);
-   case AArch64::LDR_PPXI:
-     return expandSVESpillFill(MBB, MBBI, AArch64::LDR_PXI, 2);
-   case AArch64::BLR_RVMARKER:
-   case AArch64::BLRA_RVMARKER:
-     return expandCALL_RVMARKER(MBB, MBBI);
-   case AArch64::BLR_BTI:
-     return expandCALL_BTI(MBB, MBBI);
-   case AArch64::StoreSwiftAsyncContext:
-     return expandStoreSwiftAsyncContext(MBB, MBBI);
-   case AArch64::RestoreZAPseudo:
-   case AArch64::CommitZASavePseudo:
-   case AArch64::MSRpstatePseudo: {
-     auto *NewMBB = [&] {
-       switch (Opcode) {
-       case AArch64::RestoreZAPseudo:
-         return expandRestoreZASave(MBB, MBBI);
-       case AArch64::CommitZASavePseudo:
-         return expandCommitZASave(MBB, MBBI);
-       case AArch64::MSRpstatePseudo:
-         return expandCondSMToggle(MBB, MBBI);
-       default:
-         llvm_unreachable("Unexpected conditional pseudo!");
-       }
-     }();
-     if (NewMBB != &MBB)
-       NextMBBI = MBB.end(); // The NextMBBI iterator is invalidated.
-     return true;
-   }
-   case AArch64::InOutZAUsePseudo:
-   case AArch64::RequiresZASavePseudo:
-   case AArch64::SMEStateAllocPseudo:
-   case AArch64::COALESCER_BARRIER_FPR16:
-   case AArch64::COALESCER_BARRIER_FPR32:
-   case AArch64::COALESCER_BARRIER_FPR64:
-   case AArch64::COALESCER_BARRIER_FPR128:
-     MI.eraseFromParent();
-     return true;
-   case AArch64::LD1B_2Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
-         AArch64::LD1B_2Z_IMM, AArch64::LD1B_2Z_STRIDED_IMM);
-   case AArch64::LD1H_2Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
-         AArch64::LD1H_2Z_IMM, AArch64::LD1H_2Z_STRIDED_IMM);
-   case AArch64::LD1W_2Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
-         AArch64::LD1W_2Z_IMM, AArch64::LD1W_2Z_STRIDED_IMM);
-   case AArch64::LD1D_2Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
-         AArch64::LD1D_2Z_IMM, AArch64::LD1D_2Z_STRIDED_IMM);
-   case AArch64::LDNT1B_2Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
-         AArch64::LDNT1B_2Z_IMM, AArch64::LDNT1B_2Z_STRIDED_IMM);
-   case AArch64::LDNT1H_2Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
-         AArch64::LDNT1H_2Z_IMM, AArch64::LDNT1H_2Z_STRIDED_IMM);
-   case AArch64::LDNT1W_2Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
-         AArch64::LDNT1W_2Z_IMM, AArch64::LDNT1W_2Z_STRIDED_IMM);
-   case AArch64::LDNT1D_2Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
-         AArch64::LDNT1D_2Z_IMM, AArch64::LDNT1D_2Z_STRIDED_IMM);
-   case AArch64::LD1B_2Z_PSEUDO:
-     return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR2RegClass,
-                                 AArch64::ZPR2StridedRegClass, AArch64::LD1B_2Z,
-                                 AArch64::LD1B_2Z_STRIDED);
-   case AArch64::LD1H_2Z_PSEUDO:
-     return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR2RegClass,
-                                 AArch64::ZPR2StridedRegClass, AArch64::LD1H_2Z,
-                                 AArch64::LD1H_2Z_STRIDED);
-   case AArch64::LD1W_2Z_PSEUDO:
-     return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR2RegClass,
-                                 AArch64::ZPR2StridedRegClass, AArch64::LD1W_2Z,
-                                 AArch64::LD1W_2Z_STRIDED);
-   case AArch64::LD1D_2Z_PSEUDO:
-     return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR2RegClass,
-                                 AArch64::ZPR2StridedRegClass, AArch64::LD1D_2Z,
-                                 AArch64::LD1D_2Z_STRIDED);
-   case AArch64::LDNT1B_2Z_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
-         AArch64::LDNT1B_2Z, AArch64::LDNT1B_2Z_STRIDED);
-   case AArch64::LDNT1H_2Z_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
-         AArch64::LDNT1H_2Z, AArch64::LDNT1H_2Z_STRIDED);
-   case AArch64::LDNT1W_2Z_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
-         AArch64::LDNT1W_2Z, AArch64::LDNT1W_2Z_STRIDED);
-   case AArch64::LDNT1D_2Z_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
-         AArch64::LDNT1D_2Z, AArch64::LDNT1D_2Z_STRIDED);
-   case AArch64::LD1B_4Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
-         AArch64::LD1B_4Z_IMM, AArch64::LD1B_4Z_STRIDED_IMM);
-   case AArch64::LD1H_4Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
-         AArch64::LD1H_4Z_IMM, AArch64::LD1H_4Z_STRIDED_IMM);
-   case AArch64::LD1W_4Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
-         AArch64::LD1W_4Z_IMM, AArch64::LD1W_4Z_STRIDED_IMM);
-   case AArch64::LD1D_4Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
-         AArch64::LD1D_4Z_IMM, AArch64::LD1D_4Z_STRIDED_IMM);
-   case AArch64::LDNT1B_4Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
-         AArch64::LDNT1B_4Z_IMM, AArch64::LDNT1B_4Z_STRIDED_IMM);
-   case AArch64::LDNT1H_4Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
-         AArch64::LDNT1H_4Z_IMM, AArch64::LDNT1H_4Z_STRIDED_IMM);
-   case AArch64::LDNT1W_4Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
-         AArch64::LDNT1W_4Z_IMM, AArch64::LDNT1W_4Z_STRIDED_IMM);
-   case AArch64::LDNT1D_4Z_IMM_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
-         AArch64::LDNT1D_4Z_IMM, AArch64::LDNT1D_4Z_STRIDED_IMM);
-   case AArch64::LD1B_4Z_PSEUDO:
-     return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR4RegClass,
-                                 AArch64::ZPR4StridedRegClass, AArch64::LD1B_4Z,
-                                 AArch64::LD1B_4Z_STRIDED);
-   case AArch64::LD1H_4Z_PSEUDO:
-     return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR4RegClass,
-                                 AArch64::ZPR4StridedRegClass, AArch64::LD1H_4Z,
-                                 AArch64::LD1H_4Z_STRIDED);
-   case AArch64::LD1W_4Z_PSEUDO:
-     return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR4RegClass,
-                                 AArch64::ZPR4StridedRegClass, AArch64::LD1W_4Z,
-                                 AArch64::LD1W_4Z_STRIDED);
-   case AArch64::LD1D_4Z_PSEUDO:
-     return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR4RegClass,
-                                 AArch64::ZPR4StridedRegClass, AArch64::LD1D_4Z,
-                                 AArch64::LD1D_4Z_STRIDED);
-   case AArch64::LDNT1B_4Z_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
-         AArch64::LDNT1B_4Z, AArch64::LDNT1B_4Z_STRIDED);
-   case AArch64::LDNT1H_4Z_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
-         AArch64::LDNT1H_4Z, AArch64::LDNT1H_4Z_STRIDED);
-   case AArch64::LDNT1W_4Z_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
-         AArch64::LDNT1W_4Z, AArch64::LDNT1W_4Z_STRIDED);
-   case AArch64::LDNT1D_4Z_PSEUDO:
-     return expandMultiVecPseudo(
-         MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
-         AArch64::LDNT1D_4Z, AArch64::LDNT1D_4Z_STRIDED);
-   case AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO:
-     return expandFormTuplePseudo(MBB, MBBI, NextMBBI, 2);
-   case AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO:
-     return expandFormTuplePseudo(MBB, MBBI, NextMBBI, 4);
+    // IRG does not allow immediate offset. getTaggedBasePointerOffset should
+    // almost always point to SP-after-prologue; if not, emit a longer
+    // instruction sequence.
+    int BaseOffset = -AFI->getTaggedBasePointerOffset();
+    Register FrameReg;
+    StackOffset FrameRegOffset = TFI->resolveFrameOffsetReference(
+        MF, BaseOffset, false /*isFixed*/, TargetStackID::Default /*StackID*/,
+        FrameReg,
+        /*PreferFP=*/false,
+        /*ForSimm=*/true);
+    Register SrcReg = FrameReg;
+    if (FrameRegOffset) {
+      // Use output register as temporary.
+      SrcReg = MI.getOperand(0).getReg();
+      emitFrameOffset(MBB, &MI, MI.getDebugLoc(), SrcReg, FrameReg,
+                      FrameRegOffset, TII);
+    }
+    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::IRG))
+        .add(MI.getOperand(0))
+        .addUse(SrcReg)
+        .add(MI.getOperand(2));
+    MI.eraseFromParent();
+    return true;
+  }
+  case AArch64::TAGPstack: {
+    int64_t Offset = MI.getOperand(2).getImm();
+    BuildMI(MBB, MBBI, MI.getDebugLoc(),
+            TII->get(Offset >= 0 ? AArch64::ADDG : AArch64::SUBG))
+        .add(MI.getOperand(0))
+        .add(MI.getOperand(1))
+        .addImm(std::abs(Offset))
+        .add(MI.getOperand(4));
+    MI.eraseFromParent();
+    return true;
+  }
+  case AArch64::STGloop_wback:
+  case AArch64::STZGloop_wback:
+    return expandSetTagLoop(MBB, MBBI, NextMBBI);
+  case AArch64::STGloop:
+  case AArch64::STZGloop:
+    report_fatal_error(
+        "Non-writeback variants of STGloop / STZGloop should not "
+        "survive past PrologEpilogInserter.");
+  case AArch64::STR_ZZZZXI:
+  case AArch64::STR_ZZZZXI_STRIDED_CONTIGUOUS:
+    return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 4);
+  case AArch64::STR_ZZZXI:
+    return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 3);
+  case AArch64::STR_ZZXI:
+  case AArch64::STR_ZZXI_STRIDED_CONTIGUOUS:
+    return expandSVESpillFill(MBB, MBBI, AArch64::STR_ZXI, 2);
+  case AArch64::STR_PPXI:
+    return expandSVESpillFill(MBB, MBBI, AArch64::STR_PXI, 2);
+  case AArch64::LDR_ZZZZXI:
+  case AArch64::LDR_ZZZZXI_STRIDED_CONTIGUOUS:
+    return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 4);
+  case AArch64::LDR_ZZZXI:
+    return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 3);
+  case AArch64::LDR_ZZXI:
+  case AArch64::LDR_ZZXI_STRIDED_CONTIGUOUS:
+    return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 2);
+  case AArch64::LDR_PPXI:
+    return expandSVESpillFill(MBB, MBBI, AArch64::LDR_PXI, 2);
+  case AArch64::BLR_RVMARKER:
+  case AArch64::BLRA_RVMARKER:
+    return expandCALL_RVMARKER(MBB, MBBI);
+  case AArch64::BLR_BTI:
+    return expandCALL_BTI(MBB, MBBI);
+  case AArch64::StoreSwiftAsyncContext:
+    return expandStoreSwiftAsyncContext(MBB, MBBI);
+  case AArch64::RestoreZAPseudo:
+  case AArch64::CommitZASavePseudo:
+  case AArch64::MSRpstatePseudo: {
+    auto *NewMBB = [&] {
+      switch (Opcode) {
+      case AArch64::RestoreZAPseudo:
+        return expandRestoreZASave(MBB, MBBI);
+      case AArch64::CommitZASavePseudo:
+        return expandCommitZASave(MBB, MBBI);
+      case AArch64::MSRpstatePseudo:
+        return expandCondSMToggle(MBB, MBBI);
+      default:
+        llvm_unreachable("Unexpected conditional pseudo!");
+      }
+    }();
+    if (NewMBB != &MBB)
+      NextMBBI = MBB.end(); // The NextMBBI iterator is invalidated.
+    return true;
+  }
+  case AArch64::InOutZAUsePseudo:
+  case AArch64::RequiresZASavePseudo:
+  case AArch64::SMEStateAllocPseudo:
+  case AArch64::COALESCER_BARRIER_FPR16:
+  case AArch64::COALESCER_BARRIER_FPR32:
+  case AArch64::COALESCER_BARRIER_FPR64:
+  case AArch64::COALESCER_BARRIER_FPR128:
+    MI.eraseFromParent();
+    return true;
+  case AArch64::LD1B_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::LD1B_2Z_IMM, AArch64::LD1B_2Z_STRIDED_IMM);
+  case AArch64::LD1H_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::LD1H_2Z_IMM, AArch64::LD1H_2Z_STRIDED_IMM);
+  case AArch64::LD1W_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::LD1W_2Z_IMM, AArch64::LD1W_2Z_STRIDED_IMM);
+  case AArch64::LD1D_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::LD1D_2Z_IMM, AArch64::LD1D_2Z_STRIDED_IMM);
+  case AArch64::LDNT1B_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::LDNT1B_2Z_IMM, AArch64::LDNT1B_2Z_STRIDED_IMM);
+  case AArch64::LDNT1H_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::LDNT1H_2Z_IMM, AArch64::LDNT1H_2Z_STRIDED_IMM);
+  case AArch64::LDNT1W_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::LDNT1W_2Z_IMM, AArch64::LDNT1W_2Z_STRIDED_IMM);
+  case AArch64::LDNT1D_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::LDNT1D_2Z_IMM, AArch64::LDNT1D_2Z_STRIDED_IMM);
+  case AArch64::LD1B_2Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR2RegClass,
+                                AArch64::ZPR2StridedRegClass, AArch64::LD1B_2Z,
+                                AArch64::LD1B_2Z_STRIDED);
+  case AArch64::LD1H_2Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR2RegClass,
+                                AArch64::ZPR2StridedRegClass, AArch64::LD1H_2Z,
+                                AArch64::LD1H_2Z_STRIDED);
+  case AArch64::LD1W_2Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR2RegClass,
+                                AArch64::ZPR2StridedRegClass, AArch64::LD1W_2Z,
+                                AArch64::LD1W_2Z_STRIDED);
+  case AArch64::LD1D_2Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR2RegClass,
+                                AArch64::ZPR2StridedRegClass, AArch64::LD1D_2Z,
+                                AArch64::LD1D_2Z_STRIDED);
+  case AArch64::LDNT1B_2Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR2RegClass,
+                                AArch64::ZPR2StridedRegClass,
+                                AArch64::LDNT1B_2Z, AArch64::LDNT1B_2Z_STRIDED);
+  case AArch64::LDNT1H_2Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR2RegClass,
+                                AArch64::ZPR2StridedRegClass,
+                                AArch64::LDNT1H_2Z, AArch64::LDNT1H_2Z_STRIDED);
+  case AArch64::LDNT1W_2Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR2RegClass,
+                                AArch64::ZPR2StridedRegClass,
+                                AArch64::LDNT1W_2Z, AArch64::LDNT1W_2Z_STRIDED);
+  case AArch64::LDNT1D_2Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR2RegClass,
+                                AArch64::ZPR2StridedRegClass,
+                                AArch64::LDNT1D_2Z, AArch64::LDNT1D_2Z_STRIDED);
+  case AArch64::LD1B_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::LD1B_4Z_IMM, AArch64::LD1B_4Z_STRIDED_IMM);
+  case AArch64::LD1H_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::LD1H_4Z_IMM, AArch64::LD1H_4Z_STRIDED_IMM);
+  case AArch64::LD1W_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::LD1W_4Z_IMM, AArch64::LD1W_4Z_STRIDED_IMM);
+  case AArch64::LD1D_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::LD1D_4Z_IMM, AArch64::LD1D_4Z_STRIDED_IMM);
+  case AArch64::LDNT1B_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::LDNT1B_4Z_IMM, AArch64::LDNT1B_4Z_STRIDED_IMM);
+  case AArch64::LDNT1H_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::LDNT1H_4Z_IMM, AArch64::LDNT1H_4Z_STRIDED_IMM);
+  case AArch64::LDNT1W_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::LDNT1W_4Z_IMM, AArch64::LDNT1W_4Z_STRIDED_IMM);
+  case AArch64::LDNT1D_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::LDNT1D_4Z_IMM, AArch64::LDNT1D_4Z_STRIDED_IMM);
+  case AArch64::LD1B_4Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR4RegClass,
+                                AArch64::ZPR4StridedRegClass, AArch64::LD1B_4Z,
+                                AArch64::LD1B_4Z_STRIDED);
+  case AArch64::LD1H_4Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR4RegClass,
+                                AArch64::ZPR4StridedRegClass, AArch64::LD1H_4Z,
+                                AArch64::LD1H_4Z_STRIDED);
+  case AArch64::LD1W_4Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR4RegClass,
+                                AArch64::ZPR4StridedRegClass, AArch64::LD1W_4Z,
+                                AArch64::LD1W_4Z_STRIDED);
+  case AArch64::LD1D_4Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR4RegClass,
+                                AArch64::ZPR4StridedRegClass, AArch64::LD1D_4Z,
+                                AArch64::LD1D_4Z_STRIDED);
+  case AArch64::LDNT1B_4Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR4RegClass,
+                                AArch64::ZPR4StridedRegClass,
+                                AArch64::LDNT1B_4Z, AArch64::LDNT1B_4Z_STRIDED);
+  case AArch64::LDNT1H_4Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR4RegClass,
+                                AArch64::ZPR4StridedRegClass,
+                                AArch64::LDNT1H_4Z, AArch64::LDNT1H_4Z_STRIDED);
+  case AArch64::LDNT1W_4Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR4RegClass,
+                                AArch64::ZPR4StridedRegClass,
+                                AArch64::LDNT1W_4Z, AArch64::LDNT1W_4Z_STRIDED);
+  case AArch64::LDNT1D_4Z_PSEUDO:
+    return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR4RegClass,
+                                AArch64::ZPR4StridedRegClass,
+                                AArch64::LDNT1D_4Z, AArch64::LDNT1D_4Z_STRIDED);
+  case AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO:
+    return expandFormTuplePseudo(MBB, MBBI, NextMBBI, 2);
+  case AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO:
+    return expandFormTuplePseudo(MBB, MBBI, NextMBBI, 4);
   }
   return false;
 }

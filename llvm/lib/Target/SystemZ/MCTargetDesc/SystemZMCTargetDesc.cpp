@@ -231,8 +231,7 @@ createObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
     return new SystemZTargetELFStreamer(S);
 }
 
-static MCTargetStreamer *
-createNullTargetStreamer(MCStreamer &S) {
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
   return new SystemZTargetStreamer(S);
 }
 

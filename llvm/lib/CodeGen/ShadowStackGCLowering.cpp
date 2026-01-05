@@ -80,8 +80,8 @@ private:
                                       Type *Ty, Value *BasePtr, int Idx1,
                                       const char *Name);
   static GetElementPtrInst *CreateGEP(LLVMContext &Context, IRBuilder<> &B,
-                                      Type *Ty, Value *BasePtr, int Idx1, int Idx2,
-                                      const char *Name);
+                                      Type *Ty, Value *BasePtr, int Idx1,
+                                      int Idx2, const char *Name);
 };
 
 class ShadowStackGCLowering : public FunctionPass {
@@ -139,7 +139,9 @@ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(ShadowStackGCLowering, DEBUG_TYPE,
                     "Shadow Stack GC Lowering", false, false)
 
-FunctionPass *llvm::createShadowStackGCLoweringPass() { return new ShadowStackGCLowering(); }
+FunctionPass *llvm::createShadowStackGCLoweringPass() {
+  return new ShadowStackGCLowering();
+}
 
 ShadowStackGCLowering::ShadowStackGCLowering() : FunctionPass(ID) {
   initializeShadowStackGCLoweringPass(*PassRegistry::getPassRegistry());

@@ -89,8 +89,8 @@ void MipsAnalyzeImmediate::GetInstSeqLs(uint64_t Imm, unsigned RemSize,
 void MipsAnalyzeImmediate::ReplaceADDiuSLLWithLUi(InstSeq &Seq) {
   // Check if the first two instructions are ADDiu and SLL and the shift amount
   // is at least 16.
-  if ((Seq.size() < 2) || (Seq[0].Opc != ADDiu) ||
-      (Seq[1].Opc != SLL) || (Seq[1].ImmOpnd < 16))
+  if ((Seq.size() < 2) || (Seq[0].Opc != ADDiu) || (Seq[1].Opc != SLL) ||
+      (Seq[1].ImmOpnd < 16))
     return;
 
   // Sign-extend and shift operand of ADDiu and see if it still fits in 16-bit.
@@ -125,9 +125,9 @@ void MipsAnalyzeImmediate::GetShortestSeq(InstSeqLs &SeqLs, InstSeq &Insts) {
   Insts.append(ShortestSeq->begin(), ShortestSeq->end());
 }
 
-const MipsAnalyzeImmediate::InstSeq
-&MipsAnalyzeImmediate::Analyze(uint64_t Imm, unsigned Size,
-                               bool LastInstrIsADDiu) {
+const MipsAnalyzeImmediate::InstSeq &
+MipsAnalyzeImmediate::Analyze(uint64_t Imm, unsigned Size,
+                              bool LastInstrIsADDiu) {
   this->Size = Size;
 
   if (Size == 32) {

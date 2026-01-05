@@ -20,8 +20,9 @@ using namespace llvm;
 /// alloca.  This allows the CFG to be changed around without fear of
 /// invalidating the SSA information for the value.  It returns the pointer to
 /// the alloca inserted to create a stack slot for I.
-AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
-                                   std::optional<BasicBlock::iterator> AllocaPoint) {
+AllocaInst *
+llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
+                       std::optional<BasicBlock::iterator> AllocaPoint) {
   if (I.use_empty()) {
     I.eraseFromParent();
     return nullptr;
@@ -34,7 +35,7 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
   AllocaInst *Slot;
   if (AllocaPoint) {
     Slot = new AllocaInst(I.getType(), DL.getAllocaAddrSpace(), nullptr,
-                          I.getName()+".reg2mem", *AllocaPoint);
+                          I.getName() + ".reg2mem", *AllocaPoint);
   } else {
     Slot = new AllocaInst(I.getType(), DL.getAllocaAddrSpace(), nullptr,
                           I.getName() + ".reg2mem", F->getEntryBlock().begin());
@@ -45,7 +46,8 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
   // into which the store can be inserted.
   if (InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
     if (!II->getNormalDest()->getSinglePredecessor()) {
-      unsigned SuccNum = GetSuccessorNumber(II->getParent(), II->getNormalDest());
+      unsigned SuccNum =
+          GetSuccessorNumber(II->getParent(), II->getNormalDest());
       assert(isCriticalEdge(II, SuccNum) && "Expected a critical edge!");
       BasicBlock *BB = SplitCriticalEdge(II, SuccNum);
       assert(BB && "Unable to split critical edge.");
@@ -75,15 +77,15 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
       // resulting PHI node will have multiple values (from each load) coming in
       // from the same block, which is illegal SSA form. For this reason, we
       // keep track of and reuse loads we insert.
-      DenseMap<BasicBlock*, Value*> Loads;
+      DenseMap<BasicBlock *, Value *> Loads;
       for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
         if (PN->getIncomingValue(i) == &I) {
           Value *&V = Loads[PN->getIncomingBlock(i)];
           if (!V) {
             // Insert the load into the predecessor block
-            V = new LoadInst(I.getType(), Slot, I.getName() + ".reload",
-                             VolatileLoads,
-                             PN->getIncomingBlock(i)->getTerminator()->getIterator());
+            V = new LoadInst(
+                I.getType(), Slot, I.getName() + ".reload", VolatileLoads,
+                PN->getIncomingBlock(i)->getTerminator()->getIterator());
             Loads[PN->getIncomingBlock(i)] = V;
           }
           PN->setIncomingValue(i, V);
@@ -129,7 +131,9 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
 /// DemotePHIToStack - This function takes a virtual register computed by a PHI
 /// node and replaces it with a slot in the stack frame allocated via alloca.
 /// The PHI node is deleted. It returns the pointer to the alloca inserted.
-AllocaInst *llvm::DemotePHIToStack(PHINode *P, std::optional<BasicBlock::iterator> AllocaPoint) {
+AllocaInst *
+llvm::DemotePHIToStack(PHINode *P,
+                       std::optional<BasicBlock::iterator> AllocaPoint) {
   if (P->use_empty()) {
     P->eraseFromParent();
     return nullptr;
@@ -141,19 +145,20 @@ AllocaInst *llvm::DemotePHIToStack(PHINode *P, std::optional<BasicBlock::iterato
   AllocaInst *Slot;
   if (AllocaPoint) {
     Slot = new AllocaInst(P->getType(), DL.getAllocaAddrSpace(), nullptr,
-                          P->getName()+".reg2mem", *AllocaPoint);
+                          P->getName() + ".reg2mem", *AllocaPoint);
   } else {
     Function *F = P->getParent()->getParent();
-    Slot = new AllocaInst(P->getType(), DL.getAllocaAddrSpace(), nullptr,
-                          P->getName() + ".reg2mem",
-                          F->getEntryBlock().begin());
+    Slot =
+        new AllocaInst(P->getType(), DL.getAllocaAddrSpace(), nullptr,
+                       P->getName() + ".reg2mem", F->getEntryBlock().begin());
   }
 
   // Iterate over each operand inserting a store in each predecessor.
   for (unsigned i = 0, e = P->getNumIncomingValues(); i < e; ++i) {
     if (InvokeInst *II = dyn_cast<InvokeInst>(P->getIncomingValue(i))) {
       assert(II->getParent() != P->getIncomingBlock(i) &&
-             "Invoke edge not supported yet"); (void)II;
+             "Invoke edge not supported yet");
+      (void)II;
     }
     new StoreInst(P->getIncomingValue(i), Slot,
                   P->getIncomingBlock(i)->getTerminator()->getIterator());
@@ -173,8 +178,8 @@ AllocaInst *llvm::DemotePHIToStack(PHINode *P, std::optional<BasicBlock::iterato
       Users.push_back(User);
     }
     for (Instruction *User : Users) {
-      Value *V =
-          new LoadInst(P->getType(), Slot, P->getName() + ".reload", User->getIterator());
+      Value *V = new LoadInst(P->getType(), Slot, P->getName() + ".reload",
+                              User->getIterator());
       User->replaceUsesOfWith(P, V);
     }
   } else {

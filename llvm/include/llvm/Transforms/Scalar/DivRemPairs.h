@@ -25,6 +25,5 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
 
-}
+} // namespace llvm
 #endif // LLVM_TRANSFORMS_SCALAR_DIVREMPAIRS_H
-

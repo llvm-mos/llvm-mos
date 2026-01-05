@@ -80,8 +80,8 @@ public:
   HexagonVectorCombine(Function &F_, AliasAnalysis &AA_, AssumptionCache &AC_,
                        DominatorTree &DT_, ScalarEvolution &SE_,
                        TargetLibraryInfo &TLI_, const TargetMachine &TM_)
-      : F(F_), DL(F.getDataLayout()), AA(AA_), AC(AC_), DT(DT_),
-        SE(SE_), TLI(TLI_),
+      : F(F_), DL(F.getDataLayout()), AA(AA_), AC(AC_), DT(DT_), SE(SE_),
+        TLI(TLI_),
         HST(static_cast<const HexagonSubtarget &>(*TM_.getSubtargetImpl(F))) {}
 
   bool run();

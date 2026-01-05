@@ -129,8 +129,8 @@ void CodeViewContext::recordCVLoc(MCContext &Ctx, const MCSymbol *Label,
                                   unsigned FunctionId, unsigned FileNo,
                                   unsigned Line, unsigned Column,
                                   bool PrologueEnd, bool IsStmt) {
-  addLineEntry(MCCVLoc{
-      Label, FunctionId, FileNo, Line, Column, PrologueEnd, IsStmt});
+  addLineEntry(
+      MCCVLoc{Label, FunctionId, FileNo, Line, Column, PrologueEnd, IsStmt});
 }
 
 std::pair<StringRef, unsigned> CodeViewContext::addToStringTable(StringRef S) {
@@ -260,8 +260,7 @@ void CodeViewContext::addLineEntry(const MCCVLoc &LineEntry) {
   MCCVLines.push_back(LineEntry);
 }
 
-std::vector<MCCVLoc>
-CodeViewContext::getFunctionLineEntries(unsigned FuncId) {
+std::vector<MCCVLoc> CodeViewContext::getFunctionLineEntries(unsigned FuncId) {
   std::vector<MCCVLoc> FilteredLines;
   size_t LocBegin;
   size_t LocEnd;
@@ -360,10 +359,9 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
   for (auto I = Locs.begin(), E = Locs.end(); I != E;) {
     // Emit a file segment for the run of locations that share a file id.
     unsigned CurFileNum = I->getFileNum();
-    auto FileSegEnd =
-        std::find_if(I, E, [CurFileNum](const MCCVLoc &Loc) {
-          return Loc.getFileNum() != CurFileNum;
-        });
+    auto FileSegEnd = std::find_if(I, E, [CurFileNum](const MCCVLoc &Loc) {
+      return Loc.getFileNum() != CurFileNum;
+    });
     unsigned EntryCount = FileSegEnd - I;
     OS.AddComment("Segment for file '" +
                   Twine(StrTab[Files[CurFileNum - 1].StringTableOffset]) +
@@ -590,8 +588,7 @@ void CodeViewContext::encodeInlineLineTable(const MCAssembler &Asm,
 
   assert(HaveOpenRange);
 
-  unsigned EndSymLength =
-      computeLabelDiff(Asm, LastLabel, Frag.getFnEndSym());
+  unsigned EndSymLength = computeLabelDiff(Asm, LastLabel, Frag.getFnEndSym());
   unsigned LocAfterLength = ~0U;
   ArrayRef<MCCVLoc> LocAfter = getLinesForExtent(LocEnd, LocEnd + 1);
   if (!LocAfter.empty()) {
@@ -632,7 +629,8 @@ void CodeViewContext::encodeDefRange(const MCAssembler &Asm,
     unsigned RangeSize = GapAndRangeSizes[I].second;
     size_t J = I + 1;
     for (; J != E; ++J) {
-      unsigned GapAndRangeSize = GapAndRangeSizes[J].first + GapAndRangeSizes[J].second;
+      unsigned GapAndRangeSize =
+          GapAndRangeSizes[J].first + GapAndRangeSizes[J].second;
       if (RangeSize + GapAndRangeSize > MaxDefRange)
         break;
       RangeSize += GapAndRangeSize;

@@ -159,15 +159,11 @@ public:
 
   /// Multiply number of micro-ops by this factor to normalize it
   /// relative to other resources.
-  unsigned getMicroOpFactor() const {
-    return MicroOpFactor;
-  }
+  unsigned getMicroOpFactor() const { return MicroOpFactor; }
 
   /// Multiply cycle count by this factor to normalize it relative to
   /// other resources. This is the number of resource units per cycle.
-  unsigned getLatencyFactor() const {
-    return ResourceLCM;
-  }
+  unsigned getLatencyFactor() const { return ResourceLCM; }
 
   /// Number of micro-ops that may be buffered for OOO execution.
   unsigned getMicroOpBufferSize() const { return SchedModel.MicroOpBufferSize; }

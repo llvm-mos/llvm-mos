@@ -1,4 +1,5 @@
-//===- WasmAsmParser.cpp - Wasm Assembly Parser -----------------------------===//
+//===- WasmAsmParser.cpp - Wasm Assembly Parser
+//-----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,10 +37,10 @@ class WasmAsmParser : public MCAsmParserExtension {
   MCAsmParser *Parser = nullptr;
   AsmLexer *Lexer = nullptr;
 
-  template<bool (WasmAsmParser::*HandlerMethod)(StringRef, SMLoc)>
+  template <bool (WasmAsmParser::*HandlerMethod)(StringRef, SMLoc)>
   void addDirectiveHandler(StringRef Directive) {
-    MCAsmParser::ExtensionDirectiveHandler Handler = std::make_pair(
-        this, HandleDirective<WasmAsmParser, HandlerMethod>);
+    MCAsmParser::ExtensionDirectiveHandler Handler =
+        std::make_pair(this, HandleDirective<WasmAsmParser, HandlerMethod>);
 
     getParser().addDirectiveHandler(Directive, Handler);
   }
@@ -59,14 +60,13 @@ public:
     addDirectiveHandler<&WasmAsmParser::parseDirectiveSize>(".size");
     addDirectiveHandler<&WasmAsmParser::parseDirectiveType>(".type");
     addDirectiveHandler<&WasmAsmParser::ParseDirectiveIdent>(".ident");
-    addDirectiveHandler<
-      &WasmAsmParser::ParseDirectiveSymbolAttribute>(".weak");
-    addDirectiveHandler<
-      &WasmAsmParser::ParseDirectiveSymbolAttribute>(".local");
-    addDirectiveHandler<
-      &WasmAsmParser::ParseDirectiveSymbolAttribute>(".internal");
-    addDirectiveHandler<
-      &WasmAsmParser::ParseDirectiveSymbolAttribute>(".hidden");
+    addDirectiveHandler<&WasmAsmParser::ParseDirectiveSymbolAttribute>(".weak");
+    addDirectiveHandler<&WasmAsmParser::ParseDirectiveSymbolAttribute>(
+        ".local");
+    addDirectiveHandler<&WasmAsmParser::ParseDirectiveSymbolAttribute>(
+        ".internal");
+    addDirectiveHandler<&WasmAsmParser::ParseDirectiveSymbolAttribute>(
+        ".hidden");
   }
 
   bool error(const StringRef &Msg, const AsmToken &Tok) {
@@ -154,7 +154,8 @@ public:
       return true;
 
     if (Lexer->isNot(AsmToken::String))
-      return error("expected string in directive, instead got: ", Lexer->getTok());
+      return error("expected string in directive, instead got: ",
+                   Lexer->getTok());
 
     auto Kind = StringSwitch<std::optional<SectionKind>>(Name)
                     .StartsWith(".data", SectionKind::getData())
@@ -282,12 +283,12 @@ public:
   ///  ::= { ".local", ".weak", ... } [ identifier ( , identifier )* ]
   bool ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
     MCSymbolAttr Attr = StringSwitch<MCSymbolAttr>(Directive)
-      .Case(".weak", MCSA_Weak)
-      .Case(".local", MCSA_Local)
-      .Case(".hidden", MCSA_Hidden)
-      .Case(".internal", MCSA_Internal)
-      .Case(".protected", MCSA_Protected)
-      .Default(MCSA_Invalid);
+                            .Case(".weak", MCSA_Weak)
+                            .Case(".local", MCSA_Local)
+                            .Case(".hidden", MCSA_Hidden)
+                            .Case(".internal", MCSA_Internal)
+                            .Case(".protected", MCSA_Protected)
+                            .Default(MCSA_Invalid);
     assert(Attr != MCSA_Invalid && "unexpected symbol attribute directive!");
     if (getLexer().isNot(AsmToken::EndOfStatement)) {
       while (true) {
@@ -311,8 +312,6 @@ public:
 
 namespace llvm {
 
-MCAsmParserExtension *createWasmAsmParser() {
-  return new WasmAsmParser;
-}
+MCAsmParserExtension *createWasmAsmParser() { return new WasmAsmParser; }
 
 } // end namespace llvm

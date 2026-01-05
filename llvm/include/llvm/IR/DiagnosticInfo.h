@@ -119,6 +119,7 @@ private:
   const DiagnosticSeverity Severity;
 
   virtual void anchor();
+
 public:
   DiagnosticInfo(/* DiagnosticKind */ int Kind, DiagnosticSeverity Severity)
       : Kind(Kind), Severity(Severity) {}
@@ -347,6 +348,7 @@ public:
 /// Common features for diagnostics with an associated location.
 class LLVM_ABI DiagnosticInfoWithLocationBase : public DiagnosticInfo {
   void anchor() override;
+
 public:
   /// \p Fn is the function where the diagnostic is being emitted. \p Loc is
   /// the location information to use in the diagnostic.
@@ -697,6 +699,7 @@ operator<<(RemarkT &&R,
 class LLVM_ABI DiagnosticInfoIROptimization
     : public DiagnosticInfoOptimizationBase {
   void anchor() override;
+
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. \p
   /// RemarkName is a textual identifier for the remark (single-word,
@@ -927,6 +930,7 @@ private:
 class LLVM_ABI OptimizationRemarkAnalysisFPCommute
     : public OptimizationRemarkAnalysis {
   void anchor() override;
+
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the
@@ -970,6 +974,7 @@ private:
 class LLVM_ABI OptimizationRemarkAnalysisAliasing
     : public OptimizationRemarkAnalysis {
   void anchor() override;
+
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the

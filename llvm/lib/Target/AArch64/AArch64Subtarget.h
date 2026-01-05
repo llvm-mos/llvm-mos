@@ -165,9 +165,7 @@ public:
   /// Avoid this function! CPU specifics should be kept local to this class
   /// and preferably modeled with SubtargetFeatures or properties in
   /// initializeProperties().
-  ARMProcFamilyEnum getProcFamily() const {
-    return ARMProcFamily;
-  }
+  ARMProcFamilyEnum getProcFamily() const { return ARMProcFamily; }
 
   bool isXRaySupported() const override { return true; }
 
@@ -185,8 +183,8 @@ public:
   }
 
   /// Returns true if the target has NEON and the function at runtime is known
-  /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE
-  /// mode, which disables NEON instructions).
+  /// to have NEON enabled (e.g. the function is known not to be in
+  /// streaming-SVE mode, which disables NEON instructions).
   bool isNeonAvailable() const {
     return hasNEON() &&
            (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
@@ -228,7 +226,9 @@ public:
   }
 
   bool isXRegisterReserved(size_t i) const { return ReserveXRegister[i]; }
-  bool isXRegisterReservedForRA(size_t i) const { return ReserveXRegisterForRA[i]; }
+  bool isXRegisterReservedForRA(size_t i) const {
+    return ReserveXRegisterForRA[i];
+  }
   unsigned getNumXRegisterReserved() const {
     BitVector AllReservedX(AArch64::GPR64commonRegClass.getNumRegs());
     AllReservedX |= ReserveXRegister;
@@ -266,9 +266,7 @@ public:
   unsigned getMaxPrefetchIterationsAhead() const override {
     return MaxPrefetchIterationsAhead;
   }
-  Align getPrefFunctionAlignment() const {
-    return PrefFunctionAlignment;
-  }
+  Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
   Align getPrefLoopAlignment() const { return PrefLoopAlignment; }
 
   unsigned getMaxBytesForLoopAlignment() const {
@@ -313,13 +311,13 @@ public:
 
   bool useSmallAddressing() const {
     switch (TLInfo.getTargetMachine().getCodeModel()) {
-      case CodeModel::Kernel:
-        // Kernel is currently allowed only for Fuchsia targets,
-        // where it is the same as Small for almost all purposes.
-      case CodeModel::Small:
-        return true;
-      default:
-        return false;
+    case CodeModel::Kernel:
+      // Kernel is currently allowed only for Fuchsia targets,
+      // where it is the same as Small for almost all purposes.
+    case CodeModel::Small:
+      return true;
+    default:
+      return false;
     }
   }
 
@@ -384,7 +382,7 @@ public:
     const Triple &TT = getTargetTriple();
 
     unsigned Major = TT.getOSVersion().getMajor();
-    switch(TT.getOS()) {
+    switch (TT.getOS()) {
     default:
       return false;
     case Triple::IOS:
@@ -450,7 +448,7 @@ public:
   /// add + cnt instructions.
   bool useScalarIncVL() const;
 
-  const char* getChkStkName() const {
+  const char *getChkStkName() const {
     if (isWindowsArm64EC())
       return "#__chkstk_arm64ec";
     return "__chkstk";
@@ -470,6 +468,6 @@ public:
   std::optional<uint16_t>
   getPtrAuthBlockAddressDiscriminatorIfEnabled(const Function &ParentFn) const;
 };
-} // End llvm namespace
+} // namespace llvm
 
 #endif

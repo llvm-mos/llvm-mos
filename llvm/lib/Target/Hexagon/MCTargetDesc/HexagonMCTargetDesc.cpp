@@ -57,13 +57,13 @@ using namespace llvm;
 #define GET_REGINFO_MC_DESC
 #include "HexagonGenRegisterInfo.inc"
 
-cl::opt<bool> llvm::HexagonDisableCompound
-  ("mno-compound",
-   cl::desc("Disable looking for compound instructions for Hexagon"));
+cl::opt<bool> llvm::HexagonDisableCompound(
+    "mno-compound",
+    cl::desc("Disable looking for compound instructions for Hexagon"));
 
-cl::opt<bool> llvm::HexagonDisableDuplex
-  ("mno-pairing",
-   cl::desc("Disable looking for duplex instructions for Hexagon"));
+cl::opt<bool> llvm::HexagonDisableDuplex(
+    "mno-pairing",
+    cl::desc("Disable looking for duplex instructions for Hexagon"));
 
 namespace { // These flags are to be deprecated
 cl::opt<bool> MV5("mv5", cl::Hidden, cl::desc("Build for Hexagon V5"),
@@ -119,15 +119,14 @@ static cl::opt<Hexagon::ArchEnum> EnableHVX(
     // Sentinel for flag not present.
     cl::init(Hexagon::ArchEnum::NoArch), cl::ValueOptional);
 
-static cl::opt<bool>
-  DisableHVX("mno-hvx", cl::Hidden,
-             cl::desc("Disable Hexagon Vector eXtensions"));
+static cl::opt<bool> DisableHVX("mno-hvx", cl::Hidden,
+                                cl::desc("Disable Hexagon Vector eXtensions"));
 
 static cl::opt<bool>
     EnableHvxIeeeFp("mhvx-ieee-fp", cl::Hidden,
                     cl::desc("Enable HVX IEEE floating point extensions"));
-static cl::opt<bool> EnableHexagonCabac
-  ("mcabac", cl::desc("tbd"), cl::init(false));
+static cl::opt<bool> EnableHexagonCabac("mcabac", cl::desc("tbd"),
+                                        cl::init(false));
 
 static constexpr StringRef DefaultArch = "hexagonv68";
 
@@ -229,7 +228,6 @@ unsigned llvm::HexagonConvertUnits(unsigned ItinUnits, unsigned *Lanes) {
 
   return (*Lanes = 0, CVI_NONE);
 }
-
 
 namespace llvm {
 namespace HexagonFUnits {
@@ -396,8 +394,7 @@ static MCInstPrinter *createHexagonMCInstPrinter(const Triple &T,
                                                  unsigned SyntaxVariant,
                                                  const MCAsmInfo &MAI,
                                                  const MCInstrInfo &MII,
-                                                 const MCRegisterInfo &MRI)
-{
+                                                 const MCRegisterInfo &MRI) {
   if (SyntaxVariant == 0)
     return new HexagonInstPrinter(MAI, MII, MRI);
   else
@@ -512,7 +509,7 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
 
   return join(Result.begin(), Result.end(), ",");
 }
-}
+} // namespace
 
 static bool isCPUValid(StringRef CPU) {
   return Hexagon::getCpu(CPU).has_value();
@@ -734,22 +731,22 @@ public:
   HexagonMCInstrAnalysis(MCInstrInfo const *Info) : MCInstrAnalysis(Info) {}
 
   bool isUnconditionalBranch(MCInst const &Inst) const override {
-    //assert(!HexagonMCInstrInfo::isBundle(Inst));
+    // assert(!HexagonMCInstrInfo::isBundle(Inst));
     return MCInstrAnalysis::isUnconditionalBranch(Inst);
   }
 
   bool isConditionalBranch(MCInst const &Inst) const override {
-    //assert(!HexagonMCInstrInfo::isBundle(Inst));
+    // assert(!HexagonMCInstrInfo::isBundle(Inst));
     return MCInstrAnalysis::isConditionalBranch(Inst);
   }
 
-  bool evaluateBranch(MCInst const &Inst, uint64_t Addr,
-                      uint64_t Size, uint64_t &Target) const override {
+  bool evaluateBranch(MCInst const &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override {
     if (!(isCall(Inst) || isUnconditionalBranch(Inst) ||
           isConditionalBranch(Inst)))
       return false;
 
-    //assert(!HexagonMCInstrInfo::isBundle(Inst));
+    // assert(!HexagonMCInstrInfo::isBundle(Inst));
     if (!HexagonMCInstrInfo::isExtendable(*Info, Inst))
       return false;
     auto const &Extended(HexagonMCInstrInfo::getExtendableOperand(*Info, Inst));

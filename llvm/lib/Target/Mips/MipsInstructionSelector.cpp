@@ -394,11 +394,13 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     if (MF.getTarget().isPositionIndependent()) {
       Register DestTmp = MRI.createVirtualRegister(&Mips::GPR32RegClass);
       LW->getOperand(0).setReg(DestTmp);
-      MachineInstr *ADDu = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::ADDu))
-                               .addDef(Dest)
-                               .addUse(DestTmp)
-                               .addUse(MF.getInfo<MipsFunctionInfo>()
-                                           ->getGlobalBaseRegForGlobalISel(MF));
+      MachineInstr *ADDu =
+          BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::ADDu))
+              .addDef(Dest)
+              .addUse(DestTmp)
+              .addUse(
+                  MF.getInfo<MipsFunctionInfo>()->getGlobalBaseRegForGlobalISel(
+                      MF));
       if (!constrainSelectedInstRegOperands(*ADDu, TII, TRI, RBI))
         return false;
     }
@@ -621,9 +623,9 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
   }
   case G_FABS: {
     unsigned Size = MRI.getType(I.getOperand(0).getReg()).getSizeInBits();
-    unsigned FABSOpcode =
-        Size == 32 ? Mips::FABS_S
-                   : STI.isFP64bit() ? Mips::FABS_D64 : Mips::FABS_D32;
+    unsigned FABSOpcode = Size == 32        ? Mips::FABS_S
+                          : STI.isFP64bit() ? Mips::FABS_D64
+                                            : Mips::FABS_D32;
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(FABSOpcode))
              .add(I.getOperand(0))
              .add(I.getOperand(1));
@@ -644,8 +646,8 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
       Opcode = STI.isFP64bit() ? Mips::TRUNC_W_D64 : Mips::TRUNC_W_D32;
     Register ResultInFPR = MRI.createVirtualRegister(&Mips::FGR32RegClass);
     MachineInstr *Trunc = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode))
-                .addDef(ResultInFPR)
-                .addUse(I.getOperand(1).getReg());
+                              .addDef(ResultInFPR)
+                              .addUse(I.getOperand(1).getReg());
     if (!constrainSelectedInstRegOperands(*Trunc, TII, TRI, RBI))
       return false;
 
@@ -661,11 +663,13 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
   case G_GLOBAL_VALUE: {
     const llvm::GlobalValue *GVal = I.getOperand(1).getGlobal();
     if (MF.getTarget().isPositionIndependent()) {
-      MachineInstr *LWGOT = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::LW))
-                                .addDef(I.getOperand(0).getReg())
-                                .addReg(MF.getInfo<MipsFunctionInfo>()
-                                            ->getGlobalBaseRegForGlobalISel(MF))
-                                .addGlobalAddress(GVal);
+      MachineInstr *LWGOT =
+          BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::LW))
+              .addDef(I.getOperand(0).getReg())
+              .addReg(
+                  MF.getInfo<MipsFunctionInfo>()->getGlobalBaseRegForGlobalISel(
+                      MF))
+              .addGlobalAddress(GVal);
       // Global Values that don't have local linkage are handled differently
       // when they are part of call sequence. MipsCallLowering::lowerCall
       // creates G_GLOBAL_VALUE instruction as part of call sequence and adds
@@ -717,14 +721,16 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
   }
   case G_JUMP_TABLE: {
     if (MF.getTarget().isPositionIndependent()) {
-      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::LW))
-               .addDef(I.getOperand(0).getReg())
-               .addReg(MF.getInfo<MipsFunctionInfo>()
-                           ->getGlobalBaseRegForGlobalISel(MF))
-               .addJumpTableIndex(I.getOperand(1).getIndex(), MipsII::MO_GOT)
-               .addMemOperand(MF.getMachineMemOperand(
-                   MachinePointerInfo::getGOT(MF), MachineMemOperand::MOLoad, 4,
-                   Align(4)));
+      MI =
+          BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::LW))
+              .addDef(I.getOperand(0).getReg())
+              .addReg(
+                  MF.getInfo<MipsFunctionInfo>()->getGlobalBaseRegForGlobalISel(
+                      MF))
+              .addJumpTableIndex(I.getOperand(1).getIndex(), MipsII::MO_GOT)
+              .addMemOperand(MF.getMachineMemOperand(
+                  MachinePointerInfo::getGOT(MF), MachineMemOperand::MOLoad, 4,
+                  Align(4)));
     } else {
       MI =
           BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::LUi))
@@ -738,7 +744,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
       unsigned Opcode;
       Register Def, LHS, RHS;
       Instr(unsigned Opcode, Register Def, Register LHS, Register RHS)
-          : Opcode(Opcode), Def(Def), LHS(LHS), RHS(RHS){};
+          : Opcode(Opcode), Def(Def), LHS(LHS), RHS(RHS) {};
 
       bool hasImm() const {
         if (Opcode == Mips::SLTiu || Opcode == Mips::XORi)
@@ -870,9 +876,9 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
         .addImm(1);
 
     unsigned Size = MRI.getType(I.getOperand(2).getReg()).getSizeInBits();
-    unsigned FCMPOpcode =
-        Size == 32 ? Mips::FCMP_S32
-                   : STI.isFP64bit() ? Mips::FCMP_D64 : Mips::FCMP_D32;
+    unsigned FCMPOpcode = Size == 32        ? Mips::FCMP_S32
+                          : STI.isFP64bit() ? Mips::FCMP_D64
+                                            : Mips::FCMP_D32;
     MachineInstr *FCMP = BuildMI(MBB, I, I.getDebugLoc(), TII.get(FCMPOpcode))
                              .addUse(I.getOperand(2).getReg())
                              .addUse(I.getOperand(3).getReg())

@@ -604,5 +604,5 @@ llvm::createMipsELFObjectWriter(const Triple &TT, bool IsN32) {
   bool IsN64 = TT.isArch64Bit() && !IsN32;
   bool HasRelocationAddend = TT.isArch64Bit();
   return std::make_unique<MipsELFObjectWriter>(OSABI, HasRelocationAddend,
-                                                IsN64);
+                                               IsN64);
 }

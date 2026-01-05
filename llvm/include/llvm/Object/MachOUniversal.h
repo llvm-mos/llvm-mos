@@ -33,6 +33,7 @@ class LLVM_ABI MachOUniversalBinary : public Binary {
 
   uint32_t Magic;
   uint32_t NumberOfObjects;
+
 public:
   static constexpr uint32_t MaxSectionAlignment = 15; /* 2**15 or 0x8000 */
 
@@ -112,6 +113,7 @@ public:
 
   class object_iterator {
     ObjectForArch Obj;
+
   public:
     object_iterator(const ObjectForArch &Obj) : Obj(Obj) {}
     const ObjectForArch *operator->() const { return &Obj; }
@@ -124,7 +126,7 @@ public:
       return !(*this == Other);
     }
 
-    object_iterator& operator++() {  // Preincrement
+    object_iterator &operator++() { // Preincrement
       Obj = Obj.getNext();
       return *this;
     }
@@ -134,12 +136,8 @@ public:
   static Expected<std::unique_ptr<MachOUniversalBinary>>
   create(MemoryBufferRef Source);
 
-  object_iterator begin_objects() const {
-    return ObjectForArch(this, 0);
-  }
-  object_iterator end_objects() const {
-    return ObjectForArch(nullptr, 0);
-  }
+  object_iterator begin_objects() const { return ObjectForArch(this, 0); }
+  object_iterator end_objects() const { return ObjectForArch(nullptr, 0); }
 
   iterator_range<object_iterator> objects() const {
     return make_range(begin_objects(), end_objects());
@@ -149,12 +147,9 @@ public:
   uint32_t getNumberOfObjects() const { return NumberOfObjects; }
 
   // Cast methods.
-  static bool classof(Binary const *V) {
-    return V->isMachOUniversalBinary();
-  }
+  static bool classof(Binary const *V) { return V->isMachOUniversalBinary(); }
 
-  Expected<ObjectForArch>
-  getObjectForArch(StringRef ArchName) const;
+  Expected<ObjectForArch> getObjectForArch(StringRef ArchName) const;
 
   Expected<std::unique_ptr<MachOObjectFile>>
   getMachOObjectForArch(StringRef ArchName) const;
@@ -165,7 +160,7 @@ public:
   Expected<std::unique_ptr<Archive>>
   getArchiveForArch(StringRef ArchName) const;
 };
-}
-}
+} // namespace object
+} // namespace llvm
 
 #endif

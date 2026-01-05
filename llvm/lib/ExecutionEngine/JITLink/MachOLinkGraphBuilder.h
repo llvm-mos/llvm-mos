@@ -30,7 +30,6 @@ public:
   Expected<std::unique_ptr<LinkGraph>> buildGraph();
 
 protected:
-
   struct NormalizedSymbol {
     friend class MachOLinkGraphBuilder;
 
@@ -96,7 +95,7 @@ protected:
 
   /// Create a symbol.
   template <typename... ArgTs>
-  NormalizedSymbol &createNormalizedSymbol(ArgTs &&... Args) {
+  NormalizedSymbol &createNormalizedSymbol(ArgTs &&...Args) {
     NormalizedSymbol *Sym = reinterpret_cast<NormalizedSymbol *>(
         Allocator.Allocate<NormalizedSymbol>());
     new (Sym) NormalizedSymbol(std::forward<ArgTs>(Args)...);

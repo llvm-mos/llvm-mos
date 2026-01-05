@@ -12,28 +12,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stddef.h>
 #include "llvm/Support/Valgrind.h"
 #include "llvm/Config/config.h"
+#include <stddef.h>
 
 #if HAVE_VALGRIND_VALGRIND_H
 #include <valgrind/valgrind.h>
 
-bool llvm::sys::RunningOnValgrind() {
-  return RUNNING_ON_VALGRIND;
-}
+bool llvm::sys::RunningOnValgrind() { return RUNNING_ON_VALGRIND; }
 
 void llvm::sys::ValgrindDiscardTranslations(const void *Addr, size_t Len) {
   VALGRIND_DISCARD_TRANSLATIONS(Addr, Len);
 }
 
-#else  // !HAVE_VALGRIND_VALGRIND_H
+#else // !HAVE_VALGRIND_VALGRIND_H
 
-bool llvm::sys::RunningOnValgrind() {
-  return false;
-}
+bool llvm::sys::RunningOnValgrind() { return false; }
 
-void llvm::sys::ValgrindDiscardTranslations(const void *Addr, size_t Len) {
-}
+void llvm::sys::ValgrindDiscardTranslations(const void *Addr, size_t Len) {}
 
-#endif  // !HAVE_VALGRIND_VALGRIND_H
+#endif // !HAVE_VALGRIND_VALGRIND_H

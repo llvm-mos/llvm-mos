@@ -66,8 +66,8 @@ int llvm_test_callsite_attributes(void) {
             int AttrCount = LLVMGetCallSiteAttributeCount(I, Idx);
             LLVMAttributeRef *Attrs = 0;
             if (AttrCount) {
-              Attrs = (LLVMAttributeRef *)malloc(
-                  AttrCount * sizeof(LLVMAttributeRef));
+              Attrs = (LLVMAttributeRef *)malloc(AttrCount *
+                                                 sizeof(LLVMAttributeRef));
               assert(Attrs);
             }
             LLVMGetCallSiteAttributes(I, Idx, Attrs);

@@ -42,8 +42,7 @@ template <typename K, typename V, typename KInfo = DenseMapInfo<K>,
           typename AllocatorTy = MallocAllocator>
 class ScopedHashTable;
 
-template <typename K, typename V>
-class ScopedHashTableVal {
+template <typename K, typename V> class ScopedHashTableVal {
   ScopedHashTableVal *NextInScope;
   ScopedHashTableVal *NextForKey;
   K Key;
@@ -61,10 +60,9 @@ public:
   ScopedHashTableVal *getNextInScope() { return NextInScope; }
 
   template <typename AllocatorTy>
-  static ScopedHashTableVal *Create(ScopedHashTableVal *nextInScope,
-                                    ScopedHashTableVal *nextForKey,
-                                    const K &key, const V &val,
-                                    AllocatorTy &Allocator) {
+  static ScopedHashTableVal *
+  Create(ScopedHashTableVal *nextInScope, ScopedHashTableVal *nextForKey,
+         const K &key, const V &val, AllocatorTy &Allocator) {
     ScopedHashTableVal *New = Allocator.template Allocate<ScopedHashTableVal>();
     // Set up the value.
     new (New) ScopedHashTableVal(key, val);
@@ -105,9 +103,7 @@ public:
 private:
   friend class ScopedHashTable<K, V, KInfo, AllocatorTy>;
 
-  ScopedHashTableVal<K, V> *getLastValInScope() {
-    return LastValInScope;
-  }
+  ScopedHashTableVal<K, V> *getLastValInScope() { return LastValInScope; }
 
   void setLastValInScope(ScopedHashTableVal<K, V> *Val) {
     LastValInScope = Val;
@@ -125,9 +121,7 @@ public:
     assert(Node && "Dereference end()");
     return Node->getValue();
   }
-  V *operator->() const {
-    return &Node->getValue();
-  }
+  V *operator->() const { return &Node->getValue(); }
 
   bool operator==(const ScopedHashTableIterator &RHS) const {
     return Node == RHS.Node;
@@ -136,13 +130,15 @@ public:
     return Node != RHS.Node;
   }
 
-  inline ScopedHashTableIterator& operator++() {          // Preincrement
+  inline ScopedHashTableIterator &operator++() { // Preincrement
     assert(Node && "incrementing past end()");
     Node = Node->getNextForKey();
     return *this;
   }
-  ScopedHashTableIterator operator++(int) {        // Postincrement
-    ScopedHashTableIterator tmp = *this; ++*this; return tmp;
+  ScopedHashTableIterator operator++(int) { // Postincrement
+    ScopedHashTableIterator tmp = *this;
+    ++*this;
+    return tmp;
   }
 };
 
@@ -161,7 +157,7 @@ private:
 
   using ValTy = ScopedHashTableVal<K, V>;
 
-  DenseMap<K, ValTy*, KInfo> TopLevelMap;
+  DenseMap<K, ValTy *, KInfo> TopLevelMap;
   ScopeTy *CurScope = nullptr;
 
 public:
@@ -178,9 +174,7 @@ public:
   using AllocTy::getAllocator;
 
   /// Return 1 if the specified key is in the table, 0 otherwise.
-  size_type count(const K &Key) const {
-    return TopLevelMap.count(Key);
-  }
+  size_type count(const K &Key) const { return TopLevelMap.count(Key); }
 
   V lookup(const K &Key) const {
     auto I = TopLevelMap.find(Key);
@@ -199,9 +193,9 @@ public:
   iterator end() { return iterator(nullptr); }
 
   iterator begin(const K &Key) {
-    typename DenseMap<K, ValTy*, KInfo>::iterator I =
-      TopLevelMap.find(Key);
-    if (I == TopLevelMap.end()) return end();
+    typename DenseMap<K, ValTy *, KInfo>::iterator I = TopLevelMap.find(Key);
+    if (I == TopLevelMap.end())
+      return end();
     return iterator(I->second);
   }
 
@@ -224,8 +218,9 @@ public:
 /// ScopedHashTableScope ctor - Install this as the current scope for the hash
 /// table.
 template <typename K, typename V, typename KInfo, typename Allocator>
-ScopedHashTableScope<K, V, KInfo, Allocator>::
-  ScopedHashTableScope(ScopedHashTable<K, V, KInfo, Allocator> &ht) : HT(ht) {
+ScopedHashTableScope<K, V, KInfo, Allocator>::ScopedHashTableScope(
+    ScopedHashTable<K, V, KInfo, Allocator> &ht)
+    : HT(ht) {
   PrevScope = HT.CurScope;
   HT.CurScope = this;
   LastValInScope = nullptr;

@@ -671,7 +671,7 @@ class CompressedSection : public SectionBase {
 
 public:
   CompressedSection(const SectionBase &Sec,
-    DebugCompressionType CompressionType, bool Is64Bits);
+                    DebugCompressionType CompressionType, bool Is64Bits);
   CompressedSection(ArrayRef<uint8_t> CompressedData, uint32_t ChType,
                     uint64_t DecompressedSize, uint64_t DecompressedAlign);
 

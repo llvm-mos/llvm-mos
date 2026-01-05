@@ -51,10 +51,10 @@ static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
   Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
 }
 
-unsigned PPCMCCodeEmitter::
-getDirectBrEncoding(const MCInst &MI, unsigned OpNo,
-                    SmallVectorImpl<MCFixup> &Fixups,
-                    const MCSubtargetInfo &STI) const {
+unsigned
+PPCMCCodeEmitter::getDirectBrEncoding(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
 
   if (MO.isReg() || MO.isImm())
@@ -162,34 +162,37 @@ bool PPCMCCodeEmitter::isNoTOCCallInstr(const MCInst &MI) const {
 }
 
 unsigned PPCMCCodeEmitter::getCondBrEncoding(const MCInst &MI, unsigned OpNo,
-                                     SmallVectorImpl<MCFixup> &Fixups,
-                                     const MCSubtargetInfo &STI) const {
+                                             SmallVectorImpl<MCFixup> &Fixups,
+                                             const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
-  if (MO.isReg() || MO.isImm()) return getMachineOpValue(MI, MO, Fixups, STI);
+  if (MO.isReg() || MO.isImm())
+    return getMachineOpValue(MI, MO, Fixups, STI);
 
   // Add a fixup for the branch target.
   addFixup(Fixups, 0, MO.getExpr(), PPC::fixup_ppc_brcond14);
   return 0;
 }
 
-unsigned PPCMCCodeEmitter::
-getAbsDirectBrEncoding(const MCInst &MI, unsigned OpNo,
-                       SmallVectorImpl<MCFixup> &Fixups,
-                       const MCSubtargetInfo &STI) const {
+unsigned
+PPCMCCodeEmitter::getAbsDirectBrEncoding(const MCInst &MI, unsigned OpNo,
+                                         SmallVectorImpl<MCFixup> &Fixups,
+                                         const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
-  if (MO.isReg() || MO.isImm()) return getMachineOpValue(MI, MO, Fixups, STI);
+  if (MO.isReg() || MO.isImm())
+    return getMachineOpValue(MI, MO, Fixups, STI);
 
   // Add a fixup for the branch target.
   addFixup(Fixups, 0, MO.getExpr(), PPC::fixup_ppc_br24abs);
   return 0;
 }
 
-unsigned PPCMCCodeEmitter::
-getAbsCondBrEncoding(const MCInst &MI, unsigned OpNo,
-                     SmallVectorImpl<MCFixup> &Fixups,
-                     const MCSubtargetInfo &STI) const {
+unsigned
+PPCMCCodeEmitter::getAbsCondBrEncoding(const MCInst &MI, unsigned OpNo,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
-  if (MO.isReg() || MO.isImm()) return getMachineOpValue(MI, MO, Fixups, STI);
+  if (MO.isReg() || MO.isImm())
+    return getMachineOpValue(MI, MO, Fixups, STI);
 
   // Add a fixup for the branch target.
   addFixup(Fixups, 0, MO.getExpr(), PPC::fixup_ppc_brcond14abs);
@@ -354,7 +357,7 @@ PPCMCCodeEmitter::getDispRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
     // Put zero in the location of the immediate. The linker will fill in the
     // correct value based on the relocation.
     return 0;
-    }
+  }
   }
 }
 
@@ -398,10 +401,11 @@ PPCMCCodeEmitter::getDispSPE2Encoding(const MCInst &MI, unsigned OpNo,
 }
 
 unsigned PPCMCCodeEmitter::getTLSRegEncoding(const MCInst &MI, unsigned OpNo,
-                                       SmallVectorImpl<MCFixup> &Fixups,
-                                       const MCSubtargetInfo &STI) const {
+                                             SmallVectorImpl<MCFixup> &Fixups,
+                                             const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
-  if (MO.isReg()) return getMachineOpValue(MI, MO, Fixups, STI);
+  if (MO.isReg())
+    return getMachineOpValue(MI, MO, Fixups, STI);
 
   // Add a fixup for the TLS register, which simply provides a relocation
   // hint to the linker that this statement is part of a relocation sequence.
@@ -416,21 +420,22 @@ unsigned PPCMCCodeEmitter::getTLSRegEncoding(const MCInst &MI, unsigned OpNo,
   return CTX.getRegisterInfo()->getEncodingValue(isPPC64 ? PPC::X13 : PPC::R2);
 }
 
-unsigned PPCMCCodeEmitter::getTLSCallEncoding(const MCInst &MI, unsigned OpNo,
-                                       SmallVectorImpl<MCFixup> &Fixups,
-                                       const MCSubtargetInfo &STI) const {
+unsigned
+PPCMCCodeEmitter::getTLSCallEncoding(const MCInst &MI, unsigned OpNo,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
   // For special TLS calls, we need two fixups; one for the branch target
   // (__tls_get_addr), which we create via getDirectBrEncoding as usual,
   // and one for the TLSGD or TLSLD symbol, which is emitted here.
-  const MCOperand &MO = MI.getOperand(OpNo+1);
+  const MCOperand &MO = MI.getOperand(OpNo + 1);
   addFixup(Fixups, 0, MO.getExpr(), PPC::fixup_ppc_nofixup);
   return getDirectBrEncoding(MI, OpNo, Fixups, STI);
 }
 
-unsigned PPCMCCodeEmitter::
-get_crbitm_encoding(const MCInst &MI, unsigned OpNo,
-                    SmallVectorImpl<MCFixup> &Fixups,
-                    const MCSubtargetInfo &STI) const {
+unsigned
+PPCMCCodeEmitter::get_crbitm_encoding(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
   assert((MI.getOpcode() == PPC::MTOCRF || MI.getOpcode() == PPC::MTOCRF8 ||
           MI.getOpcode() == PPC::MFOCRF || MI.getOpcode() == PPC::MFOCRF8) &&
@@ -452,10 +457,10 @@ static unsigned getOpIdxForMO(const MCInst &MI, const MCOperand &MO) {
   return ~0U; // Silence any warnings about no return.
 }
 
-uint64_t PPCMCCodeEmitter::
-getMachineOpValue(const MCInst &MI, const MCOperand &MO,
-                  SmallVectorImpl<MCFixup> &Fixups,
-                  const MCSubtargetInfo &STI) const {
+uint64_t PPCMCCodeEmitter::getMachineOpValue(const MCInst &MI,
+                                             const MCOperand &MO,
+                                             SmallVectorImpl<MCFixup> &Fixups,
+                                             const MCSubtargetInfo &STI) const {
   if (MO.isReg()) {
     // MTOCRF/MFOCRF should go through get_crbitm_encoding for the CR operand.
     // The GPR operand should come through here though.

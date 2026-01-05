@@ -38,6 +38,6 @@ bool lowerAtomicRMWInst(AtomicRMWInst *RMWI);
 /// returning the new value.
 Value *buildAtomicRMWValue(AtomicRMWInst::BinOp Op, IRBuilderBase &Builder,
                            Value *Loaded, Value *Val);
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_LOWERATOMIC_H

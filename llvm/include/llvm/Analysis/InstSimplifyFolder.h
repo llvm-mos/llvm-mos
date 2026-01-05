@@ -70,7 +70,7 @@ public:
   }
 
   Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
-                      FastMathFlags FMF) const override {
+                     FastMathFlags FMF) const override {
     return simplifyUnOp(Opc, V, FMF, SQ);
   }
 
@@ -108,9 +108,9 @@ public:
 
   Value *FoldShuffleVector(Value *V1, Value *V2,
                            ArrayRef<int> Mask) const override {
-    Type *RetTy = VectorType::get(
-        cast<VectorType>(V1->getType())->getElementType(), Mask.size(),
-        isa<ScalableVectorType>(V1->getType()));
+    Type *RetTy =
+        VectorType::get(cast<VectorType>(V1->getType())->getElementType(),
+                        Mask.size(), isa<ScalableVectorType>(V1->getType()));
     return simplifyShuffleVectorInst(V1, V2, Mask, RetTy, SQ);
   }
 

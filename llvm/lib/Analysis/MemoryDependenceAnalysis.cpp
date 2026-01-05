@@ -374,8 +374,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
     BatchAAResults &BatchAA) {
   bool isInvariantLoad = false;
-  Align MemLocAlign =
-      MemLoc.Ptr->getPointerAlignment(BB->getDataLayout());
+  Align MemLocAlign = MemLoc.Ptr->getPointerAlignment(BB->getDataLayout());
 
   unsigned DefaultLimit = getDefaultBlockScanLimit();
   if (!Limit)
@@ -423,7 +422,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   // True for volatile instruction.
   // For Load/Store return true if atomic ordering is stronger than AO,
   // for other instruction just true if it can read or write to memory.
-  auto isComplexForReordering = [](Instruction * I, AtomicOrdering AO)->bool {
+  auto isComplexForReordering = [](Instruction *I, AtomicOrdering AO) -> bool {
     if (I->isVolatile())
       return true;
     if (auto *LI = dyn_cast<LoadInst>(I))
@@ -457,7 +456,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       case Intrinsic::masked_load:
       case Intrinsic::masked_store: {
         MemoryLocation Loc;
-        /*ModRefInfo MR =*/ GetLocation(II, Loc, TLI);
+        /*ModRefInfo MR =*/GetLocation(II, Loc, TLI);
         AliasResult R = BatchAA.alias(Loc, MemLoc);
         if (R == AliasResult::NoAlias)
           continue;
@@ -886,7 +885,7 @@ void MemoryDependenceResults::getNonLocalPointerDependency(
   // translation.
   SmallDenseMap<BasicBlock *, Value *, 16> Visited;
   if (getNonLocalPointerDepFromBB(QueryInst, Address, Loc, isLoad, FromBB,
-                                   Result, Visited, true))
+                                  Result, Visited, true))
     return;
   Result.clear();
   Result.push_back(NonLocalDepResult(FromBB, MemDepResult::getUnknown(),
@@ -1347,8 +1346,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       // assume it is unknown, but this also does not block PRE of the load.
       if (!CanTranslate ||
           !getNonLocalPointerDepFromBB(QueryInst, PredPointer,
-                                      Loc.getWithNewPtr(PredPtrVal), isLoad,
-                                      Pred, Result, Visited)) {
+                                       Loc.getWithNewPtr(PredPtrVal), isLoad,
+                                       Pred, Result, Visited)) {
         // Add the entry to the Result list.
         NonLocalDepResult Entry(Pred, MemDepResult::getUnknown(), PredPtrVal);
         Result.push_back(Entry);
@@ -1415,7 +1414,6 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
                "Should only be here with transparent block");
 
         I.setResult(MemDepResult::getUnknown());
-
 
         break;
       }
@@ -1737,9 +1735,7 @@ MemoryDependenceWrapperPass::MemoryDependenceWrapperPass() : FunctionPass(ID) {}
 
 MemoryDependenceWrapperPass::~MemoryDependenceWrapperPass() = default;
 
-void MemoryDependenceWrapperPass::releaseMemory() {
-  MemDep.reset();
-}
+void MemoryDependenceWrapperPass::releaseMemory() { MemDep.reset(); }
 
 void MemoryDependenceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -1749,8 +1745,9 @@ void MemoryDependenceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<TargetLibraryInfoWrapperPass>();
 }
 
-bool MemoryDependenceResults::invalidate(Function &F, const PreservedAnalyses &PA,
-                               FunctionAnalysisManager::Invalidator &Inv) {
+bool MemoryDependenceResults::invalidate(
+    Function &F, const PreservedAnalyses &PA,
+    FunctionAnalysisManager::Invalidator &Inv) {
   // Check whether our analysis is preserved.
   auto PAC = PA.getChecker<MemoryDependenceAnalysis>();
   if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>())

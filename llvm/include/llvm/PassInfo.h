@@ -28,14 +28,14 @@ class Pass;
 ///
 class PassInfo {
 public:
-  using NormalCtor_t = Pass* (*)();
+  using NormalCtor_t = Pass *(*)();
 
 private:
   StringRef PassName;     // Nice name for Pass
   StringRef PassArgument; // Command Line argument to run this pass
   const void *PassID;
-  const bool IsCFGOnlyPass = false;      // Pass only looks at the CFG.
-  const bool IsAnalysis;                 // True if an analysis pass.
+  const bool IsCFGOnlyPass = false; // Pass only looks at the CFG.
+  const bool IsAnalysis;            // True if an analysis pass.
   NormalCtor_t NormalCtor = nullptr;
 
 public:
@@ -73,12 +73,8 @@ public:
   /// getNormalCtor - Return a pointer to a function, that when called, creates
   /// an instance of the pass and returns it.  This pointer may be null if there
   /// is no default constructor for the pass.
-  NormalCtor_t getNormalCtor() const {
-    return NormalCtor;
-  }
-  void setNormalCtor(NormalCtor_t Ctor) {
-    NormalCtor = Ctor;
-  }
+  NormalCtor_t getNormalCtor() const { return NormalCtor; }
+  void setNormalCtor(NormalCtor_t Ctor) { NormalCtor = Ctor; }
 
   /// createPass() - Use this method to create an instance of this pass.
   Pass *createPass() const {

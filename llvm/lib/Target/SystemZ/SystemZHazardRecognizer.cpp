@@ -42,8 +42,7 @@ static cl::opt<int> ProcResCostLim("procres-cost-lim", cl::Hidden,
                                             "resources during scheduling."),
                                    cl::init(8));
 
-unsigned SystemZHazardRecognizer::
-getNumDecoderSlots(SUnit *SU) const {
+unsigned SystemZHazardRecognizer::getNumDecoderSlots(SUnit *SU) const {
   const MCSchedClassDesc *SC = getSchedClass(SU);
   if (!SC->isValid())
     return 0; // IMPLICIT_DEF / KILL -- will not make impact in output.
@@ -73,8 +72,8 @@ unsigned SystemZHazardRecognizer::getCurrCycleIdx(SUnit *SU) const {
   return Idx;
 }
 
-ScheduleHazardRecognizer::HazardType SystemZHazardRecognizer::
-getHazardType(SUnit *SU, int Stalls) {
+ScheduleHazardRecognizer::HazardType
+SystemZHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   return (fitsIntoCurrentGroup(SU) ? NoHazard : Hazard);
 }
 
@@ -88,8 +87,7 @@ void SystemZHazardRecognizer::Reset() {
   LLVM_DEBUG(CurGroupDbg = "";);
 }
 
-bool
-SystemZHazardRecognizer::fitsIntoCurrentGroup(SUnit *SU) const {
+bool SystemZHazardRecognizer::fitsIntoCurrentGroup(SUnit *SU) const {
   const MCSchedClassDesc *SC = getSchedClass(SU);
   if (!SC->isValid())
     return true;
@@ -100,16 +98,16 @@ SystemZHazardRecognizer::fitsIntoCurrentGroup(SUnit *SU) const {
     return (CurrGroupSize == 0);
 
   // An instruction with 4 register operands will not fit in last slot.
-  assert ((CurrGroupSize < 2 || !CurrGroupHas4RegOps) &&
-          "Current decoder group is already full!");
+  assert((CurrGroupSize < 2 || !CurrGroupHas4RegOps) &&
+         "Current decoder group is already full!");
   if (CurrGroupSize == 2 && has4RegOps(SU->getInstr()))
     return false;
 
   // Since a full group is handled immediately in EmitInstruction(),
   // SU should fit into current group. NumSlots should be 1 or 0,
   // since it is not a cracked or expanded instruction.
-  assert ((getNumDecoderSlots(SU) <= 1) && (CurrGroupSize < 3) &&
-          "Expected normal instruction to fit in non-full group!");
+  assert((getNumDecoderSlots(SU) <= 1) && (CurrGroupSize < 3) &&
+         "Expected normal instruction to fit in non-full group!");
 
   return true;
 }
@@ -144,7 +142,7 @@ void SystemZHazardRecognizer::nextGroup() {
   CurrGroupSize = 0;
   CurrGroupHas4RegOps = false;
 
-  GrpCount += ((unsigned) NumGroups);
+  GrpCount += ((unsigned)NumGroups);
 
   // Decrease counters for execution units.
   for (unsigned i = 0; i < SchedModel->getNumProcResourceKinds(); ++i)
@@ -154,8 +152,7 @@ void SystemZHazardRecognizer::nextGroup() {
 
   // Clear CriticalResourceIdx if it is now below the threshold.
   if (CriticalResourceIdx != UINT_MAX &&
-      (ProcResourceCounters[CriticalResourceIdx] <=
-       ProcResCostLim))
+      (ProcResourceCounters[CriticalResourceIdx] <= ProcResCostLim))
     CriticalResourceIdx = UINT_MAX;
 
   LLVM_DEBUG(dumpState(););
@@ -170,11 +167,11 @@ void SystemZHazardRecognizer::dumpSU(SUnit *SU, raw_ostream &OS) const {
   if (!SC->isValid())
     return;
 
-  for (TargetSchedModel::ProcResIter
-         PI = SchedModel->getWriteProcResBegin(SC),
-         PE = SchedModel->getWriteProcResEnd(SC); PI != PE; ++PI) {
+  for (TargetSchedModel::ProcResIter PI = SchedModel->getWriteProcResBegin(SC),
+                                     PE = SchedModel->getWriteProcResEnd(SC);
+       PI != PE; ++PI) {
     const MCProcResourceDesc &PRD =
-      *SchedModel->getProcResource(PI->ProcResourceIdx);
+        *SchedModel->getProcResource(PI->ProcResourceIdx);
     std::string FU(PRD.Name);
     // trim e.g. Z13_FXaUnit -> FXa
     FU = FU.substr(FU.find('_') + 1);
@@ -185,7 +182,7 @@ void SystemZHazardRecognizer::dumpSU(SUnit *SU, raw_ostream &OS) const {
       FU = "LSU";
     OS << "/" << FU;
 
-    if (PI->ReleaseAtCycle> 1)
+    if (PI->ReleaseAtCycle > 1)
       OS << "(" << PI->ReleaseAtCycle << "cyc)";
   }
 
@@ -212,9 +209,8 @@ void SystemZHazardRecognizer::dumpCurrGroup(std::string Msg) const {
   else {
     dbgs() << "{ " << CurGroupDbg << " }";
     dbgs() << " (" << CurrGroupSize << " decoder slot"
-           << (CurrGroupSize > 1 ? "s":"")
-           << (CurrGroupHas4RegOps ? ", 4RegOps" : "")
-           << ")\n";
+           << (CurrGroupSize > 1 ? "s" : "")
+           << (CurrGroupHas4RegOps ? ", 4RegOps" : "") << ")\n";
   }
 }
 
@@ -233,26 +229,24 @@ void SystemZHazardRecognizer::dumpProcResourceCounters() const {
   dbgs() << "++ | Resource counters: ";
   for (unsigned i = 0; i < SchedModel->getNumProcResourceKinds(); ++i)
     if (ProcResourceCounters[i] > 0)
-      dbgs() << SchedModel->getProcResource(i)->Name
-             << ":" << ProcResourceCounters[i] << " ";
+      dbgs() << SchedModel->getProcResource(i)->Name << ":"
+             << ProcResourceCounters[i] << " ";
   dbgs() << "\n";
 
   if (CriticalResourceIdx != UINT_MAX)
     dbgs() << "++ | Critical resource: "
-           << SchedModel->getProcResource(CriticalResourceIdx)->Name
-           << "\n";
+           << SchedModel->getProcResource(CriticalResourceIdx)->Name << "\n";
 }
 
 void SystemZHazardRecognizer::dumpState() const {
   dumpCurrGroup("| Current decoder group");
-  dbgs() << "++ | Current cycle index: "
-         << getCurrCycleIdx() << "\n";
+  dbgs() << "++ | Current cycle index: " << getCurrCycleIdx() << "\n";
   dumpProcResourceCounters();
   if (LastFPdOpCycleIdx != UINT_MAX)
     dbgs() << "++ | Last FPd cycle index: " << LastFPdOpCycleIdx << "\n";
 }
 
-#endif //NDEBUG
+#endif // NDEBUG
 
 void SystemZHazardRecognizer::clearProcResCounters() {
   ProcResourceCounters.assign(SchedModel->getNumProcResourceKinds(), 0);
@@ -265,8 +259,7 @@ static inline bool isBranchRetTrap(MachineInstr *MI) {
 }
 
 // Update state with SU as the next scheduled unit.
-void SystemZHazardRecognizer::
-EmitInstruction(SUnit *SU) {
+void SystemZHazardRecognizer::EmitInstruction(SUnit *SU) {
   const MCSchedClassDesc *SC = getSchedClass(SU);
   LLVM_DEBUG(dbgs() << "++ HazardRecognizer emitting "; dumpSU(SU, dbgs());
              dbgs() << "\n";);
@@ -291,21 +284,19 @@ EmitInstruction(SUnit *SU) {
   }
 
   // Increase counter for execution unit(s).
-  for (TargetSchedModel::ProcResIter
-         PI = SchedModel->getWriteProcResBegin(SC),
-         PE = SchedModel->getWriteProcResEnd(SC); PI != PE; ++PI) {
+  for (TargetSchedModel::ProcResIter PI = SchedModel->getWriteProcResBegin(SC),
+                                     PE = SchedModel->getWriteProcResEnd(SC);
+       PI != PE; ++PI) {
     // Don't handle FPd together with the other resources.
     if (SchedModel->getProcResource(PI->ProcResourceIdx)->BufferSize == 1)
       continue;
-    int &CurrCounter =
-      ProcResourceCounters[PI->ProcResourceIdx];
+    int &CurrCounter = ProcResourceCounters[PI->ProcResourceIdx];
     CurrCounter += PI->ReleaseAtCycle;
     // Check if this is now the new critical resource.
     if ((CurrCounter > ProcResCostLim) &&
         (CriticalResourceIdx == UINT_MAX ||
          (PI->ProcResourceIdx != CriticalResourceIdx &&
-          CurrCounter >
-          ProcResourceCounters[CriticalResourceIdx]))) {
+          CurrCounter > ProcResourceCounters[CriticalResourceIdx]))) {
       LLVM_DEBUG(
           dbgs() << "++ New critical resource: "
                  << SchedModel->getProcResource(PI->ProcResourceIdx)->Name
@@ -326,8 +317,9 @@ EmitInstruction(SUnit *SU) {
   CurrGroupSize += getNumDecoderSlots(SU);
   CurrGroupHas4RegOps |= has4RegOps(SU->getInstr());
   unsigned GroupLim = (CurrGroupHas4RegOps ? 2 : 3);
-  assert((CurrGroupSize <= GroupLim || CurrGroupSize == getNumDecoderSlots(SU))
-         && "SU does not fit into decoder group!");
+  assert(
+      (CurrGroupSize <= GroupLim || CurrGroupSize == getNumDecoderSlots(SU)) &&
+      "SU does not fit into decoder group!");
 
   // Check if current group is now full/ended. If so, move on to next
   // group to be ready to evaluate more candidates.
@@ -366,7 +358,7 @@ int SystemZHazardRecognizer::groupingCost(SUnit *SU) const {
 }
 
 bool SystemZHazardRecognizer::isFPdOpPreferred_distance(SUnit *SU) const {
-  assert (SU->isUnbuffered);
+  assert(SU->isUnbuffered);
   // If this is the first FPd op, it should be scheduled high.
   if (LastFPdOpCycleIdx == UINT_MAX)
     return true;
@@ -380,8 +372,7 @@ bool SystemZHazardRecognizer::isFPdOpPreferred_distance(SUnit *SU) const {
   return ((SUCycleIdx - LastFPdOpCycleIdx) == 3);
 }
 
-int SystemZHazardRecognizer::
-resourcesCost(SUnit *SU) {
+int SystemZHazardRecognizer::resourcesCost(SUnit *SU) {
   int Cost = 0;
 
   const MCSchedClassDesc *SC = getSchedClass(SU);
@@ -395,8 +386,9 @@ resourcesCost(SUnit *SU) {
   // For other instructions, give a cost to the use of the critical resource.
   else if (CriticalResourceIdx != UINT_MAX) {
     for (TargetSchedModel::ProcResIter
-           PI = SchedModel->getWriteProcResBegin(SC),
-           PE = SchedModel->getWriteProcResEnd(SC); PI != PE; ++PI)
+             PI = SchedModel->getWriteProcResBegin(SC),
+             PE = SchedModel->getWriteProcResEnd(SC);
+         PI != PE; ++PI)
       if (PI->ProcResourceIdx == CriticalResourceIdx)
         Cost = PI->ReleaseAtCycle;
   }
@@ -414,8 +406,8 @@ void SystemZHazardRecognizer::emitInstruction(MachineInstr *MI,
 
   const MCSchedClassDesc *SC = SchedModel->resolveSchedClass(MI);
   for (const MCWriteProcResEntry &PRE :
-         make_range(SchedModel->getWriteProcResBegin(SC),
-                    SchedModel->getWriteProcResEnd(SC))) {
+       make_range(SchedModel->getWriteProcResBegin(SC),
+                  SchedModel->getWriteProcResEnd(SC))) {
     switch (SchedModel->getProcResource(PRE.ProcResourceIdx)->BufferSize) {
     case 0:
       SU.hasReservedResource = true;
@@ -440,12 +432,11 @@ void SystemZHazardRecognizer::emitInstruction(MachineInstr *MI,
   if (TakenBranch && CurrGroupSize > 0)
     nextGroup();
 
-  assert ((!MI->isTerminator() || isBranchRetTrap(MI)) &&
-          "Scheduler: unhandled terminator!");
+  assert((!MI->isTerminator() || isBranchRetTrap(MI)) &&
+         "Scheduler: unhandled terminator!");
 }
 
-void SystemZHazardRecognizer::
-copyState(SystemZHazardRecognizer *Incoming) {
+void SystemZHazardRecognizer::copyState(SystemZHazardRecognizer *Incoming) {
   // Current decoder group
   CurrGroupSize = Incoming->CurrGroupSize;
   LLVM_DEBUG(CurGroupDbg = Incoming->CurGroupDbg;);

@@ -25,7 +25,7 @@ namespace llvm {
 class LLVM_ABI MCSectionMachO final : public MCSection {
   friend class MCContext;
   friend class MCAsmInfoDarwin;
-  char SegmentName[16];  // Not necessarily null terminated!
+  char SegmentName[16]; // Not necessarily null terminated!
 
   /// This is the SECTION_TYPE and SECTION_ATTRIBUTES field of a section, drawn
   /// from the enums below.
@@ -44,8 +44,8 @@ class LLVM_ABI MCSectionMachO final : public MCSection {
 
   MCSectionMachO(StringRef Segment, StringRef Section, unsigned TAA,
                  unsigned reserved2, SectionKind K, MCSymbol *Begin);
-public:
 
+public:
   StringRef getSegmentName() const {
     // SegmentName is not necessarily null terminated!
     if (SegmentName[15])

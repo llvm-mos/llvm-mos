@@ -239,13 +239,13 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
 /// Create a MemoryBuffer from a memory range with an optional name.
 std::unique_ptr<MemoryBuffer>
 LTOModule::makeBuffer(const void *mem, size_t length, StringRef name) {
-  const char *startPtr = (const char*)mem;
+  const char *startPtr = (const char *)mem;
   return MemoryBuffer::getMemBuffer(StringRef(startPtr, length), name, false);
 }
 
 /// objcClassNameFromExpression - Get string that the data pointer points to.
-bool
-LTOModule::objcClassNameFromExpression(const Constant *c, std::string &name) {
+bool LTOModule::objcClassNameFromExpression(const Constant *c,
+                                            std::string &name) {
   if (const ConstantExpr *ce = dyn_cast<ConstantExpr>(c)) {
     Constant *op = ce->getOperand(0);
     if (GlobalVariable *gvn = dyn_cast<GlobalVariable>(op)) {
@@ -264,7 +264,8 @@ LTOModule::objcClassNameFromExpression(const Constant *c, std::string &name) {
 /// addObjCClass - Parse i386/ppc ObjC class data structure.
 void LTOModule::addObjCClass(const GlobalVariable *clgv) {
   const ConstantStruct *c = dyn_cast<ConstantStruct>(clgv->getInitializer());
-  if (!c) return;
+  if (!c)
+    return;
 
   // second slot in __OBJC,__class is pointer to superclass name
   std::string superclassName;
@@ -287,7 +288,7 @@ void LTOModule::addObjCClass(const GlobalVariable *clgv) {
     NameAndAttributes info;
     info.name = Iter->first();
     info.attributes = LTO_SYMBOL_PERMISSIONS_DATA |
-      LTO_SYMBOL_DEFINITION_REGULAR | LTO_SYMBOL_SCOPE_DEFAULT;
+                      LTO_SYMBOL_DEFINITION_REGULAR | LTO_SYMBOL_SCOPE_DEFAULT;
     info.isFunction = false;
     info.symbol = clgv;
     _symbols.push_back(info);
@@ -297,7 +298,8 @@ void LTOModule::addObjCClass(const GlobalVariable *clgv) {
 /// addObjCCategory - Parse i386/ppc ObjC category data structure.
 void LTOModule::addObjCCategory(const GlobalVariable *clgv) {
   const ConstantStruct *c = dyn_cast<ConstantStruct>(clgv->getInitializer());
-  if (!c) return;
+  if (!c)
+    return;
 
   // second slot in __OBJC,__category is pointer to target class name
   std::string targetclassName;
@@ -499,7 +501,7 @@ void LTOModule::addAsmGlobalSymbol(StringRef name,
     // fill information structure
     info.name = IterBool.first->first();
     info.attributes =
-      LTO_SYMBOL_PERMISSIONS_DATA | LTO_SYMBOL_DEFINITION_REGULAR | scope;
+        LTO_SYMBOL_PERMISSIONS_DATA | LTO_SYMBOL_DEFINITION_REGULAR | scope;
     info.isFunction = false;
     info.symbol = nullptr;
 
@@ -620,11 +622,13 @@ void LTOModule::parseSymbols() {
   }
 
   // make symbols for all undefines
-  for (StringMap<NameAndAttributes>::iterator u =_undefines.begin(),
-         e = _undefines.end(); u != e; ++u) {
+  for (StringMap<NameAndAttributes>::iterator u = _undefines.begin(),
+                                              e = _undefines.end();
+       u != e; ++u) {
     // If this symbol also has a definition, then don't make an undefine because
     // it is a tentative definition.
-    if (_defines.count(u->getKey())) continue;
+    if (_defines.count(u->getKey()))
+      continue;
     NameAndAttributes info = u->getValue();
     _symbols.push_back(info);
   }

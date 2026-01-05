@@ -151,7 +151,9 @@ template <typename IRUnitT, typename ResultT> class ResultHasInvalidateMethod {
   // Purely to help out MSVC which fails to disable the below specialization,
   // explicitly enable using the result type's invalidate routine if we can
   // successfully call that routine.
-  template <typename T> struct Nonce { using Type = EnabledType; };
+  template <typename T> struct Nonce {
+    using Type = EnabledType;
+  };
   template <typename T>
   static typename Nonce<decltype(std::declval<T>().invalidate(
       std::declval<IRUnitT &>(), std::declval<PreservedAnalyses>()))>::Type
@@ -162,15 +164,16 @@ template <typename IRUnitT, typename ResultT> class ResultHasInvalidateMethod {
   // member in an adjacent base class of a derived class. This would be
   // ambiguous if there were an invalidate member in the result type.
   template <typename T, typename U> static DisabledType NonceFunction(T U::*);
-  struct CheckerBase { int invalidate; };
+  struct CheckerBase {
+    int invalidate;
+  };
   template <typename T> struct Checker : CheckerBase, std::remove_cv_t<T> {};
   template <typename T>
   static decltype(NonceFunction(&Checker<T>::invalidate)) check(rank<1>);
 
   // Now we have the fallback that will only be reached when there is an
   // invalidate member, and enables the trait.
-  template <typename T>
-  static EnabledType check(rank<0>);
+  template <typename T> static EnabledType check(rank<0>);
 
 public:
   enum { Value = sizeof(check<ResultT>(rank<2>())) == sizeof(EnabledType) };

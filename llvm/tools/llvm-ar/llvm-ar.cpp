@@ -228,10 +228,10 @@ static bool CompareFullPath = false;      ///< 'P' modifier
 static bool OnlyUpdate = false;           ///< 'u' modifier
 static bool Verbose = false;              ///< 'v' modifier
 static SymtabWritingMode Symtab =
-    SymtabWritingMode::NormalSymtab;      ///< 's' modifier
-static bool Deterministic = true;         ///< 'D' and 'U' modifiers
-static bool Thin = false;                 ///< 'T' modifier
-static bool AddLibrary = false;           ///< 'L' modifier
+    SymtabWritingMode::NormalSymtab; ///< 's' modifier
+static bool Deterministic = true;    ///< 'D' and 'U' modifiers
+static bool Thin = false;            ///< 'T' modifier
+static bool AddLibrary = false;      ///< 'L' modifier
 
 // Relative Positional Argument (for insert/move). This variable holds
 // the name of the archive member to which the 'a', 'b' or 'i' modifier
@@ -754,7 +754,8 @@ static void addChildMember(std::vector<NewArchiveMember> &Members,
     Expected<std::string> FileNameOrErr(M.getName());
     failIfError(FileNameOrErr.takeError());
     if (sys::path::is_absolute(*FileNameOrErr)) {
-      NMOrErr->MemberName = Saver.save(sys::path::convert_to_slash(*FileNameOrErr));
+      NMOrErr->MemberName =
+          Saver.save(sys::path::convert_to_slash(*FileNameOrErr));
     } else {
       FileNameOrErr = M.getFullName();
       failIfError(FileNameOrErr.takeError());
@@ -1181,7 +1182,16 @@ static int performOperation(ArchiveOperation Operation) {
 }
 
 static void runMRIScript() {
-  enum class MRICommand { AddLib, AddMod, Create, CreateThin, Delete, Save, End, Invalid };
+  enum class MRICommand {
+    AddLib,
+    AddMod,
+    Create,
+    CreateThin,
+    Delete,
+    Save,
+    End,
+    Invalid
+  };
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getSTDIN();
   failIfError(Buf.getError());

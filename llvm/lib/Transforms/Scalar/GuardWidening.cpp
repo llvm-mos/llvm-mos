@@ -140,7 +140,7 @@ class GuardWideningImpl {
   /// Together, these describe the region of interest.  This might be all of
   /// the blocks within a function, or only a given loop's blocks and preheader.
   DomTreeNode *Root;
-  std::function<bool(BasicBlock*)> BlockFilter;
+  std::function<bool(BasicBlock *)> BlockFilter;
 
   /// The set of guards and conditional branches whose conditions have been
   /// widened into dominating guards.
@@ -341,8 +341,7 @@ static bool isSupportedGuardInstruction(const Instruction *Insn) {
 bool GuardWideningImpl::run() {
   DenseMap<BasicBlock *, SmallVector<Instruction *, 8>> GuardsInBlock;
   bool Changed = false;
-  for (auto DFI = df_begin(Root), DFE = df_end(Root);
-       DFI != DFE; ++DFI) {
+  for (auto DFI = df_begin(Root), DFE = df_end(Root); DFI != DFE; ++DFI) {
     auto *BB = (*DFI)->getBlock();
     if (!BlockFilter(BB))
       continue;
@@ -498,7 +497,7 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
 
   // For a given basic block \p BB, return its successor which is guaranteed or
   // highly likely will be taken as its successor.
-  auto GetLikelySuccessor = [](const BasicBlock * BB)->const BasicBlock * {
+  auto GetLikelySuccessor = [](const BasicBlock *BB) -> const BasicBlock * {
     if (auto *UniqueSucc = BB->getUniqueSuccessor())
       return UniqueSucc;
     auto *Term = BB->getTerminator();
@@ -710,7 +709,7 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig,
     if (V == Orig)
       Result = FI;
     V->replaceUsesWithIf(
-        FI, [&](const Use & U)->bool { return U.getUser() != FI; });
+        FI, [&](const Use &U) -> bool { return U.getUser() != FI; });
   }
 
   return Result;

@@ -30,8 +30,7 @@ class RegisterClassInfo;
 /// registers to break register anti-dependencies (WAR hazards).
 class AntiDepBreaker {
 public:
-  using DbgValueVector =
-      std::vector<std::pair<MachineInstr *, MachineInstr *>>;
+  using DbgValueVector = std::vector<std::pair<MachineInstr *, MachineInstr *>>;
 
   virtual ~AntiDepBreaker();
 
@@ -62,8 +61,7 @@ public:
           MI.getDebugOperand(0).getReg() == OldReg)
         MI.getDebugOperand(0).setReg(NewReg);
     } else if (MI.isDebugPHI()) {
-      if (MI.getOperand(0).isReg() &&
-          MI.getOperand(0).getReg() == OldReg)
+      if (MI.getOperand(0).isReg() && MI.getOperand(0).getReg() == OldReg)
         MI.getOperand(0).setReg(NewReg);
     } else {
       llvm_unreachable("MI is not DBG_VALUE / DBG_PHI!");

@@ -29,7 +29,7 @@ public:
 public:
   virtual void writeUserDefinedType(TypeIndex TI, StringRef Name) = 0;
 };
-}
-}
+} // namespace codeview
+} // namespace llvm
 
 #endif

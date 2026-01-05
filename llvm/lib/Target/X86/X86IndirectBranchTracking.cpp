@@ -178,7 +178,7 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
           break;
         }
       }
-    } else if (MBB.isEHPad()){
+    } else if (MBB.isEHPad()) {
       for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
         if (!I->isEHLabel())
           continue;

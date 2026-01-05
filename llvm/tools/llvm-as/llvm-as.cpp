@@ -86,8 +86,8 @@ static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
     const ModuleSummaryIndex *IndexToWrite = nullptr;
     // Don't attempt to write a summary index unless it contains any entries or
     // has non-zero flags. The latter is used to assemble dummy index files for
-    // skipping modules by distributed ThinLTO backends. Otherwise we get an empty
-    // summary section.
+    // skipping modules by distributed ThinLTO backends. Otherwise we get an
+    // empty summary section.
     if (Index && (Index->begin() != Index->end() || Index->getFlags()))
       IndexToWrite = Index;
     if (!IndexToWrite || (M && (!M->empty() || !M->global_empty())))

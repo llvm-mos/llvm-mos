@@ -20,9 +20,9 @@ class VETargetStreamer : public MCTargetStreamer {
 public:
   VETargetStreamer(MCStreamer &S);
   /// Emit ".register <reg>, #ignore".
-  virtual void emitVERegisterIgnore(unsigned reg){};
+  virtual void emitVERegisterIgnore(unsigned reg) {};
   /// Emit ".register <reg>, #scratch".
-  virtual void emitVERegisterScratch(unsigned reg){};
+  virtual void emitVERegisterScratch(unsigned reg) {};
 };
 
 // This part is for ascii assembly output

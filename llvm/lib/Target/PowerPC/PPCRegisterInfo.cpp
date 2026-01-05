@@ -50,29 +50,29 @@ using namespace llvm;
 STATISTIC(InflateGPRC, "Number of gprc inputs for getLargestLegalClass");
 STATISTIC(InflateGP8RC, "Number of g8rc inputs for getLargestLegalClass");
 
-static cl::opt<bool>
-EnableBasePointer("ppc-use-base-pointer", cl::Hidden, cl::init(true),
-         cl::desc("Enable use of a base pointer for complex stack frames"));
+static cl::opt<bool> EnableBasePointer(
+    "ppc-use-base-pointer", cl::Hidden, cl::init(true),
+    cl::desc("Enable use of a base pointer for complex stack frames"));
+
+static cl::opt<bool> AlwaysBasePointer(
+    "ppc-always-use-base-pointer", cl::Hidden, cl::init(false),
+    cl::desc("Force the use of a base pointer in every function"));
+
+static cl::opt<bool> EnableGPRToVecSpills(
+    "ppc-enable-gpr-to-vsr-spills", cl::Hidden, cl::init(false),
+    cl::desc("Enable spills from gpr to vsr rather than stack"));
 
 static cl::opt<bool>
-AlwaysBasePointer("ppc-always-use-base-pointer", cl::Hidden, cl::init(false),
-         cl::desc("Force the use of a base pointer in every function"));
+    StackPtrConst("ppc-stack-ptr-caller-preserved",
+                  cl::desc("Consider R1 caller preserved so stack saves of "
+                           "caller preserved registers can be LICM candidates"),
+                  cl::init(true), cl::Hidden);
 
-static cl::opt<bool>
-EnableGPRToVecSpills("ppc-enable-gpr-to-vsr-spills", cl::Hidden, cl::init(false),
-         cl::desc("Enable spills from gpr to vsr rather than stack"));
-
-static cl::opt<bool>
-StackPtrConst("ppc-stack-ptr-caller-preserved",
-                cl::desc("Consider R1 caller preserved so stack saves of "
-                         "caller preserved registers can be LICM candidates"),
-                cl::init(true), cl::Hidden);
-
-static cl::opt<unsigned>
-MaxCRBitSpillDist("ppc-max-crbit-spill-dist",
-                  cl::desc("Maximum search distance for definition of CR bit "
-                           "spill on ppc"),
-                  cl::Hidden, cl::init(100));
+static cl::opt<unsigned> MaxCRBitSpillDist(
+    "ppc-max-crbit-spill-dist",
+    cl::desc("Maximum search distance for definition of CR bit "
+             "spill on ppc"),
+    cl::Hidden, cl::init(100));
 
 // Copies/moves of physical accumulators are expensive operations
 // that should be avoided whenever possible. MMA instructions are
@@ -82,11 +82,11 @@ MaxCRBitSpillDist("ppc-max-crbit-spill-dist",
 // their code or report a compiler bug if that turns out to be the
 // cause.
 #ifndef NDEBUG
-static cl::opt<bool>
-ReportAccMoves("ppc-report-acc-moves",
-               cl::desc("Emit information about accumulator register spills "
-                        "and copies"),
-               cl::Hidden, cl::init(false));
+static cl::opt<bool> ReportAccMoves(
+    "ppc-report-acc-moves",
+    cl::desc("Emit information about accumulator register spills "
+             "and copies"),
+    cl::Hidden, cl::init(false));
 #endif
 
 extern cl::opt<bool> DisableAutoPairedVecSt;
@@ -94,25 +94,35 @@ extern cl::opt<bool> DisableAutoPairedVecSt;
 static unsigned offsetMinAlignForOpcode(unsigned OpC);
 
 PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
-  : PPCGenRegisterInfo(TM.isPPC64() ? PPC::LR8 : PPC::LR,
-                       TM.isPPC64() ? 0 : 1,
-                       TM.isPPC64() ? 0 : 1),
-    TM(TM) {
-  ImmToIdxMap[PPC::LD]   = PPC::LDX;    ImmToIdxMap[PPC::STD]  = PPC::STDX;
-  ImmToIdxMap[PPC::LBZ]  = PPC::LBZX;   ImmToIdxMap[PPC::STB]  = PPC::STBX;
-  ImmToIdxMap[PPC::LHZ]  = PPC::LHZX;   ImmToIdxMap[PPC::LHA]  = PPC::LHAX;
-  ImmToIdxMap[PPC::LWZ]  = PPC::LWZX;   ImmToIdxMap[PPC::LWA]  = PPC::LWAX;
-  ImmToIdxMap[PPC::LFS]  = PPC::LFSX;   ImmToIdxMap[PPC::LFD]  = PPC::LFDX;
-  ImmToIdxMap[PPC::STH]  = PPC::STHX;   ImmToIdxMap[PPC::STW]  = PPC::STWX;
-  ImmToIdxMap[PPC::STFS] = PPC::STFSX;  ImmToIdxMap[PPC::STFD] = PPC::STFDX;
+    : PPCGenRegisterInfo(TM.isPPC64() ? PPC::LR8 : PPC::LR,
+                         TM.isPPC64() ? 0 : 1, TM.isPPC64() ? 0 : 1),
+      TM(TM) {
+  ImmToIdxMap[PPC::LD] = PPC::LDX;
+  ImmToIdxMap[PPC::STD] = PPC::STDX;
+  ImmToIdxMap[PPC::LBZ] = PPC::LBZX;
+  ImmToIdxMap[PPC::STB] = PPC::STBX;
+  ImmToIdxMap[PPC::LHZ] = PPC::LHZX;
+  ImmToIdxMap[PPC::LHA] = PPC::LHAX;
+  ImmToIdxMap[PPC::LWZ] = PPC::LWZX;
+  ImmToIdxMap[PPC::LWA] = PPC::LWAX;
+  ImmToIdxMap[PPC::LFS] = PPC::LFSX;
+  ImmToIdxMap[PPC::LFD] = PPC::LFDX;
+  ImmToIdxMap[PPC::STH] = PPC::STHX;
+  ImmToIdxMap[PPC::STW] = PPC::STWX;
+  ImmToIdxMap[PPC::STFS] = PPC::STFSX;
+  ImmToIdxMap[PPC::STFD] = PPC::STFDX;
   ImmToIdxMap[PPC::ADDI] = PPC::ADD4;
   ImmToIdxMap[PPC::LWA_32] = PPC::LWAX_32;
 
   // 64-bit
-  ImmToIdxMap[PPC::LHA8] = PPC::LHAX8; ImmToIdxMap[PPC::LBZ8] = PPC::LBZX8;
-  ImmToIdxMap[PPC::LHZ8] = PPC::LHZX8; ImmToIdxMap[PPC::LWZ8] = PPC::LWZX8;
-  ImmToIdxMap[PPC::STB8] = PPC::STBX8; ImmToIdxMap[PPC::STH8] = PPC::STHX8;
-  ImmToIdxMap[PPC::STW8] = PPC::STWX8; ImmToIdxMap[PPC::STDU] = PPC::STDUX;
+  ImmToIdxMap[PPC::LHA8] = PPC::LHAX8;
+  ImmToIdxMap[PPC::LBZ8] = PPC::LBZX8;
+  ImmToIdxMap[PPC::LHZ8] = PPC::LHZX8;
+  ImmToIdxMap[PPC::LWZ8] = PPC::LWZX8;
+  ImmToIdxMap[PPC::STB8] = PPC::STBX8;
+  ImmToIdxMap[PPC::STH8] = PPC::STHX8;
+  ImmToIdxMap[PPC::STW8] = PPC::STWX8;
+  ImmToIdxMap[PPC::STDU] = PPC::STDUX;
   ImmToIdxMap[PPC::ADDI8] = PPC::ADD8;
   ImmToIdxMap[PPC::LQ] = PPC::LQX_PSEUDO;
   ImmToIdxMap[PPC::STQ] = PPC::STQX_PSEUDO;
@@ -138,26 +148,40 @@ PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
   ImmToIdxMap[PPC::SPELWZ] = PPC::SPELWZX;
 
   // Power10
-  ImmToIdxMap[PPC::PLBZ]   = PPC::LBZX; ImmToIdxMap[PPC::PLBZ8]   = PPC::LBZX8;
-  ImmToIdxMap[PPC::PLHZ]   = PPC::LHZX; ImmToIdxMap[PPC::PLHZ8]   = PPC::LHZX8;
-  ImmToIdxMap[PPC::PLHA]   = PPC::LHAX; ImmToIdxMap[PPC::PLHA8]   = PPC::LHAX8;
-  ImmToIdxMap[PPC::PLWZ]   = PPC::LWZX; ImmToIdxMap[PPC::PLWZ8]   = PPC::LWZX8;
-  ImmToIdxMap[PPC::PLWA]   = PPC::LWAX; ImmToIdxMap[PPC::PLWA8]   = PPC::LWAX;
-  ImmToIdxMap[PPC::PLD]    = PPC::LDX;  ImmToIdxMap[PPC::PSTD]   = PPC::STDX;
+  ImmToIdxMap[PPC::PLBZ] = PPC::LBZX;
+  ImmToIdxMap[PPC::PLBZ8] = PPC::LBZX8;
+  ImmToIdxMap[PPC::PLHZ] = PPC::LHZX;
+  ImmToIdxMap[PPC::PLHZ8] = PPC::LHZX8;
+  ImmToIdxMap[PPC::PLHA] = PPC::LHAX;
+  ImmToIdxMap[PPC::PLHA8] = PPC::LHAX8;
+  ImmToIdxMap[PPC::PLWZ] = PPC::LWZX;
+  ImmToIdxMap[PPC::PLWZ8] = PPC::LWZX8;
+  ImmToIdxMap[PPC::PLWA] = PPC::LWAX;
+  ImmToIdxMap[PPC::PLWA8] = PPC::LWAX;
+  ImmToIdxMap[PPC::PLD] = PPC::LDX;
+  ImmToIdxMap[PPC::PSTD] = PPC::STDX;
 
-  ImmToIdxMap[PPC::PSTB]   = PPC::STBX; ImmToIdxMap[PPC::PSTB8]   = PPC::STBX8;
-  ImmToIdxMap[PPC::PSTH]   = PPC::STHX; ImmToIdxMap[PPC::PSTH8]   = PPC::STHX8;
-  ImmToIdxMap[PPC::PSTW]   = PPC::STWX; ImmToIdxMap[PPC::PSTW8]   = PPC::STWX8;
+  ImmToIdxMap[PPC::PSTB] = PPC::STBX;
+  ImmToIdxMap[PPC::PSTB8] = PPC::STBX8;
+  ImmToIdxMap[PPC::PSTH] = PPC::STHX;
+  ImmToIdxMap[PPC::PSTH8] = PPC::STHX8;
+  ImmToIdxMap[PPC::PSTW] = PPC::STWX;
+  ImmToIdxMap[PPC::PSTW8] = PPC::STWX8;
 
-  ImmToIdxMap[PPC::PLFS]   = PPC::LFSX; ImmToIdxMap[PPC::PSTFS]   = PPC::STFSX;
-  ImmToIdxMap[PPC::PLFD]   = PPC::LFDX; ImmToIdxMap[PPC::PSTFD]   = PPC::STFDX;
-  ImmToIdxMap[PPC::PLXSSP] = PPC::LXSSPX; ImmToIdxMap[PPC::PSTXSSP] = PPC::STXSSPX;
-  ImmToIdxMap[PPC::PLXSD]  = PPC::LXSDX; ImmToIdxMap[PPC::PSTXSD]  = PPC::STXSDX;
-  ImmToIdxMap[PPC::PLXV]   = PPC::LXVX; ImmToIdxMap[PPC::PSTXV]  = PPC::STXVX;
+  ImmToIdxMap[PPC::PLFS] = PPC::LFSX;
+  ImmToIdxMap[PPC::PSTFS] = PPC::STFSX;
+  ImmToIdxMap[PPC::PLFD] = PPC::LFDX;
+  ImmToIdxMap[PPC::PSTFD] = PPC::STFDX;
+  ImmToIdxMap[PPC::PLXSSP] = PPC::LXSSPX;
+  ImmToIdxMap[PPC::PSTXSSP] = PPC::STXSSPX;
+  ImmToIdxMap[PPC::PLXSD] = PPC::LXSDX;
+  ImmToIdxMap[PPC::PSTXSD] = PPC::STXSDX;
+  ImmToIdxMap[PPC::PLXV] = PPC::LXVX;
+  ImmToIdxMap[PPC::PSTXV] = PPC::STXVX;
 
-  ImmToIdxMap[PPC::LXVP]   = PPC::LXVPX;
-  ImmToIdxMap[PPC::STXVP]  = PPC::STXVPX;
-  ImmToIdxMap[PPC::PLXVP]  = PPC::LXVPX;
+  ImmToIdxMap[PPC::LXVP] = PPC::LXVPX;
+  ImmToIdxMap[PPC::STXVP] = PPC::STXVPX;
+  ImmToIdxMap[PPC::PLXVP] = PPC::LXVPX;
   ImmToIdxMap[PPC::PSTXVP] = PPC::STXVPX;
 }
 
@@ -178,7 +202,7 @@ PPCRegisterInfo::getPointerRegClass(unsigned Kind) const {
   return &PPC::GPRCRegClass;
 }
 
-const MCPhysReg*
+const MCPhysReg *
 PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
   if (MF->getFunction().getCallingConv() == CallingConv::AnyReg) {
@@ -220,8 +244,7 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       if (Subtarget.hasAltivec())
         return SaveR2 ? CSR_SVR64_ColdCC_R2_Altivec_SaveList
                       : CSR_SVR64_ColdCC_Altivec_SaveList;
-      return SaveR2 ? CSR_SVR64_ColdCC_R2_SaveList
-                    : CSR_SVR64_ColdCC_SaveList;
+      return SaveR2 ? CSR_SVR64_ColdCC_R2_SaveList : CSR_SVR64_ColdCC_SaveList;
     }
     // 32-bit targets.
     if (Subtarget.pairedVectorMemops())
@@ -267,7 +290,7 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (TM.isPositionIndependent() && !TM.isPPC64())
       return CSR_SVR432_SPE_NO_S30_31_SaveList;
     return CSR_SVR432_SPE_SaveList;
-   }
+  }
   return CSR_SVR432_SaveList;
 }
 
@@ -333,13 +356,12 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                       ? CSR_SVR432_Altivec_RegMask
                       : (Subtarget.hasSPE()
                              ? (TM.isPositionIndependent()
-                                     ? CSR_SVR432_SPE_NO_S30_31_RegMask
-                                     : CSR_SVR432_SPE_RegMask)
+                                    ? CSR_SVR432_SPE_NO_S30_31_RegMask
+                                    : CSR_SVR432_SPE_RegMask)
                              : CSR_SVR432_RegMask));
 }
 
-const uint32_t*
-PPCRegisterInfo::getNoPreservedMask() const {
+const uint32_t *PPCRegisterInfo::getNoPreservedMask() const {
   return CSR_NoRegs_RegMask;
 }
 
@@ -444,9 +466,10 @@ bool PPCRegisterInfo::isAsmClobberable(const MachineFunction &MF,
   return !getReservedRegs(MF).test(PhysReg);
 }
 
-bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) const {
+bool PPCRegisterInfo::requiresFrameIndexScavenging(
+    const MachineFunction &MF) const {
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
-  const PPCInstrInfo *InstrInfo =  Subtarget.getInstrInfo();
+  const PPCInstrInfo *InstrInfo = Subtarget.getInstrInfo();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const std::vector<CalleeSavedInfo> &Info = MFI.getCalleeSavedInfo();
 
@@ -528,8 +551,8 @@ bool PPCRegisterInfo::requiresVirtualBaseRegisters(
   return !Subtarget.hasROPProtect();
 }
 
-bool PPCRegisterInfo::isCallerPreservedPhysReg(MCRegister PhysReg,
-                                               const MachineFunction &MF) const {
+bool PPCRegisterInfo::isCallerPreservedPhysReg(
+    MCRegister PhysReg, const MachineFunction &MF) const {
   assert(PhysReg.isPhysical());
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -956,7 +979,7 @@ void PPCRegisterInfo::lowerDynamicAreaOffset(
 void PPCRegisterInfo::lowerCRSpilling(MachineBasicBlock::iterator II,
                                       unsigned FrameIndex) const {
   // Get the instruction.
-  MachineInstr &MI = *II;       // ; SPILL_CR <SrcReg>, <offset>
+  MachineInstr &MI = *II; // ; SPILL_CR <SrcReg>, <offset>
   // Get the instruction's basic block.
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -984,14 +1007,14 @@ void PPCRegisterInfo::lowerCRSpilling(MachineBasicBlock::iterator II,
 
     // rlwinm rA, rA, ShiftBits, 0, 31.
     BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::RLWINM8 : PPC::RLWINM), Reg)
-      .addReg(Reg1, RegState::Kill)
-      .addImm(getEncodingValue(SrcReg) * 4)
-      .addImm(0)
-      .addImm(31);
+        .addReg(Reg1, RegState::Kill)
+        .addImm(getEncodingValue(SrcReg) * 4)
+        .addImm(0)
+        .addImm(31);
   }
 
   addFrameReference(BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::STW8 : PPC::STW))
-                    .addReg(Reg, RegState::Kill),
+                        .addReg(Reg, RegState::Kill),
                     FrameIndex);
 
   // Discard the pseudo instruction.
@@ -999,9 +1022,9 @@ void PPCRegisterInfo::lowerCRSpilling(MachineBasicBlock::iterator II,
 }
 
 void PPCRegisterInfo::lowerCRRestore(MachineBasicBlock::iterator II,
-                                      unsigned FrameIndex) const {
+                                     unsigned FrameIndex) const {
   // Get the instruction.
-  MachineInstr &MI = *II;       // ; <DestReg> = RESTORE_CR <offset>
+  MachineInstr &MI = *II; // ; <DestReg> = RESTORE_CR <offset>
   // Get the instruction's basic block.
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -1018,8 +1041,9 @@ void PPCRegisterInfo::lowerCRRestore(MachineBasicBlock::iterator II,
   assert(MI.definesRegister(DestReg, /*TRI=*/nullptr) &&
          "RESTORE_CR does not define its destination");
 
-  addFrameReference(BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::LWZ8 : PPC::LWZ),
-                              Reg), FrameIndex);
+  addFrameReference(
+      BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::LWZ8 : PPC::LWZ), Reg),
+      FrameIndex);
 
   // If the reloaded register isn't CR0, shift the bits right so that they are
   // in the right CR's slot.
@@ -1027,15 +1051,17 @@ void PPCRegisterInfo::lowerCRRestore(MachineBasicBlock::iterator II,
     Register Reg1 = Reg;
     Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
 
-    unsigned ShiftBits = getEncodingValue(DestReg)*4;
+    unsigned ShiftBits = getEncodingValue(DestReg) * 4;
     // rlwinm r11, r11, 32-ShiftBits, 0, 31.
     BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::RLWINM8 : PPC::RLWINM), Reg)
-             .addReg(Reg1, RegState::Kill).addImm(32-ShiftBits).addImm(0)
-             .addImm(31);
+        .addReg(Reg1, RegState::Kill)
+        .addImm(32 - ShiftBits)
+        .addImm(0)
+        .addImm(31);
   }
 
   BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::MTOCRF8 : PPC::MTOCRF), DestReg)
-             .addReg(Reg, RegState::Kill);
+      .addReg(Reg, RegState::Kill);
 
   // Discard the pseudo instruction.
   MBB.erase(II);
@@ -1044,13 +1070,13 @@ void PPCRegisterInfo::lowerCRRestore(MachineBasicBlock::iterator II,
 void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
                                          unsigned FrameIndex) const {
   // Get the instruction.
-  MachineInstr &MI = *II;       // ; SPILL_CRBIT <SrcReg>, <offset>
+  MachineInstr &MI = *II; // ; SPILL_CRBIT <SrcReg>, <offset>
   // Get the instruction's basic block.
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
-  const TargetRegisterInfo* TRI = Subtarget.getRegisterInfo();
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   DebugLoc dl = MI.getDebugLoc();
 
   bool LP64 = TM.isPPC64();
@@ -1091,13 +1117,12 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
   // There is no need to extract the CR bit if its value is already known.
   switch (Ins->getOpcode()) {
   case PPC::CRUNSET:
-    BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::LI8 : PPC::LI), Reg)
-      .addImm(0);
+    BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::LI8 : PPC::LI), Reg).addImm(0);
     SpillsKnownBit = true;
     break;
   case PPC::CRSET:
     BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::LIS8 : PPC::LIS), Reg)
-      .addImm(-32768);
+        .addImm(-32768);
     SpillsKnownBit = true;
     break;
   default:
@@ -1137,9 +1162,9 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
 
     // We need to move the CR field that contains the CR bit we are spilling.
     BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::MFOCRF8 : PPC::MFOCRF), Reg)
-      .addReg(getCRFromCRBit(SrcReg), RegState::Undef)
-      .addReg(SrcReg,
-              RegState::Implicit | getKillRegState(MI.getOperand(0).isKill()));
+        .addReg(getCRFromCRBit(SrcReg), RegState::Undef)
+        .addReg(SrcReg, RegState::Implicit |
+                            getKillRegState(MI.getOperand(0).isKill()));
 
     // If the saved register wasn't CR0LT, shift the bits left so that the bit
     // to store is the first one. Mask all but that bit.
@@ -1148,12 +1173,13 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
 
     // rlwinm rA, rA, ShiftBits, 0, 0.
     BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::RLWINM8 : PPC::RLWINM), Reg)
-      .addReg(Reg1, RegState::Kill)
-      .addImm(getEncodingValue(SrcReg))
-      .addImm(0).addImm(0);
+        .addReg(Reg1, RegState::Kill)
+        .addImm(getEncodingValue(SrcReg))
+        .addImm(0)
+        .addImm(0);
   }
   addFrameReference(BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::STW8 : PPC::STW))
-                    .addReg(Reg, RegState::Kill),
+                        .addReg(Reg, RegState::Kill),
                     FrameIndex);
 
   bool KillsCRBit = MI.killsRegister(SrcReg, TRI);
@@ -1166,9 +1192,9 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
 }
 
 void PPCRegisterInfo::lowerCRBitRestore(MachineBasicBlock::iterator II,
-                                      unsigned FrameIndex) const {
+                                        unsigned FrameIndex) const {
   // Get the instruction.
-  MachineInstr &MI = *II;       // ; <DestReg> = RESTORE_CRBIT <offset>
+  MachineInstr &MI = *II; // ; <DestReg> = RESTORE_CRBIT <offset>
   // Get the instruction's basic block.
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -1185,14 +1211,15 @@ void PPCRegisterInfo::lowerCRBitRestore(MachineBasicBlock::iterator II,
   assert(MI.definesRegister(DestReg, /*TRI=*/nullptr) &&
          "RESTORE_CRBIT does not define its destination");
 
-  addFrameReference(BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::LWZ8 : PPC::LWZ),
-                              Reg), FrameIndex);
+  addFrameReference(
+      BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::LWZ8 : PPC::LWZ), Reg),
+      FrameIndex);
 
   BuildMI(MBB, II, dl, TII.get(TargetOpcode::IMPLICIT_DEF), DestReg);
 
   Register RegO = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
   BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::MFOCRF8 : PPC::MFOCRF), RegO)
-          .addReg(getCRFromCRBit(DestReg));
+      .addReg(getCRFromCRBit(DestReg));
 
   unsigned ShiftBits = getEncodingValue(DestReg);
   // rlwimi r11, r10, 32-ShiftBits, ..., ...
@@ -1378,8 +1405,8 @@ void PPCRegisterInfo::lowerACCRestore(MachineBasicBlock::iterator II,
 
   // Create two loads for the pair subregisters accounting for endianness and
   // then prime the accumulator register being restored.
-  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), Reg),
-                    FrameIndex, IsLittleEndian ? 32 : 0);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), Reg), FrameIndex,
+                    IsLittleEndian ? 32 : 0);
   addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), Reg + 1),
                     FrameIndex, IsLittleEndian ? 0 : 32);
   if (IsPrimed)
@@ -1669,10 +1696,9 @@ static unsigned getOffsetONFromFION(const MachineInstr &MI,
   return OffsetOperandNo;
 }
 
-bool
-PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
-                                     int SPAdj, unsigned FIOperandNum,
-                                     RegScavenger *RS) const {
+bool PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+                                          int SPAdj, unsigned FIOperandNum,
+                                          RegScavenger *RS) const {
   assert(SPAdj == 0 && "Unexpected");
 
   // Get the instruction.
@@ -1778,8 +1804,9 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
 
   // Replace the FrameIndex with base register with GPR1 (SP) or GPR31 (FP).
-  MI.getOperand(FIOperandNum).ChangeToRegister(
-    FrameIndex < 0 ? getBaseRegister(MF) : getFrameRegister(MF), false);
+  MI.getOperand(FIOperandNum)
+      .ChangeToRegister(
+          FrameIndex < 0 ? getBaseRegister(MF) : getFrameRegister(MF), false);
 
   // If the instruction is not present in ImmToIdxMap, then it has no immediate
   // form (and must be r+r).
@@ -1821,15 +1848,14 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
          "This should be handled in a target-independent way");
   // FIXME: This should be factored out to a separate function as prefixed
   // instructions add a number of opcodes for which we can use 34-bit imm.
-  bool OffsetFitsMnemonic = (OpC == PPC::EVSTDD || OpC == PPC::EVLDD) ?
-                            isUInt<8>(Offset) :
-                            isInt<16>(Offset);
+  bool OffsetFitsMnemonic = (OpC == PPC::EVSTDD || OpC == PPC::EVLDD)
+                                ? isUInt<8>(Offset)
+                                : isInt<16>(Offset);
   if (TII.isPrefixed(MI.getOpcode()))
     OffsetFitsMnemonic = isInt<34>(Offset);
-  if (!noImmForm && ((OffsetFitsMnemonic &&
-                      ((Offset % offsetMinAlign(MI)) == 0)) ||
-                     OpC == TargetOpcode::STACKMAP ||
-                     OpC == TargetOpcode::PATCHPOINT)) {
+  if (!noImmForm &&
+      ((OffsetFitsMnemonic && ((Offset % offsetMinAlign(MI)) == 0)) ||
+       OpC == TargetOpcode::STACKMAP || OpC == TargetOpcode::PATCHPOINT)) {
     MI.getOperand(OffsetOperandNo).ChangeToImmediate(Offset);
     return false;
   }
@@ -1961,8 +1987,8 @@ bool PPCRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
 /// reference would be better served by a base register other than FP
 /// or SP. Used by LocalStackFrameAllocation to determine which frame index
 /// references it should create new base registers for.
-bool PPCRegisterInfo::
-needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
+bool PPCRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
+                                        int64_t Offset) const {
   assert(Offset < 0 && "Local offset must be negative");
 
   // It's the load/store FI references that cause issues, as it can be difficult
@@ -2012,7 +2038,7 @@ Register PPCRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   unsigned ADDriOpc = TM.isPPC64() ? PPC::ADDI8 : PPC::ADDI;
 
   MachineBasicBlock::iterator Ins = MBB->begin();
-  DebugLoc DL;                  // Defaults to "unknown"
+  DebugLoc DL; // Defaults to "unknown"
   if (Ins != MBB->end())
     DL = Ins->getDebugLoc();
 
@@ -2025,8 +2051,7 @@ Register PPCRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   Register BaseReg = MRI.createVirtualRegister(RC);
   MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, 0));
 
-  BuildMI(*MBB, Ins, DL, MCID, BaseReg)
-    .addFrameIndex(FrameIdx).addImm(Offset);
+  BuildMI(*MBB, Ins, DL, MCID, BaseReg).addFrameIndex(FrameIdx).addImm(Offset);
 
   return BaseReg;
 }

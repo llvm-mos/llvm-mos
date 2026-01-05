@@ -115,9 +115,8 @@ ExegesisTarget::createBenchmarkRunner(
   case Benchmark::InverseThroughput:
     if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
         !PfmCounters.CycleCounter) {
-      const char *ModeName = Mode == Benchmark::Latency
-                                 ? "latency"
-                                 : "inverse_throughput";
+      const char *ModeName =
+          Mode == Benchmark::Latency ? "latency" : "inverse_throughput";
       return make_error<Failure>(
           Twine("can't run '")
               .concat(ModeName)
@@ -150,7 +149,8 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createSerialSnippetGenerator(
   return std::make_unique<SerialSnippetGenerator>(State, Opts);
 }
 
-std::unique_ptr<SnippetGenerator> ExegesisTarget::createParallelSnippetGenerator(
+std::unique_ptr<SnippetGenerator>
+ExegesisTarget::createParallelSnippetGenerator(
     const LLVMState &State, const SnippetGenerator::Options &Opts) const {
   return std::make_unique<ParallelSnippetGenerator>(State, Opts);
 }

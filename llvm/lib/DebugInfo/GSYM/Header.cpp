@@ -46,14 +46,17 @@ llvm::Error Header::checkForError() const {
     return createStringError(std::errc::invalid_argument,
                              "unsupported GSYM version %u", Version);
   switch (AddrOffSize) {
-    case 1: break;
-    case 2: break;
-    case 4: break;
-    case 8: break;
-    default:
-        return createStringError(std::errc::invalid_argument,
-                                 "invalid address offset size %u",
-                                 AddrOffSize);
+  case 1:
+    break;
+  case 2:
+    break;
+  case 4:
+    break;
+  case 8:
+    break;
+  default:
+    return createStringError(std::errc::invalid_argument,
+                             "invalid address offset size %u", AddrOffSize);
   }
   if (UUIDSize > GSYM_MAX_UUID_SIZE)
     return createStringError(std::errc::invalid_argument,
@@ -100,10 +103,10 @@ llvm::Error Header::encode(FileWriter &O) const {
 
 bool llvm::gsym::operator==(const Header &LHS, const Header &RHS) {
   return LHS.Magic == RHS.Magic && LHS.Version == RHS.Version &&
-      LHS.AddrOffSize == RHS.AddrOffSize && LHS.UUIDSize == RHS.UUIDSize &&
-      LHS.BaseAddress == RHS.BaseAddress &&
-      LHS.NumAddresses == RHS.NumAddresses &&
-      LHS.StrtabOffset == RHS.StrtabOffset &&
-      LHS.StrtabSize == RHS.StrtabSize &&
-      memcmp(LHS.UUID, RHS.UUID, LHS.UUIDSize) == 0;
+         LHS.AddrOffSize == RHS.AddrOffSize && LHS.UUIDSize == RHS.UUIDSize &&
+         LHS.BaseAddress == RHS.BaseAddress &&
+         LHS.NumAddresses == RHS.NumAddresses &&
+         LHS.StrtabOffset == RHS.StrtabOffset &&
+         LHS.StrtabSize == RHS.StrtabSize &&
+         memcmp(LHS.UUID, RHS.UUID, LHS.UUIDSize) == 0;
 }

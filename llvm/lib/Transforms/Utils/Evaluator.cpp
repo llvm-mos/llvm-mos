@@ -281,7 +281,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
     if (StoreInst *SI = dyn_cast<StoreInst>(CurInst)) {
       if (SI->isVolatile()) {
         LLVM_DEBUG(dbgs() << "Store is volatile! Can not evaluate.\n");
-        return false;  // no volatile accesses.
+        return false; // no volatile accesses.
       }
       Constant *Ptr = getVal(SI->getOperand(1));
       Constant *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI);
@@ -318,7 +318,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
       if (LI->isVolatile()) {
         LLVM_DEBUG(
             dbgs() << "Found a Load! Volatile load, can not evaluate.\n");
-        return false;  // no volatile accesses.
+        return false; // no volatile accesses.
       }
 
       Constant *Ptr = getVal(LI->getOperand(0));
@@ -341,7 +341,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
     } else if (AllocaInst *AI = dyn_cast<AllocaInst>(CurInst)) {
       if (AI->isArrayAllocation()) {
         LLVM_DEBUG(dbgs() << "Found an array alloca. Can not evaluate.\n");
-        return false;  // Cannot handle array allocs.
+        return false; // Cannot handle array allocs.
       }
       Type *Ty = AI->getAllocatedType();
       AllocaTmps.push_back(std::make_unique<GlobalVariable>(
@@ -391,8 +391,8 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
               !GV->getInitializer()->isNullValue()) {
             APInt Len = LenC->getValue();
             if (Len.ugt(64 * 1024)) {
-              LLVM_DEBUG(dbgs() << "Not evaluating large memset of size "
-                                << Len << "\n");
+              LLVM_DEBUG(dbgs() << "Not evaluating large memset of size " << Len
+                                << "\n");
               return false;
             }
 
@@ -432,9 +432,8 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
           Value *Ptr = PtrArg->stripPointerCasts();
           if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Ptr)) {
             Type *ElemTy = GV->getValueType();
-            if (!Size->isMinusOne() &&
-                Size->getValue().getLimitedValue() >=
-                    DL.getTypeStoreSize(ElemTy)) {
+            if (!Size->isMinusOne() && Size->getValue().getLimitedValue() >=
+                                           DL.getTypeStoreSize(ElemTy)) {
               Invariants.insert(GV);
               LLVM_DEBUG(dbgs() << "Found a global var that is an invariant: "
                                 << *GV << "\n");
@@ -531,29 +530,29 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
         if (BI->isUnconditional()) {
           NextBB = BI->getSuccessor(0);
         } else {
-          ConstantInt *Cond =
-            dyn_cast<ConstantInt>(getVal(BI->getCondition()));
-          if (!Cond) return false;  // Cannot determine.
+          ConstantInt *Cond = dyn_cast<ConstantInt>(getVal(BI->getCondition()));
+          if (!Cond)
+            return false; // Cannot determine.
 
           NextBB = BI->getSuccessor(!Cond->getZExtValue());
         }
       } else if (SwitchInst *SI = dyn_cast<SwitchInst>(CurInst)) {
-        ConstantInt *Val =
-          dyn_cast<ConstantInt>(getVal(SI->getCondition()));
-        if (!Val) return false;  // Cannot determine.
+        ConstantInt *Val = dyn_cast<ConstantInt>(getVal(SI->getCondition()));
+        if (!Val)
+          return false; // Cannot determine.
         NextBB = SI->findCaseValue(Val)->getCaseSuccessor();
       } else if (IndirectBrInst *IBI = dyn_cast<IndirectBrInst>(CurInst)) {
         Value *Val = getVal(IBI->getAddress())->stripPointerCasts();
         if (BlockAddress *BA = dyn_cast<BlockAddress>(Val))
           NextBB = BA->getBasicBlock();
         else
-          return false;  // Cannot determine.
+          return false; // Cannot determine.
       } else if (isa<ReturnInst>(CurInst)) {
         NextBB = nullptr;
       } else {
         // invoke, unwind, resume, unreachable.
         LLVM_DEBUG(dbgs() << "Can not handle terminator.");
-        return false;  // Cannot handle this terminator.
+        return false; // Cannot handle this terminator.
       }
 
       // We succeeded at evaluating this block!
@@ -592,8 +591,9 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
 /// Evaluate a call to function F, returning true if successful, false if we
 /// can't evaluate it.  ActualArgs contains the formal arguments for the
 /// function.
-bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
-                                 const SmallVectorImpl<Constant*> &ActualArgs) {
+bool Evaluator::EvaluateFunction(
+    Function *F, Constant *&RetVal,
+    const SmallVectorImpl<Constant *> &ActualArgs) {
   assert(ActualArgs.size() == F->arg_size() && "wrong number of arguments");
 
   // Check to see if this function is already executing (recursion).  If so,
@@ -610,7 +610,7 @@ bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
   // ExecutedBlocks - We only handle non-looping, non-recursive code.  As such,
   // we can only evaluate any one basic block at most once.  This set keeps
   // track of what we have executed so we can detect recursive cases etc.
-  SmallPtrSet<BasicBlock*, 32> ExecutedBlocks;
+  SmallPtrSet<BasicBlock *, 32> ExecutedBlocks;
 
   // CurBB - The current basic block we're evaluating.
   BasicBlock *CurBB = &F->front();
@@ -650,14 +650,14 @@ bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
     // executed the new block before.  If so, we have a looping function,
     // which we cannot evaluate in reasonable time.
     if (!ExecutedBlocks.insert(NextBB).second)
-      return false;  // looped!
+      return false; // looped!
 
     // Okay, we have never been in this block before.  Check to see if there
     // are any PHI nodes.  If so, evaluate them with information about where
     // we came from.
     PHINode *PN = nullptr;
-    for (CurInst = NextBB->begin();
-         (PN = dyn_cast<PHINode>(CurInst)); ++CurInst)
+    for (CurInst = NextBB->begin(); (PN = dyn_cast<PHINode>(CurInst));
+         ++CurInst)
       setVal(PN, getVal(PN->getIncomingValueForBlock(CurBB)));
 
     // Advance to the next block.

@@ -40,8 +40,8 @@ class NativeInjectedSource final : public IPDBInjectedSource {
   PDBFile &File;
 
 public:
-  NativeInjectedSource(const SrcHeaderBlockEntry &Entry,
-                       PDBFile &File, const PDBStringTable &Strings)
+  NativeInjectedSource(const SrcHeaderBlockEntry &Entry, PDBFile &File,
+                       const PDBStringTable &Strings)
       : Entry(Entry), Strings(Strings), File(File) {}
 
   uint32_t getCrc32() const override { return Entry.CRC; }
@@ -107,8 +107,8 @@ std::unique_ptr<IPDBInjectedSource>
 NativeEnumInjectedSources::getChildAtIndex(uint32_t N) const {
   if (N >= getChildCount())
     return nullptr;
-  return std::make_unique<NativeInjectedSource>(std::next(Stream.begin(), N)->second,
-                                           File, Strings);
+  return std::make_unique<NativeInjectedSource>(
+      std::next(Stream.begin(), N)->second, File, Strings);
 }
 
 std::unique_ptr<IPDBInjectedSource> NativeEnumInjectedSources::getNext() {
@@ -119,5 +119,5 @@ std::unique_ptr<IPDBInjectedSource> NativeEnumInjectedSources::getNext() {
 
 void NativeEnumInjectedSources::reset() { Cur = Stream.begin(); }
 
-}
-}
+} // namespace pdb
+} // namespace llvm

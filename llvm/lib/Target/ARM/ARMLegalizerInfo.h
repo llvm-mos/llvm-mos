@@ -62,5 +62,5 @@ private:
 
   const ARMSubtarget &ST;
 };
-} // End llvm namespace.
+} // namespace llvm
 #endif

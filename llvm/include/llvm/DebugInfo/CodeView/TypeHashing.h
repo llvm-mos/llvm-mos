@@ -88,7 +88,7 @@ struct GloballyHashedType {
   }
   std::array<uint8_t, 8> Hash;
 
-  bool empty() const { return *(const uint64_t*)Hash.data() == 0; }
+  bool empty() const { return *(const uint64_t *)Hash.data() == 0; }
 
   friend inline bool operator==(const GloballyHashedType &L,
                                 const GloballyHashedType &R) {

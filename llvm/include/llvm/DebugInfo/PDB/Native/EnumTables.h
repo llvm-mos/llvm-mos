@@ -16,6 +16,6 @@ template <typename T> struct EnumEntry;
 namespace pdb {
 ArrayRef<EnumEntry<uint16_t>> getOMFSegMapDescFlagNames();
 }
-}
+} // namespace llvm
 
 #endif // LLVM_DEBUGINFO_PDB_NATIVE_ENUMTABLES_H

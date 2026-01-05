@@ -129,8 +129,7 @@ private:
                                                    size_t Pos) const = 0;
   };
 
-  template <typename T>
-  struct CompleterModel : CompleterConcept {
+  template <typename T> struct CompleterModel : CompleterConcept {
     CompleterModel(T Value) : Value(Value) {}
     CompletionAction complete(StringRef Buffer, size_t Pos) const override {
       return Value(Buffer, Pos);
@@ -138,8 +137,7 @@ private:
     T Value;
   };
 
-  template <typename T>
-  struct ListCompleterModel : ListCompleterConcept {
+  template <typename T> struct ListCompleterModel : ListCompleterConcept {
     ListCompleterModel(T Value) : Value(std::move(Value)) {}
     std::vector<Completion> getCompletions(StringRef Buffer,
                                            size_t Pos) const override {
@@ -151,6 +149,6 @@ private:
   std::unique_ptr<const CompleterConcept> Completer;
 };
 
-}
+} // namespace llvm
 
 #endif

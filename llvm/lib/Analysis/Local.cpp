@@ -30,8 +30,8 @@ Value *llvm::emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL,
   bool NUW = GEPOp->hasNoUnsignedWrap() && !NoAssumptions;
   auto AddOffset = [&](Value *Offset) {
     if (Result)
-      Result = Builder->CreateAdd(Result, Offset, GEP->getName() + ".offs",
-                                  NUW, NSW);
+      Result = Builder->CreateAdd(Result, Offset, GEP->getName() + ".offs", NUW,
+                                  NSW);
     else
       Result = Offset;
   };

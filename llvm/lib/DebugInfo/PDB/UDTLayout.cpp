@@ -82,8 +82,7 @@ VBPtrLayoutItem::VBPtrLayoutItem(const UDTLayoutBase &Parent,
                                  std::unique_ptr<PDBSymbolTypeBuiltin> Sym,
                                  uint32_t Offset, uint32_t Size)
     : LayoutItemBase(&Parent, Sym.get(), "<vbptr>", Offset, Size, false),
-      Type(std::move(Sym)) {
-}
+      Type(std::move(Sym)) {}
 
 const PDBSymbolData &DataMemberLayoutItem::getDataMember() {
   return *cast<PDBSymbolData>(Symbol);
@@ -181,8 +180,7 @@ void UDTLayoutBase::initializeChildren(const PDBSymbol &Sym) {
         VirtualBaseSyms.push_back(std::move(Base));
       else
         Bases.push_back(std::move(Base));
-    }
-    else if (auto Data = unique_dyn_cast<PDBSymbolData>(Child)) {
+    } else if (auto Data = unique_dyn_cast<PDBSymbolData>(Child)) {
       if (Data->getDataKind() == PDB_DataKind::Member)
         Members.push_back(std::move(Data));
       else
@@ -208,7 +206,7 @@ void UDTLayoutBase::initializeChildren(const PDBSymbol &Sym) {
     uint32_t Offset = Base->getOffset();
     // Non-virtual bases never get elided.
     auto BL = std::make_unique<BaseClassLayout>(*this, Offset, false,
-                                                 std::move(Base));
+                                                std::move(Base));
 
     AllBases.push_back(BL.get());
     addChildToLayout(std::move(BL));
@@ -239,7 +237,7 @@ void UDTLayoutBase::initializeChildren(const PDBSymbol &Sym) {
     if (!hasVBPtrAtOffset(VBPO)) {
       if (auto VBP = VB->getRawSymbol().getVirtualBaseTableType()) {
         auto VBPL = std::make_unique<VBPtrLayoutItem>(*this, std::move(VBP),
-                                                       VBPO, VBP->getLength());
+                                                      VBPO, VBP->getLength());
         VBPtr = VBPL.get();
         addChildToLayout(std::move(VBPL));
       }

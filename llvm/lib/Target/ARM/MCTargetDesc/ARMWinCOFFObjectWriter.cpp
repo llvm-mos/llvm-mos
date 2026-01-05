@@ -26,8 +26,7 @@ namespace {
 class ARMWinCOFFObjectWriter : public MCWinCOFFObjectTargetWriter {
 public:
   ARMWinCOFFObjectWriter()
-    : MCWinCOFFObjectTargetWriter(COFF::IMAGE_FILE_MACHINE_ARMNT) {
-  }
+      : MCWinCOFFObjectTargetWriter(COFF::IMAGE_FILE_MACHINE_ARMNT) {}
 
   ~ARMWinCOFFObjectWriter() override = default;
 
@@ -56,7 +55,6 @@ unsigned ARMWinCOFFObjectWriter::getRelocType(MCContext &Ctx,
     FixupKind = FK_Data_4;
     PCRel = true;
   }
-
 
   switch (FixupKind) {
   default: {
@@ -97,8 +95,7 @@ bool ARMWinCOFFObjectWriter::recordRelocation(const MCFixup &Fixup) const {
 
 namespace llvm {
 
-std::unique_ptr<MCObjectTargetWriter>
-createARMWinCOFFObjectWriter() {
+std::unique_ptr<MCObjectTargetWriter> createARMWinCOFFObjectWriter() {
   return std::make_unique<ARMWinCOFFObjectWriter>();
 }
 

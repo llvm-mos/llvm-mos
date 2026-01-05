@@ -79,51 +79,50 @@ private:
   // is always 0.  If AllowTLS is true and optional operand OpNum + 1
   // is present, also emit a TLS call fixup for it.
   uint64_t getPCRelEncoding(const MCInst &MI, unsigned OpNum,
-                            SmallVectorImpl<MCFixup> &Fixups,
-                            unsigned Kind, int64_t Offset,
-                            bool AllowTLS) const;
+                            SmallVectorImpl<MCFixup> &Fixups, unsigned Kind,
+                            int64_t Offset, bool AllowTLS) const;
 
   uint64_t getPC16DBLEncoding(const MCInst &MI, unsigned OpNum,
                               SmallVectorImpl<MCFixup> &Fixups,
                               const MCSubtargetInfo &STI) const {
-    return getPCRelEncoding(MI, OpNum, Fixups,
-                            SystemZ::FK_390_PC16DBL, 2, false);
+    return getPCRelEncoding(MI, OpNum, Fixups, SystemZ::FK_390_PC16DBL, 2,
+                            false);
   }
   uint64_t getPC32DBLEncoding(const MCInst &MI, unsigned OpNum,
                               SmallVectorImpl<MCFixup> &Fixups,
                               const MCSubtargetInfo &STI) const {
-    return getPCRelEncoding(MI, OpNum, Fixups,
-                            SystemZ::FK_390_PC32DBL, 2, false);
+    return getPCRelEncoding(MI, OpNum, Fixups, SystemZ::FK_390_PC32DBL, 2,
+                            false);
   }
   uint64_t getPC16DBLTLSEncoding(const MCInst &MI, unsigned OpNum,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const {
-    return getPCRelEncoding(MI, OpNum, Fixups,
-                            SystemZ::FK_390_PC16DBL, 2, true);
+    return getPCRelEncoding(MI, OpNum, Fixups, SystemZ::FK_390_PC16DBL, 2,
+                            true);
   }
   uint64_t getPC32DBLTLSEncoding(const MCInst &MI, unsigned OpNum,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const {
-    return getPCRelEncoding(MI, OpNum, Fixups,
-                            SystemZ::FK_390_PC32DBL, 2, true);
+    return getPCRelEncoding(MI, OpNum, Fixups, SystemZ::FK_390_PC32DBL, 2,
+                            true);
   }
   uint64_t getPC12DBLBPPEncoding(const MCInst &MI, unsigned OpNum,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const {
-    return getPCRelEncoding(MI, OpNum, Fixups,
-                            SystemZ::FK_390_PC12DBL, 1, false);
+    return getPCRelEncoding(MI, OpNum, Fixups, SystemZ::FK_390_PC12DBL, 1,
+                            false);
   }
   uint64_t getPC16DBLBPPEncoding(const MCInst &MI, unsigned OpNum,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const {
-    return getPCRelEncoding(MI, OpNum, Fixups,
-                            SystemZ::FK_390_PC16DBL, 4, false);
+    return getPCRelEncoding(MI, OpNum, Fixups, SystemZ::FK_390_PC16DBL, 4,
+                            false);
   }
   uint64_t getPC24DBLBPPEncoding(const MCInst &MI, unsigned OpNum,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const {
-    return getPCRelEncoding(MI, OpNum, Fixups,
-                            SystemZ::FK_390_PC24DBL, 3, false);
+    return getPCRelEncoding(MI, OpNum, Fixups, SystemZ::FK_390_PC24DBL, 3,
+                            false);
   }
 };
 
@@ -148,10 +147,10 @@ void SystemZMCCodeEmitter::encodeInstruction(const MCInst &MI,
   }
 }
 
-uint64_t SystemZMCCodeEmitter::
-getMachineOpValue(const MCInst &MI, const MCOperand &MO,
-                  SmallVectorImpl<MCFixup> &Fixups,
-                  const MCSubtargetInfo &STI) const {
+uint64_t
+SystemZMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
   if (MO.isReg())
     return Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
   // SystemZAsmParser::parseAnyRegister() produces KindImm when registers are
@@ -188,11 +187,9 @@ SystemZMCCodeEmitter::getLenEncoding(const MCInst &MI, unsigned OpNum,
   return getImmOpValue<Kind>(MI, OpNum, Fixups, STI) - 1;
 }
 
-uint64_t
-SystemZMCCodeEmitter::getPCRelEncoding(const MCInst &MI, unsigned OpNum,
-                                       SmallVectorImpl<MCFixup> &Fixups,
-                                       unsigned Kind, int64_t Offset,
-                                       bool AllowTLS) const {
+uint64_t SystemZMCCodeEmitter::getPCRelEncoding(
+    const MCInst &MI, unsigned OpNum, SmallVectorImpl<MCFixup> &Fixups,
+    unsigned Kind, int64_t Offset, bool AllowTLS) const {
   SMLoc Loc = MI.getLoc();
   const MCOperand &MO = MI.getOperand(OpNum);
   const MCExpr *Expr;

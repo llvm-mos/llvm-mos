@@ -46,10 +46,9 @@ public:
 } // end anonymous namespace
 
 char WebAssemblyMCLowerPrePass::ID = 0;
-INITIALIZE_PASS(
-    WebAssemblyMCLowerPrePass, DEBUG_TYPE,
-    "Collects information ahead of time for MC lowering",
-    false, false)
+INITIALIZE_PASS(WebAssemblyMCLowerPrePass, DEBUG_TYPE,
+                "Collects information ahead of time for MC lowering", false,
+                false)
 
 ModulePass *llvm::createWebAssemblyMCLowerPrePass() {
   return new WebAssemblyMCLowerPrePass();

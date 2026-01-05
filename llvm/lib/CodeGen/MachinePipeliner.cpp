@@ -123,8 +123,8 @@ static cl::opt<bool> EnableSWPOptSize("enable-pipeliner-opt-size",
 
 /// A command line argument to limit minimum initial interval for pipelining.
 static cl::opt<int> SwpMaxMii("pipeliner-max-mii",
-                              cl::desc("Size limit for the MII."),
-                              cl::Hidden, cl::init(27));
+                              cl::desc("Size limit for the MII."), cl::Hidden,
+                              cl::init(27));
 
 /// A command line argument to force pipeliner to use specified initial
 /// interval.
@@ -238,8 +238,8 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_END(MachinePipeliner, DEBUG_TYPE,
-                    "Modulo Software Pipelining", false, false)
+INITIALIZE_PASS_END(MachinePipeliner, DEBUG_TYPE, "Modulo Software Pipelining",
+                    false, false)
 
 namespace {
 
@@ -474,11 +474,12 @@ void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
       continue;
 
     if (S->getString() == "llvm.loop.pipeline.initiationinterval") {
-      assert(MD->getNumOperands() == 2 &&
-             "Pipeline initiation interval hint metadata should have two operands.");
+      assert(MD->getNumOperands() == 2 && "Pipeline initiation interval hint "
+                                          "metadata should have two operands.");
       II_setByPragma =
           mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
-      assert(II_setByPragma >= 1 && "Pipeline initiation interval must be positive.");
+      assert(II_setByPragma >= 1 &&
+             "Pipeline initiation interval must be positive.");
     } else if (S->getString() == "llvm.loop.pipeline.disable") {
       disabledByPragma = true;
     }
@@ -649,12 +650,12 @@ void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
       // If the operand uses a subregister, replace it with a new register
       // without subregisters, and generate a copy to the new register.
       Register NewReg = MRI.createVirtualRegister(RC);
-      MachineBasicBlock &PredB = *PI.getOperand(i+1).getMBB();
+      MachineBasicBlock &PredB = *PI.getOperand(i + 1).getMBB();
       MachineBasicBlock::iterator At = PredB.getFirstTerminator();
       const DebugLoc &DL = PredB.findDebugLoc(At);
-      auto Copy = BuildMI(PredB, At, DL, TII->get(TargetOpcode::COPY), NewReg)
-                    .addReg(RegOp.getReg(), getRegState(RegOp),
-                            RegOp.getSubReg());
+      auto Copy =
+          BuildMI(PredB, At, DL, TII->get(TargetOpcode::COPY), NewReg)
+              .addReg(RegOp.getReg(), getRegState(RegOp), RegOp.getSubReg());
       Slots.insertMachineInstrInMaps(*Copy);
       RegOp.setReg(NewReg);
       RegOp.setSubReg(0);
@@ -859,7 +860,7 @@ void SwingSchedulerDAG::schedule() {
   SMSchedule Schedule(Pass.MF, this);
   Scheduled = schedulePipeline(Schedule);
 
-  if (!Scheduled){
+  if (!Scheduled) {
     LLVM_DEBUG(dbgs() << "No schedule found, return\n");
     NumFailNoSchedule++;
     Pass.ORE->emit([&]() {
@@ -2744,8 +2745,8 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
 /// of the instructions, if possible. Return true if a schedule is found.
 bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
 
-  if (NodeOrder.empty()){
-    LLVM_DEBUG(dbgs() << "NodeOrder is empty! abort scheduling\n" );
+  if (NodeOrder.empty()) {
+    LLVM_DEBUG(dbgs() << "NodeOrder is empty! abort scheduling\n");
     return false;
   }
 
@@ -2843,8 +2844,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
   }
 
   LLVM_DEBUG(dbgs() << "Schedule Found? " << scheduleFound
-                    << " (II=" << Schedule.getInitiationInterval()
-                    << ")\n");
+                    << " (II=" << Schedule.getInitiationInterval() << ")\n");
 
   if (scheduleFound) {
     scheduleFound = LoopPipelinerInfo->shouldUseSchedule(*this, Schedule);

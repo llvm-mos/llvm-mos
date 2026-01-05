@@ -107,8 +107,8 @@ public:
   class InstDesc {
   public:
     InstDesc(bool IsRecur, Instruction *I, Instruction *ExactFP = nullptr)
-        : IsRecurrence(IsRecur), PatternLastInst(I),
-          RecKind(RecurKind::None), ExactFPMathInst(ExactFP) {}
+        : IsRecurrence(IsRecur), PatternLastInst(I), RecKind(RecurKind::None),
+          ExactFPMathInst(ExactFP) {}
 
     InstDesc(Instruction *I, RecurKind K, Instruction *ExactFP = nullptr)
         : IsRecurrence(true), PatternLastInst(I), RecKind(K),
@@ -326,7 +326,9 @@ public:
 
   /// Returns a reference to the instructions used for type-promoting the
   /// recurrence.
-  const SmallPtrSet<Instruction *, 8> &getCastInsts() const { return CastInsts; }
+  const SmallPtrSet<Instruction *, 8> &getCastInsts() const {
+    return CastInsts;
+  }
 
   /// Returns the minimum width used by the recurrence in bits.
   unsigned getMinWidthCastToRecurrenceTypeInBits() const {

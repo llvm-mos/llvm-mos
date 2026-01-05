@@ -28,21 +28,35 @@ constexpr bool IsBigEndianHost =
 
 constexpr bool IsLittleEndianHost = !IsBigEndianHost;
 
-inline unsigned char      getSwappedBytes(unsigned char      C) { return llvm::byteswap(C); }
-inline   signed char      getSwappedBytes( signed  char      C) { return llvm::byteswap(C); }
-inline          char      getSwappedBytes(         char      C) { return llvm::byteswap(C); }
+inline unsigned char getSwappedBytes(unsigned char C) {
+  return llvm::byteswap(C);
+}
+inline signed char getSwappedBytes(signed char C) { return llvm::byteswap(C); }
+inline char getSwappedBytes(char C) { return llvm::byteswap(C); }
 
-inline unsigned short     getSwappedBytes(unsigned short     C) { return llvm::byteswap(C); }
-inline   signed short     getSwappedBytes(  signed short     C) { return llvm::byteswap(C); }
+inline unsigned short getSwappedBytes(unsigned short C) {
+  return llvm::byteswap(C);
+}
+inline signed short getSwappedBytes(signed short C) {
+  return llvm::byteswap(C);
+}
 
-inline unsigned int       getSwappedBytes(unsigned int       C) { return llvm::byteswap(C); }
-inline   signed int       getSwappedBytes(  signed int       C) { return llvm::byteswap(C); }
+inline unsigned int getSwappedBytes(unsigned int C) {
+  return llvm::byteswap(C);
+}
+inline signed int getSwappedBytes(signed int C) { return llvm::byteswap(C); }
 
-inline unsigned long      getSwappedBytes(unsigned long      C) { return llvm::byteswap(C); }
-inline   signed long      getSwappedBytes(  signed long      C) { return llvm::byteswap(C); }
+inline unsigned long getSwappedBytes(unsigned long C) {
+  return llvm::byteswap(C);
+}
+inline signed long getSwappedBytes(signed long C) { return llvm::byteswap(C); }
 
-inline unsigned long long getSwappedBytes(unsigned long long C) { return llvm::byteswap(C); }
-inline   signed long long getSwappedBytes(  signed long long C) { return llvm::byteswap(C); }
+inline unsigned long long getSwappedBytes(unsigned long long C) {
+  return llvm::byteswap(C);
+}
+inline signed long long getSwappedBytes(signed long long C) {
+  return llvm::byteswap(C);
+}
 
 inline float getSwappedBytes(float C) {
   return llvm::bit_cast<float>(llvm::byteswap(llvm::bit_cast<uint32_t>(C)));
@@ -57,8 +71,7 @@ inline std::enable_if_t<std::is_enum_v<T>, T> getSwappedBytes(T C) {
   return static_cast<T>(llvm::byteswap(llvm::to_underlying(C)));
 }
 
-template<typename T>
-inline void swapByteOrder(T &Value) {
+template <typename T> inline void swapByteOrder(T &Value) {
   Value = getSwappedBytes(Value);
 }
 

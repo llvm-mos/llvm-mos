@@ -23,7 +23,7 @@ void circular_raw_ostream::write_impl(const char *Ptr, size_t Size) {
   // Write into the buffer, wrapping if necessary.
   while (Size != 0) {
     unsigned Bytes =
-      std::min(unsigned(Size), unsigned(BufferSize - (Cur - BufferArray)));
+        std::min(unsigned(Size), unsigned(BufferSize - (Cur - BufferArray)));
     memcpy(Cur, Ptr, Bytes);
     Size -= Bytes;
     Cur += Bytes;

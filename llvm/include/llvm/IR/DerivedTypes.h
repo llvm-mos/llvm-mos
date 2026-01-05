@@ -43,19 +43,21 @@ class IntegerType : public Type {
   friend class LLVMContextImpl;
 
 protected:
-  explicit IntegerType(LLVMContext &C, unsigned NumBits) : Type(C, IntegerTyID){
+  explicit IntegerType(LLVMContext &C, unsigned NumBits)
+      : Type(C, IntegerTyID) {
     setSubclassData(NumBits);
   }
 
 public:
   /// This enum is just used to hold constants we need for IntegerType.
   enum {
-    MIN_INT_BITS = 1,        ///< Minimum number of bits that can be specified
-    MAX_INT_BITS = (1<<23)   ///< Maximum number of bits that can be specified
-      ///< Note that bit width is stored in the Type classes SubclassData field
-      ///< which has 24 bits. SelectionDAG type legalization can require a
-      ///< power of 2 IntegerType, so limit to the largest representable power
-      ///< of 2, 8388608.
+    MIN_INT_BITS = 1, ///< Minimum number of bits that can be specified
+    MAX_INT_BITS =
+        (1 << 23) ///< Maximum number of bits that can be specified
+                  ///< Note that bit width is stored in the Type classes
+                  ///< SubclassData field which has 24 bits. SelectionDAG type
+                  ///< legalization can require a power of 2 IntegerType, so
+                  ///< limit to the largest representable power of 2, 8388608.
   };
 
   /// This static method is the primary way of constructing an IntegerType.
@@ -75,15 +77,11 @@ public:
 
   /// Return a bitmask with ones set for all of the bits that can be set by an
   /// unsigned version of this type. This is 0xFF for i8, 0xFFFF for i16, etc.
-  uint64_t getBitMask() const {
-    return ~uint64_t(0UL) >> (64-getBitWidth());
-  }
+  uint64_t getBitMask() const { return ~uint64_t(0UL) >> (64 - getBitWidth()); }
 
   /// Return a uint64_t with just the most significant bit set (the sign bit, if
   /// the value is treated as a signed number).
-  uint64_t getSignBit() const {
-    return 1ULL << (getBitWidth()-1);
-  }
+  uint64_t getSignBit() const { return 1ULL << (getBitWidth() - 1); }
 
   /// For example, this is 0xFF for an 8 bit integer, 0xFFFF for i16, etc.
   /// @returns a bit mask with ones set for all the bits of this type.
@@ -91,9 +89,7 @@ public:
   LLVM_ABI APInt getMask() const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(const Type *T) {
-    return T->getTypeID() == IntegerTyID;
-  }
+  static bool classof(const Type *T) { return T->getTypeID() == IntegerTyID; }
 };
 
 unsigned Type::getIntegerBitWidth() const {
@@ -103,7 +99,7 @@ unsigned Type::getIntegerBitWidth() const {
 /// Class to represent function types
 ///
 class FunctionType : public Type {
-  FunctionType(Type *Result, ArrayRef<Type*> Params, bool IsVarArgs);
+  FunctionType(Type *Result, ArrayRef<Type *> Params, bool IsVarArgs);
 
 public:
   FunctionType(const FunctionType &) = delete;
@@ -122,7 +118,7 @@ public:
   /// Return true if the specified type is valid as an argument type.
   LLVM_ABI static bool isValidArgumentType(Type *ArgTy);
 
-  bool isVarArg() const { return getSubclassData()!=0; }
+  bool isVarArg() const { return getSubclassData() != 0; }
   Type *getReturnType() const { return ContainedTys[0]; }
 
   using param_iterator = Type::subtype_iterator;
@@ -144,9 +140,7 @@ public:
   unsigned getNumParams() const { return NumContainedTys - 1; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(const Type *T) {
-    return T->getTypeID() == FunctionTyID;
-  }
+  static bool classof(const Type *T) { return T->getTypeID() == FunctionTyID; }
 };
 static_assert(alignof(FunctionType) >= alignof(Type *),
               "Alignment sufficient for objects appended to FunctionType");
@@ -256,7 +250,7 @@ public:
                                      ArrayRef<Type *> Elements);
   template <class... Tys>
   static std::enable_if_t<are_base_of<Type, Tys...>::value, StructType *>
-  create(StringRef Name, Type *elt1, Tys *... elts) {
+  create(StringRef Name, Type *elt1, Tys *...elts) {
     assert(elt1 && "Cannot create a struct type with no elements with this");
     return create(ArrayRef<Type *>({elt1, elts...}), Name);
   }
@@ -273,7 +267,7 @@ public:
   /// a non-packed struct, and requires at least one element type.
   template <class... Tys>
   static std::enable_if_t<are_base_of<Type, Tys...>::value, StructType *>
-  get(Type *elt1, Tys *... elts) {
+  get(Type *elt1, Tys *...elts) {
     assert(elt1 && "Cannot create a struct type with no elements with this");
     LLVMContext &Ctx = elt1->getContext();
     return StructType::get(Ctx, ArrayRef<Type *>({elt1, elts...}));
@@ -356,7 +350,9 @@ public:
   using element_iterator = Type::subtype_iterator;
 
   element_iterator element_begin() const { return ContainedTys; }
-  element_iterator element_end() const { return &ContainedTys[NumContainedTys];}
+  element_iterator element_end() const {
+    return &ContainedTys[NumContainedTys];
+  }
   ArrayRef<Type *> elements() const {
     return ArrayRef(element_begin(), element_end());
   }
@@ -377,9 +373,7 @@ public:
   bool indexValid(unsigned Idx) const { return Idx < getNumElements(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(const Type *T) {
-    return T->getTypeID() == StructTyID;
-  }
+  static bool classof(const Type *T) { return T->getTypeID() == StructTyID; }
 };
 
 StringRef Type::getStructName() const {
@@ -417,9 +411,7 @@ public:
   LLVM_ABI static bool isValidElementType(Type *ElemTy);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(const Type *T) {
-    return T->getTypeID() == ArrayTyID;
-  }
+  static bool classof(const Type *T) { return T->getTypeID() == ArrayTyID; }
 };
 
 uint64_t Type::getArrayNumElements() const {
@@ -500,7 +492,7 @@ public:
   static VectorType *getTruncatedElementVectorType(VectorType *VTy) {
     Type *EltTy;
     if (VTy->getElementType()->isFloatingPointTy()) {
-      switch(VTy->getElementType()->getTypeID()) {
+      switch (VTy->getElementType()->getTypeID()) {
       case DoubleTyID:
         EltTy = Type::getFloatTy(VTy->getContext());
         break;
@@ -742,9 +734,7 @@ public:
   inline unsigned getAddressSpace() const { return getSubclassData(); }
 
   /// Implement support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(const Type *T) {
-    return T->getTypeID() == PointerTyID;
-  }
+  static bool classof(const Type *T) { return T->getTypeID() == PointerTyID; }
 };
 
 Type *Type::getExtendedType() const {

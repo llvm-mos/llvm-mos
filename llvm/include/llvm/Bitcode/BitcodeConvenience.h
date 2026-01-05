@@ -325,7 +325,9 @@ template <typename Head, typename... Tail> struct last_type {
   using type = typename last_type<Tail...>::type;
 };
 
-template <typename Head> struct last_type<Head> { using type = Head; };
+template <typename Head> struct last_type<Head> {
+  using type = Head;
+};
 
 /// A type trait whose \c value field is \c true if the last type is BCBlob.
 template <typename... Types>

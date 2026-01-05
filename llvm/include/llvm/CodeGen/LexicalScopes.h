@@ -48,7 +48,7 @@ public:
       : Parent(P), Desc(D), InlinedAtLocation(I), AbstractScope(A) {
     assert(D);
     assert(D->getSubprogram()->getUnit()->getEmissionKind() !=
-           DICompileUnit::NoDebug &&
+               DICompileUnit::NoDebug &&
            "Don't build lexical scopes for non-debug locations");
     assert(D->isResolved() && "Expected resolved node");
     assert((!I || I->isResolved()) && "Expected resolved node");
@@ -118,13 +118,13 @@ public:
   LLVM_ABI void dump(unsigned Indent = 0) const;
 
 private:
-  LexicalScope *Parent;                        // Parent to this scope.
-  const DILocalScope *Desc;                    // Debug info descriptor.
-  const DILocation *InlinedAtLocation;         // Location at which this
-                                               // scope is inlined.
-  bool AbstractScope;                          // Abstract Scope
-  SmallVector<LexicalScope *, 4> Children;     // Scopes defined in scope.
-                                               // Contents not owned.
+  LexicalScope *Parent;                    // Parent to this scope.
+  const DILocalScope *Desc;                // Debug info descriptor.
+  const DILocation *InlinedAtLocation;     // Location at which this
+                                           // scope is inlined.
+  bool AbstractScope;                      // Abstract Scope
+  SmallVector<LexicalScope *, 4> Children; // Scopes defined in scope.
+                                           // Contents not owned.
   SmallVector<InsnRange, 4> Ranges;
 
   const MachineInstr *LastInsn = nullptr;  // Last instruction of this scope.

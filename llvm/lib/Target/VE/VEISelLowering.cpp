@@ -2727,8 +2727,7 @@ static SDValue generateComparison(EVT VT, SDValue LHS, SDValue RHS,
   return DAG.getNode(decideComp(VT, CC), DL, CompVT, LHS, RHS);
 }
 
-SDValue VETargetLowering::combineSelect(SDNode *N,
-                                        DAGCombinerInfo &DCI) const {
+SDValue VETargetLowering::combineSelect(SDNode *N, DAGCombinerInfo &DCI) const {
   assert(N->getOpcode() == ISD::SELECT &&
          "Should be called with a SELECT node");
   ISD::CondCode CC = ISD::CondCode::SETNE;
@@ -2763,8 +2762,7 @@ SDValue VETargetLowering::combineSelect(SDNode *N,
   } else {
     VECCVal = intCondCode2Icc(CC);
   }
-  SDValue Ops[] = {Cond, True, False,
-                   DAG.getConstant(VECCVal, DL, MVT::i32)};
+  SDValue Ops[] = {Cond, True, False, DAG.getConstant(VECCVal, DL, MVT::i32)};
   return DAG.getNode(VEISD::CMOV, DL, VT, Ops);
 }
 

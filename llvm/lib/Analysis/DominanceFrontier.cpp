@@ -30,17 +30,15 @@ template class ForwardDominanceFrontierBase<BasicBlock>;
 char DominanceFrontierWrapperPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DominanceFrontierWrapperPass, "domfrontier",
-                "Dominance Frontier Construction", true, true)
+                      "Dominance Frontier Construction", true, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(DominanceFrontierWrapperPass, "domfrontier",
-                "Dominance Frontier Construction", true, true)
+                    "Dominance Frontier Construction", true, true)
 
 DominanceFrontierWrapperPass::DominanceFrontierWrapperPass()
     : FunctionPass(ID) {}
 
-void DominanceFrontierWrapperPass::releaseMemory() {
-  DF.releaseMemory();
-}
+void DominanceFrontierWrapperPass::releaseMemory() { DF.releaseMemory(); }
 
 bool DominanceFrontierWrapperPass::runOnFunction(Function &) {
   releaseMemory();
@@ -53,7 +51,8 @@ void DominanceFrontierWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<DominatorTreeWrapperPass>();
 }
 
-void DominanceFrontierWrapperPass::print(raw_ostream &OS, const Module *) const {
+void DominanceFrontierWrapperPass::print(raw_ostream &OS,
+                                         const Module *) const {
   DF.print(OS);
 }
 
@@ -83,7 +82,7 @@ DominanceFrontier DominanceFrontierAnalysis::run(Function &F,
 }
 
 DominanceFrontierPrinterPass::DominanceFrontierPrinterPass(raw_ostream &OS)
-  : OS(OS) {}
+    : OS(OS) {}
 
 PreservedAnalyses
 DominanceFrontierPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {

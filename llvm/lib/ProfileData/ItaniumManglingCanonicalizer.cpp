@@ -39,33 +39,33 @@ struct FoldingSetNodeIDBuilder {
   }
 };
 
-template<typename ...T>
-void profileCtor(llvm::FoldingSetNodeID &ID, Node::Kind K, T ...V) {
+template <typename... T>
+void profileCtor(llvm::FoldingSetNodeID &ID, Node::Kind K, T... V) {
   FoldingSetNodeIDBuilder Builder = {ID};
   Builder(K);
   int VisitInOrder[] = {
-    (Builder(V), 0) ...,
-    0 // Avoid empty array if there are no arguments.
+      (Builder(V), 0)...,
+      0 // Avoid empty array if there are no arguments.
   };
   (void)VisitInOrder;
 }
 
 // FIXME: Convert this to a generic lambda when possible.
-template<typename NodeT> struct ProfileSpecificNode {
+template <typename NodeT> struct ProfileSpecificNode {
   FoldingSetNodeID &ID;
-  template<typename ...T> void operator()(T ...V) {
+  template <typename... T> void operator()(T... V) {
     profileCtor(ID, NodeKind<NodeT>::Kind, V...);
   }
 };
 
 struct ProfileNode {
   FoldingSetNodeID &ID;
-  template<typename NodeT> void operator()(const NodeT *N) {
+  template <typename NodeT> void operator()(const NodeT *N) {
     N->match(ProfileSpecificNode<NodeT>{ID});
   }
 };
 
-template<> void ProfileNode::operator()(const ForwardTemplateReference *N) {
+template <> void ProfileNode::operator()(const ForwardTemplateReference *N) {
   llvm_unreachable("should never canonicalize a ForwardTemplateReference");
 }
 
@@ -90,7 +90,7 @@ public:
   void reset() {}
 
   template <typename T, typename... Args>
-  std::pair<Node *, bool> getOrCreateNode(bool CreateNewNodes, Args &&... As) {
+  std::pair<Node *, bool> getOrCreateNode(bool CreateNewNodes, Args &&...As) {
     // FIXME: Don't canonicalize forward template references for now, because
     // they contain state (the resolved template node) that's not known at their
     // point of creation.
@@ -107,7 +107,7 @@ public:
 
     void *InsertPos;
     if (NodeHeader *Existing = Nodes.FindNodeOrInsertPos(ID, InsertPos))
-      return {static_cast<T*>(Existing->getNode()), false};
+      return {static_cast<T *>(Existing->getNode()), false};
 
     if (!CreateNewNodes)
       return {nullptr, true};
@@ -122,8 +122,7 @@ public:
     return {Result, true};
   }
 
-  template<typename T, typename... Args>
-  Node *makeNode(Args &&...As) {
+  template <typename T, typename... Args> Node *makeNode(Args &&...As) {
     return getOrCreateNode<T>(true, std::forward<Args>(As)...).first;
   }
 
@@ -137,9 +136,9 @@ class CanonicalizerAllocator : public FoldingNodeAllocator {
   Node *TrackedNode = nullptr;
   bool TrackedNodeIsUsed = false;
   bool CreateNewNodes = true;
-  llvm::SmallDenseMap<Node*, Node*, 32> Remappings;
+  llvm::SmallDenseMap<Node *, Node *, 32> Remappings;
 
-  template<typename T, typename ...Args> Node *makeNodeSimple(Args &&...As) {
+  template <typename T, typename... Args> Node *makeNodeSimple(Args &&...As) {
     std::pair<Node *, bool> Result =
         getOrCreateNode<T>(CreateNewNodes, std::forward<Args>(As)...);
     if (Result.second) {
@@ -159,15 +158,15 @@ class CanonicalizerAllocator : public FoldingNodeAllocator {
   }
 
   /// Helper to allow makeNode to be partially-specialized on T.
-  template<typename T> struct MakeNodeImpl {
+  template <typename T> struct MakeNodeImpl {
     CanonicalizerAllocator &Self;
-    template<typename ...Args> Node *make(Args &&...As) {
+    template <typename... Args> Node *make(Args &&...As) {
       return Self.makeNodeSimple<T>(std::forward<Args>(As)...);
     }
   };
 
 public:
-  template<typename T, typename ...Args> Node *makeNode(Args &&...As) {
+  template <typename T, typename... Args> Node *makeNode(Args &&...As) {
     return MakeNodeImpl<T>{*this}.make(std::forward<Args>(As)...);
   }
 

@@ -65,11 +65,11 @@ static cl::opt<bool>
     ClEnableVFE("enable-vfe", cl::Hidden, cl::init(true),
                 cl::desc("Enable virtual function elimination"));
 
-STATISTIC(NumAliases  , "Number of global aliases removed");
+STATISTIC(NumAliases, "Number of global aliases removed");
 STATISTIC(NumFunctions, "Number of functions removed");
-STATISTIC(NumIFuncs,    "Number of indirect functions removed");
+STATISTIC(NumIFuncs, "Number of indirect functions removed");
 STATISTIC(NumVariables, "Number of global variables removed");
-STATISTIC(NumVFuncs,    "Number of virtual functions removed");
+STATISTIC(NumVFuncs, "Number of virtual functions removed");
 
 /// Returns true if F is effectively empty.
 static bool isEmptyFunction(Function *F) {
@@ -267,11 +267,9 @@ void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
 
   ScanTypeCheckedLoadIntrinsics(M);
 
-  LLVM_DEBUG(
-    dbgs() << "VFE safe vtables:\n";
-    for (auto *VTable : VFESafeVTables)
-      dbgs() << "  " << VTable->getName() << "\n";
-  );
+  LLVM_DEBUG(dbgs() << "VFE safe vtables:\n";
+             for (auto *VTable : VFESafeVTables) dbgs()
+             << "  " << VTable->getName() << "\n";);
 }
 
 PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
@@ -355,7 +353,7 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   std::vector<GlobalVariable *> DeadGlobalVars; // Keep track of dead globals
   for (GlobalVariable &GV : M.globals())
     if (!AliveGlobals.count(&GV)) {
-      DeadGlobalVars.push_back(&GV);         // Keep track of dead globals
+      DeadGlobalVars.push_back(&GV); // Keep track of dead globals
       if (GV.hasInitializer()) {
         Constant *Init = GV.getInitializer();
         GV.setInitializer(nullptr);
@@ -368,13 +366,13 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   std::vector<Function *> DeadFunctions;
   for (Function &F : M)
     if (!AliveGlobals.count(&F)) {
-      DeadFunctions.push_back(&F);         // Keep track of dead globals
+      DeadFunctions.push_back(&F); // Keep track of dead globals
       if (!F.isDeclaration())
         F.deleteBody();
     }
 
   // The third pass drops targets of aliases which are dead...
-  std::vector<GlobalAlias*> DeadAliases;
+  std::vector<GlobalAlias *> DeadAliases;
   for (GlobalAlias &GA : M.aliases())
     if (!AliveGlobals.count(&GA)) {
       DeadAliases.push_back(&GA);
@@ -382,7 +380,7 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
     }
 
   // The fourth pass drops targets of ifuncs which are dead...
-  std::vector<GlobalIFunc*> DeadIFuncs;
+  std::vector<GlobalIFunc *> DeadIFuncs;
   for (GlobalIFunc &GIF : M.ifuncs())
     if (!AliveGlobals.count(&GIF)) {
       DeadIFuncs.push_back(&GIF);

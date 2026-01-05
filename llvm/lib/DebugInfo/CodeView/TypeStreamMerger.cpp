@@ -483,8 +483,8 @@ Expected<bool> TypeStreamMerger::shouldRemapType(const CVType &Type) {
   // reasons, to avoid re-parsing the Types stream.
   if (Type.kind() == LF_ENDPRECOMP) {
     EndPrecompRecord EP;
-    if (auto EC = TypeDeserializer::deserializeAs(const_cast<CVType &>(Type),
-                                                  EP))
+    if (auto EC =
+            TypeDeserializer::deserializeAs(const_cast<CVType &>(Type), EP))
       return joinErrors(std::move(EC), errorCorruptRecord());
     // Only one record of this kind can appear in a OBJ.
     if (PCHInfo)

@@ -12,6 +12,4 @@
 
 #include "llvm-c/Remarks.h"
 
-extern uint32_t LLVMRemarkVersion(void) {
-  return REMARKS_API_VERSION;
-}
+extern uint32_t LLVMRemarkVersion(void) { return REMARKS_API_VERSION; }

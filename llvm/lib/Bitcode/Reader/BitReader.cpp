@@ -41,9 +41,8 @@ LLVMBool LLVMParseBitcodeInContext(LLVMContextRef ContextRef,
   Expected<std::unique_ptr<Module>> ModuleOrErr = parseBitcodeFile(Buf, Ctx);
   if (Error Err = ModuleOrErr.takeError()) {
     std::string Message;
-    handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
-      Message = EIB.message();
-    });
+    handleAllErrors(std::move(Err),
+                    [&](ErrorInfoBase &EIB) { Message = EIB.message(); });
     if (OutMessage)
       *OutMessage = strdup(Message.c_str());
     *OutModule = wrap((Module *)nullptr);
@@ -87,9 +86,8 @@ LLVMBool LLVMGetBitcodeModuleInContext(LLVMContextRef ContextRef,
 
   if (Error Err = ModuleOrErr.takeError()) {
     std::string Message;
-    handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
-      Message = EIB.message();
-    });
+    handleAllErrors(std::move(Err),
+                    [&](ErrorInfoBase &EIB) { Message = EIB.message(); });
     if (OutMessage)
       *OutMessage = strdup(Message.c_str());
     *OutM = wrap((Module *)nullptr);

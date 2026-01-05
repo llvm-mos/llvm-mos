@@ -20,10 +20,7 @@ enum class AsanDtorKind {
 };
 
 /// Types of ASan module constructors supported
-enum class AsanCtorKind {
-  None,
-  Global
-};
+enum class AsanCtorKind { None, Global };
 
 /// Mode of ASan detect stack use after return
 enum class AsanDetectStackUseAfterReturnMode {

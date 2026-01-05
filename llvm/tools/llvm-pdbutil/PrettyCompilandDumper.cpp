@@ -77,8 +77,8 @@ void CompilandDumper::start(const PDBSymbolCompiland &Symbol,
 
           Printer << "Line ";
           PDB_ColorItem StatementColor = Line->isStatement()
-            ? PDB_ColorItem::Keyword
-            : PDB_ColorItem::LiteralValue;
+                                             ? PDB_ColorItem::Keyword
+                                             : PDB_ColorItem::LiteralValue;
           WithColor(Printer, StatementColor).get() << LineStart;
           if (LineStart != LineEnd)
             WithColor(Printer, StatementColor).get() << " - " << LineEnd;
@@ -97,13 +97,13 @@ void CompilandDumper::start(const PDBSymbolCompiland &Symbol,
             uint64_t AddrStart = Line->getVirtualAddress();
             uint64_t AddrEnd = AddrStart + Line->getLength() - 1;
             WithColor(Printer, PDB_ColorItem::Address).get()
-              << "[" << format_hex(AddrStart, 10) << " - "
-              << format_hex(AddrEnd, 10) << "]";
+                << "[" << format_hex(AddrStart, 10) << " - "
+                << format_hex(AddrEnd, 10) << "]";
             Printer << " (" << Line->getLength() << " bytes)";
           } else {
             uint64_t AddrStart = Line->getVirtualAddress();
             WithColor(Printer, PDB_ColorItem::Address).get()
-              << "[" << format_hex(AddrStart, 10) << "] ";
+                << "[" << format_hex(AddrStart, 10) << "] ";
             Printer << "(0 bytes)";
           }
         }

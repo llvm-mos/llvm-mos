@@ -80,7 +80,7 @@
 
 #ifdef __CYGWIN__
 #include <cygwin/version.h>
-#if defined(CYGWIN_VERSION_DLL_MAJOR) && CYGWIN_VERSION_DLL_MAJOR<1007
+#if defined(CYGWIN_VERSION_DLL_MAJOR) && CYGWIN_VERSION_DLL_MAJOR < 1007
 #define DO_NOTHING_ATEXIT 1
 #endif
 #endif
@@ -299,7 +299,7 @@ namespace {
 //
 class LLIObjectCache : public ObjectCache {
 public:
-  LLIObjectCache(const std::string& CacheDir) : CacheDir(CacheDir) {
+  LLIObjectCache(const std::string &CacheDir) : CacheDir(CacheDir) {
     // Add trailing '/' to cache dir if necessary.
     if (!this->CacheDir.empty() &&
         this->CacheDir[this->CacheDir.size() - 1] != '/')
@@ -323,7 +323,7 @@ public:
     outfile.close();
   }
 
-  std::unique_ptr<MemoryBuffer> getObject(const Module* M) override {
+  std::unique_ptr<MemoryBuffer> getObject(const Module *M) override {
     const std::string &ModuleID = M->getModuleIdentifier();
     std::string CacheName;
     if (!getCacheFilename(ModuleID, CacheName))
@@ -375,7 +375,8 @@ static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
   IRBuilder<> Builder(Context);
 
   // Create a new module.
-  std::unique_ptr<Module> M = std::make_unique<Module>("CygMingHelper", Context);
+  std::unique_ptr<Module> M =
+      std::make_unique<Module>("CygMingHelper", Context);
   M->setTargetTriple(TargetTriple);
 
   // Create an empty function named "__main".
@@ -417,7 +418,7 @@ static Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote();
 //===----------------------------------------------------------------------===//
 // main Driver function
 //
-int main(int argc, char **argv, char * const *envp) {
+int main(int argc, char **argv, char *const *envp) {
   InitLLVM X(argc, argv);
 
   if (argc > 1)
@@ -483,9 +484,8 @@ int main(int argc, char **argv, char * const *envp) {
   if (auto CM = codegen::getExplicitCodeModel())
     builder.setCodeModel(*CM);
   builder.setErrorStr(&ErrorMsg);
-  builder.setEngineKind(ForceInterpreter
-                        ? EngineKind::Interpreter
-                        : EngineKind::JIT);
+  builder.setEngineKind(ForceInterpreter ? EngineKind::Interpreter
+                                         : EngineKind::JIT);
 
   // If we are supposed to override the target triple, do so now.
   if (!TargetTriple.empty())
@@ -502,7 +502,7 @@ int main(int argc, char **argv, char * const *envp) {
     // Deliberately construct a temp std::unique_ptr to pass in. Do not null out
     // RTDyldMM: We still use it below, even though we don't own it.
     builder.setMCJITMemoryManager(
-      std::unique_ptr<RTDyldMemoryManager>(RTDyldMM));
+        std::unique_ptr<RTDyldMemoryManager>(RTDyldMM));
   } else if (RemoteMCJIT) {
     WithColor::error(errs(), argv[0])
         << "remote process execution does not work with the interpreter.\n";
@@ -592,12 +592,11 @@ int main(int argc, char **argv, char * const *envp) {
   // The following functions have no effect if their respective profiling
   // support wasn't enabled in the build configuration.
   EE->RegisterJITEventListener(
-                JITEventListener::createOProfileJITEventListener());
-  EE->RegisterJITEventListener(
-                JITEventListener::createIntelJITEventListener());
+      JITEventListener::createOProfileJITEventListener());
+  EE->RegisterJITEventListener(JITEventListener::createIntelJITEventListener());
   if (!RemoteMCJIT)
     EE->RegisterJITEventListener(
-                JITEventListener::createPerfJITEventListener());
+        JITEventListener::createPerfJITEventListener());
 
   if (!NoLazyCompilation && RemoteMCJIT) {
     WithColor::warning(errs(), argv[0])
@@ -677,7 +676,8 @@ int main(int argc, char **argv, char * const *envp) {
     (void)EE->getPointerToFunction(EntryFn);
     // Clear instruction cache before code will be executed.
     if (RTDyldMM)
-      static_cast<SectionMemoryManager*>(RTDyldMM)->invalidateInstructionCache();
+      static_cast<SectionMemoryManager *>(RTDyldMM)
+          ->invalidateInstructionCache();
 
     // Run main.
     Result = EE->runFunctionAsMain(EntryFn, InputArgv, envp);
@@ -704,7 +704,8 @@ int main(int argc, char **argv, char * const *envp) {
     abort();
   } else {
     // else == "if (RemoteMCJIT)"
-    std::unique_ptr<orc::ExecutorProcessControl> EPC = ExitOnErr(launchRemote());
+    std::unique_ptr<orc::ExecutorProcessControl> EPC =
+        ExitOnErr(launchRemote());
 
     // Remote target MCJIT doesn't (yet) support static constructors. No reason
     // it couldn't. This is a limitation of the LLI implementation, not the
@@ -716,8 +717,8 @@ int main(int argc, char **argv, char * const *envp) {
             *EPC));
 
     // Forward MCJIT's memory manager calls to the remote memory manager.
-    static_cast<ForwardingMemoryManager*>(RTDyldMM)->setMemMgr(
-      std::move(RemoteMM));
+    static_cast<ForwardingMemoryManager *>(RTDyldMM)->setMemMgr(
+        std::move(RemoteMM));
 
     // Forward MCJIT's symbol resolution calls to the remote.
     static_cast<ForwardingMemoryManager *>(RTDyldMM)->setResolver(
@@ -929,11 +930,11 @@ static int runOrcJIT(const char *ProgName) {
   std::optional<Triple> TT;
   std::optional<DataLayout> DL;
   MainModule.withModuleDo([&](Module &M) {
-      if (!M.getTargetTriple().empty())
-        TT = M.getTargetTriple();
-      if (!M.getDataLayout().isDefault())
-        DL = M.getDataLayout();
-    });
+    if (!M.getTargetTriple().empty())
+      TT = M.getTargetTriple();
+    if (!M.getDataLayout().isDefault())
+      DL = M.getDataLayout();
+  });
 
   orc::LLLazyJITBuilder Builder;
 
@@ -982,19 +983,19 @@ static int runOrcJIT(const char *ProgName) {
     CacheManager = std::make_unique<LLIObjectCache>(ObjectCacheDir);
 
     Builder.setCompileFunctionCreator(
-      [&](orc::JITTargetMachineBuilder JTMB)
+        [&](orc::JITTargetMachineBuilder JTMB)
             -> Expected<std::unique_ptr<orc::IRCompileLayer::IRCompiler>> {
-        if (LazyJITCompileThreads > 0)
-          return std::make_unique<orc::ConcurrentIRCompiler>(std::move(JTMB),
-                                                        CacheManager.get());
+          if (LazyJITCompileThreads > 0)
+            return std::make_unique<orc::ConcurrentIRCompiler>(
+                std::move(JTMB), CacheManager.get());
 
-        auto TM = JTMB.createTargetMachine();
-        if (!TM)
-          return TM.takeError();
+          auto TM = JTMB.createTargetMachine();
+          if (!TM)
+            return TM.takeError();
 
-        return std::make_unique<orc::TMOwningSimpleCompiler>(std::move(*TM),
-                                                        CacheManager.get());
-      });
+          return std::make_unique<orc::TMOwningSimpleCompiler>(
+              std::move(*TM), CacheManager.get());
+        });
   }
 
   // Enable debugging of JIT'd code (only works on JITLink for ELF and MachO).
@@ -1037,7 +1038,8 @@ static int runOrcJIT(const char *ProgName) {
   auto J = ExitOnErr(Builder.create());
 
   auto *ObjLayer = &J->getObjLinkingLayer();
-  if (auto *RTDyldObjLayer = dyn_cast<orc::RTDyldObjectLinkingLayer>(ObjLayer)) {
+  if (auto *RTDyldObjLayer =
+          dyn_cast<orc::RTDyldObjectLinkingLayer>(ObjLayer)) {
     RTDyldObjLayer->registerJITEventListener(
         *JITEventListener::createGDBRegistrationListener());
 #if LLVM_USE_OPROFILE
@@ -1223,7 +1225,6 @@ static Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote() {
     close(PipeFD[0][1]);
     close(PipeFD[1][0]);
 
-
     // Execute the child process.
     std::unique_ptr<char[]> ChildPath, ChildIn, ChildOut;
     {
@@ -1240,7 +1241,7 @@ static Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote() {
       ChildOut[ChildOutStr.size()] = '\0';
     }
 
-    char * const args[] = { &ChildPath[0], &ChildIn[0], &ChildOut[0], nullptr };
+    char *const args[] = {&ChildPath[0], &ChildIn[0], &ChildOut[0], nullptr};
     int rc = execv(ChildExecPath.c_str(), args);
     if (rc != 0)
       perror("Error executing child process: ");

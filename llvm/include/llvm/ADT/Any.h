@@ -33,7 +33,9 @@ class LLVM_ABI Any {
   // merges duplicate definitions across DSO boundaries.
   // We also cannot mark it as `const`, otherwise msvc merges all definitions
   // when lto is enabled, making any comparison return true.
-  template <typename T> struct TypeId { static char Id; };
+  template <typename T> struct TypeId {
+    static char Id;
+  };
 
   struct StorageBase {
     virtual ~StorageBase() = default;

@@ -112,9 +112,9 @@ static bool isDereferenceableAndAlignedPointer(
   // bitcast instructions are no-ops as far as dereferenceability is concerned.
   if (const BitCastOperator *BC = dyn_cast<BitCastOperator>(V)) {
     if (BC->getSrcTy()->isPointerTy())
-      return isDereferenceableAndAlignedPointer(
-        BC->getOperand(0), Alignment, Size, DL, CtxI, AC, DT, TLI,
-          Visited, MaxDepth);
+      return isDereferenceableAndAlignedPointer(BC->getOperand(0), Alignment,
+                                                Size, DL, CtxI, AC, DT, TLI,
+                                                Visited, MaxDepth);
   }
 
   // Recurse into both hands of select.
@@ -133,8 +133,7 @@ static bool isDereferenceableAndAlignedPointer(
                                                     CheckForFreed)) ||
         CheckForFreed)
       return false;
-    if (CheckForNonNull &&
-        !isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI)))
+    if (CheckForNonNull && !isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI)))
       return false;
     // When using something like !dereferenceable on a load, the
     // dereferenceability may only be valid on a specific control-flow path.
@@ -158,7 +157,6 @@ static bool isDereferenceableAndAlignedPointer(
 
   /// TODO refactor this function to be able to search independently for
   /// Dereferencability and Alignment requirements.
-
 
   if (const auto *Call = dyn_cast<CallBase>(V)) {
     if (auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
@@ -432,14 +430,14 @@ bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
 ///
 /// This uses the pointee type to determine how many bytes need to be safe to
 /// load from the pointer.
-bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &Size,
-                                       const DataLayout &DL,
+bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment,
+                                       const APInt &Size, const DataLayout &DL,
                                        Instruction *ScanFrom,
                                        AssumptionCache *AC,
                                        const DominatorTree *DT,
                                        const TargetLibraryInfo *TLI) {
   // If DT is not specified we can't make context-sensitive query
-  const Instruction* CtxI = DT ? ScanFrom : nullptr;
+  const Instruction *CtxI = DT ? ScanFrom : nullptr;
   if (isDereferenceableAndAlignedPointer(V, Alignment, Size, DL, CtxI, AC, DT,
                                          TLI)) {
     // With sanitizers `Dereferenceable` is not always enough for unconditional
@@ -533,11 +531,11 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
 /// threading in part by eliminating partially redundant loads.
 /// At that point, the value of MaxInstsToScan was already set to '6'
 /// without documented explanation.
-cl::opt<unsigned>
-llvm::DefMaxInstsToScan("available-load-scan-limit", cl::init(6), cl::Hidden,
-  cl::desc("Use this to specify the default maximum number of instructions "
-           "to scan backward from a given instruction, when searching for "
-           "available loaded value"));
+cl::opt<unsigned> llvm::DefMaxInstsToScan(
+    "available-load-scan-limit", cl::init(6), cl::Hidden,
+    cl::desc("Use this to specify the default maximum number of instructions "
+             "to scan backward from a given instruction, when searching for "
+             "available loaded value"));
 
 Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
                                       BasicBlock::iterator &ScanFrom,
@@ -571,10 +569,8 @@ static bool areNonOverlapSameBaseLoadAndStore(const Value *LoadPtr,
     return false;
   auto LoadAccessSize = LocationSize::precise(DL.getTypeStoreSize(LoadTy));
   auto StoreAccessSize = LocationSize::precise(DL.getTypeStoreSize(StoreTy));
-  ConstantRange LoadRange(LoadOffset,
-                          LoadOffset + LoadAccessSize.toRaw());
-  ConstantRange StoreRange(StoreOffset,
-                           StoreOffset + StoreAccessSize.toRaw());
+  ConstantRange LoadRange(LoadOffset, LoadOffset + LoadAccessSize.toRaw());
+  ConstantRange StoreRange(StoreOffset, StoreOffset + StoreAccessSize.toRaw());
   return LoadRange.intersectWith(StoreRange).isEmptySet();
 }
 
@@ -772,8 +768,8 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
   // queries until later.
   Value *Available = nullptr;
   SmallVector<Instruction *> MustNotAliasInsts;
-  for (Instruction &Inst : make_range(++Load->getReverseIterator(),
-                                      ScanBB->rend())) {
+  for (Instruction &Inst :
+       make_range(++Load->getReverseIterator(), ScanBB->rend())) {
     if (Inst.isDebugOrPseudoInst())
       continue;
 

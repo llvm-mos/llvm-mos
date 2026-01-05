@@ -36,13 +36,13 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
     PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = PrivateGlobalPrefix;
 
-  AlignmentIsInBytes          = false;
-  Data16bitsDirective         = "\t.2byte\t";
-  Data32bitsDirective         = "\t.4byte\t";
-  Data64bitsDirective         = "\t.8byte\t";
-  CommentString               = "#";
+  AlignmentIsInBytes = false;
+  Data16bitsDirective = "\t.2byte\t";
+  Data32bitsDirective = "\t.4byte\t";
+  Data64bitsDirective = "\t.8byte\t";
+  CommentString = "#";
   AllowDollarAtStartOfIdentifier = false;
-  ZeroDirective               = "\t.space\t";
+  ZeroDirective = "\t.space\t";
   UseAssignmentForEHBegin = true;
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;

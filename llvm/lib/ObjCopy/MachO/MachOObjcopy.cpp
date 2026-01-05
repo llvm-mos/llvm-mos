@@ -369,8 +369,8 @@ static Expected<Section &> findSection(StringRef SecName, Object &O) {
   // https://math-atlas.sourceforge.net/devel/assembly/MachORuntime.pdf
   // page 57
   if (O.Header.FileType == MachO::HeaderFileType::MH_OBJECT) {
-    for (const auto& LC : O.LoadCommands)
-      for (const auto& Sec : LC.Sections)
+    for (const auto &LC : O.LoadCommands)
+      for (const auto &Sec : LC.Sections)
         if (Sec->Segname == SegName && Sec->Sectname == SecName)
           return *Sec;
 

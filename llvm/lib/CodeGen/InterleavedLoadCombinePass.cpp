@@ -412,12 +412,15 @@ public:
     //
     //      =    ([b_h + a_h + (b_m + a_m) >> (n-2)] % 2) * 2^(n-2) +
     //         + ((b_m + a_m) % 2^(n-2)) +
-    //         + o_h * 2^(e'-1) * 2^(n-e') +               | pre(2), move 2^(e'-1)
-    //                                                     | out of the old exponent
+    //         + o_h * 2^(e'-1) * 2^(n-e') +               | pre(2), move
+    //         2^(e'-1)
+    //                                                     | out of the old
+    //                                                     exponent
     //         + E * 2^(n-e') =
     //      =    ([b_h + a_h + (b_m + a_m) >> (n-2)] % 2) * 2^(n-2) +
     //         + ((b_m + a_m) % 2^(n-2)) +
-    //         + [o_h * 2^(e'-1) + E] * 2^(n-e') +         | move 2^(e'-1) out of
+    //         + [o_h * 2^(e'-1) + E] * 2^(n-e') +         | move 2^(e'-1) out
+    //         of
     //                                                     | the old exponent
     //
     //    Let E' = o_h * 2^(e'-1) + E
@@ -630,8 +633,8 @@ static raw_ostream &operator<<(raw_ostream &OS, const Polynomial &S) {
 ///
 /// 1) The memory address loaded into the element as Polynomial
 /// 2) a set of load instruction necessary to construct the vector,
-/// 3) a set of all other instructions that are necessary to create the vector and
-/// 4) a pointer value that can be used as relative base for all elements.
+/// 3) a set of all other instructions that are necessary to create the vector
+/// and 4) a pointer value that can be used as relative base for all elements.
 struct VectorInfo {
 private:
   VectorInfo(const VectorInfo &c) : VTy(c.VTy) {
@@ -1225,7 +1228,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   auto MSSAU = MemorySSAUpdater(&MSSA);
   MemoryUse *MSSALoad = cast<MemoryUse>(MSSAU.createMemoryAccessBefore(
       LI, nullptr, MSSA.getMemoryAccess(InsertionPoint)));
-  MSSAU.insertUse(MSSALoad, /*RenameUses=*/ true);
+  MSSAU.insertUse(MSSALoad, /*RenameUses=*/true);
 
   // Create the final SVIs and replace all uses.
   int i = 0;
@@ -1368,8 +1371,7 @@ INITIALIZE_PASS_END(
     "Combine interleaved loads into wide loads and shufflevector instructions",
     false, false)
 
-FunctionPass *
-llvm::createInterleavedLoadCombinePass() {
+FunctionPass *llvm::createInterleavedLoadCombinePass() {
   auto P = new InterleavedLoadCombine();
   return P;
 }

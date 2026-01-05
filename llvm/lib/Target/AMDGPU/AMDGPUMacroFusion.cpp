@@ -27,7 +27,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII_,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
                                    const MachineInstr &SecondMI) {
-  const SIInstrInfo &TII = static_cast<const SIInstrInfo&>(TII_);
+  const SIInstrInfo &TII = static_cast<const SIInstrInfo &>(TII_);
 
   switch (SecondMI.getOpcode()) {
   case AMDGPU::V_ADDC_U32_e64:
@@ -43,8 +43,8 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII_,
     const MachineBasicBlock &MBB = *FirstMI->getParent();
     const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
     const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-    const MachineOperand *Src2 = TII.getNamedOperand(SecondMI,
-                                                     AMDGPU::OpName::src2);
+    const MachineOperand *Src2 =
+        TII.getNamedOperand(SecondMI, AMDGPU::OpName::src2);
     return FirstMI->definesRegister(Src2->getReg(), TRI);
   }
   default:
@@ -55,7 +55,6 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII_,
 }
 
 } // end namespace
-
 
 namespace llvm {
 

@@ -19,8 +19,7 @@
 #include <random>
 using namespace llvm;
 
-Error
-BugDriver::runManyPasses(const std::vector<std::string> &AllPasses) {
+Error BugDriver::runManyPasses(const std::vector<std::string> &AllPasses) {
   setPassesToRun(AllPasses);
   outs() << "Starting bug finding procedure...\n\n";
 

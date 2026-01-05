@@ -14,9 +14,9 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUMACHINELEGALIZER_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUMACHINELEGALIZER_H
 
-#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "AMDGPUArgumentUsageInfo.h"
 #include "SIInstrInfo.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 
 namespace llvm {
 
@@ -31,14 +31,12 @@ class AMDGPULegalizerInfo final : public LegalizerInfo {
   const GCNSubtarget &ST;
 
 public:
-  AMDGPULegalizerInfo(const GCNSubtarget &ST,
-                      const GCNTargetMachine &TM);
+  AMDGPULegalizerInfo(const GCNSubtarget &ST, const GCNTargetMachine &TM);
 
   bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
                       LostDebugLocObserver &LocObserver) const override;
 
-  Register getSegmentAperture(unsigned AddrSpace,
-                              MachineRegisterInfo &MRI,
+  Register getSegmentAperture(unsigned AddrSpace, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
 
   bool legalizeAddrSpaceCast(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -126,8 +124,8 @@ public:
                                    MachineIRBuilder &B) const;
 
   bool legalizePreloadedArgIntrin(
-    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
-    AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
+      MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
+      AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
   bool legalizeWorkitemIDIntrinsic(
       MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
       unsigned Dim, AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
@@ -233,8 +231,7 @@ public:
                         MachineIRBuilder &B) const;
 
   bool legalizeImageIntrinsic(
-      MachineInstr &MI, MachineIRBuilder &B,
-      GISelChangeObserver &Observer,
+      MachineInstr &MI, MachineIRBuilder &B, GISelChangeObserver &Observer,
       const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) const;
 
   bool legalizeSBufferLoad(LegalizerHelper &Helper, MachineInstr &MI) const;
@@ -255,5 +252,5 @@ public:
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
 };
-} // End llvm namespace.
+} // namespace llvm
 #endif

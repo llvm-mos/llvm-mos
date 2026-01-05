@@ -318,9 +318,7 @@ public:
     }
   }
 
-  bool hasAnyCopies() {
-    return !Copies.empty();
-  }
+  bool hasAnyCopies() { return !Copies.empty(); }
 
   MachineInstr *findCopyForUnit(MCRegUnit RegUnit,
                                 const TargetRegisterInfo &TRI,
@@ -445,9 +443,7 @@ public:
     return CI->second.LastSeenUseInCopy;
   }
 
-  void clear() {
-    Copies.clear();
-  }
+  void clear() { Copies.clear(); }
 };
 
 class MachineCopyPropagation {
@@ -720,7 +716,8 @@ bool MachineCopyPropagation::isForwardableRegClassCopy(const MachineInstr &Copy,
 /// operand (the register being replaced), since these can sometimes be
 /// implicitly tied to other operands.  For example, on AMDGPU:
 ///
-/// V_MOVRELS_B32_e32 %VGPR2, %M0<imp-use>, %EXEC<imp-use>, %VGPR2_VGPR3_VGPR4_VGPR5<imp-use>
+/// V_MOVRELS_B32_e32 %VGPR2, %M0<imp-use>, %EXEC<imp-use>,
+/// %VGPR2_VGPR3_VGPR4_VGPR5<imp-use>
 ///
 /// the %VGPR2 is implicitly tied to the larger reg operand, but we have no
 /// way of knowing we need to update the latter when updating the former.
@@ -886,8 +883,9 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
       Register RegSrc = CopyOperands->Source->getReg();
       Register RegDef = CopyOperands->Destination->getReg();
       if (!TRI->regsOverlap(RegDef, RegSrc)) {
-        assert(RegDef.isPhysical() && RegSrc.isPhysical() &&
-              "MachineCopyPropagation should be run after register allocation!");
+        assert(
+            RegDef.isPhysical() && RegSrc.isPhysical() &&
+            "MachineCopyPropagation should be run after register allocation!");
 
         MCRegister Def = RegDef.asMCReg();
         MCRegister Src = RegSrc.asMCReg();
@@ -1298,8 +1296,8 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
 // Reg is defined by a COPY, we untrack this Reg via
 // CopyTracker::clobberRegister(Reg, ...).
 void MachineCopyPropagation::EliminateSpillageCopies(MachineBasicBlock &MBB) {
-  // ChainLeader maps MI inside a spill-reload chain to its innermost reload COPY.
-  // Thus we can track if a MI belongs to an existing spill-reload chain.
+  // ChainLeader maps MI inside a spill-reload chain to its innermost reload
+  // COPY. Thus we can track if a MI belongs to an existing spill-reload chain.
   DenseMap<MachineInstr *, MachineInstr *> ChainLeader;
   // SpillChain maps innermost reload COPY of a spill-reload chain to a sequence
   // of COPYs that forms spills of a spill-reload chain.
@@ -1322,8 +1320,8 @@ void MachineCopyPropagation::EliminateSpillageCopies(MachineBasicBlock &MBB) {
         // pairs, we already have the shortest sequence this code can handle:
         // the outermost pair for the temporary spill slot, and the pair that
         // use that temporary spill slot for the other end of the chain.
-        // TODO: We might be able to simplify to one spill-reload pair if collecting
-        // more infomation about the outermost COPY.
+        // TODO: We might be able to simplify to one spill-reload pair if
+        // collecting more infomation about the outermost COPY.
         if (SC.size() <= 2)
           return;
 
@@ -1450,7 +1448,7 @@ void MachineCopyPropagation::EliminateSpillageCopies(MachineBasicBlock &MBB) {
         // defined by a previous COPY, since we don't want to make COPYs uses
         // Reg unavailable.
         if (Tracker.findLastSeenDefInCopy(MI, Reg.asMCReg(), *TRI, *TII,
-                                    UseCopyInstr))
+                                          UseCopyInstr))
           // Thus we can keep the property#1.
           RegsToClobber.insert(Reg);
       }
@@ -1467,8 +1465,8 @@ void MachineCopyPropagation::EliminateSpillageCopies(MachineBasicBlock &MBB) {
     // Check if we can find a pair spill-reload copy.
     LLVM_DEBUG(dbgs() << "MCP: Searching paired spill for reload: ");
     LLVM_DEBUG(MI.dump());
-    MachineInstr *MaybeSpill =
-        Tracker.findLastSeenDefInCopy(MI, Src.asMCReg(), *TRI, *TII, UseCopyInstr);
+    MachineInstr *MaybeSpill = Tracker.findLastSeenDefInCopy(
+        MI, Src.asMCReg(), *TRI, *TII, UseCopyInstr);
     bool MaybeSpillIsChained = ChainLeader.count(MaybeSpill);
     if (!MaybeSpillIsChained && MaybeSpill &&
         IsSpillReloadPair(*MaybeSpill, MI)) {

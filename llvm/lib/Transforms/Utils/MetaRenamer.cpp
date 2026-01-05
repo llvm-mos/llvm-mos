@@ -25,8 +25,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
@@ -66,10 +66,10 @@ static cl::opt<bool>
                    cl::Hidden);
 
 static const char *const metaNames[] = {
-  // See http://en.wikipedia.org/wiki/Metasyntactic_variable
-  "foo", "bar", "baz", "quux", "barney", "snork", "zot", "blam", "hoge",
-  "wibble", "wobble", "widget", "wombat", "ham", "eggs", "pluto", "spam"
-};
+    // See http://en.wikipedia.org/wiki/Metasyntactic_variable
+    "foo",    "bar",  "baz",  "quux",   "barney", "snork",
+    "zot",    "blam", "hoge", "wibble", "wobble", "widget",
+    "wombat", "ham",  "eggs", "pluto",  "spam"};
 
 namespace {
 // This PRNG is from the ISO C spec. It is intentionally simple and

@@ -38,7 +38,8 @@ using namespace llvm;
 #define DEBUG_TYPE "bpf-mi-zext-elim"
 
 static cl::opt<int> GotolAbsLowBound("gotol-abs-low-bound", cl::Hidden,
-  cl::init(INT16_MAX >> 1), cl::desc("Specify gotol lower bound"));
+                                     cl::init(INT16_MAX >> 1),
+                                     cl::desc("Specify gotol lower bound"));
 
 STATISTIC(ZExtElemNum, "Number of zero extension shifts eliminated");
 
@@ -67,7 +68,6 @@ private:
   std::set<MachineInstr *> PhiInsns;
 
 public:
-
   // Main entry point for this pass.
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
@@ -92,8 +92,7 @@ void BPFMIPeephole::initialize(MachineFunction &MFParm) {
   LLVM_DEBUG(dbgs() << "*** BPF MachineSSA ZEXT Elim peephole pass ***\n\n");
 }
 
-bool BPFMIPeephole::isCopyFrom32Def(MachineInstr *CopyMI)
-{
+bool BPFMIPeephole::isCopyFrom32Def(MachineInstr *CopyMI) {
   MachineOperand &opnd = CopyMI->getOperand(1);
 
   if (!opnd.isReg())
@@ -116,8 +115,7 @@ bool BPFMIPeephole::isCopyFrom32Def(MachineInstr *CopyMI)
   return true;
 }
 
-bool BPFMIPeephole::isPhiFrom32Def(MachineInstr *PhiMI)
-{
+bool BPFMIPeephole::isPhiFrom32Def(MachineInstr *PhiMI) {
   for (unsigned i = 1, e = PhiMI->getNumOperands(); i < e; i += 2) {
     MachineOperand &opnd = PhiMI->getOperand(i);
 
@@ -141,8 +139,7 @@ bool BPFMIPeephole::isPhiFrom32Def(MachineInstr *PhiMI)
 }
 
 // The \p DefInsn instruction defines a virtual register.
-bool BPFMIPeephole::isInsnFrom32Def(MachineInstr *DefInsn)
-{
+bool BPFMIPeephole::isInsnFrom32Def(MachineInstr *DefInsn) {
   if (!DefInsn)
     return false;
 
@@ -159,8 +156,7 @@ bool BPFMIPeephole::isInsnFrom32Def(MachineInstr *DefInsn)
   return true;
 }
 
-bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI)
-{
+bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI) {
   MachineInstr *DefInsn = MRI->getVRegDef(MovMI->getOperand(1).getReg());
 
   LLVM_DEBUG(dbgs() << "  Def of Mov Src:");
@@ -176,7 +172,7 @@ bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI)
 }
 
 bool BPFMIPeephole::eliminateZExtSeq() {
-  MachineInstr* ToErase = nullptr;
+  MachineInstr *ToErase = nullptr;
   bool Eliminated = false;
 
   for (MachineBasicBlock &MBB : *MF) {
@@ -192,8 +188,7 @@ bool BPFMIPeephole::eliminateZExtSeq() {
       //   MOV_32_64 rB, wA
       //   SLL_ri    rB, rB, 32
       //   SRL_ri    rB, rB, 32
-      if (MI.getOpcode() == BPF::SRL_ri &&
-          MI.getOperand(2).getImm() == 32) {
+      if (MI.getOpcode() == BPF::SRL_ri && MI.getOperand(2).getImm() == 32) {
         Register DstReg = MI.getOperand(0).getReg();
         Register ShfReg = MI.getOperand(1).getReg();
         MachineInstr *SllMI = MRI->getVRegDef(ShfReg);
@@ -201,9 +196,7 @@ bool BPFMIPeephole::eliminateZExtSeq() {
         LLVM_DEBUG(dbgs() << "Starting SRL found:");
         LLVM_DEBUG(MI.dump());
 
-        if (!SllMI ||
-            SllMI->isPHI() ||
-            SllMI->getOpcode() != BPF::SLL_ri ||
+        if (!SllMI || SllMI->isPHI() || SllMI->getOpcode() != BPF::SLL_ri ||
             SllMI->getOperand(2).getImm() != 32)
           continue;
 
@@ -211,9 +204,7 @@ bool BPFMIPeephole::eliminateZExtSeq() {
         LLVM_DEBUG(SllMI->dump());
 
         MachineInstr *MovMI = MRI->getVRegDef(SllMI->getOperand(1).getReg());
-        if (!MovMI ||
-            MovMI->isPHI() ||
-            MovMI->getOpcode() != BPF::MOV_32_64)
+        if (!MovMI || MovMI->isPHI() || MovMI->getOpcode() != BPF::MOV_32_64)
           continue;
 
         LLVM_DEBUG(dbgs() << "  Type cast Mov found:");
@@ -227,7 +218,9 @@ bool BPFMIPeephole::eliminateZExtSeq() {
         }
 
         BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::SUBREG_TO_REG), DstReg)
-          .addImm(0).addReg(SubReg).addImm(BPF::sub_32);
+            .addImm(0)
+            .addReg(SubReg)
+            .addImm(BPF::sub_32);
 
         SllMI->eraseFromParent();
         MovMI->eraseFromParent();
@@ -244,7 +237,7 @@ bool BPFMIPeephole::eliminateZExtSeq() {
 }
 
 bool BPFMIPeephole::eliminateZExt() {
-  MachineInstr* ToErase = nullptr;
+  MachineInstr *ToErase = nullptr;
   bool Eliminated = false;
 
   for (MachineBasicBlock &MBB : *MF) {
@@ -278,7 +271,9 @@ bool BPFMIPeephole::eliminateZExt() {
 
       // Build a SUBREG_TO_REG instruction.
       BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::SUBREG_TO_REG), dst)
-        .addImm(0).addReg(src).addImm(BPF::sub_32);
+          .addImm(0)
+          .addReg(src)
+          .addImm(BPF::sub_32);
 
       ToErase = &MI;
       Eliminated = true;
@@ -288,14 +283,14 @@ bool BPFMIPeephole::eliminateZExt() {
   return Eliminated;
 }
 
-} // end default namespace
+} // namespace
 
 INITIALIZE_PASS(BPFMIPeephole, DEBUG_TYPE,
                 "BPF MachineSSA Peephole Optimization For ZEXT Eliminate",
                 false, false)
 
 char BPFMIPeephole::ID = 0;
-FunctionPass* llvm::createBPFMIPeepholePass() { return new BPFMIPeephole(); }
+FunctionPass *llvm::createBPFMIPeepholePass() { return new BPFMIPeephole(); }
 
 STATISTIC(RedundantMovElemNum, "Number of redundant moves eliminated");
 
@@ -323,7 +318,6 @@ private:
   bool addExitAfterUnreachable();
 
 public:
-
   // Main entry point for this pass.
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
@@ -352,7 +346,7 @@ void BPFMIPreEmitPeephole::initialize(MachineFunction &MFParm) {
 }
 
 bool BPFMIPreEmitPeephole::eliminateRedundantMov() {
-  MachineInstr* ToErase = nullptr;
+  MachineInstr *ToErase = nullptr;
   bool Eliminated = false;
 
   for (MachineBasicBlock &MBB : *MF) {
@@ -503,18 +497,20 @@ bool BPFMIPreEmitPeephole::adjustBranch() {
       MachineBasicBlock *New_B1 = MF->CreateMachineBasicBlock(TermBB);
 
       // Insert New_B0 and New_B1 into function block list.
-      MachineFunction::iterator MBB_I  = ++MBB->getIterator();
+      MachineFunction::iterator MBB_I = ++MBB->getIterator();
       MF->insert(MBB_I, New_B0);
       MF->insert(MBB_I, New_B1);
 
       // replace B2 cond jump
       if (CondJmp->getOperand(1).isReg())
-        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp), CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
+        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp),
+                CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
             .addReg(CondJmp->getOperand(0).getReg())
             .addReg(CondJmp->getOperand(1).getReg())
             .addMBB(New_B1);
       else
-        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp), CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
+        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp),
+                CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
             .addReg(CondJmp->getOperand(0).getReg())
             .addImm(CondJmp->getOperand(1).getImm())
             .addMBB(New_B1);
@@ -527,7 +523,8 @@ bool BPFMIPreEmitPeephole::adjustBranch() {
       MBB->addSuccessor(New_B1);
 
       // Populate insns in New_B0 and New_B1.
-      BuildMI(New_B0, CondJmp->getDebugLoc(), TII->get(BPF::JMP)).addMBB(FollowBB);
+      BuildMI(New_B0, CondJmp->getDebugLoc(), TII->get(BPF::JMP))
+          .addMBB(FollowBB);
       BuildMI(New_B1, CondJmp->getDebugLoc(), TII->get(BPF::JMPL))
           .addMBB(CondTargetBB);
 
@@ -569,12 +566,14 @@ bool BPFMIPreEmitPeephole::adjustBranch() {
 
       // replace B2 cond jump
       if (CondJmp->getOperand(1).isReg())
-        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp), CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
+        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp),
+                CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
             .addReg(CondJmp->getOperand(0).getReg())
             .addReg(CondJmp->getOperand(1).getReg())
             .addMBB(New_B);
       else
-        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp), CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
+        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp),
+                CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
             .addReg(CondJmp->getOperand(0).getReg())
             .addImm(CondJmp->getOperand(1).getImm())
             .addMBB(New_B);
@@ -584,7 +583,8 @@ bool BPFMIPreEmitPeephole::adjustBranch() {
       MBB->addSuccessor(New_B);
 
       // Populate insn in New_B.
-      BuildMI(New_B, CondJmp->getDebugLoc(), TII->get(BPF::JMPL)).addMBB(CondTargetBB);
+      BuildMI(New_B, CondJmp->getDebugLoc(), TII->get(BPF::JMPL))
+          .addMBB(CondTargetBB);
 
       New_B->addSuccessor(CondTargetBB);
       CondJmp->eraseFromParent();
@@ -750,13 +750,12 @@ bool BPFMIPreEmitPeephole::addExitAfterUnreachable() {
   return true;
 }
 
-} // end default namespace
+} // namespace
 
 INITIALIZE_PASS(BPFMIPreEmitPeephole, "bpf-mi-pemit-peephole",
                 "BPF PreEmit Peephole Optimization", false, false)
 
 char BPFMIPreEmitPeephole::ID = 0;
-FunctionPass* llvm::createBPFMIPreEmitPeepholePass()
-{
+FunctionPass *llvm::createBPFMIPreEmitPeepholePass() {
   return new BPFMIPreEmitPeephole();
 }

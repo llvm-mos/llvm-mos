@@ -18,7 +18,8 @@ namespace {
 MachineInstr &findEquivalentInstruction(MachineInstr &MI,
                                         MachineBasicBlock *BB) {
   MachineBasicBlock *PB = MI.getParent();
-  unsigned Offset = std::distance(PB->instr_begin(), MachineBasicBlock::instr_iterator(MI));
+  unsigned Offset =
+      std::distance(PB->instr_begin(), MachineBasicBlock::instr_iterator(MI));
   return *std::next(BB->instr_begin(), Offset);
 }
 } // namespace

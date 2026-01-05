@@ -341,7 +341,7 @@ static void darwinPrintSymbol(SymbolicFile &Obj, const NMSymbol &S,
       H_64 = MachO->MachOObjectFile::getHeader64();
       Filetype = H_64.filetype;
       Flags = H_64.flags;
-      if (SymDRI.p){
+      if (SymDRI.p) {
         MachO::nlist_64 STE_64 = MachO->getSymbol64TableEntry(SymDRI);
         NType = STE_64.n_type;
         NSect = STE_64.n_sect;
@@ -359,7 +359,7 @@ static void darwinPrintSymbol(SymbolicFile &Obj, const NMSymbol &S,
       H = MachO->MachOObjectFile::getHeader();
       Filetype = H.filetype;
       Flags = H.flags;
-      if (SymDRI.p){
+      if (SymDRI.p) {
         MachO::nlist STE = MachO->getSymbolTableEntry(SymDRI);
         NType = STE.n_type;
         NSect = STE.n_sect;
@@ -1837,10 +1837,10 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
       // --special-syms option.
       auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
       bool HasMappingSymbol =
-          ELFObj && llvm::is_contained({ELF::EM_ARM, ELF::EM_AARCH64,
-                                        ELF::EM_CSKY, ELF::EM_MOS,
-                                        ELF::EM_RISCV},
-                                       ELFObj->getEMachine());
+          ELFObj &&
+          llvm::is_contained({ELF::EM_ARM, ELF::EM_AARCH64, ELF::EM_CSKY,
+                              ELF::EM_MOS, ELF::EM_RISCV},
+                             ELFObj->getEMachine());
       if (!HasMappingSymbol && !DebugSyms &&
           (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific))
         continue;
@@ -2038,8 +2038,8 @@ static bool checkMachOAndArchFlags(SymbolicFile *O, StringRef Filename) {
                                        &McpuDefault, &ArchFlag);
   } else {
     H = MachO->MachOObjectFile::getHeader();
-    T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype,
-                                       &McpuDefault, &ArchFlag);
+    T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype, &McpuDefault,
+                                       &ArchFlag);
   }
   const std::string ArchFlagName(ArchFlag);
   if (!llvm::is_contained(ArchFlags, ArchFlagName)) {

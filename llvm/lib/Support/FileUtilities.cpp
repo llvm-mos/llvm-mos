@@ -28,32 +28,43 @@
 
 using namespace llvm;
 
-static bool isSignedChar(char C) {
-  return (C == '+' || C == '-');
-}
+static bool isSignedChar(char C) { return (C == '+' || C == '-'); }
 
 static bool isExponentChar(char C) {
   switch (C) {
-  case 'D':  // Strange exponential notation.
-  case 'd':  // Strange exponential notation.
+  case 'D': // Strange exponential notation.
+  case 'd': // Strange exponential notation.
   case 'e':
-  case 'E': return true;
-  default: return false;
+  case 'E':
+    return true;
+  default:
+    return false;
   }
 }
 
 static bool isNumberChar(char C) {
   switch (C) {
-  case '0': case '1': case '2': case '3': case '4':
-  case '5': case '6': case '7': case '8': case '9':
-  case '.': return true;
-  default: return isSignedChar(C) || isExponentChar(C);
+  case '0':
+  case '1':
+  case '2':
+  case '3':
+  case '4':
+  case '5':
+  case '6':
+  case '7':
+  case '8':
+  case '9':
+  case '.':
+    return true;
+  default:
+    return isSignedChar(C) || isExponentChar(C);
   }
 }
 
 static const char *BackupNumber(const char *Pos, const char *FirstChar) {
   // If we didn't stop in the middle of a number, don't backup.
-  if (!isNumberChar(*Pos)) return Pos;
+  if (!isNumberChar(*Pos))
+    return Pos;
 
   // Otherwise, return to the start of the number.
   bool HasPeriod = false;
@@ -105,27 +116,27 @@ static bool CompareNumbers(const char *&F1P, const char *&F2P,
     // Note that some ugliness is built into this to permit support for numbers
     // that use "D" or "d" as their exponential marker, e.g. "1.234D45".  This
     // occurs in 200.sixtrack in spec2k.
-    V1 = strtod(F1P, const_cast<char**>(&F1NumEnd));
-    V2 = strtod(F2P, const_cast<char**>(&F2NumEnd));
+    V1 = strtod(F1P, const_cast<char **>(&F1NumEnd));
+    V2 = strtod(F2P, const_cast<char **>(&F2NumEnd));
 
     if (*F1NumEnd == 'D' || *F1NumEnd == 'd') {
       // Copy string into tmp buffer to replace the 'D' with an 'e'.
-      SmallString<200> StrTmp(F1P, EndOfNumber(F1NumEnd)+1);
+      SmallString<200> StrTmp(F1P, EndOfNumber(F1NumEnd) + 1);
       // Strange exponential notation!
-      StrTmp[static_cast<unsigned>(F1NumEnd-F1P)] = 'e';
+      StrTmp[static_cast<unsigned>(F1NumEnd - F1P)] = 'e';
 
-      V1 = strtod(&StrTmp[0], const_cast<char**>(&F1NumEnd));
-      F1NumEnd = F1P + (F1NumEnd-&StrTmp[0]);
+      V1 = strtod(&StrTmp[0], const_cast<char **>(&F1NumEnd));
+      F1NumEnd = F1P + (F1NumEnd - &StrTmp[0]);
     }
 
     if (*F2NumEnd == 'D' || *F2NumEnd == 'd') {
       // Copy string into tmp buffer to replace the 'D' with an 'e'.
-      SmallString<200> StrTmp(F2P, EndOfNumber(F2NumEnd)+1);
+      SmallString<200> StrTmp(F2P, EndOfNumber(F2NumEnd) + 1);
       // Strange exponential notation!
-      StrTmp[static_cast<unsigned>(F2NumEnd-F2P)] = 'e';
+      StrTmp[static_cast<unsigned>(F2NumEnd - F2P)] = 'e';
 
-      V2 = strtod(&StrTmp[0], const_cast<char**>(&F2NumEnd));
-      F2NumEnd = F2P + (F2NumEnd-&StrTmp[0]);
+      V2 = strtod(&StrTmp[0], const_cast<char **>(&F2NumEnd));
+      F2NumEnd = F2P + (F2NumEnd - &StrTmp[0]);
     }
   }
 
@@ -141,29 +152,31 @@ static bool CompareNumbers(const char *&F1P, const char *&F2P,
   }
 
   // Check to see if these are inside the absolute tolerance
-  if (AbsTolerance < std::abs(V1-V2)) {
+  if (AbsTolerance < std::abs(V1 - V2)) {
     // Nope, check the relative tolerance...
     double Diff;
     if (V2)
-      Diff = std::abs(V1/V2 - 1.0);
+      Diff = std::abs(V1 / V2 - 1.0);
     else if (V1)
-      Diff = std::abs(V2/V1 - 1.0);
+      Diff = std::abs(V2 / V1 - 1.0);
     else
-      Diff = 0;  // Both zero.
+      Diff = 0; // Both zero.
     if (Diff > RelTolerance) {
       if (ErrorMsg) {
         raw_string_ostream(*ErrorMsg)
-          << "Compared: " << V1 << " and " << V2 << '\n'
-          << "abs. diff = " << std::abs(V1-V2) << " rel.diff = " << Diff << '\n'
-          << "Out of tolerance: rel/abs: " << RelTolerance << '/'
-          << AbsTolerance;
+            << "Compared: " << V1 << " and " << V2 << '\n'
+            << "abs. diff = " << std::abs(V1 - V2) << " rel.diff = " << Diff
+            << '\n'
+            << "Out of tolerance: rel/abs: " << RelTolerance << '/'
+            << AbsTolerance;
       }
       return true;
     }
   }
 
   // Otherwise, advance our read pointers to the end of the numbers.
-  F1P = F1NumEnd;  F2P = F2NumEnd;
+  F1P = F1NumEnd;
+  F2P = F2NumEnd;
   return false;
 }
 
@@ -175,8 +188,7 @@ static bool CompareNumbers(const char *&F1P, const char *&F2P,
 /// error occurs, allowing the caller to distinguish between a failed diff and a
 /// file system error.
 ///
-int llvm::DiffFilesWithTolerance(StringRef NameA,
-                                 StringRef NameB,
+int llvm::DiffFilesWithTolerance(StringRef NameA, StringRef NameB,
                                  double AbsTol, double RelTol,
                                  std::string *Error) {
   // Now its safe to mmap the files into memory because both files
@@ -208,15 +220,14 @@ int llvm::DiffFilesWithTolerance(StringRef NameA,
   uint64_t B_size = F2.getBufferSize();
 
   // Are the buffers identical?  Common case: Handle this efficiently.
-  if (A_size == B_size &&
-      std::memcmp(File1Start, File2Start, A_size) == 0)
+  if (A_size == B_size && std::memcmp(File1Start, File2Start, A_size) == 0)
     return 0;
 
   // Otherwise, we are done a tolerances are set.
   if (AbsTol == 0 && RelTol == 0) {
     if (Error)
       *Error = "Files differ without tolerance allowance";
-    return 1;   // Files different!
+    return 1; // Files different!
   }
 
   bool CompareFailed = false;
@@ -227,7 +238,8 @@ int llvm::DiffFilesWithTolerance(StringRef NameA,
       ++F2P;
     }
 
-    if (F1P >= File1End || F2P >= File2End) break;
+    if (F1P >= File1End || F2P >= File2End)
+      break;
 
     // Okay, we must have found a difference.  Backup to the start of the
     // current number each stream is at so that we can compare from the
@@ -249,8 +261,10 @@ int llvm::DiffFilesWithTolerance(StringRef NameA,
   bool F2AtEnd = F2P >= File2End;
   if (!CompareFailed && (!F1AtEnd || !F2AtEnd)) {
     // Else, we might have run off the end due to a number: backup and retry.
-    if (F1AtEnd && isNumberChar(F1P[-1])) --F1P;
-    if (F2AtEnd && isNumberChar(F2P[-1])) --F2P;
+    if (F1AtEnd && isNumberChar(F1P[-1]))
+      --F1P;
+    if (F2AtEnd && isNumberChar(F2P[-1]))
+      --F2P;
     F1P = BackupNumber(F1P, File1Start);
     F2P = BackupNumber(F2P, File2Start);
 

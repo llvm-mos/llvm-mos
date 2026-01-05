@@ -35,11 +35,11 @@
 using namespace llvm;
 
 STATISTIC(NumLoadAlignChanged,
-  "Number of loads changed by alignment assumptions");
+          "Number of loads changed by alignment assumptions");
 STATISTIC(NumStoreAlignChanged,
-  "Number of stores changed by alignment assumptions");
+          "Number of stores changed by alignment assumptions");
 STATISTIC(NumMemIntAlignChanged,
-  "Number of memory intrinsics changed by alignment assumptions");
+          "Number of memory intrinsics changed by alignment assumptions");
 
 // Given an expression for the (constant) alignment, AlignSCEV, and an
 // expression for the displacement between a pointer and the aligned address,
@@ -56,8 +56,7 @@ static MaybeAlign getNewAlignmentDiff(const SCEV *DiffSCEV,
   LLVM_DEBUG(dbgs() << "\talignment relative to " << *AlignSCEV << " is "
                     << *DiffUnitsSCEV << " (diff: " << *DiffSCEV << ")\n");
 
-  if (const SCEVConstant *ConstDUSCEV =
-      dyn_cast<SCEVConstant>(DiffUnitsSCEV)) {
+  if (const SCEVConstant *ConstDUSCEV = dyn_cast<SCEVConstant>(DiffUnitsSCEV)) {
     int64_t DiffUnits = ConstDUSCEV->getValue()->getSExtValue();
 
     // If the displacement is an exact multiple of the alignment, then the
@@ -202,7 +201,7 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
 
   // Apply the assumption to all other users of the specified pointer.
   SmallPtrSet<Instruction *, 32> Visited;
-  SmallVector<Instruction*, 16> WorkList;
+  SmallVector<Instruction *, 16> WorkList;
   for (User *J : AAPtr->users()) {
     if (J == ACall)
       continue;

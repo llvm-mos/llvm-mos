@@ -26,7 +26,7 @@ struct ImmInsnModel {
 };
 
 void expandMOVImm(uint64_t Imm, unsigned BitSize,
-		  SmallVectorImpl<ImmInsnModel> &Insn);
+                  SmallVectorImpl<ImmInsnModel> &Insn);
 
 } // end namespace AArch64_IMM
 

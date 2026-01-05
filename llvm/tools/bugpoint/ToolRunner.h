@@ -185,6 +185,6 @@ public:
 ErrorOr<std::string> FindProgramByName(const std::string &ExeName,
                                        const char *Argv0, void *MainAddr);
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

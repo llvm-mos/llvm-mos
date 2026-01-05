@@ -50,7 +50,7 @@ private:
   uint32_t Length = 0;
   std::vector<CVSymbol> Records;
 };
-}
-}
+} // namespace codeview
+} // namespace llvm
 
 #endif

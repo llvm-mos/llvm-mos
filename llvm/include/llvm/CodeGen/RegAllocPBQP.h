@@ -52,10 +52,10 @@ inline unsigned getSpillOptionIdx() { return 0; }
 /// Keeps track of the number of infinities in each row and column.
 class MatrixMetadata {
 public:
-  MatrixMetadata(const Matrix& M)
-    : UnsafeRows(new bool[M.getRows() - 1]()),
-      UnsafeCols(new bool[M.getCols() - 1]()) {
-    unsigned* ColCounts = new unsigned[M.getCols() - 1]();
+  MatrixMetadata(const Matrix &M)
+      : UnsafeRows(new bool[M.getRows() - 1]()),
+        UnsafeCols(new bool[M.getCols() - 1]()) {
+    unsigned *ColCounts = new unsigned[M.getCols() - 1]();
 
     for (unsigned i = 1; i < M.getRows(); ++i) {
       unsigned RowCount = 0;
@@ -70,7 +70,7 @@ public:
       WorstRow = std::max(WorstRow, RowCount);
     }
     unsigned WorstColCountForCurRow =
-      *std::max_element(ColCounts, ColCounts + M.getCols() - 1);
+        *std::max_element(ColCounts, ColCounts + M.getCols() - 1);
     WorstCol = std::max(WorstCol, WorstColCountForCurRow);
     delete[] ColCounts;
   }
@@ -80,8 +80,8 @@ public:
 
   unsigned getWorstRow() const { return WorstRow; }
   unsigned getWorstCol() const { return WorstCol; }
-  const bool* getUnsafeRows() const { return UnsafeRows.get(); }
-  const bool* getUnsafeCols() const { return UnsafeCols.get(); }
+  const bool *getUnsafeRows() const { return UnsafeRows.get(); }
+  const bool *getUnsafeCols() const { return UnsafeCols.get(); }
 
 private:
   unsigned WorstRow = 0;
@@ -124,8 +124,7 @@ private:
 inline hash_code hash_value(const AllowedRegVector &OptRegs) {
   MCRegister *OStart = OptRegs.Opts.get();
   MCRegister *OEnd = OptRegs.Opts.get() + OptRegs.NumOpts;
-  return hash_combine(OptRegs.NumOpts,
-                      hash_combine_range(OStart, OEnd));
+  return hash_combine(OptRegs.NumOpts, hash_combine_range(OStart, OEnd));
 }
 
 /// Holds graph-level metadata relevant to PBQP RA problems.
@@ -136,10 +135,9 @@ private:
 public:
   using AllowedRegVecRef = AllowedRegVecPool::PoolRef;
 
-  GraphMetadata(MachineFunction &MF,
-                LiveIntervals &LIS,
+  GraphMetadata(MachineFunction &MF, LiveIntervals &LIS,
                 MachineBlockFrequencyInfo &MBFI)
-    : MF(MF), LIS(LIS), MBFI(MBFI) {}
+      : MF(MF), LIS(LIS), MBFI(MBFI) {}
 
   MachineFunction &MF;
   LiveIntervals &LIS;
@@ -198,7 +196,7 @@ public:
   }
 
   NodeMetadata(NodeMetadata &&) = default;
-  NodeMetadata& operator=(NodeMetadata &&) = default;
+  NodeMetadata &operator=(NodeMetadata &&) = default;
 
   void setVReg(Register VReg) { this->VReg = VReg; }
   Register getVReg() const { return VReg; }
@@ -206,9 +204,9 @@ public:
   void setAllowedRegs(GraphMetadata::AllowedRegVecRef AllowedRegs) {
     this->AllowedRegs = std::move(AllowedRegs);
   }
-  const AllowedRegVector& getAllowedRegs() const { return *AllowedRegs; }
+  const AllowedRegVector &getAllowedRegs() const { return *AllowedRegs; }
 
-  void setup(const Vector& Costs) {
+  void setup(const Vector &Costs) {
     NumOpts = Costs.getLength() - 1;
     OptUnsafeEdges = std::unique_ptr<unsigned[]>(new unsigned[NumOpts]());
   }
@@ -226,26 +224,26 @@ public:
 #endif
   }
 
-  void handleAddEdge(const MatrixMetadata& MD, bool Transpose) {
+  void handleAddEdge(const MatrixMetadata &MD, bool Transpose) {
     DeniedOpts += Transpose ? MD.getWorstRow() : MD.getWorstCol();
-    const bool* UnsafeOpts =
-      Transpose ? MD.getUnsafeCols() : MD.getUnsafeRows();
+    const bool *UnsafeOpts =
+        Transpose ? MD.getUnsafeCols() : MD.getUnsafeRows();
     for (unsigned i = 0; i < NumOpts; ++i)
       OptUnsafeEdges[i] += UnsafeOpts[i];
   }
 
-  void handleRemoveEdge(const MatrixMetadata& MD, bool Transpose) {
+  void handleRemoveEdge(const MatrixMetadata &MD, bool Transpose) {
     DeniedOpts -= Transpose ? MD.getWorstRow() : MD.getWorstCol();
-    const bool* UnsafeOpts =
-      Transpose ? MD.getUnsafeCols() : MD.getUnsafeRows();
+    const bool *UnsafeOpts =
+        Transpose ? MD.getUnsafeCols() : MD.getUnsafeRows();
     for (unsigned i = 0; i < NumOpts; ++i)
       OptUnsafeEdges[i] -= UnsafeOpts[i];
   }
 
   bool isConservativelyAllocatable() const {
     return (DeniedOpts < NumOpts) ||
-      (std::find(&OptUnsafeEdges[0], &OptUnsafeEdges[NumOpts], 0) !=
-       &OptUnsafeEdges[NumOpts]);
+           (std::find(&OptUnsafeEdges[0], &OptUnsafeEdges[NumOpts], 0) !=
+            &OptUnsafeEdges[NumOpts]);
   }
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -305,7 +303,7 @@ public:
   }
 
   void handleRemoveNode(NodeId NId) {}
-  void handleSetNodeCosts(NodeId NId, const Vector& newCosts) {}
+  void handleSetNodeCosts(NodeId NId, const Vector &newCosts) {}
 
   void handleAddEdge(EdgeId EId) {
     handleReconnectEdge(EId, G.getEdgeNode1Id(EId));
@@ -313,33 +311,33 @@ public:
   }
 
   void handleDisconnectEdge(EdgeId EId, NodeId NId) {
-    NodeMetadata& NMd = G.getNodeMetadata(NId);
-    const MatrixMetadata& MMd = G.getEdgeCosts(EId).getMetadata();
+    NodeMetadata &NMd = G.getNodeMetadata(NId);
+    const MatrixMetadata &MMd = G.getEdgeCosts(EId).getMetadata();
     NMd.handleRemoveEdge(MMd, NId == G.getEdgeNode2Id(EId));
     promote(NId, NMd);
   }
 
   void handleReconnectEdge(EdgeId EId, NodeId NId) {
-    NodeMetadata& NMd = G.getNodeMetadata(NId);
-    const MatrixMetadata& MMd = G.getEdgeCosts(EId).getMetadata();
+    NodeMetadata &NMd = G.getNodeMetadata(NId);
+    const MatrixMetadata &MMd = G.getEdgeCosts(EId).getMetadata();
     NMd.handleAddEdge(MMd, NId == G.getEdgeNode2Id(EId));
   }
 
-  void handleUpdateCosts(EdgeId EId, const Matrix& NewCosts) {
+  void handleUpdateCosts(EdgeId EId, const Matrix &NewCosts) {
     NodeId N1Id = G.getEdgeNode1Id(EId);
     NodeId N2Id = G.getEdgeNode2Id(EId);
-    NodeMetadata& N1Md = G.getNodeMetadata(N1Id);
-    NodeMetadata& N2Md = G.getNodeMetadata(N2Id);
+    NodeMetadata &N1Md = G.getNodeMetadata(N1Id);
+    NodeMetadata &N2Md = G.getNodeMetadata(N2Id);
     bool Transpose = N1Id != G.getEdgeNode1Id(EId);
 
     // Metadata are computed incrementally. First, update them
     // by removing the old cost.
-    const MatrixMetadata& OldMMd = G.getEdgeCosts(EId).getMetadata();
+    const MatrixMetadata &OldMMd = G.getEdgeCosts(EId).getMetadata();
     N1Md.handleRemoveEdge(OldMMd, Transpose);
     N2Md.handleRemoveEdge(OldMMd, !Transpose);
 
     // And update now the metadata with the new cost.
-    const MatrixMetadata& MMd = NewCosts.getMetadata();
+    const MatrixMetadata &MMd = NewCosts.getMetadata();
     N1Md.handleAddEdge(MMd, Transpose);
     N2Md.handleAddEdge(MMd, !Transpose);
 
@@ -350,12 +348,12 @@ public:
   }
 
 private:
-  void promote(NodeId NId, NodeMetadata& NMd) {
+  void promote(NodeId NId, NodeMetadata &NMd) {
     if (G.getNodeDegree(NId) == 3) {
       // This node is becoming optimally reducible.
       moveToOptimallyReducibleNodes(NId);
     } else if (NMd.getReductionState() ==
-               NodeMetadata::NotProvablyAllocatable &&
+                   NodeMetadata::NotProvablyAllocatable &&
                NMd.isConservativelyAllocatable()) {
       // This node just became conservatively allocatable.
       moveToConservativelyAllocatableNodes(NId);
@@ -364,22 +362,23 @@ private:
 
   void removeFromCurrentSet(NodeId NId) {
     switch (G.getNodeMetadata(NId).getReductionState()) {
-    case NodeMetadata::Unprocessed: break;
+    case NodeMetadata::Unprocessed:
+      break;
     case NodeMetadata::OptimallyReducible:
       assert(OptimallyReducibleNodes.find(NId) !=
-             OptimallyReducibleNodes.end() &&
+                 OptimallyReducibleNodes.end() &&
              "Node not in optimally reducible set.");
       OptimallyReducibleNodes.erase(NId);
       break;
     case NodeMetadata::ConservativelyAllocatable:
       assert(ConservativelyAllocatableNodes.find(NId) !=
-             ConservativelyAllocatableNodes.end() &&
+                 ConservativelyAllocatableNodes.end() &&
              "Node not in conservatively allocatable set.");
       ConservativelyAllocatableNodes.erase(NId);
       break;
     case NodeMetadata::NotProvablyAllocatable:
       assert(NotProvablyAllocatableNodes.find(NId) !=
-             NotProvablyAllocatableNodes.end() &&
+                 NotProvablyAllocatableNodes.end() &&
              "Node not in not-provably-allocatable set.");
       NotProvablyAllocatableNodes.erase(NId);
       break;
@@ -389,22 +388,21 @@ private:
   void moveToOptimallyReducibleNodes(NodeId NId) {
     removeFromCurrentSet(NId);
     OptimallyReducibleNodes.insert(NId);
-    G.getNodeMetadata(NId).setReductionState(
-      NodeMetadata::OptimallyReducible);
+    G.getNodeMetadata(NId).setReductionState(NodeMetadata::OptimallyReducible);
   }
 
   void moveToConservativelyAllocatableNodes(NodeId NId) {
     removeFromCurrentSet(NId);
     ConservativelyAllocatableNodes.insert(NId);
     G.getNodeMetadata(NId).setReductionState(
-      NodeMetadata::ConservativelyAllocatable);
+        NodeMetadata::ConservativelyAllocatable);
   }
 
   void moveToNotProvablyAllocatableNodes(NodeId NId) {
     removeFromCurrentSet(NId);
     NotProvablyAllocatableNodes.insert(NId);
     G.getNodeMetadata(NId).setReductionState(
-      NodeMetadata::NotProvablyAllocatable);
+        NodeMetadata::NotProvablyAllocatable);
   }
 
   void setup() {
@@ -447,7 +445,8 @@ private:
         case 2:
           applyR2(G, NId);
           break;
-        default: llvm_unreachable("Not an optimally reducible node.");
+        default:
+          llvm_unreachable("Not an optimally reducible node.");
         }
       } else if (!ConservativelyAllocatableNodes.empty()) {
         // Conservatively allocatable nodes will never spill. For now just
@@ -477,7 +476,7 @@ private:
 
   class SpillCostComparator {
   public:
-    SpillCostComparator(const Graph& G) : G(G) {}
+    SpillCostComparator(const Graph &G) : G(G) {}
 
     bool operator()(NodeId N1Id, NodeId N2Id) {
       PBQPNum N1SC = G.getNodeCosts(N1Id)[0];
@@ -488,10 +487,10 @@ private:
     }
 
   private:
-    const Graph& G;
+    const Graph &G;
   };
 
-  Graph& G;
+  Graph &G;
   using NodeSet = std::set<NodeId>;
   NodeSet OptimallyReducibleNodes;
   NodeSet ConservativelyAllocatableNodes;
@@ -517,7 +516,7 @@ public:
   void printDot(raw_ostream &OS) const;
 };
 
-inline Solution solve(PBQPRAGraph& G) {
+inline Solution solve(PBQPRAGraph &G) {
   if (G.empty())
     return Solution();
   RegAllocSolverImpl RegAllocSolver(G);
@@ -528,8 +527,7 @@ inline Solution solve(PBQPRAGraph& G) {
 } // end namespace PBQP
 
 /// Create a PBQP register allocator instance.
-FunctionPass *
-createPBQPRegisterAllocator(char *customPassID = nullptr);
+FunctionPass *createPBQPRegisterAllocator(char *customPassID = nullptr);
 
 } // end namespace llvm
 

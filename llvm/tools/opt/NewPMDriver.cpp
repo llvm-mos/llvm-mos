@@ -173,7 +173,6 @@ static cl::opt<bool> DisablePipelineVerification(
              "-print-pipeline-passes can be used to create a pipeline."),
     cl::Hidden);
 
-
 static cl::opt<PGOKind>
     PGOKindFlag("pgo-kind", cl::init(NoPGO), cl::Hidden,
                 cl::desc("The kind of profile guided optimization"),
@@ -184,8 +183,8 @@ static cl::opt<PGOKind>
                                       "Use instrumented profile to guide PGO."),
                            clEnumValN(SampleUse, "pgo-sample-use-pipeline",
                                       "Use sampled profile to guide PGO.")));
-static cl::opt<std::string> ProfileFile("profile-file",
-                                 cl::desc("Path to the profile."), cl::Hidden);
+static cl::opt<std::string>
+    ProfileFile("profile-file", cl::desc("Path to the profile."), cl::Hidden);
 static cl::opt<std::string>
     MemoryProfileFile("memory-profile-file",
                       cl::desc("Path to the memory profile."), cl::Hidden);
@@ -436,8 +435,7 @@ bool llvm::runPassPipeline(
   } else if (VerifyEachDebugInfoPreserve) {
     Debugify.setDebugInfoBeforePass(DebugInfoBeforePass);
     Debugify.setDebugifyMode(DebugifyMode::OriginalDebugInfo);
-    Debugify.setOrigDIVerifyBugsReportFilePath(
-      VerifyDIPreserveExport);
+    Debugify.setOrigDIVerifyBugsReportFilePath(VerifyDIPreserveExport);
     Debugify.registerCallbacks(PIC, MAM);
   }
 

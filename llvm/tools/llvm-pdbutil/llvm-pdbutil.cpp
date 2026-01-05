@@ -341,14 +341,18 @@ cl::list<std::string> IncludeCompilands(
     "include-compilands",
     cl::desc("Include only compilands those which match a regular expression"),
     cl::cat(FilterCategory), cl::sub(PrettySubcommand));
-cl::opt<uint32_t> SizeThreshold(
-    "min-type-size", cl::desc("Displays only those types which are greater "
-                              "than or equal to the specified size."),
-    cl::init(0), cl::cat(FilterCategory), cl::sub(PrettySubcommand));
-cl::opt<uint32_t> PaddingThreshold(
-    "min-class-padding", cl::desc("Displays only those classes which have at "
-                                  "least the specified amount of padding."),
-    cl::init(0), cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+cl::opt<uint32_t>
+    SizeThreshold("min-type-size",
+                  cl::desc("Displays only those types which are greater "
+                           "than or equal to the specified size."),
+                  cl::init(0), cl::cat(FilterCategory),
+                  cl::sub(PrettySubcommand));
+cl::opt<uint32_t>
+    PaddingThreshold("min-class-padding",
+                     cl::desc("Displays only those classes which have at "
+                              "least the specified amount of padding."),
+                     cl::init(0), cl::cat(FilterCategory),
+                     cl::sub(PrettySubcommand));
 cl::opt<uint32_t> ImmediatePaddingThreshold(
     "min-class-padding-imm",
     cl::desc("Displays only those classes which have at least the specified "
@@ -368,7 +372,7 @@ cl::opt<bool>
 cl::opt<bool> NoEnumDefs("no-enum-definitions",
                          cl::desc("Don't display full enum definitions"),
                          cl::cat(FilterCategory), cl::sub(PrettySubcommand));
-}
+} // namespace pretty
 
 static cl::OptionCategory FileOptions("Module & File Options");
 
@@ -470,14 +474,14 @@ cl::opt<bool> DumpSymbolStats(
     "sym-stats",
     cl::desc("Dump a detailed breakdown of symbol usage/size for each module"),
     cl::cat(MsfOptions), cl::sub(DumpSubcommand));
-cl::opt<bool> DumpTypeStats(
-    "type-stats",
-    cl::desc("Dump a detailed breakdown of type usage/size"),
-    cl::cat(MsfOptions), cl::sub(DumpSubcommand));
-cl::opt<bool> DumpIDStats(
-    "id-stats",
-    cl::desc("Dump a detailed breakdown of IPI types usage/size"),
-    cl::cat(MsfOptions), cl::sub(DumpSubcommand));
+cl::opt<bool>
+    DumpTypeStats("type-stats",
+                  cl::desc("Dump a detailed breakdown of type usage/size"),
+                  cl::cat(MsfOptions), cl::sub(DumpSubcommand));
+cl::opt<bool>
+    DumpIDStats("id-stats",
+                cl::desc("Dump a detailed breakdown of IPI types usage/size"),
+                cl::cat(MsfOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpUdtStats(
     "udt-stats",
     cl::desc("Dump a detailed breakdown of S_UDT record usage / stats"),
@@ -649,7 +653,7 @@ static cl::list<std::string> InputFilenames(cl::Positional,
                                             cl::desc("<input PDB files>"),
                                             cl::OneOrMore,
                                             cl::sub(DumpSubcommand));
-}
+} // namespace dump
 
 namespace yaml2pdb {
 cl::opt<std::string>
@@ -659,11 +663,10 @@ cl::opt<std::string>
 cl::opt<std::string> InputFilename(cl::Positional,
                                    cl::desc("<input YAML file>"), cl::Required,
                                    cl::sub(YamlToPdbSubcommand));
-}
+} // namespace yaml2pdb
 
 namespace pdb2yaml {
-cl::opt<bool> All("all",
-                  cl::desc("Dump everything we know how to dump."),
+cl::opt<bool> All("all", cl::desc("Dump everything we know how to dump."),
                   cl::sub(PdbToYamlSubcommand), cl::init(false));
 cl::opt<bool> NoFileHeaders("no-file-headers",
                             cl::desc("Do not dump MSF file headers"),
@@ -734,7 +737,7 @@ static cl::list<std::string> InputFilenames(cl::Positional,
 cl::opt<std::string>
     PdbOutputFile("pdb", cl::desc("the name of the PDB file to write"),
                   cl::sub(MergeSubcommand));
-}
+} // namespace merge
 
 namespace explain {
 cl::list<std::string> InputFilename(cl::Positional,
@@ -777,7 +780,7 @@ cl::opt<bool> ForceName("name",
                         cl::sub(ExportSubcommand), cl::Optional,
                         cl::init(false));
 } // namespace exportstream
-}
+} // namespace opts
 
 static ExitOnError ExitOnErr;
 
@@ -788,7 +791,8 @@ static void yamlToPdb(StringRef Path) {
                                    /*RequiresNullTerminator=*/false);
 
   if (ErrorOrBuffer.getError()) {
-    ExitOnErr(createFileError(Path, errorCodeToError(ErrorOrBuffer.getError())));
+    ExitOnErr(
+        createFileError(Path, errorCodeToError(ErrorOrBuffer.getError())));
   }
 
   std::unique_ptr<MemoryBuffer> &Buffer = ErrorOrBuffer.get();
@@ -1379,8 +1383,8 @@ static void mergePdbs() {
     }
     if (File.hasPDBIpiStream()) {
       auto &Ipi = ExitOnErr(File.getPDBIpiStream());
-      ExitOnErr(codeview::mergeIdRecords(MergedIpi, TypeMap, IdMap,
-                                         Ipi.typeArray()));
+      ExitOnErr(
+          codeview::mergeIdRecords(MergedIpi, TypeMap, IdMap, Ipi.typeArray()));
     }
   }
 

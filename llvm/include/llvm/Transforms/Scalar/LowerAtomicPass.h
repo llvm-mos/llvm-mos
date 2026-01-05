@@ -25,6 +25,6 @@ public:
   static bool isRequired() { return true; }
 };
 
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_LOWERATOMICPASS_H

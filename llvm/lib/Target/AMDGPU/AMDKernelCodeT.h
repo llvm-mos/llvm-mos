@@ -1,4 +1,5 @@
-//===-- AMDGPUKernelCodeT.h - Print AMDGPU assembly code ---------*- C++ -*-===//
+//===-- AMDGPUKernelCodeT.h - Print AMDGPU assembly code ---------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,12 +42,11 @@ enum amd_code_version_t {
 
 // Sets val bits for specified mask in specified dst packed instance.
 #define AMD_HSA_BITS_SET(dst, mask, val)                                       \
-  dst &= (~(1 << mask ## _SHIFT) & ~mask);                                     \
-  dst |= (((val) << mask ## _SHIFT) & mask)
+  dst &= (~(1 << mask##_SHIFT) & ~mask);                                       \
+  dst |= (((val) << mask##_SHIFT) & mask)
 
 // Gets bits for specified mask from specified src packed instance.
-#define AMD_HSA_BITS_GET(src, mask)                                            \
-  ((src & mask) >> mask ## _SHIFT)                                             \
+#define AMD_HSA_BITS_GET(src, mask) ((src & mask) >> mask##_SHIFT)
 
 /// The values used to define the number of bytes to use for the
 /// swizzle element size.
@@ -84,58 +84,83 @@ enum amd_code_property_mask_t {
 
   AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER_SHIFT = 0,
   AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER_WIDTH = 1,
-  AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER = ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER_WIDTH) - 1) << AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER_SHIFT,
+  AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER =
+      ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER_SHIFT,
 
   AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR_SHIFT = 1,
   AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR_WIDTH = 1,
-  AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR = ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR_WIDTH) - 1) << AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR_SHIFT,
+  AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR =
+      ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR_SHIFT,
 
   AMD_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR_SHIFT = 2,
   AMD_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR_WIDTH = 1,
-  AMD_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR = ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR_WIDTH) - 1) << AMD_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR_SHIFT,
+  AMD_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR =
+      ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR_SHIFT,
 
   AMD_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR_SHIFT = 3,
   AMD_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR_WIDTH = 1,
-  AMD_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR = ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR_WIDTH) - 1) << AMD_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR_SHIFT,
+  AMD_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR =
+      ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR_SHIFT,
 
   AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID_SHIFT = 4,
   AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID_WIDTH = 1,
-  AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID = ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID_WIDTH) - 1) << AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID_SHIFT,
+  AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID =
+      ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID_SHIFT,
 
   AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT_SHIFT = 5,
   AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT_WIDTH = 1,
-  AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT = ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT_WIDTH) - 1) << AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT_SHIFT,
+  AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT =
+      ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT_SHIFT,
 
   AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE_SHIFT = 6,
   AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE_WIDTH = 1,
-  AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE = ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE_WIDTH) - 1) << AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE_SHIFT,
+  AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE =
+      ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE_SHIFT,
 
   AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_X_SHIFT = 7,
   AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_X_WIDTH = 1,
-  AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_X = ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_X_WIDTH) - 1) << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_X_SHIFT,
+  AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_X =
+      ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_X_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_X_SHIFT,
 
   AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Y_SHIFT = 8,
   AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Y_WIDTH = 1,
-  AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Y = ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Y_WIDTH) - 1) << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Y_SHIFT,
+  AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Y =
+      ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Y_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Y_SHIFT,
 
   AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Z_SHIFT = 9,
   AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Z_WIDTH = 1,
-  AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Z = ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Z_WIDTH) - 1) << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Z_SHIFT,
+  AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Z =
+      ((1 << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Z_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Z_SHIFT,
 
   AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_SHIFT = 10,
   AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_WIDTH = 1,
-  AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32 = ((1 << AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_WIDTH) - 1) << AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_SHIFT,
+  AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32 =
+      ((1 << AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_SHIFT,
 
   AMD_CODE_PROPERTY_RESERVED1_SHIFT = 11,
   AMD_CODE_PROPERTY_RESERVED1_WIDTH = 5,
-  AMD_CODE_PROPERTY_RESERVED1 = ((1 << AMD_CODE_PROPERTY_RESERVED1_WIDTH) - 1) << AMD_CODE_PROPERTY_RESERVED1_SHIFT,
+  AMD_CODE_PROPERTY_RESERVED1 = ((1 << AMD_CODE_PROPERTY_RESERVED1_WIDTH) - 1)
+                                << AMD_CODE_PROPERTY_RESERVED1_SHIFT,
 
   /// Control wave ID base counter for GDS ordered-append. Used to set
   /// COMPUTE_DISPATCH_INITIATOR.ORDERED_APPEND_ENBL. (Not sure if
   /// ORDERED_APPEND_MODE also needs to be settable)
   AMD_CODE_PROPERTY_ENABLE_ORDERED_APPEND_GDS_SHIFT = 16,
   AMD_CODE_PROPERTY_ENABLE_ORDERED_APPEND_GDS_WIDTH = 1,
-  AMD_CODE_PROPERTY_ENABLE_ORDERED_APPEND_GDS = ((1 << AMD_CODE_PROPERTY_ENABLE_ORDERED_APPEND_GDS_WIDTH) - 1) << AMD_CODE_PROPERTY_ENABLE_ORDERED_APPEND_GDS_SHIFT,
+  AMD_CODE_PROPERTY_ENABLE_ORDERED_APPEND_GDS =
+      ((1 << AMD_CODE_PROPERTY_ENABLE_ORDERED_APPEND_GDS_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_ENABLE_ORDERED_APPEND_GDS_SHIFT,
 
   /// The interleave (swizzle) element size in bytes required by the
   /// code for private memory. This must be 2, 4, 8 or 16. This value
@@ -160,7 +185,9 @@ enum amd_code_property_mask_t {
   /// uSE VALUES FROM THE AMD_ELEMENT_BYTE_SIZE_T ENUM.
   AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE_SHIFT = 17,
   AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE_WIDTH = 2,
-  AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE = ((1 << AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE_WIDTH) - 1) << AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE_SHIFT,
+  AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE =
+      ((1 << AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE_SHIFT,
 
   /// Are global memory addresses 64 bits. Must match
   /// amd_kernel_code_t.hsail_machine_model ==
@@ -169,7 +196,8 @@ enum amd_code_property_mask_t {
   /// SH_MEM_CONFIG.ADDRESS_MODE (GFX8 (VI)+).
   AMD_CODE_PROPERTY_IS_PTR64_SHIFT = 19,
   AMD_CODE_PROPERTY_IS_PTR64_WIDTH = 1,
-  AMD_CODE_PROPERTY_IS_PTR64 = ((1 << AMD_CODE_PROPERTY_IS_PTR64_WIDTH) - 1) << AMD_CODE_PROPERTY_IS_PTR64_SHIFT,
+  AMD_CODE_PROPERTY_IS_PTR64 = ((1 << AMD_CODE_PROPERTY_IS_PTR64_WIDTH) - 1)
+                               << AMD_CODE_PROPERTY_IS_PTR64_SHIFT,
 
   /// Indicate if the generated ISA is using a dynamically sized call
   /// stack. This can happen if calls are implemented using a call
@@ -181,45 +209,52 @@ enum amd_code_property_mask_t {
   /// for the call stack.
   AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK_SHIFT = 20,
   AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK_WIDTH = 1,
-  AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK = ((1 << AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK_WIDTH) - 1) << AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK_SHIFT,
+  AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK =
+      ((1 << AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK_SHIFT,
 
   /// Indicate if code generated has support for debugging.
   AMD_CODE_PROPERTY_IS_DEBUG_SUPPORTED_SHIFT = 21,
   AMD_CODE_PROPERTY_IS_DEBUG_SUPPORTED_WIDTH = 1,
-  AMD_CODE_PROPERTY_IS_DEBUG_SUPPORTED = ((1 << AMD_CODE_PROPERTY_IS_DEBUG_SUPPORTED_WIDTH) - 1) << AMD_CODE_PROPERTY_IS_DEBUG_SUPPORTED_SHIFT,
+  AMD_CODE_PROPERTY_IS_DEBUG_SUPPORTED =
+      ((1 << AMD_CODE_PROPERTY_IS_DEBUG_SUPPORTED_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_IS_DEBUG_SUPPORTED_SHIFT,
 
   AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED_SHIFT = 22,
   AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED_WIDTH = 1,
-  AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED = ((1 << AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED_WIDTH) - 1) << AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED_SHIFT,
+  AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED =
+      ((1 << AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED_WIDTH) - 1)
+      << AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED_SHIFT,
 
   AMD_CODE_PROPERTY_RESERVED2_SHIFT = 23,
   AMD_CODE_PROPERTY_RESERVED2_WIDTH = 9,
-  AMD_CODE_PROPERTY_RESERVED2 = ((1 << AMD_CODE_PROPERTY_RESERVED2_WIDTH) - 1) << AMD_CODE_PROPERTY_RESERVED2_SHIFT
+  AMD_CODE_PROPERTY_RESERVED2 = ((1 << AMD_CODE_PROPERTY_RESERVED2_WIDTH) - 1)
+                                << AMD_CODE_PROPERTY_RESERVED2_SHIFT
 };
 
 /// The hsa_ext_control_directives_t specifies the values for the HSAIL
 /// control directives. These control how the finalizer generates code. This
-/// struct is used both as an argument to hsaFinalizeKernel to specify values for
-/// the control directives, and is used in HsaKernelCode to record the values of
-/// the control directives that the finalize used when generating the code which
-/// either came from the finalizer argument or explicit HSAIL control
+/// struct is used both as an argument to hsaFinalizeKernel to specify values
+/// for the control directives, and is used in HsaKernelCode to record the
+/// values of the control directives that the finalize used when generating the
+/// code which either came from the finalizer argument or explicit HSAIL control
 /// directives. See the definition of the control directives in HSA Programmer's
 /// Reference Manual which also defines how the values specified as finalizer
 /// arguments have to agree with the control directives in the HSAIL code.
 typedef struct hsa_ext_control_directives_s {
   /// This is a bit set indicating which control directives have been
-  /// specified. If the value is 0 then there are no control directives specified
-  /// and the rest of the fields can be ignored. The bits are accessed using the
-  /// hsa_ext_control_directives_present_mask_t. Any control directive that is not
-  /// enabled in this bit set must have the value of all 0s.
+  /// specified. If the value is 0 then there are no control directives
+  /// specified and the rest of the fields can be ignored. The bits are accessed
+  /// using the hsa_ext_control_directives_present_mask_t. Any control directive
+  /// that is not enabled in this bit set must have the value of all 0s.
   hsa_ext_control_directive_present64_t enabled_control_directives;
 
   /// If enableBreakExceptions is not enabled then must be 0, otherwise must be
   /// non-0 and specifies the set of HSAIL exceptions that must have the BREAK
   /// policy enabled. If this set is not empty then the generated code may have
   /// lower performance than if the set is empty. If the kernel being finalized
-  /// has any enablebreakexceptions control directives, then the values specified
-  /// by this argument are unioned with the values in these control
+  /// has any enablebreakexceptions control directives, then the values
+  /// specified by this argument are unioned with the values in these control
   /// directives. If any of the functions the kernel calls have an
   /// enablebreakexceptions control directive, then they must be equal or a
   /// subset of, this union.
@@ -247,15 +282,15 @@ typedef struct hsa_ext_control_directives_s {
   /// used by each work-group by adding this value to the group memory required
   /// for all group segment variables used by the kernel and all functions it
   /// calls, and group memory used to implement other HSAIL features such as
-  /// fbarriers and the detect exception operations. This can allow the finalizer
-  /// to determine the expected number of work-groups that can be executed by a
-  /// compute unit and allow more resources to be allocated to the work-items if
-  /// it is known that fewer work-groups can be executed due to group memory
-  /// limitations.
+  /// fbarriers and the detect exception operations. This can allow the
+  /// finalizer to determine the expected number of work-groups that can be
+  /// executed by a compute unit and allow more resources to be allocated to the
+  /// work-items if it is known that fewer work-groups can be executed due to
+  /// group memory limitations.
   uint32_t max_dynamic_group_size;
 
-  /// If maxFlatGridSize is not enabled then must be 0, otherwise must be greater
-  /// than 0. See HSA Programmer's Reference Manual description of
+  /// If maxFlatGridSize is not enabled then must be 0, otherwise must be
+  /// greater than 0. See HSA Programmer's Reference Manual description of
   /// maxflatgridsize control directive.
   uint32_t max_flat_grid_size;
 
@@ -272,13 +307,13 @@ typedef struct hsa_ext_control_directives_s {
   /// can be ignored by the finalizer. If the kernel being finalized, or any of
   /// the functions it calls, has a requested control directive, then the values
   /// must be the same. This can be used to determine the number of resources
-  /// that should be allocated to a single work-group and work-item. For example,
-  /// a low value may allow more resources to be allocated, resulting in higher
-  /// per work-item performance, as it is known there will never be more than the
-  /// specified number of work-groups actually executing on the compute
-  /// unit. Conversely, a high value may allocate fewer resources, resulting in
-  /// lower per work-item performance, which is offset by the fact it allows more
-  /// work-groups to actually execute on the compute unit.
+  /// that should be allocated to a single work-group and work-item. For
+  /// example, a low value may allow more resources to be allocated, resulting
+  /// in higher per work-item performance, as it is known there will never be
+  /// more than the specified number of work-groups actually executing on the
+  /// compute unit. Conversely, a high value may allocate fewer resources,
+  /// resulting in lower per work-item performance, which is offset by the fact
+  /// it allows more work-groups to actually execute on the compute unit.
   uint32_t requested_workgroups_per_cu;
 
   /// If not enabled then all elements for Dim3 must be 0, otherwise every
@@ -289,24 +324,24 @@ typedef struct hsa_ext_control_directives_s {
   /// If requiredWorkgroupSize is not enabled then all elements for Dim3 must be
   /// 0, and the produced code can be dispatched with any legal work-group range
   /// consistent with the dispatch dimensions. Otherwise, the code produced must
-  /// always be dispatched with the specified work-group range. No element of the
-  /// specified range must be 0. It must be consistent with required_dimensions
-  /// and max_flat_workgroup_size. If the kernel being finalized, or any of the
-  /// functions it calls, has a requiredworkgroupsize control directive, then the
-  /// values must be the same. Specifying a value can allow the finalizer to
-  /// optimize work-group id operations, and if the number of work-items in the
-  /// work-group is less than the WAVESIZE then barrier operations can be
-  /// optimized to just a memory fence.
+  /// always be dispatched with the specified work-group range. No element of
+  /// the specified range must be 0. It must be consistent with
+  /// required_dimensions and max_flat_workgroup_size. If the kernel being
+  /// finalized, or any of the functions it calls, has a requiredworkgroupsize
+  /// control directive, then the values must be the same. Specifying a value
+  /// can allow the finalizer to optimize work-group id operations, and if the
+  /// number of work-items in the work-group is less than the WAVESIZE then
+  /// barrier operations can be optimized to just a memory fence.
   hsa_dim3_t required_workgroup_size;
 
   /// If requiredDim is not enabled then must be 0 and the produced kernel code
   /// can be dispatched with 1, 2 or 3 dimensions. If enabled then the value is
   /// 1..3 and the code produced must only be dispatched with a dimension that
-  /// matches. Other values are illegal. If the kernel being finalized, or any of
-  /// the functions it calls, has a requireddimsize control directive, then the
-  /// values must be the same. This can be used to optimize the code generated to
-  /// compute the absolute and flat work-group and work-item id, and the dim
-  /// HSAIL operations.
+  /// matches. Other values are illegal. If the kernel being finalized, or any
+  /// of the functions it calls, has a requireddimsize control directive, then
+  /// the values must be the same. This can be used to optimize the code
+  /// generated to compute the absolute and flat work-group and work-item id,
+  /// and the dim HSAIL operations.
   uint8_t required_dim;
 
   /// Reserved. Must be 0.
@@ -518,9 +553,9 @@ typedef struct hsa_ext_control_directives_s {
 ///     amd_kernel_code_t.globalMemoryCoherence
 ///
 /// When the Global Buffer is used to access the Kernarg segment, must add the
-/// dispatch packet kernArgPtr to a kernarg segment address before using this V#.
-/// Alternatively scalar loads can be used if the kernarg offset is uniform, as
-/// the kernarg segment is constant for the duration of the kernel execution.
+/// dispatch packet kernArgPtr to a kernarg segment address before using this
+/// V#. Alternatively scalar loads can be used if the kernarg offset is uniform,
+/// as the kernarg segment is constant for the duration of the kernel execution.
 ///
 
 struct amd_kernel_code_t {

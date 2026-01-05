@@ -90,8 +90,8 @@ void WinException::beginFunction(const MachineFunction *MF) {
                                PerEncoding != dwarf::DW_EH_PE_omit && PerFn);
 
   unsigned LSDAEncoding = TLOF.getLSDAEncoding();
-  shouldEmitLSDA = shouldEmitPersonality &&
-    LSDAEncoding != dwarf::DW_EH_PE_omit;
+  shouldEmitLSDA =
+      shouldEmitPersonality && LSDAEncoding != dwarf::DW_EH_PE_omit;
 
   // If we're not using CFI, we don't want the CFI or the personality, but we
   // might want EH tables if we had EH pads.
@@ -186,8 +186,7 @@ static MCSymbol *getMCSymbolForMBB(AsmPrinter *Asm,
                                FuncLinkageName + "@4HA");
 }
 
-void WinException::beginFunclet(const MachineBasicBlock &MBB,
-                                MCSymbol *Sym) {
+void WinException::beginFunclet(const MachineBasicBlock &MBB, MCSymbol *Sym) {
   CurrentFuncletEntry = &MBB;
 
   const Function &F = Asm->MF->getFunction();
@@ -265,7 +264,8 @@ void WinException::endFuncletImpl() {
 
       // If this is a C++ catch funclet (or the parent function),
       // emit a reference to the LSDA for the parent function.
-      StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F.getName());
+      StringRef FuncLinkageName =
+          GlobalValue::dropLLVMManglingEscape(F.getName());
       MCSymbol *FuncInfoXData = Asm->OutContext.getOrCreateSymbol(
           Twine("$cppxdata$", FuncLinkageName));
       Asm->OutStreamer->emitValue(create32bitRef(FuncInfoXData), 4);
@@ -345,17 +345,17 @@ int WinException::getFrameIndexOffset(int FrameIndex,
     StackOffset Offset =
         TFI.getFrameIndexReferencePreferSP(*Asm->MF, FrameIndex, UnusedReg,
                                            /*IgnoreSPUpdates*/ true);
-    assert(UnusedReg ==
-           Asm->MF->getSubtarget()
-               .getTargetLowering()
-               ->getStackPointerRegisterToSaveRestore());
+    assert(UnusedReg == Asm->MF->getSubtarget()
+                            .getTargetLowering()
+                            ->getStackPointerRegisterToSaveRestore());
     return Offset.getFixed();
   }
 
   // For 32-bit, offsets should be relative to the end of the EH registration
   // node. For 64-bit, it's relative to SP at the end of the prologue.
   assert(FuncInfo.EHRegNodeEndOffset != INT_MAX);
-  StackOffset Offset = TFI.getFrameIndexReference(*Asm->MF, FrameIndex, UnusedReg);
+  StackOffset Offset =
+      TFI.getFrameIndexReference(*Asm->MF, FrameIndex, UnusedReg);
   Offset += StackOffset::getFixed(FuncInfo.EHRegNodeEndOffset);
   assert(!Offset.getScalable() &&
          "Frame offsets with a scalable component are not supported");
@@ -650,8 +650,9 @@ void WinException::emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
     OS.emitValue(getLabel(BeginLabel), 4);
     AddComment("LabelEnd");
     OS.emitValue(getLabel(EndLabel), 4);
-    AddComment(UME.IsFinally ? "FinallyFunclet" : UME.Filter ? "FilterFunction"
-                                                             : "CatchAll");
+    AddComment(UME.IsFinally ? "FinallyFunclet"
+               : UME.Filter  ? "FilterFunction"
+                             : "CatchAll");
     OS.emitValue(FilterOrFinally, 4);
     AddComment(UME.IsFinally ? "Null" : "ExceptionHandler");
     OS.emitValue(ExceptOrNull, 4);

@@ -426,7 +426,8 @@ static void computeFunctionSummary(
       // Check if this is an alias to a function. If so, get the
       // called aliasee for the checks below.
       if (auto *GA = dyn_cast<GlobalAlias>(CalledValue)) {
-        assert(!CalledFunction && "Expected null called function in callsite for alias");
+        assert(!CalledFunction &&
+               "Expected null called function in callsite for alias");
         CalledFunction = dyn_cast<Function>(GA->getAliaseeObject());
       }
       // Check if this is a direct call to a known function or a known
@@ -799,8 +800,8 @@ static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
           LHSOffset == 0 &&
 
           // Also, the RHS should always point to somewhere within the vtable.
-          RHSOffset <=
-              static_cast<uint64_t>(DL.getTypeAllocSize(OrigGV.getInitializer()->getType()))) {
+          RHSOffset <= static_cast<uint64_t>(DL.getTypeAllocSize(
+                           OrigGV.getInitializer()->getType()))) {
         findFuncPointers(LHS, StartingOffset, M, Index, VTableFuncs, OrigGV);
       }
     }
@@ -890,7 +891,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
                                        Constant ? false : CanBeInternalized,
                                        Constant, V.getVCallVisibility());
   auto GVarSummary = std::make_unique<GlobalVarSummary>(Flags, VarFlags,
-                                                         RefEdges.takeVector());
+                                                        RefEdges.takeVector());
   if (NonRenamableLocal)
     CantBePromoted.insert(V.getGUID());
   if (NotEligibleForImport)
@@ -987,7 +988,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
           GlobalValue *GV = M.getNamedValue(Name);
           if (!GV)
             return;
-          assert(GV->isDeclaration() && "Def in module asm already has definition");
+          assert(GV->isDeclaration() &&
+                 "Def in module asm already has definition");
           GlobalValueSummary::GVFlags GVFlags(
               GlobalValue::InternalLinkage, GlobalValue::DefaultVisibility,
               /* NotEligibleToImport = */ true,
@@ -1144,8 +1146,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 
 AnalysisKey ModuleSummaryIndexAnalysis::Key;
 
-ModuleSummaryIndex
-ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
+ModuleSummaryIndex ModuleSummaryIndexAnalysis::run(Module &M,
+                                                   ModuleAnalysisManager &AM) {
   ProfileSummaryInfo &PSI = AM.getResult<ProfileSummaryAnalysis>(M);
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   bool NeedSSI = needsParamAccessSummary(M);

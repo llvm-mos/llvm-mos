@@ -86,9 +86,7 @@ class AliasSet : public ilist_node<AliasSet> {
   /// of the set. We represent these independently of the values of alias
   /// results in order to pack it into a single bit. Lattice goes from
   /// MustAlias to MayAlias.
-  enum AliasLattice {
-    SetMustAlias = 0, SetMayAlias = 1
-  };
+  enum AliasLattice { SetMustAlias = 0, SetMayAlias = 1 };
   unsigned Alias : 1;
 
   void addRef() { ++RefCount; }
@@ -107,7 +105,7 @@ public:
   bool isRef() const { return Access & RefAccess; }
   bool isMod() const { return Access & ModAccess; }
   bool isMustAlias() const { return Alias == SetMustAlias; }
-  bool isMayAlias()  const { return Alias == SetMayAlias; }
+  bool isMayAlias() const { return Alias == SetMayAlias; }
 
   /// Return true if this alias set should be ignored as part of the
   /// AliasSetTracker object.
@@ -155,7 +153,7 @@ public:
                                          BatchAAResults &AA) const;
 };
 
-inline raw_ostream& operator<<(raw_ostream &OS, const AliasSet &AS) {
+inline raw_ostream &operator<<(raw_ostream &OS, const AliasSet &AS) {
   AS.print(OS);
   return OS;
 }
@@ -216,10 +214,10 @@ public:
   using const_iterator = ilist<AliasSet>::const_iterator;
 
   const_iterator begin() const { return AliasSets.begin(); }
-  const_iterator end()   const { return AliasSets.end(); }
+  const_iterator end() const { return AliasSets.end(); }
 
   iterator begin() { return AliasSets.begin(); }
-  iterator end()   { return AliasSets.end(); }
+  iterator end() { return AliasSets.end(); }
 
   LLVM_ABI void print(raw_ostream &OS) const;
   LLVM_ABI void dump() const;
@@ -265,7 +263,7 @@ private:
   AliasSet *findAliasSetForUnknownInst(Instruction *Inst);
 };
 
-inline raw_ostream& operator<<(raw_ostream &OS, const AliasSetTracker &AST) {
+inline raw_ostream &operator<<(raw_ostream &OS, const AliasSetTracker &AST) {
   AST.print(OS);
   return OS;
 }

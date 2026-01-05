@@ -48,8 +48,8 @@ namespace sampleprof {
 ///   container.
 template <template <typename, typename, typename...> typename MapT,
           typename KeyT, typename ValueT, typename... MapTArgs>
-class HashKeyMap :
-    public MapT<decltype(hash_value(KeyT())), ValueT, MapTArgs...> {
+class HashKeyMap
+    : public MapT<decltype(hash_value(KeyT())), ValueT, MapTArgs...> {
 public:
   using base_type = MapT<decltype(hash_value(KeyT())), ValueT, MapTArgs...>;
   using key_type = decltype(hash_value(KeyT()));
@@ -116,13 +116,11 @@ public:
     return 0;
   }
 
-  iterator erase(const_iterator It) {
-    return base_type::erase(It);
-  }
+  iterator erase(const_iterator It) { return base_type::erase(It); }
 };
 
-}
+} // namespace sampleprof
 
-}
+} // namespace llvm
 
 #endif // LLVM_PROFILEDATA_HASHKEYMAP_H

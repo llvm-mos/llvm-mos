@@ -84,7 +84,7 @@ public:
   int getMoveF64ViaSpillFI(MachineFunction &MF, const TargetRegisterClass *RC);
 
   std::map<const char *, const Mips16HardFloatInfo::FuncSignature *>
-  StubsNeeded;
+      StubsNeeded;
 
 private:
   virtual void anchor();

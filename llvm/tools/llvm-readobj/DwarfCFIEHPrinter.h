@@ -98,8 +98,10 @@ void PrinterContext<ELFT>::printEHFrameHdr(const Elf_Phdr *EHFramePHdr) const {
   DictScope L(W, "EHFrameHeader");
   uint64_t EHFrameHdrAddress = EHFramePHdr->p_vaddr;
   W.startLine() << format("Address: 0x%" PRIx64 "\n", EHFrameHdrAddress);
-  W.startLine() << format("Offset: 0x%" PRIx64 "\n", (uint64_t)EHFramePHdr->p_offset);
-  W.startLine() << format("Size: 0x%" PRIx64 "\n", (uint64_t)EHFramePHdr->p_memsz);
+  W.startLine() << format("Offset: 0x%" PRIx64 "\n",
+                          (uint64_t)EHFramePHdr->p_offset);
+  W.startLine() << format("Size: 0x%" PRIx64 "\n",
+                          (uint64_t)EHFramePHdr->p_memsz);
 
   const object::ELFFile<ELFT> &Obj = ObjF.getELFFile();
   if (const Elf_Shdr *EHFrameHdr =

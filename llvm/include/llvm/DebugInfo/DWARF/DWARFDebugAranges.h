@@ -37,7 +37,7 @@ private:
 
   struct Range {
     explicit Range(uint64_t LowPC, uint64_t HighPC, uint64_t CUOffset)
-      : LowPC(LowPC), Length(HighPC - LowPC), CUOffset(CUOffset) {}
+        : LowPC(LowPC), Length(HighPC - LowPC), CUOffset(CUOffset) {}
 
     void setHighPC(uint64_t HighPC) {
       if (HighPC == -1ULL || HighPC <= LowPC)
@@ -52,12 +52,10 @@ private:
       return -1ULL;
     }
 
-    bool operator<(const Range &other) const {
-      return LowPC < other.LowPC;
-    }
+    bool operator<(const Range &other) const { return LowPC < other.LowPC; }
 
-    uint64_t LowPC; /// Start of address range.
-    uint64_t Length; /// End of address range (not including this address).
+    uint64_t LowPC;    /// Start of address range.
+    uint64_t Length;   /// End of address range (not including this address).
     uint64_t CUOffset; /// Offset of the compile unit or die.
   };
 

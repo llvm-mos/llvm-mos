@@ -29,8 +29,8 @@ public:
   // Clusters `Points` using DBSCAN with the given parameters. See the cc file
   // for more explanations on the algorithm.
   static Expected<BenchmarkClustering>
-  create(const std::vector<Benchmark> &Points, ModeE Mode,
-         size_t DbscanMinPts, double AnalysisClusteringEpsilon,
+  create(const std::vector<Benchmark> &Points, ModeE Mode, size_t DbscanMinPts,
+         double AnalysisClusteringEpsilon,
          const MCSubtargetInfo *SubtargetInfo = nullptr,
          const MCInstrInfo *InstrInfo = nullptr);
 
@@ -119,9 +119,8 @@ public:
   }
 
 private:
-  BenchmarkClustering(
-      const std::vector<Benchmark> &Points,
-      double AnalysisClusteringEpsilonSquared);
+  BenchmarkClustering(const std::vector<Benchmark> &Points,
+                      double AnalysisClusteringEpsilonSquared);
 
   Error validateAndSetup();
 

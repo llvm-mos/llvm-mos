@@ -198,7 +198,7 @@ public:
   /// TargetSubtargetInfo.  In debug builds, it verifies that the object being
   /// returned is of the correct type.
   template <typename STC> const STC &getSubtarget(const Function &F) const {
-    return *static_cast<const STC*>(getSubtargetImpl(F));
+    return *static_cast<const STC *>(getSubtargetImpl(F));
   }
 
   /// Create a DataLayout.
@@ -216,9 +216,7 @@ public:
   /// Get the pointer size for this target.
   ///
   /// This is the only time the DataLayout in the TargetMachine is used.
-  unsigned getPointerSize(unsigned AS) const {
-    return DL.getPointerSize(AS);
-  }
+  unsigned getPointerSize(unsigned AS) const { return DL.getPointerSize(AS); }
 
   unsigned getPointerSizeInBits(unsigned AS) const {
     return DL.getPointerSizeInBits(AS);
@@ -328,19 +326,13 @@ public:
 
   /// Return true if data objects should be emitted into their own section,
   /// corresponds to -fdata-sections.
-  bool getDataSections() const {
-    return Options.DataSections;
-  }
+  bool getDataSections() const { return Options.DataSections; }
 
   /// Return true if functions should be emitted into their own section,
   /// corresponding to -ffunction-sections.
-  bool getFunctionSections() const {
-    return Options.FunctionSections;
-  }
+  bool getFunctionSections() const { return Options.FunctionSections; }
 
-  virtual bool hasNoInitSection() const {
-    return false;
-  }
+  virtual bool hasNoInitSection() const { return false; }
 
   bool getEnableStaticDataPartitioning() const {
     return Options.EnableStaticDataPartitioning;
@@ -455,7 +447,9 @@ public:
 
   void getNameWithPrefix(SmallVectorImpl<char> &Name, const GlobalValue *GV,
                          Mangler &Mang, bool MayAlwaysUsePrivate = false) const;
-  virtual StringRef getSectionPrefix(const GlobalObject *GO) const { return {}; }
+  virtual StringRef getSectionPrefix(const GlobalObject *GO) const {
+    return {};
+  }
 
   MCSymbol *getSymbol(const GlobalValue *GV) const;
 

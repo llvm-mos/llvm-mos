@@ -194,7 +194,8 @@ void BTFTypeInt::emitType(MCStreamer &OS) {
 }
 
 BTFTypeEnum::BTFTypeEnum(const DICompositeType *ETy, uint32_t VLen,
-    bool IsSigned) : ETy(ETy) {
+                         bool IsSigned)
+    : ETy(ETy) {
   Kind = BTF::BTF_KIND_ENUM;
   BTFType.Info = IsSigned << 31 | Kind << 24 | VLen;
   BTFType.Size = roundupToBytes(ETy->getSizeInBits());
@@ -233,7 +234,8 @@ void BTFTypeEnum::emitType(MCStreamer &OS) {
 }
 
 BTFTypeEnum64::BTFTypeEnum64(const DICompositeType *ETy, uint32_t VLen,
-    bool IsSigned) : ETy(ETy) {
+                             bool IsSigned)
+    : ETy(ETy) {
   Kind = BTF::BTF_KIND_ENUM64;
   BTFType.Info = IsSigned << 31 | Kind << 24 | VLen;
   BTFType.Size = roundupToBytes(ETy->getSizeInBits());
@@ -437,7 +439,7 @@ void BTFTypeFuncProto::emitType(MCStreamer &OS) {
 }
 
 BTFTypeFunc::BTFTypeFunc(StringRef FuncName, uint32_t ProtoTypeId,
-    uint32_t Scope)
+                         uint32_t Scope)
     : Name(FuncName) {
   Kind = BTF::BTF_KIND_FUNC;
   BTFType.Info = (Kind << 24) | Scope;
@@ -647,10 +649,9 @@ void BTFDebug::visitSubroutineType(
 }
 
 void BTFDebug::processDeclAnnotations(DINodeArray Annotations,
-                                      uint32_t BaseTypeId,
-                                      int ComponentIdx) {
+                                      uint32_t BaseTypeId, int ComponentIdx) {
   if (!Annotations)
-     return;
+    return;
 
   for (const Metadata *Annotation : Annotations->operands()) {
     const MDNode *MD = cast<MDNode>(Annotation);
@@ -803,8 +804,7 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
         // For struct s { int b; char c[]; }, the c[] will be represented
         // as an array with Count = -1.
         auto TypeEntry =
-            std::make_unique<BTFTypeArray>(ElemTypeId,
-                Count >= 0 ? Count : 0);
+            std::make_unique<BTFTypeArray>(ElemTypeId, Count >= 0 ? Count : 0);
         if (I == 0)
           ElemTypeId = addType(std::move(TypeEntry), CTy);
         else
@@ -818,8 +818,8 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
   // The IR does not have a type for array index while BTF wants one.
   // So create an array index type if there is none.
   if (!ArrayIndexTypeId) {
-    auto TypeEntry = std::make_unique<BTFTypeInt>(dwarf::DW_ATE_unsigned, 32,
-                                                   0, "__ARRAY_SIZE_TYPE__");
+    auto TypeEntry = std::make_unique<BTFTypeInt>(dwarf::DW_ATE_unsigned, 32, 0,
+                                                  "__ARRAY_SIZE_TYPE__");
     ArrayIndexTypeId = addType(std::move(TypeEntry));
   }
 }
@@ -1189,8 +1189,7 @@ void BTFDebug::emitBTFSection() {
 void BTFDebug::emitBTFExtSection() {
   // Do not emit section if empty FuncInfoTable and LineInfoTable
   // and FieldRelocTable.
-  if (!FuncInfoTable.size() && !LineInfoTable.size() &&
-      !FieldRelocTable.size())
+  if (!FuncInfoTable.size() && !LineInfoTable.size() && !FieldRelocTable.size())
     return;
 
   MCContext &Ctx = OS.getContext();
@@ -1383,10 +1382,10 @@ void BTFDebug::generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,
     size_t FirstColon = AccessPattern.find_first_of(':');
     size_t SecondColon = AccessPattern.find_first_of(':', FirstColon + 1);
     StringRef IndexPattern = AccessPattern.substr(FirstDollar + 1);
-    StringRef RelocKindStr = AccessPattern.substr(FirstColon + 1,
-        SecondColon - FirstColon);
-    StringRef PatchImmStr = AccessPattern.substr(SecondColon + 1,
-        FirstDollar - SecondColon);
+    StringRef RelocKindStr =
+        AccessPattern.substr(FirstColon + 1, SecondColon - FirstColon);
+    StringRef PatchImmStr =
+        AccessPattern.substr(SecondColon + 1, FirstDollar - SecondColon);
 
     FieldReloc.OffsetNameOff = addString(IndexPattern);
     FieldReloc.RelocKind = std::stoull(std::string(RelocKindStr));

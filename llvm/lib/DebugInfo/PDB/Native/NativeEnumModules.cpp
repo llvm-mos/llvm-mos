@@ -36,5 +36,5 @@ std::unique_ptr<PDBSymbol> NativeEnumModules::getNext() {
 
 void NativeEnumModules::reset() { Index = 0; }
 
-}
-}
+} // namespace pdb
+} // namespace llvm

@@ -27,7 +27,7 @@ constexpr llvm::endianness Endianness = llvm::endianness::big;
 namespace FirstByte {
 #define HANDLE_MP_FIRST_BYTE(ID, NAME) constexpr uint8_t NAME = ID;
 #include "llvm/BinaryFormat/MsgPack.def"
-}
+} // namespace FirstByte
 
 /// Most significant bits used to identify "Fix" variants in MessagePack.
 ///
@@ -39,7 +39,7 @@ namespace FirstByte {
 namespace FixBits {
 #define HANDLE_MP_FIX_BITS(ID, NAME) constexpr uint8_t NAME = ID;
 #include "llvm/BinaryFormat/MsgPack.def"
-}
+} // namespace FixBits
 
 /// Mask of bits used to identify "Fix" variants in MessagePack.
 ///
@@ -52,7 +52,7 @@ namespace FixBits {
 namespace FixBitsMask {
 #define HANDLE_MP_FIX_BITS_MASK(ID, NAME) constexpr uint8_t NAME = ID;
 #include "llvm/BinaryFormat/MsgPack.def"
-}
+} // namespace FixBitsMask
 
 /// The maximum value or size encodable in "Fix" variants of formats.
 ///
@@ -61,7 +61,7 @@ namespace FixBitsMask {
 namespace FixMax {
 #define HANDLE_MP_FIX_MAX(ID, NAME) constexpr uint8_t NAME = ID;
 #include "llvm/BinaryFormat/MsgPack.def"
-}
+} // namespace FixMax
 
 /// The exact size encodable in "Fix" variants of formats.
 ///
@@ -71,7 +71,7 @@ namespace FixMax {
 namespace FixLen {
 #define HANDLE_MP_FIX_LEN(ID, NAME) constexpr uint8_t NAME = ID;
 #include "llvm/BinaryFormat/MsgPack.def"
-}
+} // namespace FixLen
 
 /// The minimum value or size encodable in "Fix" variants of formats.
 ///
@@ -84,7 +84,7 @@ namespace FixLen {
 namespace FixMin {
 #define HANDLE_MP_FIX_MIN(ID, NAME) constexpr int8_t NAME = ID;
 #include "llvm/BinaryFormat/MsgPack.def"
-}
+} // namespace FixMin
 
 } // end namespace msgpack
 } // end namespace llvm

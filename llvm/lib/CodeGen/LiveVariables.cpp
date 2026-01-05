@@ -125,14 +125,15 @@ void LiveVariables::MarkVirtRegAliveInBlock(
   // remove it.
   for (unsigned i = 0, e = VRInfo.Kills.size(); i != e; ++i)
     if (VRInfo.Kills[i]->getParent() == MBB) {
-      VRInfo.Kills.erase(VRInfo.Kills.begin()+i);  // Erase entry
+      VRInfo.Kills.erase(VRInfo.Kills.begin() + i); // Erase entry
       break;
     }
 
-  if (MBB == DefBlock) return;  // Terminate recursion
+  if (MBB == DefBlock)
+    return; // Terminate recursion
 
   if (VRInfo.AliveBlocks.test(BBNum))
-    return;  // We already know the block is live
+    return; // We already know the block is live
 
   // Mark the variable known alive in this bb
   VRInfo.AliveBlocks.set(BBNum);
@@ -222,7 +223,7 @@ MachineInstr *LiveVariables::FindLastPartialDef(Register Reg) {
       continue;
     unsigned Dist = DistanceMap[Def];
     if (Dist > LastDefDist) {
-      LastDef     = Def;
+      LastDef = Def;
       LastDefDist = Dist;
     }
   }
@@ -257,8 +258,8 @@ void LiveVariables::HandlePhysRegUse(Register Reg, MachineInstr &MI) {
   } else if (LastDef && !PhysRegUse[Reg.id()] &&
              !LastDef->findRegisterDefOperand(Reg, /*TRI=*/nullptr))
     // Last def defines the super register, add an implicit def of reg.
-    LastDef->addOperand(MachineOperand::CreateReg(Reg, true/*IsDef*/,
-                                                  true/*IsImp*/));
+    LastDef->addOperand(
+        MachineOperand::CreateReg(Reg, true /*IsDef*/, true /*IsImp*/));
 
   // Remember this use.
   for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
@@ -382,8 +383,8 @@ bool LiveVariables::HandlePhysRegKill(Register Reg, MachineInstr *MI) {
              LastRefOrPartRef != MI) {
     if (LastPartDef)
       // The last partial def kills the register.
-      LastPartDef->addOperand(MachineOperand::CreateReg(Reg, false/*IsDef*/,
-                                                true/*IsImp*/, true/*IsKill*/));
+      LastPartDef->addOperand(MachineOperand::CreateReg(
+          Reg, false /*IsDef*/, true /*IsImp*/, true /*IsKill*/));
     else {
       MachineOperand *MO =
           LastRefOrPartRef->findRegisterDefOperand(Reg, TRI, false, false);
@@ -459,7 +460,7 @@ void LiveVariables::HandlePhysRegDef(Register Reg, MachineInstr *MI,
   }
 
   if (MI)
-    Defs.push_back(Reg);  // Remember this def.
+    Defs.push_back(Reg); // Remember this def.
 }
 
 void LiveVariables::UpdatePhysRegDefs(MachineInstr &MI,
@@ -468,7 +469,7 @@ void LiveVariables::UpdatePhysRegDefs(MachineInstr &MI,
     Register Reg = Defs.pop_back_val();
     for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg)) {
       PhysRegDef[SubReg] = &MI;
-      PhysRegUse[SubReg]  = nullptr;
+      PhysRegUse[SubReg] = nullptr;
     }
   }
 }
@@ -612,7 +613,7 @@ void LiveVariables::analyze(MachineFunction &mf) {
   // register before its uses due to dominance properties of SSA (except for PHI
   // nodes, which are treated as a special case).
   MachineBasicBlock *Entry = &MF->front();
-  df_iterator_default_set<MachineBasicBlock*,16> Visited;
+  df_iterator_default_set<MachineBasicBlock *, 16> Visited;
 
   for (MachineBasicBlock *MBB : depth_first_ext(Entry, Visited)) {
     runOnBlock(MBB, NumRegs);
@@ -757,15 +758,15 @@ void LiveVariables::removeVirtualRegistersKilled(MachineInstr &MI) {
 /// particular, we want to map the variable information of a virtual register
 /// which is used in a PHI node. We map that to the BB the vreg is coming from.
 ///
-void LiveVariables::analyzePHINodes(const MachineFunction& Fn) {
+void LiveVariables::analyzePHINodes(const MachineFunction &Fn) {
   for (const auto &MBB : Fn)
     for (const auto &BBI : MBB) {
       if (!BBI.isPHI())
         break;
       for (unsigned i = 1, e = BBI.getNumOperands(); i != e; i += 2)
         if (BBI.getOperand(i).readsReg())
-          PHIVarInfo[BBI.getOperand(i + 1).getMBB()->getNumber()]
-            .push_back(BBI.getOperand(i).getReg());
+          PHIVarInfo[BBI.getOperand(i + 1).getMBB()->getNumber()].push_back(
+              BBI.getOperand(i).getReg());
     }
 }
 
@@ -782,7 +783,7 @@ bool LiveVariables::VarInfo::isLiveIn(const MachineBasicBlock &MBB,
   if (Def && Def->getParent() == &MBB)
     return false;
 
- // Reg was not defined in MBB, was it killed here?
+  // Reg was not defined in MBB, was it killed here?
   return findKill(&MBB);
 }
 
@@ -811,8 +812,7 @@ bool LiveVariables::isLiveOut(Register Reg, const MachineBasicBlock &MBB) {
 /// addNewBlock - Add a new basic block BB as an empty succcessor to DomBB. All
 /// variables that are live out of DomBB will be marked as passing live through
 /// BB.
-void LiveVariables::addNewBlock(MachineBasicBlock *BB,
-                                MachineBasicBlock *DomBB,
+void LiveVariables::addNewBlock(MachineBasicBlock *BB, MachineBasicBlock *DomBB,
                                 MachineBasicBlock *SuccBB) {
   const unsigned NumNew = BB->getNumber();
 
@@ -825,7 +825,7 @@ void LiveVariables::addNewBlock(MachineBasicBlock *BB,
 
     // All registers used by PHI nodes in SuccBB must be live through BB.
     for (unsigned i = 1, e = BBI->getNumOperands(); i != e; i += 2)
-      if (BBI->getOperand(i+1).getMBB() == BB)
+      if (BBI->getOperand(i + 1).getMBB() == BB)
         getVarInfo(BBI->getOperand(i).getReg()).AliveBlocks.set(NumNew);
   }
 
@@ -861,8 +861,7 @@ void LiveVariables::addNewBlock(MachineBasicBlock *BB,
 /// variables that are live out of DomBB will be marked as passing live through
 /// BB. LiveInSets[BB] is *not* updated (because it is not needed during
 /// PHIElimination).
-void LiveVariables::addNewBlock(MachineBasicBlock *BB,
-                                MachineBasicBlock *DomBB,
+void LiveVariables::addNewBlock(MachineBasicBlock *BB, MachineBasicBlock *DomBB,
                                 MachineBasicBlock *SuccBB,
                                 std::vector<SparseBitVector<>> &LiveInSets) {
   const unsigned NumNew = BB->getNumber();
@@ -874,13 +873,11 @@ void LiveVariables::addNewBlock(MachineBasicBlock *BB,
     VI.AliveBlocks.set(NumNew);
   }
   // All registers used by PHI nodes in SuccBB must be live through BB.
-  for (MachineBasicBlock::iterator BBI = SuccBB->begin(),
-         BBE = SuccBB->end();
+  for (MachineBasicBlock::iterator BBI = SuccBB->begin(), BBE = SuccBB->end();
        BBI != BBE && BBI->isPHI(); ++BBI) {
     for (unsigned i = 1, e = BBI->getNumOperands(); i != e; i += 2)
       if (BBI->getOperand(i + 1).getMBB() == BB &&
           BBI->getOperand(i).readsReg())
-        getVarInfo(BBI->getOperand(i).getReg())
-          .AliveBlocks.set(NumNew);
+        getVarInfo(BBI->getOperand(i).getReg()).AliveBlocks.set(NumNew);
   }
 }

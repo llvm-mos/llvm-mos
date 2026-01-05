@@ -17,10 +17,11 @@
 #include "ThumbRegisterInfo.h"
 
 namespace llvm {
-  class ARMSubtarget;
+class ARMSubtarget;
 
 class Thumb1InstrInfo : public ARMBaseInstrInfo {
   ThumbRegisterInfo RI;
+
 public:
   explicit Thumb1InstrInfo(const ARMSubtarget &STI);
 
@@ -53,9 +54,10 @@ public:
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool canCopyGluedNodeDuringSchedule(SDNode *N) const override;
+
 private:
   void expandLoadStackGuard(MachineBasicBlock::iterator MI) const override;
 };
-}
+} // namespace llvm
 
 #endif

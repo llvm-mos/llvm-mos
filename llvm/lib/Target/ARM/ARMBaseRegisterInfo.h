@@ -31,13 +31,13 @@ class LiveIntervals;
 /// Register allocation hints.
 namespace ARMRI {
 
-  enum {
-    // Used for LDRD register pairs
-    RegPairOdd  = 1,
-    RegPairEven = 2,
-    // Used to hint for lr in t2DoLoopStart
-    RegLR = 3
-  };
+enum {
+  // Used for LDRD register pairs
+  RegPairOdd = 1,
+  RegPairEven = 2,
+  // Used to hint for lr in t2DoLoopStart
+  RegLR = 3
+};
 
 } // end namespace ARMRI
 
@@ -62,8 +62,7 @@ protected:
 public:
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
-  const MCPhysReg *
-  getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
+  const MCPhysReg *getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
   const uint32_t *getNoPreservedMask() const override;
@@ -86,7 +85,7 @@ public:
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isAsmClobberable(const MachineFunction &MF,
-                       MCRegister PhysReg) const override;
+                        MCRegister PhysReg) const override;
   bool isInlineAsmReadOnlyReg(const MachineFunction &MF,
                               MCRegister PhysReg) const override;
 
@@ -145,17 +144,14 @@ public:
 
   bool requiresVirtualBaseRegisters(const MachineFunction &MF) const override;
 
-  bool eliminateFrameIndex(MachineBasicBlock::iterator II,
-                           int SPAdj, unsigned FIOperandNum,
+  bool eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
+                           unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 
   /// SrcRC and DstRC will be morphed into NewRC if this returns true
-  bool shouldCoalesce(MachineInstr *MI,
-                      const TargetRegisterClass *SrcRC,
-                      unsigned SubReg,
-                      const TargetRegisterClass *DstRC,
-                      unsigned DstSubReg,
-                      const TargetRegisterClass *NewRC,
+  bool shouldCoalesce(MachineInstr *MI, const TargetRegisterClass *SrcRC,
+                      unsigned SubReg, const TargetRegisterClass *DstRC,
+                      unsigned DstSubReg, const TargetRegisterClass *NewRC,
                       LiveIntervals &LIS) const override;
 
   int getSEHRegNum(unsigned i) const { return getEncodingValue(i); }

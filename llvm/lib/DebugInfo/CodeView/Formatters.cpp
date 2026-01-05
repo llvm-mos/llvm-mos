@@ -45,13 +45,13 @@ void GuidAdapter::format(raw_ostream &Stream, StringRef Style) {
     support::ubig64_t Data4;
   };
   const MSGuid *G = reinterpret_cast<const MSGuid *>(Item.data());
-  Stream
-      << '{' << format_hex_no_prefix(G->Data1, 8, /*Upper=*/true)
-      << '-' << format_hex_no_prefix(G->Data2, 4, /*Upper=*/true)
-      << '-' << format_hex_no_prefix(G->Data3, 4, /*Upper=*/true)
-      << '-' << format_hex_no_prefix(G->Data4 >> 48, 4, /*Upper=*/true) << '-'
-      << format_hex_no_prefix(G->Data4 & ((1ULL << 48) - 1), 12, /*Upper=*/true)
-      << '}';
+  Stream << '{' << format_hex_no_prefix(G->Data1, 8, /*Upper=*/true) << '-'
+         << format_hex_no_prefix(G->Data2, 4, /*Upper=*/true) << '-'
+         << format_hex_no_prefix(G->Data3, 4, /*Upper=*/true) << '-'
+         << format_hex_no_prefix(G->Data4 >> 48, 4, /*Upper=*/true) << '-'
+         << format_hex_no_prefix(G->Data4 & ((1ULL << 48) - 1), 12,
+                                 /*Upper=*/true)
+         << '}';
 }
 
 raw_ostream &llvm::codeview::operator<<(raw_ostream &OS, const GUID &Guid) {

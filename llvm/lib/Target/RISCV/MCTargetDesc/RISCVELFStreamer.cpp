@@ -117,9 +117,7 @@ void RISCVTargetELFStreamer::finish() {
   W.setELFHeaderEFlags(EFlags);
 }
 
-void RISCVTargetELFStreamer::reset() {
-  AttributeSection = nullptr;
-}
+void RISCVTargetELFStreamer::reset() { AttributeSection = nullptr; }
 
 void RISCVTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
   getStreamer().getAssembler().registerSymbol(Symbol);

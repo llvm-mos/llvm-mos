@@ -28,6 +28,6 @@ struct StripDeadPrototypesPass : PassInfoMixin<StripDeadPrototypesPass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_STRIPDEADPROTOTYPES_H

@@ -58,9 +58,9 @@ public:
 
   virtual ~AbstractLatticeFunction() = default;
 
-  LatticeVal getUndefVal()       const { return UndefVal; }
+  LatticeVal getUndefVal() const { return UndefVal; }
   LatticeVal getOverdefinedVal() const { return OverdefinedVal; }
-  LatticeVal getUntrackedVal()   const { return UntrackedVal; }
+  LatticeVal getUntrackedVal() const { return UntrackedVal; }
 
   /// IsUntrackedValue - If the specified LatticeKey is obviously uninteresting
   /// to the analysis (i.e., it would always return UntrackedVal), this

@@ -159,6 +159,6 @@ LLVM_ABI bool
 lowerGlobalIFuncUsersAsGlobalCtor(Module &M,
                                   ArrayRef<GlobalIFunc *> IFuncsToLower = {});
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_MODULEUTILS_H

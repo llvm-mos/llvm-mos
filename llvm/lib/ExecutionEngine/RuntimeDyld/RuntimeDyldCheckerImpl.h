@@ -20,8 +20,7 @@ class RuntimeDyldCheckerImpl {
   friend class RuntimeDyldChecker;
   friend class RuntimeDyldCheckerExprEval;
 
-  using IsSymbolValidFunction =
-    RuntimeDyldChecker::IsSymbolValidFunction;
+  using IsSymbolValidFunction = RuntimeDyldChecker::IsSymbolValidFunction;
   using GetSymbolInfoFunction = RuntimeDyldChecker::GetSymbolInfoFunction;
   using GetSectionInfoFunction = RuntimeDyldChecker::GetSectionInfoFunction;
   using GetStubInfoFunction = RuntimeDyldChecker::GetStubInfoFunction;
@@ -40,7 +39,6 @@ public:
   bool checkAllRulesInBuffer(StringRef RulePrefix, MemoryBuffer *MemBuf) const;
 
 private:
-
   // StubMap typedefs.
 
   Expected<JITSymbolResolver::LookupResult>
@@ -80,6 +78,6 @@ private:
   SubtargetFeatures TF;
   llvm::raw_ostream &ErrStream;
 };
-}
+} // namespace llvm
 
 #endif

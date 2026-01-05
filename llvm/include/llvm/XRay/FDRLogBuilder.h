@@ -25,7 +25,7 @@ class LogBuilder {
   std::vector<std::unique_ptr<Record>> Records;
 
 public:
-  template <class R, class... T> LogBuilder &add(T &&... A) {
+  template <class R, class... T> LogBuilder &add(T &&...A) {
     Records.emplace_back(new R(std::forward<T>(A)...));
     return *this;
   }

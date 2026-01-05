@@ -34,20 +34,21 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> SmallDataThreshold("hexagon-small-data-threshold",
-  cl::init(8), cl::Hidden,
-  cl::desc("The maximum size of an object in the sdata section"));
+static cl::opt<unsigned> SmallDataThreshold(
+    "hexagon-small-data-threshold", cl::init(8), cl::Hidden,
+    cl::desc("The maximum size of an object in the sdata section"));
 
-static cl::opt<bool> NoSmallDataSorting("mno-sort-sda", cl::init(false),
-  cl::Hidden, cl::desc("Disable small data sections sorting"));
+static cl::opt<bool>
+    NoSmallDataSorting("mno-sort-sda", cl::init(false), cl::Hidden,
+                       cl::desc("Disable small data sections sorting"));
 
 static cl::opt<bool>
     StaticsInSData("hexagon-statics-in-small-data", cl::Hidden,
                    cl::desc("Allow static variables in .sdata"));
 
-static cl::opt<bool> TraceGVPlacement("trace-gv-placement",
-  cl::Hidden, cl::init(false),
-  cl::desc("Trace global value placement"));
+static cl::opt<bool> TraceGVPlacement("trace-gv-placement", cl::Hidden,
+                                      cl::init(false),
+                                      cl::desc("Trace global value placement"));
 
 static cl::opt<bool>
     EmitJtInText("hexagon-emit-jt-text", cl::Hidden, cl::init(false),
@@ -55,7 +56,7 @@ static cl::opt<bool>
 
 static cl::opt<bool>
     EmitLutInText("hexagon-emit-lut-text", cl::Hidden, cl::init(false),
-                 cl::desc("Emit hexagon lookup tables in function section"));
+                  cl::desc("Emit hexagon lookup tables in function section"));
 
 // TraceGVPlacement controls messages for all builds. For builds with assertions
 // (debug or release), messages are also controlled by the usual debug flags
@@ -110,17 +111,15 @@ static const char *getSectionSuffixForSize(unsigned Size) {
 }
 
 void HexagonTargetObjectFile::Initialize(MCContext &Ctx,
-      const TargetMachine &TM) {
+                                         const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
 
-  SmallDataSection =
-    getContext().getELFSection(".sdata", ELF::SHT_PROGBITS,
-                               ELF::SHF_WRITE | ELF::SHF_ALLOC |
-                               ELF::SHF_HEX_GPREL);
-  SmallBSSSection =
-    getContext().getELFSection(".sbss", ELF::SHT_NOBITS,
-                               ELF::SHF_WRITE | ELF::SHF_ALLOC |
-                               ELF::SHF_HEX_GPREL);
+  SmallDataSection = getContext().getELFSection(
+      ".sdata", ELF::SHT_PROGBITS,
+      ELF::SHF_WRITE | ELF::SHF_ALLOC | ELF::SHF_HEX_GPREL);
+  SmallBSSSection = getContext().getELFSection(".sbss", ELF::SHT_NOBITS,
+                                               ELF::SHF_WRITE | ELF::SHF_ALLOC |
+                                                   ELF::SHF_HEX_GPREL);
 }
 
 MCSection *HexagonTargetObjectFile::SelectSectionForGlobal(
@@ -129,14 +128,14 @@ MCSection *HexagonTargetObjectFile::SelectSectionForGlobal(
   TRACE("input section(" << GO->getSection() << ") ");
 
   TRACE((GO->hasPrivateLinkage() ? "private_linkage " : "")
-         << (GO->hasLocalLinkage() ? "local_linkage " : "")
-         << (GO->hasInternalLinkage() ? "internal " : "")
-         << (GO->hasExternalLinkage() ? "external " : "")
-         << (GO->hasCommonLinkage() ? "common_linkage " : "")
-         << (GO->hasCommonLinkage() ? "common " : "" )
-         << (Kind.isCommon() ? "kind_common " : "" )
-         << (Kind.isBSS() ? "kind_bss " : "" )
-         << (Kind.isBSSLocal() ? "kind_bss_local " : "" ));
+        << (GO->hasLocalLinkage() ? "local_linkage " : "")
+        << (GO->hasInternalLinkage() ? "internal " : "")
+        << (GO->hasExternalLinkage() ? "external " : "")
+        << (GO->hasCommonLinkage() ? "common_linkage " : "")
+        << (GO->hasCommonLinkage() ? "common " : "")
+        << (Kind.isCommon() ? "kind_common " : "")
+        << (Kind.isBSS() ? "kind_bss " : "")
+        << (Kind.isBSSLocal() ? "kind_bss_local " : ""));
 
   // If the lookup table is used by more than one function, do not place
   // it in text section.
@@ -164,16 +163,16 @@ MCSection *HexagonTargetObjectFile::SelectSectionForGlobal(
 MCSection *HexagonTargetObjectFile::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   TRACE("[getExplicitSectionGlobal] GO(" << GO->getName() << ") from("
-        << GO->getSection() << ") ");
+                                         << GO->getSection() << ") ");
   TRACE((GO->hasPrivateLinkage() ? "private_linkage " : "")
-         << (GO->hasLocalLinkage() ? "local_linkage " : "")
-         << (GO->hasInternalLinkage() ? "internal " : "")
-         << (GO->hasExternalLinkage() ? "external " : "")
-         << (GO->hasCommonLinkage() ? "common_linkage " : "")
-         << (GO->hasCommonLinkage() ? "common " : "" )
-         << (Kind.isCommon() ? "kind_common " : "" )
-         << (Kind.isBSS() ? "kind_bss " : "" )
-         << (Kind.isBSSLocal() ? "kind_bss_local " : "" ));
+        << (GO->hasLocalLinkage() ? "local_linkage " : "")
+        << (GO->hasInternalLinkage() ? "internal " : "")
+        << (GO->hasExternalLinkage() ? "external " : "")
+        << (GO->hasCommonLinkage() ? "common_linkage " : "")
+        << (GO->hasCommonLinkage() ? "common " : "")
+        << (Kind.isCommon() ? "kind_common " : "")
+        << (Kind.isBSS() ? "kind_bss " : "")
+        << (Kind.isBSSLocal() ? "kind_bss_local " : ""));
 
   if (GO->hasSection()) {
     StringRef Section = GO->getSection();
@@ -195,8 +194,8 @@ MCSection *HexagonTargetObjectFile::getExplicitSectionGlobal(
 
 /// Return true if this global value should be placed into small data/bss
 /// section.
-bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
-      const TargetMachine &TM) const {
+bool HexagonTargetObjectFile::isGlobalInSmallSection(
+    const GlobalObject *GO, const TargetMachine &TM) const {
   bool HaveSData = isSmallDataEnabled(TM);
   if (!HaveSData)
     LLVM_DEBUG(dbgs() << "Small-data allocation is disabled, but symbols "
@@ -268,8 +267,8 @@ bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
   return true;
 }
 
-bool HexagonTargetObjectFile::isSmallDataEnabled(const TargetMachine &TM)
-    const {
+bool HexagonTargetObjectFile::isSmallDataEnabled(
+    const TargetMachine &TM) const {
   return SmallDataThreshold > 0 && !TM.isPositionIndependent();
 }
 
@@ -285,8 +284,8 @@ bool HexagonTargetObjectFile::shouldPutJumpTableInFunctionSection(
 /// Descends any type down to "elementary" components,
 /// discovering the smallest addressable one.
 /// If zero is returned, declaration will not be modified.
-unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
-      const GlobalValue *GV, const TargetMachine &TM) const {
+unsigned HexagonTargetObjectFile::getSmallestAddressableSize(
+    const Type *Ty, const GlobalValue *GV, const TargetMachine &TM) const {
   // Assign the smallest element access size to the highest
   // value which assembler can handle.
   unsigned SmallestElement = 8;
@@ -319,7 +318,7 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
   case Type::IntegerTyID: {
     const DataLayout &DL = GV->getDataLayout();
     // It is unfortunate that DL's function take non-const Type*.
-    return DL.getTypeAllocSize(const_cast<Type*>(Ty));
+    return DL.getTypeAllocSize(const_cast<Type *>(Ty));
   }
   case Type::FunctionTyID:
   case Type::VoidTyID:
@@ -372,7 +371,8 @@ MCSection *HexagonTargetObjectFile::selectSmallSectionForGlobal(
     }
     TRACE(" unique sbss(" << Name << ")\n");
     return getContext().getELFSection(Name.str(), ELF::SHT_NOBITS,
-                ELF::SHF_WRITE | ELF::SHF_ALLOC | ELF::SHF_HEX_GPREL);
+                                      ELF::SHF_WRITE | ELF::SHF_ALLOC |
+                                          ELF::SHF_HEX_GPREL);
   }
 
   if (Kind.isCommon()) {
@@ -388,7 +388,7 @@ MCSection *HexagonTargetObjectFile::selectSmallSectionForGlobal(
 
     return getContext().getELFSection(Name.str(), ELF::SHT_NOBITS,
                                       ELF::SHF_WRITE | ELF::SHF_ALLOC |
-                                      ELF::SHF_HEX_GPREL);
+                                          ELF::SHF_HEX_GPREL);
   }
 
   // We could have changed sdata object to a constant... in this
@@ -416,7 +416,8 @@ MCSection *HexagonTargetObjectFile::selectSmallSectionForGlobal(
     }
     TRACE(" unique sdata(" << Name << ")\n");
     return getContext().getELFSection(Name.str(), ELF::SHT_PROGBITS,
-                ELF::SHF_WRITE | ELF::SHF_ALLOC | ELF::SHF_HEX_GPREL);
+                                      ELF::SHF_WRITE | ELF::SHF_ALLOC |
+                                          ELF::SHF_HEX_GPREL);
   }
 
   TRACE("default ELF section\n");

@@ -17,29 +17,29 @@ class MCSymbolMachO : public MCSymbol {
   /// We store the value for the 'desc' symbol field in the
   /// lowest 16 bits of the implementation defined flags.
   enum MachOSymbolFlags : uint16_t { // See <mach-o/nlist.h>.
-    SF_DescFlagsMask                        = 0xFFFF,
+    SF_DescFlagsMask = 0xFFFF,
 
     // Reference type flags.
-    SF_ReferenceTypeMask                    = 0x0007,
-    SF_ReferenceTypeUndefinedNonLazy        = 0x0000,
-    SF_ReferenceTypeUndefinedLazy           = 0x0001,
-    SF_ReferenceTypeDefined                 = 0x0002,
-    SF_ReferenceTypePrivateDefined          = 0x0003,
+    SF_ReferenceTypeMask = 0x0007,
+    SF_ReferenceTypeUndefinedNonLazy = 0x0000,
+    SF_ReferenceTypeUndefinedLazy = 0x0001,
+    SF_ReferenceTypeDefined = 0x0002,
+    SF_ReferenceTypePrivateDefined = 0x0003,
     SF_ReferenceTypePrivateUndefinedNonLazy = 0x0004,
-    SF_ReferenceTypePrivateUndefinedLazy    = 0x0005,
+    SF_ReferenceTypePrivateUndefinedLazy = 0x0005,
 
     // Other 'desc' flags.
-    SF_ThumbFunc                            = 0x0008,
-    SF_NoDeadStrip                          = 0x0020,
-    SF_WeakReference                        = 0x0040,
-    SF_WeakDefinition                       = 0x0080,
-    SF_SymbolResolver                       = 0x0100,
-    SF_AltEntry                             = 0x0200,
-    SF_Cold                                 = 0x0400,
+    SF_ThumbFunc = 0x0008,
+    SF_NoDeadStrip = 0x0020,
+    SF_WeakReference = 0x0040,
+    SF_WeakDefinition = 0x0080,
+    SF_SymbolResolver = 0x0100,
+    SF_AltEntry = 0x0200,
+    SF_Cold = 0x0400,
 
     // Common alignment
-    SF_CommonAlignmentMask                  = 0xF0FF,
-    SF_CommonAlignmentShift                 = 8
+    SF_CommonAlignmentMask = 0xF0FF,
+    SF_CommonAlignmentShift = 8
   };
 
 public:
@@ -53,9 +53,7 @@ public:
 
   // Reference type methods.
 
-  void clearReferenceType() const {
-    modifyFlags(0, SF_ReferenceTypeMask);
-  }
+  void clearReferenceType() const { modifyFlags(0, SF_ReferenceTypeMask); }
 
   void setReferenceTypeUndefinedLazy(bool Value) const {
     modifyFlags(Value ? SF_ReferenceTypeUndefinedLazy : 0,
@@ -64,53 +62,36 @@ public:
 
   // Other 'desc' methods.
 
-  void setThumbFunc() const {
-    modifyFlags(SF_ThumbFunc, SF_ThumbFunc);
-  }
+  void setThumbFunc() const { modifyFlags(SF_ThumbFunc, SF_ThumbFunc); }
 
-  bool isNoDeadStrip() const {
-    return getFlags() & SF_NoDeadStrip;
-  }
-  void setNoDeadStrip() const {
-    modifyFlags(SF_NoDeadStrip, SF_NoDeadStrip);
-  }
+  bool isNoDeadStrip() const { return getFlags() & SF_NoDeadStrip; }
+  void setNoDeadStrip() const { modifyFlags(SF_NoDeadStrip, SF_NoDeadStrip); }
 
-  bool isWeakReference() const {
-    return getFlags() & SF_WeakReference;
-  }
+  bool isWeakReference() const { return getFlags() & SF_WeakReference; }
   void setWeakReference() const {
     modifyFlags(SF_WeakReference, SF_WeakReference);
   }
 
-  bool isWeakDefinition() const {
-    return getFlags() & SF_WeakDefinition;
-  }
+  bool isWeakDefinition() const { return getFlags() & SF_WeakDefinition; }
   void setWeakDefinition() const {
     modifyFlags(SF_WeakDefinition, SF_WeakDefinition);
   }
 
-  bool isSymbolResolver() const {
-    return getFlags() & SF_SymbolResolver;
-  }
+  bool isSymbolResolver() const { return getFlags() & SF_SymbolResolver; }
   void setSymbolResolver() const {
     modifyFlags(SF_SymbolResolver, SF_SymbolResolver);
   }
 
-  void setAltEntry() const {
-    modifyFlags(SF_AltEntry, SF_AltEntry);
-  }
+  void setAltEntry() const { modifyFlags(SF_AltEntry, SF_AltEntry); }
 
-  bool isAltEntry() const {
-    return getFlags() & SF_AltEntry;
-  }
+  bool isAltEntry() const { return getFlags() & SF_AltEntry; }
 
   void setCold() const { modifyFlags(SF_Cold, SF_Cold); }
 
   bool isCold() const { return getFlags() & SF_Cold; }
 
   void setDesc(unsigned Value) const {
-    assert(Value == (Value & SF_DescFlagsMask) &&
-           "Invalid .desc value!");
+    assert(Value == (Value & SF_DescFlagsMask) && "Invalid .desc value!");
     setFlags(Value & SF_DescFlagsMask);
   }
 
@@ -152,6 +133,6 @@ public:
     return Flags;
   }
 };
-}
+} // namespace llvm
 
 #endif

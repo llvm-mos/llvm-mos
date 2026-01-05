@@ -201,8 +201,8 @@ static bool sinkInstruction(
       continue;
     }
 
-    // We cannot sink I to PHI-uses, try to look through PHI to find the incoming
-    // block of the value being used.
+    // We cannot sink I to PHI-uses, try to look through PHI to find the
+    // incoming block of the value being used.
     PHINode *PN = dyn_cast<PHINode>(UI);
     BasicBlock *PhiBB = PN->getIncomingBlock(U);
 

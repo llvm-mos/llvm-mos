@@ -31,7 +31,7 @@ public:
   unsigned getRelocType(const MCFixup &, const MCValue &,
                         bool IsPCRel) const override;
 };
-}
+} // namespace
 
 HexagonELFObjectWriter::HexagonELFObjectWriter(uint8_t OSABI, StringRef C)
     : MCELFObjectTargetWriter(/*Is64bit*/ false, OSABI, ELF::EM_HEXAGON,
@@ -86,7 +86,7 @@ unsigned HexagonELFObjectWriter::getRelocType(const MCFixup &Fixup,
       report_fatal_error("Unrecognized variant type");
     };
   case FK_Data_2:
-    switch(Variant) {
+    switch (Variant) {
     case HexagonMCExpr::VK_DTPREL:
       return ELF::R_HEX_DTPREL_16;
     case HexagonMCExpr::VK_GOT:

@@ -12,8 +12,7 @@
 namespace llvm {
 namespace MOS {
 
-#define ENUM_ENT(enum, altName)                                                \
-  { #enum, altName, ELF::enum }
+#define ENUM_ENT(enum, altName) {#enum, altName, ELF::enum}
 
 static const EnumEntry<unsigned> ElfHeaderMOSFlagsEntries[] = {
     ENUM_ENT(EF_MOS_ARCH_6502, "mos6502"),
@@ -45,12 +44,10 @@ std::string makeEFlagsString(unsigned EFlags) {
 bool checkEFlagsCompatibility(unsigned EFlags, unsigned ModuleEFlags) {
   const unsigned Flags = EFlags | ModuleEFlags;
   // Mixing sweet16 with native is prohibited
-  if ((Flags & ELF::EF_MOS_ARCH_SWEET16) &&
-      (Flags & ~ELF::EF_MOS_ARCH_SWEET16))
+  if ((Flags & ELF::EF_MOS_ARCH_SWEET16) && (Flags & ~ELF::EF_MOS_ARCH_SWEET16))
     return false;
   // Mixing SPC700 with native is prohibited
-  if ((Flags & ELF::EF_MOS_ARCH_SPC700) &&
-      (Flags & ~ELF::EF_MOS_ARCH_SPC700))
+  if ((Flags & ELF::EF_MOS_ARCH_SPC700) && (Flags & ~ELF::EF_MOS_ARCH_SPC700))
     return false;
   return true;
 }

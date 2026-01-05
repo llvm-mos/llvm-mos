@@ -25,7 +25,8 @@
 using namespace llvm;
 
 /// Given a specified llvm.global_ctors list, remove the listed elements.
-static void removeGlobalCtors(GlobalVariable *GCL, const BitVector &CtorsToRemove) {
+static void removeGlobalCtors(GlobalVariable *GCL,
+                              const BitVector &CtorsToRemove) {
   // Filter out the initializer elements to remove.
   ConstantArray *OldCA = cast<ConstantArray>(GCL->getInitializer());
   SmallVector<Constant *, 10> CAList;

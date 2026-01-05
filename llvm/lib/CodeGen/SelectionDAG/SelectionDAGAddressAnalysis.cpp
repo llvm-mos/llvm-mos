@@ -135,8 +135,9 @@ bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
       MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
       // If the base are the same frame index but the we couldn't find a
       // constant offset, (indices are different) be conservative.
-      if (A->getIndex() != B->getIndex() && (!MFI.isFixedObjectIndex(A->getIndex()) ||
-                     !MFI.isFixedObjectIndex(B->getIndex()))) {
+      if (A->getIndex() != B->getIndex() &&
+          (!MFI.isFixedObjectIndex(A->getIndex()) ||
+           !MFI.isFixedObjectIndex(B->getIndex()))) {
         IsAlias = false;
         return true;
       }
@@ -250,7 +251,8 @@ static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
             Offset -= Off;
           else
             Offset += Off;
-          Base = DAG.getTargetLoweringInfo().unwrapAddress(LSBase->getBasePtr());
+          Base =
+              DAG.getTargetLoweringInfo().unwrapAddress(LSBase->getBasePtr());
           continue;
         }
       break;
@@ -310,11 +312,9 @@ BaseIndexOffset BaseIndexOffset::match(const SDNode *N,
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
-LLVM_DUMP_METHOD void BaseIndexOffset::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void BaseIndexOffset::dump() const { print(dbgs()); }
 
-void BaseIndexOffset::print(raw_ostream& OS) const {
+void BaseIndexOffset::print(raw_ostream &OS) const {
   OS << "BaseIndexOffset base=[";
   Base->print(OS);
   OS << "] index=[";

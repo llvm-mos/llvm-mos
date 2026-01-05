@@ -35,12 +35,12 @@ using namespace llvm;
 #define DEBUG_TYPE "arm-mve-vpt-opts"
 
 static cl::opt<bool>
-MergeEndDec("arm-enable-merge-loopenddec", cl::Hidden,
-    cl::desc("Enable merging Loop End and Dec instructions."),
-    cl::init(true));
+    MergeEndDec("arm-enable-merge-loopenddec", cl::Hidden,
+                cl::desc("Enable merging Loop End and Dec instructions."),
+                cl::init(true));
 
-static cl::opt<bool>
-SetLRPredicate("arm-set-lr-predicate", cl::Hidden,
+static cl::opt<bool> SetLRPredicate(
+    "arm-set-lr-predicate", cl::Hidden,
     cl::desc("Enable setting lr as a predicate in tail predication regions."),
     cl::init(true));
 
@@ -434,7 +434,7 @@ bool MVETPAndVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
 // instruction, making the backend ARMLowOverheadLoops passes job of finding the
 // VCTP operand much simpler.
 bool MVETPAndVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
-                                              MachineDominatorTree *DT) {
+                                                   MachineDominatorTree *DT) {
   LLVM_DEBUG(dbgs() << "ConvertTailPredLoop on loop "
                     << ML->getHeader()->getName() << "\n");
 

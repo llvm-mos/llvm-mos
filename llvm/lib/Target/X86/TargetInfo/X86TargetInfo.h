@@ -16,6 +16,6 @@ class Target;
 Target &getTheX86_32Target();
 Target &getTheX86_64Target();
 
-}
+} // namespace llvm
 
 #endif // LLVM_LIB_TARGET_X86_TARGETINFO_X86TARGETINFO_H

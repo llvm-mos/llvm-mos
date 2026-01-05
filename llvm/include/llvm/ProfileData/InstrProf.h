@@ -1017,8 +1017,8 @@ private:
     // cast away the constness from the result.
     auto AR = const_cast<const InstrProfRecord *>(this)->getValueSitesForKind(
         ValueKind);
-    return MutableArrayRef(
-        const_cast<InstrProfValueSiteRecord *>(AR.data()), AR.size());
+    return MutableArrayRef(const_cast<InstrProfValueSiteRecord *>(AR.data()),
+                           AR.size());
   }
   ArrayRef<InstrProfValueSiteRecord>
   getValueSitesForKind(uint32_t ValueKind) const {
@@ -1126,10 +1126,7 @@ void InstrProfValueSiteRecord::sortByCount() {
 
 namespace IndexedInstrProf {
 
-enum class HashT : uint32_t {
-  MD5,
-  Last = MD5
-};
+enum class HashT : uint32_t { MD5, Last = MD5 };
 
 inline uint64_t ComputeHash(HashT Type, StringRef K) {
   switch (Type) {
@@ -1285,13 +1282,9 @@ struct Summary {
     return reinterpret_cast<Entry *>(&getSummaryDataBase()[NumSummaryFields]);
   }
 
-  uint64_t get(SummaryFieldKind K) const {
-    return getSummaryDataBase()[K];
-  }
+  uint64_t get(SummaryFieldKind K) const { return getSummaryDataBase()[K]; }
 
-  void set(SummaryFieldKind K, uint64_t V) {
-    getSummaryDataBase()[K] = V;
-  }
+  void set(SummaryFieldKind K, uint64_t V) { getSummaryDataBase()[K] = V; }
 
   const Entry &getEntry(uint32_t I) const { return getCutoffEntryBase()[I]; }
 

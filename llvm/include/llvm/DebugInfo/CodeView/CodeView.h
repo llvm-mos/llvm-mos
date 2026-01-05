@@ -619,7 +619,7 @@ enum class JumpTableEntrySize : uint16_t {
   Int8ShiftLeft = 9,
   Int16ShiftLeft = 10,
 };
-}
-}
+} // namespace codeview
+} // namespace llvm
 
 #endif

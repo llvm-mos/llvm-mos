@@ -29,7 +29,7 @@ private:
   NativeSession &Session;
   uint32_t Index;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

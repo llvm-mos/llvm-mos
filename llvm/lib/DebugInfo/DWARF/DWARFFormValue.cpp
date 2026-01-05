@@ -616,19 +616,19 @@ Expected<const char *> DWARFFormValue::getAsCString() const {
   // Prefer the Unit's string extractor, because for .dwo it will point to
   // .debug_str.dwo, while the Context's extractor always uses .debug_str.
   bool IsDebugLineString = Form == DW_FORM_line_strp;
-  DataExtractor StrData =
-      IsDebugLineString ? C->getLineStringExtractor()
-                        : U ? U->getStringExtractor() : C->getStringExtractor();
+  DataExtractor StrData = IsDebugLineString ? C->getLineStringExtractor()
+                          : U               ? U->getStringExtractor()
+                                            : C->getStringExtractor();
   if (const char *Str = StrData.getCStr(&Offset))
     return Str;
   std::string Msg = FormEncodingString(Form).str();
   if (Index)
-    Msg += (" uses index " + Twine(*Index) + ", but the referenced string").str();
+    Msg +=
+        (" uses index " + Twine(*Index) + ", but the referenced string").str();
   Msg += (" offset " + Twine(Offset) + " is beyond " +
           (IsDebugLineString ? ".debug_line_str" : ".debug_str") + " bounds")
              .str();
-  return make_error<StringError>(Msg,
-      inconvertibleErrorCode());
+  return make_error<StringError>(Msg, inconvertibleErrorCode());
 }
 
 std::optional<uint64_t> DWARFFormValue::getAsAddress() const {
@@ -768,8 +768,9 @@ DWARFFormValue::getAsFile(DILineInfoSpecifier::FileLineInfoKind Kind) const {
   return std::nullopt;
 }
 
-bool llvm::dwarf::doesFormBelongToClass(dwarf::Form Form, DWARFFormValue::FormClass FC,
-                           uint16_t DwarfVersion) {
+bool llvm::dwarf::doesFormBelongToClass(dwarf::Form Form,
+                                        DWARFFormValue::FormClass FC,
+                                        uint16_t DwarfVersion) {
   // First, check DWARF5 form classes.
   if (Form < std::size(DWARF5FormClasses) && DWARF5FormClasses[Form] == FC)
     return true;

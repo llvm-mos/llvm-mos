@@ -102,8 +102,8 @@ class Scheduler : public HardwareUnit {
   // moved from the PendingSet to the ReadySet must transition to the 'IS_READY'
   // stage.
   //
-  // On every cycle, the Scheduler checks if it can promote instructions from the
-  // PendingSet to the ReadySet.
+  // On every cycle, the Scheduler checks if it can promote instructions from
+  // the PendingSet to the ReadySet.
   //
   // An Instruction is moved from the ReadySet to the `IssuedSet` when it starts
   // exection. This event also causes an instruction state transition (i.e. from

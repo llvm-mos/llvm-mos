@@ -223,7 +223,7 @@ void ReachingDefInfo::reprocessBasicBlock(MachineBasicBlock *MBB) {
 
   // Count number of non-debug instructions for end of block adjustment.
   auto NonDbgInsts =
-    instructionsWithoutDebug(MBB->instr_begin(), MBB->instr_end());
+      instructionsWithoutDebug(MBB->instr_begin(), MBB->instr_end());
   int NumInsts = std::distance(NonDbgInsts.begin(), NonDbgInsts.end());
 
   // When reprocessing a block, the only thing we need to do is check whether
@@ -519,7 +519,7 @@ void ReachingDefInfo::getGlobalUses(MachineInstr *MI, Register Reg,
       return;
 
     SmallVector<MachineBasicBlock *, 4> ToVisit(MBB->successors());
-    SmallPtrSet<MachineBasicBlock*, 4>Visited;
+    SmallPtrSet<MachineBasicBlock *, 4> Visited;
     while (!ToVisit.empty()) {
       MachineBasicBlock *MBB = ToVisit.pop_back_val();
       if (Visited.count(MBB) || !MBB->isLiveIn(Reg))
@@ -544,7 +544,7 @@ void ReachingDefInfo::getGlobalReachingDefs(MachineInstr *MI, Register Reg,
 
 void ReachingDefInfo::getLiveOuts(MachineBasicBlock *MBB, Register Reg,
                                   InstSet &Defs) const {
-  SmallPtrSet<MachineBasicBlock*, 2> VisitedBBs;
+  SmallPtrSet<MachineBasicBlock *, 2> VisitedBBs;
   getLiveOuts(MBB, Reg, Defs, VisitedBBs);
 }
 
@@ -573,7 +573,7 @@ MachineInstr *ReachingDefInfo::getUniqueReachingMIDef(MachineInstr *MI,
   if (LocalDef && InstIds.lookup(LocalDef) < InstIds.lookup(MI))
     return LocalDef;
 
-  SmallPtrSet<MachineInstr*, 2> Incoming;
+  SmallPtrSet<MachineInstr *, 2> Incoming;
   MachineBasicBlock *Parent = MI->getParent();
   for (auto *Pred : Parent->predecessors())
     getLiveOuts(Pred, Reg, Incoming);
@@ -680,8 +680,8 @@ MachineInstr *ReachingDefInfo::getLocalLiveOutMIDef(MachineBasicBlock *MBB,
 
 static bool mayHaveSideEffects(MachineInstr &MI) {
   return MI.mayLoadOrStore() || MI.mayRaiseFPException() ||
-         MI.hasUnmodeledSideEffects() || MI.isTerminator() ||
-         MI.isCall() || MI.isBarrier() || MI.isBranch() || MI.isReturn();
+         MI.hasUnmodeledSideEffects() || MI.isTerminator() || MI.isCall() ||
+         MI.isBarrier() || MI.isBranch() || MI.isReturn();
 }
 
 // Can we safely move 'From' to just before 'To'? To satisfy this, 'From' must
@@ -738,14 +738,14 @@ bool ReachingDefInfo::isSafeToMoveBackwards(MachineInstr *From,
 
 bool ReachingDefInfo::isSafeToRemove(MachineInstr *MI,
                                      InstSet &ToRemove) const {
-  SmallPtrSet<MachineInstr*, 1> Ignore;
-  SmallPtrSet<MachineInstr*, 2> Visited;
+  SmallPtrSet<MachineInstr *, 1> Ignore;
+  SmallPtrSet<MachineInstr *, 2> Visited;
   return isSafeToRemove(MI, Visited, ToRemove, Ignore);
 }
 
 bool ReachingDefInfo::isSafeToRemove(MachineInstr *MI, InstSet &ToRemove,
                                      InstSet &Ignore) const {
-  SmallPtrSet<MachineInstr*, 2> Visited;
+  SmallPtrSet<MachineInstr *, 2> Visited;
   return isSafeToRemove(MI, Visited, ToRemove, Ignore);
 }
 
@@ -764,7 +764,7 @@ bool ReachingDefInfo::isSafeToRemove(MachineInstr *MI, InstSet &Visited,
     if (!isValidRegDef(MO))
       continue;
 
-    SmallPtrSet<MachineInstr*, 4> Uses;
+    SmallPtrSet<MachineInstr *, 4> Uses;
     getGlobalUses(MI, MO.getReg(), Uses);
 
     for (auto *I : Uses) {
@@ -796,7 +796,7 @@ void ReachingDefInfo::collectKilledOperands(MachineInstr *MI,
     if (LiveDefs > 1)
       return false;
 
-    SmallPtrSet<MachineInstr*, 4> Uses;
+    SmallPtrSet<MachineInstr *, 4> Uses;
     getGlobalUses(Def, Reg, Uses);
     return llvm::set_is_subset(Uses, Dead);
   };
@@ -811,7 +811,7 @@ void ReachingDefInfo::collectKilledOperands(MachineInstr *MI,
 }
 
 bool ReachingDefInfo::isSafeToDefRegAt(MachineInstr *MI, Register Reg) const {
-  SmallPtrSet<MachineInstr*, 1> Ignore;
+  SmallPtrSet<MachineInstr *, 1> Ignore;
   return isSafeToDefRegAt(MI, Reg, Ignore);
 }
 
@@ -820,7 +820,7 @@ bool ReachingDefInfo::isSafeToDefRegAt(MachineInstr *MI, Register Reg,
   // Check for any uses of the register after MI.
   if (isRegUsedAfter(MI, Reg)) {
     if (auto *Def = getReachingLocalMIDef(MI, Reg)) {
-      SmallPtrSet<MachineInstr*, 2> Uses;
+      SmallPtrSet<MachineInstr *, 2> Uses;
       getGlobalUses(Def, Reg, Uses);
       if (!llvm::set_is_subset(Uses, Ignore))
         return false;

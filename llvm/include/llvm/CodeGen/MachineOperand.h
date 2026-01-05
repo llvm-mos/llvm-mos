@@ -156,8 +156,8 @@ private:
   /// MO_Register: Register number.
   /// OffsetedInfo: Low bits of offset.
   union {
-    unsigned RegNo;           // For MO_Register.
-    unsigned OffsetLo;        // Matches Contents.OffsetedInfo.OffsetHi.
+    unsigned RegNo;    // For MO_Register.
+    unsigned OffsetLo; // Matches Contents.OffsetedInfo.OffsetHi.
   } SmallContents;
 
   /// ParentMI - This is the instruction that this operand is embedded into.
@@ -167,21 +167,21 @@ private:
   /// Contents union - This contains the payload for the various operand types.
   union ContentsUnion {
     ContentsUnion() {}
-    MachineBasicBlock *MBB;  // For MO_MachineBasicBlock.
-    const ConstantFP *CFP;   // For MO_FPImmediate.
-    const ConstantInt *CI;   // For MO_CImmediate. Integers > 64bit.
-    int64_t ImmVal;          // For MO_Immediate.
-    const uint32_t *RegMask; // For MO_RegisterMask and MO_RegisterLiveOut.
-    const MDNode *MD;        // For MO_Metadata.
-    MCSymbol *Sym;           // For MO_MCSymbol.
-    unsigned CFIIndex;       // For MO_CFI.
+    MachineBasicBlock *MBB;    // For MO_MachineBasicBlock.
+    const ConstantFP *CFP;     // For MO_FPImmediate.
+    const ConstantInt *CI;     // For MO_CImmediate. Integers > 64bit.
+    int64_t ImmVal;            // For MO_Immediate.
+    const uint32_t *RegMask;   // For MO_RegisterMask and MO_RegisterLiveOut.
+    const MDNode *MD;          // For MO_Metadata.
+    MCSymbol *Sym;             // For MO_MCSymbol.
+    unsigned CFIIndex;         // For MO_CFI.
     Intrinsic::ID IntrinsicID; // For MO_IntrinsicID.
-    unsigned Pred;           // For MO_Predicate
+    unsigned Pred;             // For MO_Predicate
     ArrayRef<int> ShuffleMask; // For MO_ShuffleMask
 
-    struct {                  // For MO_Register.
+    struct { // For MO_Register.
       // Register number is in SmallContents.RegNo.
-      MachineOperand *Prev;   // Access list for register. See MRI.
+      MachineOperand *Prev; // Access list for register. See MRI.
       MachineOperand *Next;
     } Reg;
 
@@ -194,13 +194,13 @@ private:
     /// this represent the object as with an optional offset from it.
     struct {
       union {
-        int Index;                // For MO_*Index - The index itself.
-        const char *SymbolName;   // For MO_ExternalSymbol.
-        const GlobalValue *GV;    // For MO_GlobalAddress.
-        const BlockAddress *BA;   // For MO_BlockAddress.
+        int Index;              // For MO_*Index - The index itself.
+        const char *SymbolName; // For MO_ExternalSymbol.
+        const GlobalValue *GV;  // For MO_GlobalAddress.
+        const BlockAddress *BA; // For MO_BlockAddress.
       } Val;
       // Low bits of offset are in SmallContents.OffsetLo.
-      int OffsetHi;               // An offset from the object, high 32 bits.
+      int OffsetHi; // An offset from the object, high 32 bits.
     } OffsetedInfo;
   } Contents;
 
@@ -223,9 +223,7 @@ public:
   ///
   MachineOperandType getType() const { return (MachineOperandType)OpKind; }
 
-  unsigned getTargetFlags() const {
-    return isReg() ? 0 : SubReg_TargetFlags;
-  }
+  unsigned getTargetFlags() const { return isReg() ? 0 : SubReg_TargetFlags; }
   void setTargetFlags(unsigned F) {
     assert(!isReg() && "Register operands can't have target flags");
     SubReg_TargetFlags = F;
@@ -236,7 +234,6 @@ public:
     SubReg_TargetFlags |= F;
     assert((SubReg_TargetFlags & F) && "Target flags out of range");
   }
-
 
   /// getParent - Return the instruction that this operand belongs to.
   ///
@@ -652,7 +649,7 @@ public:
 
   /// clobbersPhysReg - Returns true if this RegMask operand clobbers PhysReg.
   bool clobbersPhysReg(MCRegister PhysReg) const {
-     return clobbersPhysReg(getRegMask(), PhysReg);
+    return clobbersPhysReg(getRegMask(), PhysReg);
   }
 
   /// getRegMask - Returns a bit mask of registers preserved by this RegMask

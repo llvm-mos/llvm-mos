@@ -38,7 +38,7 @@ enum DiffAttrKind {
 /// AttributeDiff is the abstract class for RTTI.
 class AttributeDiff {
 public:
-  AttributeDiff(DiffAttrKind Kind) : Kind(Kind){};
+  AttributeDiff(DiffAttrKind Kind) : Kind(Kind) {};
   virtual ~AttributeDiff() = default;
   DiffAttrKind getKind() const { return Kind; }
 
@@ -55,14 +55,14 @@ struct DiffOutput {
   /// Different values for the attribute
   /// from each file where a diff is present.
   std::vector<std::unique_ptr<AttributeDiff>> Values;
-  DiffOutput(std::string Name) : Name(Name){};
+  DiffOutput(std::string Name) : Name(Name) {};
 };
 
 /// DiffScalarVal is a template class for the different types of scalar values.
 template <class T, DiffAttrKind U> class DiffScalarVal : public AttributeDiff {
 public:
   DiffScalarVal(InterfaceInputOrder Order, T Val)
-      : AttributeDiff(U), Order(Order), Val(Val){};
+      : AttributeDiff(U), Order(Order), Val(Val) {};
 
   static bool classof(const AttributeDiff *A) { return A->getKind() == U; }
 
@@ -81,7 +81,7 @@ private:
 class SymScalar {
 public:
   SymScalar(InterfaceInputOrder Order, const MachO::Symbol *Sym)
-      : Order(Order), Val(Sym){};
+      : Order(Order), Val(Sym) {};
 
   std::string getFlagString(const MachO::Symbol *Sym);
 
@@ -102,7 +102,7 @@ public:
   MachO::Target Targ;
   /// Values is a vector of StringRef values associated with the target.
   std::vector<DiffScalarVal<StringRef, AD_Diff_Scalar_Str>> TargValues;
-  DiffStrVec(MachO::Target Targ) : AttributeDiff(AD_Str_Vec), Targ(Targ){};
+  DiffStrVec(MachO::Target Targ) : AttributeDiff(AD_Str_Vec), Targ(Targ) {};
 
   static bool classof(const AttributeDiff *A) {
     return A->getKind() == AD_Str_Vec;
@@ -114,7 +114,7 @@ public:
   MachO::Target Targ;
   /// Values is a vector of symbol values associated with the target.
   std::vector<SymScalar> TargValues;
-  DiffSymVec(MachO::Target Targ) : AttributeDiff(AD_Sym_Vec), Targ(Targ){};
+  DiffSymVec(MachO::Target Targ) : AttributeDiff(AD_Sym_Vec), Targ(Targ) {};
 
   static bool classof(const AttributeDiff *A) {
     return A->getKind() == AD_Sym_Vec;
@@ -146,7 +146,7 @@ class DiffEngine {
 public:
   DiffEngine(MachO::InterfaceFile *InputFileNameLHS,
              MachO::InterfaceFile *InputFileNameRHS)
-      : FileLHS(InputFileNameLHS), FileRHS(InputFileNameRHS){};
+      : FileLHS(InputFileNameLHS), FileRHS(InputFileNameRHS) {};
   bool compareFiles(raw_ostream &);
 
 private:

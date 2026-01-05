@@ -132,7 +132,6 @@ struct Uncommon {
   Str SectionName;
 };
 
-
 struct Header {
   /// Version number of the symtab format. This number should be incremented
   /// when the format changes, but it does not need to be incremented if a

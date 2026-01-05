@@ -29,4 +29,3 @@ public:
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_NEWGVN_H
-

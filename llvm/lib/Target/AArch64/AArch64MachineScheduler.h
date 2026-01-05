@@ -20,8 +20,8 @@ namespace llvm {
 /// A MachineSchedStrategy implementation for AArch64 post RA scheduling.
 class AArch64PostRASchedStrategy : public PostGenericScheduler {
 public:
-  AArch64PostRASchedStrategy(const MachineSchedContext *C) :
-    PostGenericScheduler(C) {}
+  AArch64PostRASchedStrategy(const MachineSchedContext *C)
+      : PostGenericScheduler(C) {}
 
 protected:
   bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand) override;
@@ -30,4 +30,3 @@ protected:
 } // end namespace llvm
 
 #endif
-

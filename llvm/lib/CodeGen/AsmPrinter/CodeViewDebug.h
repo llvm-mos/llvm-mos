@@ -172,7 +172,7 @@ private:
     SmallVector<LocalVariable, 1> Locals;
     SmallVector<CVGlobalVariable, 1> Globals;
 
-    std::unordered_map<const DILexicalBlockBase*, LexicalBlock> LexicalBlocks;
+    std::unordered_map<const DILexicalBlockBase *, LexicalBlock> LexicalBlocks;
 
     // Lexical blocks containing local variables.
     SmallVector<LexicalBlock *, 1> ChildBlocks;
@@ -236,7 +236,7 @@ private:
   // Map to separate global variables according to the lexical scope they
   // belong in. A null local scope represents the global scope.
   typedef SmallVector<CVGlobalVariable, 1> GlobalVariableList;
-  DenseMap<const DIScope*, std::unique_ptr<GlobalVariableList> > ScopeGlobals;
+  DenseMap<const DIScope *, std::unique_ptr<GlobalVariableList>> ScopeGlobals;
 
   // Array of global variables which  need to be emitted into a COMDAT section.
   SmallVector<CVGlobalVariable, 1> ComdatVariables;
@@ -346,8 +346,7 @@ private:
 
   void emitInlineeLinesSubsection();
 
-  void emitDebugInfoForThunk(const Function *GV,
-                             FunctionInfo &FI,
+  void emitDebugInfoForThunk(const Function *GV, FunctionInfo &FI,
                              const MCSymbol *Fn);
 
   void emitDebugInfoForFunction(const Function *GV, FunctionInfo &FI);
@@ -399,10 +398,11 @@ private:
                                SmallVectorImpl<LexicalBlock *> &Blocks,
                                SmallVectorImpl<LocalVariable> &Locals,
                                SmallVectorImpl<CVGlobalVariable> &Globals);
-  void collectLexicalBlockInfo(LexicalScope &Scope,
-                               SmallVectorImpl<LexicalBlock *> &ParentBlocks,
-                               SmallVectorImpl<LocalVariable> &ParentLocals,
-                               SmallVectorImpl<CVGlobalVariable> &ParentGlobals);
+  void
+  collectLexicalBlockInfo(LexicalScope &Scope,
+                          SmallVectorImpl<LexicalBlock *> &ParentBlocks,
+                          SmallVectorImpl<LocalVariable> &ParentLocals,
+                          SmallVectorImpl<CVGlobalVariable> &ParentGlobals);
 
   /// Records information about a local variable in the appropriate scope. In
   /// particular, locals from inlined code live inside the inlining site.
@@ -417,10 +417,10 @@ private:
 
   /// Emits a sequence of lexical block scopes and their children.
   void emitLexicalBlockList(ArrayRef<LexicalBlock *> Blocks,
-                            const FunctionInfo& FI);
+                            const FunctionInfo &FI);
 
   /// Emit a lexical block scope and its children.
-  void emitLexicalBlock(const LexicalBlock &Block, const FunctionInfo& FI);
+  void emitLexicalBlock(const LexicalBlock &Block, const FunctionInfo &FI);
 
   /// Translates the DIType to codeview if necessary and returns a type index
   /// for it.

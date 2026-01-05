@@ -155,14 +155,13 @@ void ArgList::AddAllArgValues(ArgStringList &Output, OptSpecifier Id0,
 }
 
 void ArgList::AddAllArgsTranslated(ArgStringList &Output, OptSpecifier Id0,
-                                   const char *Translation,
-                                   bool Joined) const {
+                                   const char *Translation, bool Joined) const {
   for (auto *Arg : filtered(Id0)) {
     Arg->claim();
 
     if (Joined) {
-      Output.push_back(MakeArgString(StringRef(Translation) +
-                                     Arg->getValue(0)));
+      Output.push_back(
+          MakeArgString(StringRef(Translation) + Arg->getValue(0)));
     } else {
       Output.push_back(Translation);
       Output.push_back(Arg->getValue(0));
@@ -181,8 +180,7 @@ void ArgList::ClaimAllArgs() const {
       Arg->claim();
 }
 
-const char *ArgList::GetOrMakeJoinedArgString(unsigned Index,
-                                              StringRef LHS,
+const char *ArgList::GetOrMakeJoinedArgString(unsigned Index, StringRef LHS,
                                               StringRef RHS) const {
   StringRef Cur = getArgString(Index);
   if (Cur.size() == LHS.size() + RHS.size() && Cur.starts_with(LHS) &&
@@ -243,9 +241,9 @@ void InputArgList::releaseMemory() {
     delete A;
 }
 
-InputArgList::InputArgList(const char* const *ArgBegin,
-                           const char* const *ArgEnd)
-  : NumInputArgStrings(ArgEnd - ArgBegin) {
+InputArgList::InputArgList(const char *const *ArgBegin,
+                           const char *const *ArgEnd)
+    : NumInputArgStrings(ArgEnd - ArgBegin) {
   ArgStrings.append(ArgBegin, ArgEnd);
 }
 
@@ -259,12 +257,11 @@ unsigned InputArgList::MakeIndex(StringRef String0) const {
   return Index;
 }
 
-unsigned InputArgList::MakeIndex(StringRef String0,
-                                 StringRef String1) const {
+unsigned InputArgList::MakeIndex(StringRef String0, StringRef String1) const {
   unsigned Index0 = MakeIndex(String0);
   unsigned Index1 = MakeIndex(String1);
   assert(Index0 + 1 == Index1 && "Unexpected non-consecutive indices!");
-  (void) Index1;
+  (void)Index1;
   return Index0;
 }
 
@@ -286,7 +283,7 @@ void DerivedArgList::AddSynthesizedArg(Arg *A) {
 Arg *DerivedArgList::MakeFlagArg(const Arg *BaseArg, const Option Opt) const {
   SynthesizedArgs.push_back(
       std::make_unique<Arg>(Opt, MakeArgString(Opt.getPrefix() + Opt.getName()),
-                       BaseArgs.MakeIndex(Opt.getName()), BaseArg));
+                            BaseArgs.MakeIndex(Opt.getName()), BaseArg));
   return SynthesizedArgs.back().get();
 }
 
@@ -295,7 +292,7 @@ Arg *DerivedArgList::MakePositionalArg(const Arg *BaseArg, const Option Opt,
   unsigned Index = BaseArgs.MakeIndex(Value);
   SynthesizedArgs.push_back(
       std::make_unique<Arg>(Opt, MakeArgString(Opt.getPrefix() + Opt.getName()),
-                       Index, BaseArgs.getArgString(Index), BaseArg));
+                            Index, BaseArgs.getArgString(Index), BaseArg));
   return SynthesizedArgs.back().get();
 }
 
@@ -304,7 +301,7 @@ Arg *DerivedArgList::MakeSeparateArg(const Arg *BaseArg, const Option Opt,
   unsigned Index = BaseArgs.MakeIndex(Opt.getName(), Value);
   SynthesizedArgs.push_back(
       std::make_unique<Arg>(Opt, MakeArgString(Opt.getPrefix() + Opt.getName()),
-                       Index, BaseArgs.getArgString(Index + 1), BaseArg));
+                            Index, BaseArgs.getArgString(Index + 1), BaseArg));
   return SynthesizedArgs.back().get();
 }
 

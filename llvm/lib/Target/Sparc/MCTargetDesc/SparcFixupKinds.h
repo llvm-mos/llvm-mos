@@ -26,8 +26,8 @@ namespace llvm {
       LastTargetFixupKind,
       NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind
     };
-  // clang-format on
-  }
-}
+// clang-format on
+} // namespace Sparc
+} // namespace llvm
 // clang-format on
 #endif

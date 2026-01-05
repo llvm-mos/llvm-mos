@@ -33,7 +33,8 @@ Error DWARFDebugRangeList::extract(const DWARFDataExtractor &data,
   clear();
   if (!data.isValidOffset(*offset_ptr))
     return createStringError(errc::invalid_argument,
-                       "invalid range list offset 0x%" PRIx64, *offset_ptr);
+                             "invalid range list offset 0x%" PRIx64,
+                             *offset_ptr);
 
   AddressSize = data.getAddressSize();
   if (Error SizeErr = DWARFContext::checkAddressSizeSupported(
@@ -54,8 +55,8 @@ Error DWARFDebugRangeList::extract(const DWARFDataExtractor &data,
     if (*offset_ptr != prev_offset + 2 * AddressSize) {
       clear();
       return createStringError(errc::invalid_argument,
-                         "invalid range list entry at offset 0x%" PRIx64,
-                         prev_offset);
+                               "invalid range list entry at offset 0x%" PRIx64,
+                               prev_offset);
     }
     if (Entry.isEndOfListEntry())
       break;

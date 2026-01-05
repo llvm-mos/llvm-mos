@@ -79,8 +79,8 @@ void LiveIntervalUnion::extract(const LiveInterval &VirtReg,
   }
 }
 
-void
-LiveIntervalUnion::print(raw_ostream &OS, const TargetRegisterInfo *TRI) const {
+void LiveIntervalUnion::print(raw_ostream &OS,
+                              const TargetRegisterInfo *TRI) const {
   if (empty()) {
     OS << " empty\n";
     return;
@@ -94,11 +94,11 @@ LiveIntervalUnion::print(raw_ostream &OS, const TargetRegisterInfo *TRI) const {
 
 #ifndef NDEBUG
 // Verify the live intervals in this union and add them to the visited set.
-void LiveIntervalUnion::verify(LiveVirtRegBitSet& VisitedVRegs) {
+void LiveIntervalUnion::verify(LiveVirtRegBitSet &VisitedVRegs) {
   for (SegmentIter SI = Segments.begin(); SI.valid(); ++SI)
     VisitedVRegs.set(SI.value()->reg().id());
 }
-#endif //!NDEBUG
+#endif //! NDEBUG
 
 const LiveInterval *LiveIntervalUnion::getOneVReg() const {
   if (empty())
@@ -197,10 +197,10 @@ void LiveIntervalUnion::Array::init(LiveIntervalUnion::Allocator &Alloc,
     return;
   clear();
   Size = NSize;
-  LIUs = static_cast<LiveIntervalUnion*>(
-      safe_malloc(sizeof(LiveIntervalUnion)*NSize));
+  LIUs = static_cast<LiveIntervalUnion *>(
+      safe_malloc(sizeof(LiveIntervalUnion) * NSize));
   for (unsigned i = 0; i != Size; ++i)
-    new(LIUs + i) LiveIntervalUnion(Alloc);
+    new (LIUs + i) LiveIntervalUnion(Alloc);
 }
 
 void LiveIntervalUnion::Array::clear() {
@@ -209,6 +209,6 @@ void LiveIntervalUnion::Array::clear() {
   for (unsigned i = 0; i != Size; ++i)
     LIUs[i].~LiveIntervalUnion();
   free(LIUs);
-  Size =  0;
+  Size = 0;
   LIUs = nullptr;
 }

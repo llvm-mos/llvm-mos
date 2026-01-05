@@ -23,8 +23,8 @@ using namespace llvm;
 
 #ifndef NDEBUG
 // Print the set of SUs
-void SystemZPostRASchedStrategy::SUSet::
-dump(SystemZHazardRecognizer &HazardRec) const {
+void SystemZPostRASchedStrategy::SUSet::dump(
+    SystemZHazardRecognizer &HazardRec) const {
   dbgs() << "{";
   for (auto &SU : *this) {
     HazardRec.dumpSU(SU, dbgs());
@@ -51,18 +51,19 @@ static MachineBasicBlock *getSingleSchedPred(MachineBasicBlock *MBB,
         PredMBB = (Pred == MBB ? nullptr : Pred);
   }
 
-  assert ((PredMBB == nullptr || !Loop || Loop->contains(PredMBB))
-          && "Loop MBB should not consider predecessor outside of loop.");
+  assert((PredMBB == nullptr || !Loop || Loop->contains(PredMBB)) &&
+         "Loop MBB should not consider predecessor outside of loop.");
 
   return PredMBB;
 }
 
-void SystemZPostRASchedStrategy::
-advanceTo(MachineBasicBlock::iterator NextBegin) {
+void SystemZPostRASchedStrategy::advanceTo(
+    MachineBasicBlock::iterator NextBegin) {
   MachineBasicBlock::iterator LastEmittedMI = HazardRec->getLastEmittedMI();
   MachineBasicBlock::iterator I =
-    ((LastEmittedMI != nullptr && LastEmittedMI->getParent() == MBB) ?
-     std::next(LastEmittedMI) : MBB->begin());
+      ((LastEmittedMI != nullptr && LastEmittedMI->getParent() == MBB)
+           ? std::next(LastEmittedMI)
+           : MBB->begin());
 
   for (; I != NextBegin; ++I) {
     if (I->isPosition() || I->isDebugInstr())
@@ -72,13 +73,13 @@ advanceTo(MachineBasicBlock::iterator NextBegin) {
 }
 
 void SystemZPostRASchedStrategy::initialize(ScheduleDAGMI *dag) {
-  Available.clear();  // -misched-cutoff.
+  Available.clear(); // -misched-cutoff.
   LLVM_DEBUG(HazardRec->dumpState(););
 }
 
 void SystemZPostRASchedStrategy::enterMBB(MachineBasicBlock *NextMBB) {
-  assert ((SchedStates.find(NextMBB) == SchedStates.end()) &&
-          "Entering MBB twice?");
+  assert((SchedStates.find(NextMBB) == SchedStates.end()) &&
+         "Entering MBB twice?");
   LLVM_DEBUG(dbgs() << "** Entering " << printMBBReference(*NextMBB));
 
   MBB = NextMBB;
@@ -93,7 +94,7 @@ void SystemZPostRASchedStrategy::enterMBB(MachineBasicBlock *NextMBB) {
   // Try to take over the state from a single predecessor, if it has been
   // scheduled. If this is not possible, we are done.
   MachineBasicBlock *SinglePredMBB =
-    getSingleSchedPred(MBB, MLI->getLoopFor(MBB));
+      getSingleSchedPred(MBB, MLI->getLoopFor(MBB));
   if (SinglePredMBB == nullptr)
     return;
   auto It = SchedStates.find(SinglePredMBB);
@@ -110,9 +111,9 @@ void SystemZPostRASchedStrategy::enterMBB(MachineBasicBlock *NextMBB) {
   // prediction will generally do "the right thing".
   for (MachineInstr &MI : SinglePredMBB->terminators()) {
     LLVM_DEBUG(dbgs() << "** Emitting incoming branch: "; MI.dump(););
-    bool TakenBranch = (MI.isBranch() &&
-                        (TII->getBranchInfo(MI).isIndirect() ||
-                         TII->getBranchInfo(MI).getMBBTarget() == MBB));
+    bool TakenBranch =
+        (MI.isBranch() && (TII->getBranchInfo(MI).isIndirect() ||
+                           TII->getBranchInfo(MI).getMBBTarget() == MBB));
     HazardRec->emitInstruction(&MI, TakenBranch);
     if (TakenBranch)
       break;
@@ -127,12 +128,11 @@ void SystemZPostRASchedStrategy::leaveMBB() {
   advanceTo(MBB->getFirstTerminator());
 }
 
-SystemZPostRASchedStrategy::
-SystemZPostRASchedStrategy(const MachineSchedContext *C)
-  : MLI(C->MLI),
-    TII(static_cast<const SystemZInstrInfo *>
-        (C->MF->getSubtarget().getInstrInfo())),
-    MBB(nullptr), HazardRec(nullptr) {
+SystemZPostRASchedStrategy::SystemZPostRASchedStrategy(
+    const MachineSchedContext *C)
+    : MLI(C->MLI), TII(static_cast<const SystemZInstrInfo *>(
+                       C->MF->getSubtarget().getInstrInfo())),
+      MBB(nullptr), HazardRec(nullptr) {
   const TargetSubtargetInfo *ST = &C->MF->getSubtarget();
   SchedModel.init(ST);
 }
@@ -195,12 +195,13 @@ SUnit *SystemZPostRASchedStrategy::pickNode(bool &IsTopNode) {
       break;
   }
 
-  assert (Best.SU != nullptr);
+  assert(Best.SU != nullptr);
   return Best.SU;
 }
 
-SystemZPostRASchedStrategy::Candidate::
-Candidate(SUnit *SU_, SystemZHazardRecognizer &HazardRec) : Candidate() {
+SystemZPostRASchedStrategy::Candidate::Candidate(
+    SUnit *SU_, SystemZHazardRecognizer &HazardRec)
+    : Candidate() {
   SU = SU_;
 
   // Check the grouping cost. For a node that must begin / end a
@@ -212,8 +213,7 @@ Candidate(SUnit *SU_, SystemZHazardRecognizer &HazardRec) : Candidate() {
   ResourcesCost = HazardRec.resourcesCost(SU);
 }
 
-bool SystemZPostRASchedStrategy::Candidate::
-operator<(const Candidate &other) {
+bool SystemZPostRASchedStrategy::Candidate::operator<(const Candidate &other) {
 
   // Check decoder grouping.
   if (GroupingCost < other.GroupingCost)

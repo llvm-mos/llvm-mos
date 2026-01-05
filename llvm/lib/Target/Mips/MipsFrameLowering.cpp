@@ -20,7 +20,6 @@
 
 using namespace llvm;
 
-
 //===----------------------------------------------------------------------===//
 //
 // Stack Frame Processing methods
@@ -128,9 +127,9 @@ uint64_t MipsFrameLowering::estimateStackSize(const MachineFunction &MF) const {
 }
 
 // Eliminate ADJCALLSTACKDOWN, ADJCALLSTACKUP pseudo instructions
-MachineBasicBlock::iterator MipsFrameLowering::
-eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator I) const {
+MachineBasicBlock::iterator MipsFrameLowering::eliminateCallFramePseudoInstr(
+    MachineFunction &MF, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator I) const {
   unsigned SP = STI.getABI().IsN64() ? Mips::SP_64 : Mips::SP;
 
   if (!hasReservedCallFrame(MF)) {

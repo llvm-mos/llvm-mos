@@ -158,8 +158,7 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingMode(MachineBasicBlock &MBB) {
     // Save
     MachineRegisterInfo *MRI = &MBB.getParent()->getRegInfo();
     Register SavedFRM = MRI->createVirtualRegister(&RISCV::GPRRegClass);
-    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::SwapFRMImm),
-            SavedFRM)
+    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::SwapFRMImm), SavedFRM)
         .addImm(FRMImm);
     MI.addOperand(MachineOperand::CreateReg(RISCV::FRM, /*IsDef*/ false,
                                             /*IsImp*/ true));

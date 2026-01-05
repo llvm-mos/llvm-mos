@@ -276,9 +276,8 @@ private:
   /// Map type from a pair of analysis ID and IRUnitT pointer to an
   /// iterator into a particular result list (which is where the actual analysis
   /// result is stored).
-  using AnalysisResultMapT =
-      DenseMap<std::pair<AnalysisKey *, IRUnitT *>,
-               typename AnalysisResultListT::iterator>;
+  using AnalysisResultMapT = DenseMap<std::pair<AnalysisKey *, IRUnitT *>,
+                                      typename AnalysisResultListT::iterator>;
 
 public:
   /// API to communicate dependencies between analyses during invalidation.
@@ -907,7 +906,7 @@ struct RequireAnalysisPass
   /// created, these methods can be instantiated to satisfy whatever the
   /// context requires.
   PreservedAnalyses run(IRUnitT &Arg, AnalysisManagerT &AM,
-                        ExtraArgTs &&... Args) {
+                        ExtraArgTs &&...Args) {
     (void)AM.template getResult<AnalysisT>(Arg,
                                            std::forward<ExtraArgTs>(Args)...);
 

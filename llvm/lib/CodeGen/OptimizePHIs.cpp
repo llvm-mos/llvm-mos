@@ -179,8 +179,8 @@ bool OptimizePHIs::IsDeadPHICycle(MachineInstr *MI, InstrSet &PHIsInCycle) {
 /// a single value.
 bool OptimizePHIs::OptimizeBB(MachineBasicBlock &MBB) {
   bool Changed = false;
-  for (MachineBasicBlock::iterator
-         MII = MBB.begin(), E = MBB.end(); MII != E; ) {
+  for (MachineBasicBlock::iterator MII = MBB.begin(), E = MBB.end();
+       MII != E;) {
     MachineInstr *MI = &*MII++;
     if (!MI->isPHI())
       break;

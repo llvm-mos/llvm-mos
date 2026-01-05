@@ -70,7 +70,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
- }
+  }
 
 private:
   // Maps seen instructions that can be mapped to a TDC, values are
@@ -115,9 +115,7 @@ char SystemZTDCPass::ID = 0;
 INITIALIZE_PASS(SystemZTDCPass, "systemz-tdc",
                 "SystemZ Test Data Class optimization", false, false)
 
-FunctionPass *llvm::createSystemZTDCPass() {
-  return new SystemZTDCPass();
-}
+FunctionPass *llvm::createSystemZTDCPass() { return new SystemZTDCPass(); }
 
 void SystemZTDCPass::convertFCmp(CmpInst &I) {
   Value *Op0 = I.getOperand(0);
@@ -157,49 +155,49 @@ void SystemZTDCPass::convertFCmp(CmpInst &I) {
   }
   // Partial masks to use for EQ, GT, LT, UN comparisons, respectively.
   static const int Masks[][4] = {
-    { // 0
-      SystemZ::TDCMASK_ZERO,              // eq
-      SystemZ::TDCMASK_POSITIVE,          // gt
-      SystemZ::TDCMASK_NEGATIVE,          // lt
-      SystemZ::TDCMASK_NAN,               // un
-    },
-    { // inf
-      SystemZ::TDCMASK_INFINITY_PLUS,     // eq
-      0,                                  // gt
-      (SystemZ::TDCMASK_ZERO |
-       SystemZ::TDCMASK_NEGATIVE |
-       SystemZ::TDCMASK_NORMAL_PLUS |
-       SystemZ::TDCMASK_SUBNORMAL_PLUS),  // lt
-      SystemZ::TDCMASK_NAN,               // un
-    },
-    { // -inf
-      SystemZ::TDCMASK_INFINITY_MINUS,    // eq
-      (SystemZ::TDCMASK_ZERO |
-       SystemZ::TDCMASK_POSITIVE |
-       SystemZ::TDCMASK_NORMAL_MINUS |
-       SystemZ::TDCMASK_SUBNORMAL_MINUS), // gt
-      0,                                  // lt
-      SystemZ::TDCMASK_NAN,               // un
-    },
-    { // minnorm
-      0,                                  // eq (unsupported)
-      (SystemZ::TDCMASK_NORMAL_PLUS |
-       SystemZ::TDCMASK_INFINITY_PLUS),   // gt (actually ge)
-      (SystemZ::TDCMASK_ZERO |
-       SystemZ::TDCMASK_NEGATIVE |
-       SystemZ::TDCMASK_SUBNORMAL_PLUS),  // lt
-      SystemZ::TDCMASK_NAN,               // un
-    },
-    { // -minnorm
-      0,                                  // eq (unsupported)
-      (SystemZ::TDCMASK_ZERO |
-       SystemZ::TDCMASK_POSITIVE |
-       SystemZ::TDCMASK_SUBNORMAL_MINUS), // gt
-      (SystemZ::TDCMASK_NORMAL_MINUS |
-       SystemZ::TDCMASK_INFINITY_MINUS),  // lt (actually le)
-      SystemZ::TDCMASK_NAN,               // un
-    }
-  };
+      {
+          // 0
+          SystemZ::TDCMASK_ZERO,     // eq
+          SystemZ::TDCMASK_POSITIVE, // gt
+          SystemZ::TDCMASK_NEGATIVE, // lt
+          SystemZ::TDCMASK_NAN,      // un
+      },
+      {
+          // inf
+          SystemZ::TDCMASK_INFINITY_PLUS, // eq
+          0,                              // gt
+          (SystemZ::TDCMASK_ZERO | SystemZ::TDCMASK_NEGATIVE |
+           SystemZ::TDCMASK_NORMAL_PLUS |
+           SystemZ::TDCMASK_SUBNORMAL_PLUS), // lt
+          SystemZ::TDCMASK_NAN,              // un
+      },
+      {
+          // -inf
+          SystemZ::TDCMASK_INFINITY_MINUS, // eq
+          (SystemZ::TDCMASK_ZERO | SystemZ::TDCMASK_POSITIVE |
+           SystemZ::TDCMASK_NORMAL_MINUS |
+           SystemZ::TDCMASK_SUBNORMAL_MINUS), // gt
+          0,                                  // lt
+          SystemZ::TDCMASK_NAN,               // un
+      },
+      {
+          // minnorm
+          0, // eq (unsupported)
+          (SystemZ::TDCMASK_NORMAL_PLUS |
+           SystemZ::TDCMASK_INFINITY_PLUS), // gt (actually ge)
+          (SystemZ::TDCMASK_ZERO | SystemZ::TDCMASK_NEGATIVE |
+           SystemZ::TDCMASK_SUBNORMAL_PLUS), // lt
+          SystemZ::TDCMASK_NAN,              // un
+      },
+      {
+          // -minnorm
+          0, // eq (unsupported)
+          (SystemZ::TDCMASK_ZERO | SystemZ::TDCMASK_POSITIVE |
+           SystemZ::TDCMASK_SUBNORMAL_MINUS), // gt
+          (SystemZ::TDCMASK_NORMAL_MINUS |
+           SystemZ::TDCMASK_INFINITY_MINUS), // lt (actually le)
+          SystemZ::TDCMASK_NAN,              // un
+      }};
   // Construct the mask as a combination of the partial masks.
   int Mask = 0;
   if (Pred & CmpInst::FCMP_OEQ)
@@ -238,8 +236,7 @@ void SystemZTDCPass::convertICmp(CmpInst &I) {
     return;
   if (auto *Cast = dyn_cast<BitCastInst>(Op0)) {
     // Check for icmp+bitcast used for signbit.
-    if (!Cast->getSrcTy()->isFloatTy() &&
-        !Cast->getSrcTy()->isDoubleTy() &&
+    if (!Cast->getSrcTy()->isFloatTy() && !Cast->getSrcTy()->isDoubleTy() &&
         !Cast->getSrcTy()->isFP128Ty())
       return;
     Value *V = Cast->getOperand(0);
@@ -288,23 +285,25 @@ void SystemZTDCPass::convertLogicOp(BinaryOperator &I) {
   Value *Op0, *Op1;
   int Mask0, Mask1;
   bool Worthy0, Worthy1;
-  std::tie(Op0, Mask0, Worthy0) = ConvertedInsts[cast<Instruction>(I.getOperand(0))];
-  std::tie(Op1, Mask1, Worthy1) = ConvertedInsts[cast<Instruction>(I.getOperand(1))];
+  std::tie(Op0, Mask0, Worthy0) =
+      ConvertedInsts[cast<Instruction>(I.getOperand(0))];
+  std::tie(Op1, Mask1, Worthy1) =
+      ConvertedInsts[cast<Instruction>(I.getOperand(1))];
   if (Op0 != Op1)
     return;
   int Mask;
   switch (I.getOpcode()) {
-    case Instruction::And:
-      Mask = Mask0 & Mask1;
-      break;
-    case Instruction::Or:
-      Mask = Mask0 | Mask1;
-      break;
-    case Instruction::Xor:
-      Mask = Mask0 ^ Mask1;
-      break;
-    default:
-      llvm_unreachable("Unknown op in convertLogicOp");
+  case Instruction::And:
+    Mask = Mask0 & Mask1;
+    break;
+  case Instruction::Or:
+    Mask = Mask0 | Mask1;
+    break;
+  case Instruction::Xor:
+    Mask = Mask0 ^ Mask1;
+    break;
+  default:
+    llvm_unreachable("Unknown op in convertLogicOp");
   }
   converted(&I, Op0, Mask, true);
 }

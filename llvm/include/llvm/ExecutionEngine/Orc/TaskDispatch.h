@@ -132,6 +132,7 @@ public:
 
   void dispatch(std::unique_ptr<Task> T) override;
   void shutdown() override;
+
 private:
   bool canRunMaterializationTaskNow();
   bool canRunIdleTaskNow();

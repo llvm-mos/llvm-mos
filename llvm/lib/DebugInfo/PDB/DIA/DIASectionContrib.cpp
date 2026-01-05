@@ -16,7 +16,7 @@ using namespace llvm::pdb;
 
 DIASectionContrib::DIASectionContrib(const DIASession &PDBSession,
                                      CComPtr<IDiaSectionContrib> DiaSection)
-  : Session(PDBSession), Section(DiaSection) {}
+    : Session(PDBSession), Section(DiaSection) {}
 
 std::unique_ptr<PDBSymbolCompiland> DIASectionContrib::getCompiland() const {
   CComPtr<IDiaSymbol> Symbol;

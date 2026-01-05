@@ -135,8 +135,8 @@ EXTERN_C const IID IID_ISetupInstance;
 /// <summary>
 /// Information about an instance of a product.
 /// </summary>
-struct DECLSPEC_UUID("B41463C3-8866-43B5-BC33-2B0676F7F42E")
-    DECLSPEC_NOVTABLE ISetupInstance : public IUnknown {
+struct DECLSPEC_UUID("B41463C3-8866-43B5-BC33-2B0676F7F42E") DECLSPEC_NOVTABLE
+    ISetupInstance : public IUnknown {
   /// <summary>
   /// Gets the instance identifier (should match the name of the parent instance
   /// directory).
@@ -233,8 +233,8 @@ EXTERN_C const IID IID_ISetupInstance2;
 /// <summary>
 /// Information about an instance of a product.
 /// </summary>
-struct DECLSPEC_UUID("89143C9A-05AF-49B0-B717-72E218A2185C")
-    DECLSPEC_NOVTABLE ISetupInstance2 : public ISetupInstance {
+struct DECLSPEC_UUID("89143C9A-05AF-49B0-B717-72E218A2185C") DECLSPEC_NOVTABLE
+    ISetupInstance2 : public ISetupInstance {
   /// <summary>
   /// Gets the state of the instance.
   /// </summary>
@@ -284,8 +284,8 @@ EXTERN_C const IID IID_IEnumSetupInstances;
 /// <summary>
 /// A enumerator of installed <see cref="ISetupInstance"/> objects.
 /// </summary>
-struct DECLSPEC_UUID("6380BCFF-41D3-4B2E-8B2E-BF8A6810C848")
-    DECLSPEC_NOVTABLE IEnumSetupInstances : public IUnknown {
+struct DECLSPEC_UUID("6380BCFF-41D3-4B2E-8B2E-BF8A6810C848") DECLSPEC_NOVTABLE
+    IEnumSetupInstances : public IUnknown {
   /// <summary>
   /// Retrieves the next set of product instances in the enumeration sequence.
   /// </summary>
@@ -335,8 +335,8 @@ EXTERN_C const IID IID_ISetupConfiguration;
 /// <summary>
 /// Gets information about product instances set up on the machine.
 /// </summary>
-struct DECLSPEC_UUID("42843719-DB4C-46C2-8E7C-64F1816EFD5B")
-    DECLSPEC_NOVTABLE ISetupConfiguration : public IUnknown {
+struct DECLSPEC_UUID("42843719-DB4C-46C2-8E7C-64F1816EFD5B") DECLSPEC_NOVTABLE
+    ISetupConfiguration : public IUnknown {
   /// <summary>
   /// Enumerates all completed product instances installed.
   /// </summary>
@@ -372,8 +372,8 @@ EXTERN_C const IID IID_ISetupConfiguration2;
 /// <summary>
 /// Gets information about product instances.
 /// </summary>
-struct DECLSPEC_UUID("26AAB78C-4A60-49D6-AF3B-3C35BC93365D")
-    DECLSPEC_NOVTABLE ISetupConfiguration2 : public ISetupConfiguration {
+struct DECLSPEC_UUID("26AAB78C-4A60-49D6-AF3B-3C35BC93365D") DECLSPEC_NOVTABLE
+    ISetupConfiguration2 : public ISetupConfiguration {
   /// <summary>
   /// Enumerates all product instances.
   /// </summary>
@@ -390,8 +390,8 @@ EXTERN_C const IID IID_ISetupPackageReference;
 /// <summary>
 /// A reference to a package.
 /// </summary>
-struct DECLSPEC_UUID("da8d8a16-b2b6-4487-a2f1-594ccccd6bf5")
-    DECLSPEC_NOVTABLE ISetupPackageReference : public IUnknown {
+struct DECLSPEC_UUID("da8d8a16-b2b6-4487-a2f1-594ccccd6bf5") DECLSPEC_NOVTABLE
+    ISetupPackageReference : public IUnknown {
   /// <summary>
   /// Gets the general package identifier.
   /// </summary>
@@ -457,8 +457,8 @@ EXTERN_C const IID IID_ISetupHelper;
 /// You can query for this interface from the <see cref="SetupConfiguration"/>
 /// class.
 /// </remarks>
-struct DECLSPEC_UUID("42b21b78-6192-463e-87bf-d577838f1d5c")
-    DECLSPEC_NOVTABLE ISetupHelper : public IUnknown {
+struct DECLSPEC_UUID("42b21b78-6192-463e-87bf-d577838f1d5c") DECLSPEC_NOVTABLE
+    ISetupHelper : public IUnknown {
   /// <summary>
   /// Parses a dotted quad version string into a 64-bit unsigned integer.
   /// </summary>

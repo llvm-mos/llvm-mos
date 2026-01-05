@@ -16,7 +16,7 @@ namespace llvm {
 class MCFixup;
 class MCInst;
 class MCSubtargetInfo;
-template<typename T> class SmallVectorImpl;
+template <typename T> class SmallVectorImpl;
 
 /// MCCodeEmitter - Generic instruction encoding interface.
 class LLVM_ABI MCCodeEmitter {

@@ -1909,10 +1909,9 @@ void GlobalObject::copyMetadata(const GlobalObject *Other, unsigned Offset) {
 void GlobalObject::addTypeMetadata(unsigned Offset, Metadata *TypeID) {
   addMetadata(
       LLVMContext::MD_type,
-      *MDTuple::get(getContext(),
-                    {ConstantAsMetadata::get(ConstantInt::get(
-                         Type::getInt64Ty(getContext()), Offset)),
-                     TypeID}));
+      *MDTuple::get(getContext(), {ConstantAsMetadata::get(ConstantInt::get(
+                                       Type::getInt64Ty(getContext()), Offset)),
+                                   TypeID}));
 }
 
 void GlobalObject::setVCallVisibilityMetadata(VCallVisibility Visibility) {

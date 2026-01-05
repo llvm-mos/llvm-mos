@@ -38,6 +38,6 @@ void DecodeVPERMIL2PMask(const Constant *C, unsigned M2Z, unsigned ElSize,
 void DecodeVPPERMMask(const Constant *C, unsigned Width,
                       SmallVectorImpl<int> &ShuffleMask);
 
-} // llvm namespace
+} // namespace llvm
 
 #endif

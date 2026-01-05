@@ -146,7 +146,7 @@ public:
   /// use this method.
   raw_ostream &getCommentOS() override {
     if (!IsVerboseAsm)
-      return nulls();  // Discard comments unless in verbose asm mode.
+      return nulls(); // Discard comments unless in verbose asm mode.
     return CommentStream;
   }
 
@@ -219,8 +219,7 @@ public:
 
   void emitXCOFFRefDirective(const MCSymbol *Symbol) override;
 
-  void emitXCOFFExceptDirective(const MCSymbol *Symbol,
-                                const MCSymbol *Trap,
+  void emitXCOFFExceptDirective(const MCSymbol *Symbol, const MCSymbol *Trap,
                                 unsigned Lang, unsigned Reason,
                                 unsigned FunctionSize, bool hasDebug) override;
   void emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) override;
@@ -275,8 +274,7 @@ public:
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
 
-  void emitValueToOffset(const MCExpr *Offset,
-                         unsigned char Value,
+  void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                          SMLoc Loc) override;
 
   void emitFileDirective(StringRef Filename) override;
@@ -437,7 +435,8 @@ public:
 } // end anonymous namespace.
 
 void MCAsmStreamer::AddComment(const Twine &T, bool EOL) {
-  if (!IsVerboseAsm) return;
+  if (!IsVerboseAsm)
+    return;
 
   T.toVector(CommentToEmit);
 
@@ -453,15 +452,15 @@ void MCAsmStreamer::EmitCommentsAndEOL() {
 
   StringRef Comments = CommentToEmit;
 
-  assert(Comments.back() == '\n' &&
-         "Comment array not newline terminated");
+  assert(Comments.back() == '\n' && "Comment array not newline terminated");
   do {
     // Emit a line of comments.
     OS.PadToColumn(MAI->getCommentColumn());
     size_t Position = Comments.find('\n');
-    OS << MAI->getCommentString() << ' ' << Comments.substr(0, Position) <<'\n';
+    OS << MAI->getCommentString() << ' ' << Comments.substr(0, Position)
+       << '\n';
 
-    Comments = Comments.substr(Position+1);
+    Comments = Comments.substr(Position + 1);
   } while (!Comments.empty());
 
   CommentToEmit.clear();
@@ -469,7 +468,7 @@ void MCAsmStreamer::EmitCommentsAndEOL() {
 
 static inline int64_t truncateToSize(int64_t Value, unsigned Bytes) {
   assert(Bytes > 0 && Bytes <= 8 && "Invalid size!");
-  return Value & ((uint64_t) (int64_t) -1 >> (64 - Bytes * 8));
+  return Value & ((uint64_t)(int64_t)-1 >> (64 - Bytes * 8));
 }
 
 void MCAsmStreamer::emitRawComment(const Twine &T, bool TabPrefix) {
@@ -612,21 +611,35 @@ void MCAsmStreamer::emitDataRegion(MCDataRegionType Kind) {
   if (!MAI->doesSupportDataRegionDirectives())
     return;
   switch (Kind) {
-  case MCDR_DataRegion:            OS << "\t.data_region"; break;
-  case MCDR_DataRegionJT8:         OS << "\t.data_region jt8"; break;
-  case MCDR_DataRegionJT16:        OS << "\t.data_region jt16"; break;
-  case MCDR_DataRegionJT32:        OS << "\t.data_region jt32"; break;
-  case MCDR_DataRegionEnd:         OS << "\t.end_data_region"; break;
+  case MCDR_DataRegion:
+    OS << "\t.data_region";
+    break;
+  case MCDR_DataRegionJT8:
+    OS << "\t.data_region jt8";
+    break;
+  case MCDR_DataRegionJT16:
+    OS << "\t.data_region jt16";
+    break;
+  case MCDR_DataRegionJT32:
+    OS << "\t.data_region jt32";
+    break;
+  case MCDR_DataRegionEnd:
+    OS << "\t.end_data_region";
+    break;
   }
   EmitEOL();
 }
 
 static const char *getVersionMinDirective(MCVersionMinType Type) {
   switch (Type) {
-  case MCVM_WatchOSVersionMin: return ".watchos_version_min";
-  case MCVM_TvOSVersionMin:    return ".tvos_version_min";
-  case MCVM_IOSVersionMin:     return ".ios_version_min";
-  case MCVM_OSXVersionMin:     return ".macosx_version_min";
+  case MCVM_WatchOSVersionMin:
+    return ".watchos_version_min";
+  case MCVM_TvOSVersionMin:
+    return ".tvos_version_min";
+  case MCVM_IOSVersionMin:
+    return ".ios_version_min";
+  case MCVM_OSXVersionMin:
+    return ".macosx_version_min";
   }
   llvm_unreachable("Invalid MC version min type");
 }
@@ -714,62 +727,104 @@ void MCAsmStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
 bool MCAsmStreamer::emitSymbolAttribute(MCSymbol *Symbol,
                                         MCSymbolAttr Attribute) {
   switch (Attribute) {
-  case MCSA_Invalid: llvm_unreachable("Invalid symbol attribute");
+  case MCSA_Invalid:
+    llvm_unreachable("Invalid symbol attribute");
   case MCSA_ELF_TypeFunction:    /// .type _foo, STT_FUNC  # aka @function
   case MCSA_ELF_TypeIndFunction: /// .type _foo, STT_GNU_IFUNC
   case MCSA_ELF_TypeObject:      /// .type _foo, STT_OBJECT  # aka @object
   case MCSA_ELF_TypeTLS:         /// .type _foo, STT_TLS     # aka @tls_object
   case MCSA_ELF_TypeCommon:      /// .type _foo, STT_COMMON  # aka @common
   case MCSA_ELF_TypeNoType:      /// .type _foo, STT_NOTYPE  # aka @notype
-  case MCSA_ELF_TypeGnuUniqueObject:  /// .type _foo, @gnu_unique_object
+  case MCSA_ELF_TypeGnuUniqueObject: /// .type _foo, @gnu_unique_object
     if (!MAI->hasDotTypeDotSizeDirective())
       return false; // Symbol attribute not supported
     OS << "\t.type\t";
     Symbol->print(OS, MAI);
     OS << ',' << ((MAI->getCommentString()[0] != '@') ? '@' : '%');
     switch (Attribute) {
-    default: return false;
-    case MCSA_ELF_TypeFunction:    OS << "function"; break;
-    case MCSA_ELF_TypeIndFunction: OS << "gnu_indirect_function"; break;
-    case MCSA_ELF_TypeObject:      OS << "object"; break;
-    case MCSA_ELF_TypeTLS:         OS << "tls_object"; break;
-    case MCSA_ELF_TypeCommon:      OS << "common"; break;
-    case MCSA_ELF_TypeNoType:      OS << "notype"; break;
-    case MCSA_ELF_TypeGnuUniqueObject: OS << "gnu_unique_object"; break;
+    default:
+      return false;
+    case MCSA_ELF_TypeFunction:
+      OS << "function";
+      break;
+    case MCSA_ELF_TypeIndFunction:
+      OS << "gnu_indirect_function";
+      break;
+    case MCSA_ELF_TypeObject:
+      OS << "object";
+      break;
+    case MCSA_ELF_TypeTLS:
+      OS << "tls_object";
+      break;
+    case MCSA_ELF_TypeCommon:
+      OS << "common";
+      break;
+    case MCSA_ELF_TypeNoType:
+      OS << "notype";
+      break;
+    case MCSA_ELF_TypeGnuUniqueObject:
+      OS << "gnu_unique_object";
+      break;
     }
     EmitEOL();
     return true;
   case MCSA_Global: // .globl/.global
     OS << MAI->getGlobalDirective();
     break;
-  case MCSA_LGlobal:        OS << "\t.lglobl\t";          break;
-  case MCSA_Hidden:         OS << "\t.hidden\t";          break;
-  case MCSA_IndirectSymbol: OS << "\t.indirect_symbol\t"; break;
-  case MCSA_Internal:       OS << "\t.internal\t";        break;
-  case MCSA_LazyReference:  OS << "\t.lazy_reference\t";  break;
-  case MCSA_Local:          OS << "\t.local\t";           break;
+  case MCSA_LGlobal:
+    OS << "\t.lglobl\t";
+    break;
+  case MCSA_Hidden:
+    OS << "\t.hidden\t";
+    break;
+  case MCSA_IndirectSymbol:
+    OS << "\t.indirect_symbol\t";
+    break;
+  case MCSA_Internal:
+    OS << "\t.internal\t";
+    break;
+  case MCSA_LazyReference:
+    OS << "\t.lazy_reference\t";
+    break;
+  case MCSA_Local:
+    OS << "\t.local\t";
+    break;
   case MCSA_NoDeadStrip:
     if (!MAI->hasNoDeadStrip())
       return false;
     OS << "\t.no_dead_strip\t";
     break;
-  case MCSA_SymbolResolver: OS << "\t.symbol_resolver\t"; break;
-  case MCSA_AltEntry:       OS << "\t.alt_entry\t";       break;
+  case MCSA_SymbolResolver:
+    OS << "\t.symbol_resolver\t";
+    break;
+  case MCSA_AltEntry:
+    OS << "\t.alt_entry\t";
+    break;
   case MCSA_PrivateExtern:
     OS << "\t.private_extern\t";
     break;
-  case MCSA_Protected:      OS << "\t.protected\t";       break;
-  case MCSA_Reference:      OS << "\t.reference\t";       break;
+  case MCSA_Protected:
+    OS << "\t.protected\t";
+    break;
+  case MCSA_Reference:
+    OS << "\t.reference\t";
+    break;
   case MCSA_Extern:
     OS << "\t.extern\t";
     break;
-  case MCSA_Weak:           OS << MAI->getWeakDirective(); break;
+  case MCSA_Weak:
+    OS << MAI->getWeakDirective();
+    break;
   case MCSA_WeakDefinition:
     OS << "\t.weak_definition\t";
     break;
-      // .weak_reference
-  case MCSA_WeakReference:  OS << MAI->getWeakRefDirective(); break;
-  case MCSA_WeakDefAutoPrivate: OS << "\t.weak_def_can_be_hidden\t"; break;
+    // .weak_reference
+  case MCSA_WeakReference:
+    OS << MAI->getWeakRefDirective();
+    break;
+  case MCSA_WeakDefAutoPrivate:
+    OS << "\t.weak_def_can_be_hidden\t";
+    break;
   case MCSA_Cold:
     // Assemblers currently do not support a .cold directive.
   case MCSA_Exported:
@@ -971,8 +1026,7 @@ void MCAsmStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
 
 void MCAsmStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
                                              const MCSymbol *Trap,
-                                             unsigned Lang,
-                                             unsigned Reason,
+                                             unsigned Lang, unsigned Reason,
                                              unsigned FunctionSize,
                                              bool hasDebug) {
   OS << "\t.except\t";
@@ -1109,7 +1163,7 @@ void MCAsmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
          ".zerofill is a Mach-O specific directive");
   // This is a mach-o specific directive.
 
-  const MCSectionMachO *MOSection = ((const MCSectionMachO*)Section);
+  const MCSectionMachO *MOSection = ((const MCSectionMachO *)Section);
   OS << MOSection->getSegmentName() << "," << MOSection->getName();
 
   if (Symbol) {
@@ -1155,7 +1209,7 @@ static inline bool isPrintableString(StringRef Data) {
   return isPrint(Data.back()) || Data.back() == 0;
 }
 
-static inline char toOctal(int X) { return (X&7)+'0'; }
+static inline char toOctal(int X) { return (X & 7) + '0'; }
 
 static void PrintByteList(StringRef Data, raw_ostream &OS,
                           MCAsmInfo::AsmCharLiteralSyntax ACLS) {
@@ -1252,7 +1306,8 @@ void MCAsmStreamer::PrintQuotedString(StringRef Data, raw_ostream &OS) const {
 void MCAsmStreamer::emitBytes(StringRef Data) {
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
-  if (Data.empty()) return;
+  if (Data.empty())
+    return;
 
   const auto emitAsString = [this](StringRef Data) {
     if (MAI->isAIX()) {
@@ -1340,11 +1395,20 @@ void MCAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
          "Cannot emit contents before setting section!");
   const char *Directive = nullptr;
   switch (Size) {
-  default: break;
-  case 1: Directive = MAI->getData8bitsDirective();  break;
-  case 2: Directive = MAI->getData16bitsDirective(); break;
-  case 4: Directive = MAI->getData32bitsDirective(); break;
-  case 8: Directive = MAI->getData64bitsDirective(); break;
+  default:
+    break;
+  case 1:
+    Directive = MAI->getData8bitsDirective();
+    break;
+  case 2:
+    Directive = MAI->getData16bitsDirective();
+    break;
+  case 4:
+    Directive = MAI->getData32bitsDirective();
+    break;
+  case 8:
+    Directive = MAI->getData64bitsDirective();
+    break;
   }
 
   if (!Directive) {
@@ -1506,11 +1570,19 @@ void MCAsmStreamer::emitAlignmentDirective(uint64_t ByteAlignment,
   // Non-power of two alignment.  This is not widely supported by assemblers.
   // FIXME: Parameterize this based on MAI.
   switch (ValueSize) {
-  default: llvm_unreachable("Invalid size for machine code value!");
-  case 1: OS << ".balign";  break;
-  case 2: OS << ".balignw"; break;
-  case 4: OS << ".balignl"; break;
-  case 8: llvm_unreachable("Unsupported alignment size!");
+  default:
+    llvm_unreachable("Invalid size for machine code value!");
+  case 1:
+    OS << ".balign";
+    break;
+  case 2:
+    OS << ".balignw";
+    break;
+  case 4:
+    OS << ".balignl";
+    break;
+  case 8:
+    llvm_unreachable("Unsupported alignment size!");
   }
 
   OS << ' ' << ByteAlignment;
@@ -1540,8 +1612,7 @@ void MCAsmStreamer::emitCodeAlignment(Align Alignment,
     emitAlignmentDirective(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
 }
 
-void MCAsmStreamer::emitValueToOffset(const MCExpr *Offset,
-                                      unsigned char Value,
+void MCAsmStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                       SMLoc Loc) {
   // FIXME: Verify that Offset is associated with the current section.
   OS << ".org ";
@@ -2000,7 +2071,7 @@ void MCAsmStreamer::emitCFIEscape(StringRef Values, SMLoc Loc) {
 void MCAsmStreamer::emitCFIGnuArgsSize(int64_t Size, SMLoc Loc) {
   MCStreamer::emitCFIGnuArgsSize(Size, Loc);
 
-  uint8_t Buffer[16] = { dwarf::DW_CFA_GNU_args_size };
+  uint8_t Buffer[16] = {dwarf::DW_CFA_GNU_args_size};
   unsigned Len = encodeULEB128(Size, Buffer + 1) + 1;
 
   PrintCFIEscape(OS, StringRef((const char *)&Buffer[0], Len));
@@ -2022,8 +2093,7 @@ void MCAsmStreamer::emitCFIOffset(int64_t Register, int64_t Offset, SMLoc Loc) {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFIPersonality(const MCSymbol *Sym,
-                                       unsigned Encoding) {
+void MCAsmStreamer::emitCFIPersonality(const MCSymbol *Sym, unsigned Encoding) {
   MCStreamer::emitCFIPersonality(Sym, Encoding);
   OS << "\t.cfi_personality " << Encoding << ", ";
   Sym->print(OS, MAI);
@@ -2403,7 +2473,7 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
         if (MAI->isLittleEndian() || ForceLE)
           FixupBit = i * 8 + j;
         else
-          FixupBit = i * 8 + (7-j);
+          FixupBit = i * 8 + (7 - j);
 
         if (uint8_t MapEntry = FixupMap[FixupBit]) {
           assert(Bit == 0 && "Encoder wrote into fixed up bit!");
@@ -2456,7 +2526,7 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
     getCommentOS() << "\n";
   }
 
-  if(getTargetStreamer())
+  if (getTargetStreamer())
     getTargetStreamer()->prettyPrintAsm(*InstPrinter, 0, Inst, STI, OS);
   else
     InstPrinter->printInst(&Inst, 0, "", STI, OS);
@@ -2473,7 +2543,8 @@ void MCAsmStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index,
                                     uint64_t Discriminator,
                                     const MCPseudoProbeInlineStack &InlineStack,
                                     MCSymbol *FnSym) {
-  OS << "\t.pseudoprobe\t" << Guid << " " << Index << " " << Type << " " << Attr;
+  OS << "\t.pseudoprobe\t" << Guid << " " << Index << " " << Type << " "
+     << Attr;
   if (Discriminator)
     OS << " " << Discriminator;
   // Emit inline stack like

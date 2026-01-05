@@ -708,9 +708,7 @@ public:
   }
 
   /// Assume that values may come from different cycle iterations.
-  void enableCrossIterationMode() {
-    AAQI.MayBeCrossIteration = true;
-  }
+  void enableCrossIterationMode() { AAQI.MayBeCrossIteration = true; }
 
   /// Disable the use of the dominator tree during alias analysis queries.
   void disableDominatorTree() { AAQI.UseDominatorTree = false; }
@@ -994,11 +992,11 @@ private:
 
   SmallVector<void (*)(Function &F, FunctionAnalysisManager &AM,
                        AAResults &AAResults),
-              4> ResultGetters;
+              4>
+      ResultGetters;
 
   template <typename AnalysisT>
-  static void getFunctionAAResultImpl(Function &F,
-                                      FunctionAnalysisManager &AM,
+  static void getFunctionAAResultImpl(Function &F, FunctionAnalysisManager &AM,
                                       AAResults &AAResults) {
     AAResults.addAAResult(AM.template getResult<AnalysisT>(F));
     AAResults.addAADependencyID(AnalysisT::ID());

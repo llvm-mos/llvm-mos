@@ -51,21 +51,16 @@ void FileWriter::writeU64(uint64_t U) {
 
 void FileWriter::fixup32(uint32_t U, uint64_t Offset) {
   const uint32_t Swapped = support::endian::byte_swap(U, ByteOrder);
-  OS.pwrite(reinterpret_cast<const char *>(&Swapped), sizeof(Swapped),
-            Offset);
+  OS.pwrite(reinterpret_cast<const char *>(&Swapped), sizeof(Swapped), Offset);
 }
 
 void FileWriter::writeData(llvm::ArrayRef<uint8_t> Data) {
   OS.write(reinterpret_cast<const char *>(Data.data()), Data.size());
 }
 
-void FileWriter::writeNullTerminated(llvm::StringRef Str) {
-  OS << Str << '\0';
-}
+void FileWriter::writeNullTerminated(llvm::StringRef Str) { OS << Str << '\0'; }
 
-uint64_t FileWriter::tell() {
-  return OS.tell();
-}
+uint64_t FileWriter::tell() { return OS.tell(); }
 
 void FileWriter::alignTo(size_t Align) {
   off_t Offset = OS.tell();

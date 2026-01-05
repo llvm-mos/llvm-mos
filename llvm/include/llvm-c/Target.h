@@ -42,35 +42,35 @@ typedef struct LLVMOpaqueTargetLibraryInfotData *LLVMTargetLibraryInfoRef;
 #define LLVM_TARGET(TargetName)                                                \
   LLVM_C_ABI void LLVMInitialize##TargetName##TargetInfo(void);
 #include "llvm/Config/Targets.def"
-#undef LLVM_TARGET  /* Explicit undef to make SWIG happier */
+#undef LLVM_TARGET /* Explicit undef to make SWIG happier */
 
 #define LLVM_TARGET(TargetName)                                                \
   LLVM_C_ABI void LLVMInitialize##TargetName##Target(void);
 #include "llvm/Config/Targets.def"
-#undef LLVM_TARGET  /* Explicit undef to make SWIG happier */
+#undef LLVM_TARGET /* Explicit undef to make SWIG happier */
 
 #define LLVM_TARGET(TargetName)                                                \
   LLVM_C_ABI void LLVMInitialize##TargetName##TargetMC(void);
 #include "llvm/Config/Targets.def"
-#undef LLVM_TARGET  /* Explicit undef to make SWIG happier */
+#undef LLVM_TARGET /* Explicit undef to make SWIG happier */
 
 /* Declare all of the available assembly printer initialization functions. */
 #define LLVM_ASM_PRINTER(TargetName)                                           \
   LLVM_C_ABI void LLVMInitialize##TargetName##AsmPrinter(void);
 #include "llvm/Config/AsmPrinters.def"
-#undef LLVM_ASM_PRINTER  /* Explicit undef to make SWIG happier */
+#undef LLVM_ASM_PRINTER /* Explicit undef to make SWIG happier */
 
 /* Declare all of the available assembly parser initialization functions. */
 #define LLVM_ASM_PARSER(TargetName)                                            \
   LLVM_C_ABI void LLVMInitialize##TargetName##AsmParser(void);
 #include "llvm/Config/AsmParsers.def"
-#undef LLVM_ASM_PARSER  /* Explicit undef to make SWIG happier */
+#undef LLVM_ASM_PARSER /* Explicit undef to make SWIG happier */
 
 /* Declare all of the available disassembler initialization functions. */
 #define LLVM_DISASSEMBLER(TargetName)                                          \
   LLVM_C_ABI void LLVMInitialize##TargetName##Disassembler(void);
 #include "llvm/Config/Disassemblers.def"
-#undef LLVM_DISASSEMBLER  /* Explicit undef to make SWIG happier */
+#undef LLVM_DISASSEMBLER /* Explicit undef to make SWIG happier */
 
 /** LLVMInitializeAllTargetInfos - The main program should call this function if
     it wants access to all available targets that LLVM is configured to
@@ -78,7 +78,7 @@ typedef struct LLVMOpaqueTargetLibraryInfotData *LLVMTargetLibraryInfoRef;
 static inline void LLVMInitializeAllTargetInfos(void) {
 #define LLVM_TARGET(TargetName) LLVMInitialize##TargetName##TargetInfo();
 #include "llvm/Config/Targets.def"
-#undef LLVM_TARGET  /* Explicit undef to make SWIG happier */
+#undef LLVM_TARGET /* Explicit undef to make SWIG happier */
 }
 
 /** LLVMInitializeAllTargets - The main program should call this function if it
@@ -87,7 +87,7 @@ static inline void LLVMInitializeAllTargetInfos(void) {
 static inline void LLVMInitializeAllTargets(void) {
 #define LLVM_TARGET(TargetName) LLVMInitialize##TargetName##Target();
 #include "llvm/Config/Targets.def"
-#undef LLVM_TARGET  /* Explicit undef to make SWIG happier */
+#undef LLVM_TARGET /* Explicit undef to make SWIG happier */
 }
 
 /** LLVMInitializeAllTargetMCs - The main program should call this function if
@@ -96,7 +96,7 @@ static inline void LLVMInitializeAllTargets(void) {
 static inline void LLVMInitializeAllTargetMCs(void) {
 #define LLVM_TARGET(TargetName) LLVMInitialize##TargetName##TargetMC();
 #include "llvm/Config/Targets.def"
-#undef LLVM_TARGET  /* Explicit undef to make SWIG happier */
+#undef LLVM_TARGET /* Explicit undef to make SWIG happier */
 }
 
 /** LLVMInitializeAllAsmPrinters - The main program should call this function if
@@ -105,7 +105,7 @@ static inline void LLVMInitializeAllTargetMCs(void) {
 static inline void LLVMInitializeAllAsmPrinters(void) {
 #define LLVM_ASM_PRINTER(TargetName) LLVMInitialize##TargetName##AsmPrinter();
 #include "llvm/Config/AsmPrinters.def"
-#undef LLVM_ASM_PRINTER  /* Explicit undef to make SWIG happier */
+#undef LLVM_ASM_PRINTER /* Explicit undef to make SWIG happier */
 }
 
 /** LLVMInitializeAllAsmParsers - The main program should call this function if
@@ -114,17 +114,17 @@ static inline void LLVMInitializeAllAsmPrinters(void) {
 static inline void LLVMInitializeAllAsmParsers(void) {
 #define LLVM_ASM_PARSER(TargetName) LLVMInitialize##TargetName##AsmParser();
 #include "llvm/Config/AsmParsers.def"
-#undef LLVM_ASM_PARSER  /* Explicit undef to make SWIG happier */
+#undef LLVM_ASM_PARSER /* Explicit undef to make SWIG happier */
 }
 
 /** LLVMInitializeAllDisassemblers - The main program should call this function
     if it wants all disassemblers that LLVM is configured to support, to make
     them available via the TargetRegistry. */
 static inline void LLVMInitializeAllDisassemblers(void) {
-#define LLVM_DISASSEMBLER(TargetName) \
+#define LLVM_DISASSEMBLER(TargetName)                                          \
   LLVMInitialize##TargetName##Disassembler();
 #include "llvm/Config/Disassemblers.def"
-#undef LLVM_DISASSEMBLER  /* Explicit undef to make SWIG happier */
+#undef LLVM_DISASSEMBLER /* Explicit undef to make SWIG happier */
 }
 
 /** LLVMInitializeNativeTarget - The main program should call this function to

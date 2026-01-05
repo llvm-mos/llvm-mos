@@ -116,6 +116,6 @@ FunctionPass *createHexagonVExtract();
 FunctionPass *createHexagonExpandCondsets();
 FunctionPass *createHexagonQFPOptimizer();
 
-} // end namespace llvm;
+} // namespace llvm
 
 #endif

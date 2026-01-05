@@ -134,7 +134,7 @@ protected:
   /// Get or create a sandboxir::Constant from an existing LLVM IR \p LLVMC.
   LLVM_ABI Constant *getOrCreateConstant(llvm::Constant *LLVMC);
   friend class ConstantDataSequential; // For getOrCreateConstant().
-  friend class Utils; // For getMemoryBase
+  friend class Utils;                  // For getMemoryBase
 
   LLVM_ABI void runEraseInstrCallbacks(Instruction *I);
   LLVM_ABI void runCreateInstrCallbacks(Instruction *I);

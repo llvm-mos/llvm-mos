@@ -164,9 +164,7 @@ public:
   /// Return metadata appropriate for a TBAA root node. Each returned
   /// node is distinct from all other metadata and will never be identified
   /// (uniqued) with anything else.
-  MDNode *createAnonymousTBAARoot() {
-    return createAnonymousAARoot();
-  }
+  MDNode *createAnonymousTBAARoot() { return createAnonymousAARoot(); }
 
   /// Return metadata appropriate for an alias scope domain node.
   /// Each returned node is distinct from all other metadata and will never
@@ -207,8 +205,8 @@ public:
     uint64_t Offset;
     uint64_t Size;
     MDNode *Type;
-    TBAAStructField(uint64_t Offset, uint64_t Size, MDNode *Type) :
-      Offset(Offset), Size(Size), Type(Type) {}
+    TBAAStructField(uint64_t Offset, uint64_t Size, MDNode *Type)
+        : Offset(Offset), Size(Size), Type(Type) {}
   };
 
   /// Return metadata for a tbaa.struct node with the given

@@ -23,7 +23,7 @@ namespace {
 #include "AMDGPUGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATE_BITSET
 #undef AMDGPUSubtarget
-}
+} // namespace
 
 namespace llvm {
 
@@ -74,9 +74,9 @@ private:
   bool isInstrUniform(const MachineInstr &MI) const;
   bool isVCC(Register Reg, const MachineRegisterInfo &MRI) const;
 
-  const RegisterBank *getArtifactRegBank(
-    Register Reg, const MachineRegisterInfo &MRI,
-    const TargetRegisterInfo &TRI) const;
+  const RegisterBank *getArtifactRegBank(Register Reg,
+                                         const MachineRegisterInfo &MRI,
+                                         const TargetRegisterInfo &TRI) const;
 
   /// tblgen-erated 'select' implementation.
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
@@ -313,8 +313,8 @@ private:
 
   bool shouldUseAddr64(MUBUFAddressData AddrData) const;
 
-  void splitIllegalMUBUFOffset(MachineIRBuilder &B,
-                               Register &SOffset, int64_t &ImmOffset) const;
+  void splitIllegalMUBUFOffset(MachineIRBuilder &B, Register &SOffset,
+                               int64_t &ImmOffset) const;
 
   MUBUFAddressData parseMUBUFAddress(Register Src) const;
 
@@ -381,7 +381,7 @@ private:
                                           int OpIdx) const;
 
   void renderDstSelToOpSel3XFormXForm(MachineInstrBuilder &MIB,
-                                const MachineInstr &MI, int OpIdx) const;
+                                      const MachineInstr &MI, int OpIdx) const;
 
   void renderNegateImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
@@ -468,5 +468,5 @@ private:
 #undef GET_GLOBALISEL_TEMPORARIES_DECL
 };
 
-} // End llvm namespace.
+} // namespace llvm
 #endif

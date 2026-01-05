@@ -323,10 +323,10 @@ LLVM_ABI BasicBlock *SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
                                 DominatorTree *DT, LoopInfo *LI = nullptr,
                                 MemorySSAUpdater *MSSAU = nullptr,
                                 const Twine &BBName = "", bool Before = false);
-inline BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt, DominatorTree *DT,
-                       LoopInfo *LI = nullptr,
-                       MemorySSAUpdater *MSSAU = nullptr,
-                       const Twine &BBName = "", bool Before = false) {
+inline BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
+                              DominatorTree *DT, LoopInfo *LI = nullptr,
+                              MemorySSAUpdater *MSSAU = nullptr,
+                              const Twine &BBName = "", bool Before = false) {
   return SplitBlock(Old, SplitPt->getIterator(), DT, LI, MSSAU, BBName, Before);
 }
 
@@ -344,10 +344,12 @@ LLVM_ABI BasicBlock *SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
                                 MemorySSAUpdater *MSSAU = nullptr,
                                 const Twine &BBName = "", bool Before = false);
 inline BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
-                       DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
-                       MemorySSAUpdater *MSSAU = nullptr,
-                       const Twine &BBName = "", bool Before = false) {
-  return SplitBlock(Old, SplitPt->getIterator(), DTU, LI, MSSAU, BBName, Before);
+                              DomTreeUpdater *DTU = nullptr,
+                              LoopInfo *LI = nullptr,
+                              MemorySSAUpdater *MSSAU = nullptr,
+                              const Twine &BBName = "", bool Before = false) {
+  return SplitBlock(Old, SplitPt->getIterator(), DTU, LI, MSSAU, BBName,
+                    Before);
 }
 
 /// Split the specified block at the specified instruction \p SplitPt.
@@ -361,8 +363,9 @@ LLVM_ABI BasicBlock *splitBlockBefore(BasicBlock *Old,
                                       MemorySSAUpdater *MSSAU,
                                       const Twine &BBName = "");
 inline BasicBlock *splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
-                             DomTreeUpdater *DTU, LoopInfo *LI,
-                             MemorySSAUpdater *MSSAU, const Twine &BBName = "") {
+                                    DomTreeUpdater *DTU, LoopInfo *LI,
+                                    MemorySSAUpdater *MSSAU,
+                                    const Twine &BBName = "") {
   return splitBlockBefore(Old, SplitPt->getIterator(), DTU, LI, MSSAU, BBName);
 }
 
@@ -458,12 +461,11 @@ SplitBlockAndInsertIfThen(Value *Cond, BasicBlock::iterator SplitBefore,
                           DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
                           BasicBlock *ThenBlock = nullptr);
 
-inline Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
-                                       bool Unreachable,
-                                       MDNode *BranchWeights = nullptr,
-                                       DomTreeUpdater *DTU = nullptr,
-                                       LoopInfo *LI = nullptr,
-                                       BasicBlock *ThenBlock = nullptr) {
+inline Instruction *
+SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
+                          bool Unreachable, MDNode *BranchWeights = nullptr,
+                          DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
+                          BasicBlock *ThenBlock = nullptr) {
   return SplitBlockAndInsertIfThen(Cond, SplitBefore->getIterator(),
                                    Unreachable, BranchWeights, DTU, LI,
                                    ThenBlock);
@@ -477,12 +479,11 @@ SplitBlockAndInsertIfElse(Value *Cond, BasicBlock::iterator SplitBefore,
                           DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
                           BasicBlock *ElseBlock = nullptr);
 
-inline Instruction *SplitBlockAndInsertIfElse(Value *Cond, Instruction *SplitBefore,
-                                       bool Unreachable,
-                                       MDNode *BranchWeights = nullptr,
-                                       DomTreeUpdater *DTU = nullptr,
-                                       LoopInfo *LI = nullptr,
-                                       BasicBlock *ElseBlock = nullptr) {
+inline Instruction *
+SplitBlockAndInsertIfElse(Value *Cond, Instruction *SplitBefore,
+                          bool Unreachable, MDNode *BranchWeights = nullptr,
+                          DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
+                          BasicBlock *ElseBlock = nullptr) {
   return SplitBlockAndInsertIfElse(Cond, SplitBefore->getIterator(),
                                    Unreachable, BranchWeights, DTU, LI,
                                    ElseBlock);
@@ -510,14 +511,13 @@ LLVM_ABI void SplitBlockAndInsertIfThenElse(
     DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr);
 
 inline void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
-                                   Instruction **ThenTerm,
-                                   Instruction **ElseTerm,
-                                   MDNode *BranchWeights = nullptr,
-                                   DomTreeUpdater *DTU = nullptr,
-                                   LoopInfo *LI = nullptr)
-{
+                                          Instruction **ThenTerm,
+                                          Instruction **ElseTerm,
+                                          MDNode *BranchWeights = nullptr,
+                                          DomTreeUpdater *DTU = nullptr,
+                                          LoopInfo *LI = nullptr) {
   SplitBlockAndInsertIfThenElse(Cond, SplitBefore->getIterator(), ThenTerm,
-                               ElseTerm, BranchWeights, DTU, LI);
+                                ElseTerm, BranchWeights, DTU, LI);
 }
 
 /// Split the containing block at the specified instruction - everything before
@@ -553,16 +553,14 @@ LLVM_ABI void SplitBlockAndInsertIfThenElse(
     bool UnreachableElse = false, MDNode *BranchWeights = nullptr,
     DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr);
 
-inline void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
-                                   BasicBlock **ThenBlock,
-                                   BasicBlock **ElseBlock,
-                                   bool UnreachableThen = false,
-                                   bool UnreachableElse = false,
-                                   MDNode *BranchWeights = nullptr,
-                                   DomTreeUpdater *DTU = nullptr,
-                                   LoopInfo *LI = nullptr) {
+inline void SplitBlockAndInsertIfThenElse(
+    Value *Cond, Instruction *SplitBefore, BasicBlock **ThenBlock,
+    BasicBlock **ElseBlock, bool UnreachableThen = false,
+    bool UnreachableElse = false, MDNode *BranchWeights = nullptr,
+    DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr) {
   SplitBlockAndInsertIfThenElse(Cond, SplitBefore->getIterator(), ThenBlock,
-    ElseBlock, UnreachableThen, UnreachableElse, BranchWeights, DTU, LI);
+                                ElseBlock, UnreachableThen, UnreachableElse,
+                                BranchWeights, DTU, LI);
 }
 
 /// Insert a for (int i = 0; i < End; i++) loop structure (with the exception

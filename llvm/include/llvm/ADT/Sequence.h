@@ -87,7 +87,7 @@
                        // std::enable_if
 
 #include "llvm/ADT/STLForwardCompat.h" // llvm::to_underlying
-#include "llvm/Support/MathExtras.h" // AddOverflow / SubOverflow
+#include "llvm/Support/MathExtras.h"   // AddOverflow / SubOverflow
 
 namespace llvm {
 

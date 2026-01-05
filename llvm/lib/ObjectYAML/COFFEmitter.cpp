@@ -464,8 +464,7 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
   // Output section table.
   for (const COFFYAML::Section &S : CP.Obj.Sections) {
     OS.write(S.Header.Name, COFF::NameSize);
-    OS << binary_le(S.Header.VirtualSize)
-       << binary_le(S.Header.VirtualAddress)
+    OS << binary_le(S.Header.VirtualSize) << binary_le(S.Header.VirtualAddress)
        << binary_le(S.Header.SizeOfRawData)
        << binary_le(S.Header.PointerToRawData)
        << binary_le(S.Header.PointerToRelocations)
@@ -496,9 +495,9 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
     OS.write_zeros(S.Header.PointerToRawData + S.Header.SizeOfRawData -
                    OS.tell());
     if (S.Header.Characteristics & COFF::IMAGE_SCN_LNK_NRELOC_OVFL)
-      OS << binary_le<uint32_t>(/*VirtualAddress=*/ S.Relocations.size() + 1)
-         << binary_le<uint32_t>(/*SymbolTableIndex=*/ 0)
-         << binary_le<uint16_t>(/*Type=*/ 0);
+      OS << binary_le<uint32_t>(/*VirtualAddress=*/S.Relocations.size() + 1)
+         << binary_le<uint32_t>(/*SymbolTableIndex=*/0)
+         << binary_le<uint16_t>(/*Type=*/0);
     for (const COFFYAML::Relocation &R : S.Relocations) {
       uint32_t SymbolTableIndex;
       if (R.SymbolTableIndex) {

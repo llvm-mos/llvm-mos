@@ -16,11 +16,11 @@ class XCoreTargetStreamer : public MCTargetStreamer {
 public:
   XCoreTargetStreamer(MCStreamer &S);
   ~XCoreTargetStreamer() override;
-  virtual void emitCCTopData(StringRef Name){};
-  virtual void emitCCTopFunction(StringRef Name){};
-  virtual void emitCCBottomData(StringRef Name){};
-  virtual void emitCCBottomFunction(StringRef Name){};
+  virtual void emitCCTopData(StringRef Name) {};
+  virtual void emitCCTopFunction(StringRef Name) {};
+  virtual void emitCCBottomData(StringRef Name) {};
+  virtual void emitCCBottomFunction(StringRef Name) {};
 };
-}
+} // namespace llvm
 
 #endif

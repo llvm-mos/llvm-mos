@@ -34,8 +34,8 @@ using namespace llvm;
 #define DEBUG_TYPE "regalloc"
 
 static cl::opt<unsigned>
-StressRA("stress-regalloc", cl::Hidden, cl::init(0), cl::value_desc("N"),
-         cl::desc("Limit all regclasses to N registers"));
+    StressRA("stress-regalloc", cl::Hidden, cl::init(0), cl::value_desc("N"),
+             cl::desc("Limit all regclasses to N registers"));
 
 RegisterClassInfo::RegisterClassInfo() = default;
 

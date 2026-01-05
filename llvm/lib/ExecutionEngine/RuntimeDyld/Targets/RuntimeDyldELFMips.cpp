@@ -159,8 +159,7 @@ int64_t RuntimeDyldELFMips::evaluateMIPS64Relocation(
       Value = (Value + 0x8000) & ~0xffff;
 
     if (GOTEntry)
-      assert(GOTEntry == Value &&
-                   "GOT entry has two different addresses.");
+      assert(GOTEntry == Value && "GOT entry has two different addresses.");
     else
       writeBytesUnaligned(Value, LocalGOTAddr, getGOTEntrySize());
 
@@ -281,20 +280,17 @@ void RuntimeDyldELFMips::resolveMIPSN64Relocation(
   // RelType is used to keep information for which relocation type we are
   // applying relocation.
   uint32_t RelType = r_type;
-  int64_t CalculatedValue = evaluateMIPS64Relocation(Section, Offset, Value,
-                                                     RelType, Addend,
-                                                     SymOffset, SectionID);
+  int64_t CalculatedValue = evaluateMIPS64Relocation(
+      Section, Offset, Value, RelType, Addend, SymOffset, SectionID);
   if (r_type2 != ELF::R_MIPS_NONE) {
     RelType = r_type2;
-    CalculatedValue = evaluateMIPS64Relocation(Section, Offset, 0, RelType,
-                                               CalculatedValue, SymOffset,
-                                               SectionID);
+    CalculatedValue = evaluateMIPS64Relocation(
+        Section, Offset, 0, RelType, CalculatedValue, SymOffset, SectionID);
   }
   if (r_type3 != ELF::R_MIPS_NONE) {
     RelType = r_type3;
-    CalculatedValue = evaluateMIPS64Relocation(Section, Offset, 0, RelType,
-                                               CalculatedValue, SymOffset,
-                                               SectionID);
+    CalculatedValue = evaluateMIPS64Relocation(
+        Section, Offset, 0, RelType, CalculatedValue, SymOffset, SectionID);
   }
   applyMIPSRelocation(Section.getAddressWithOffset(Offset), CalculatedValue,
                       RelType);

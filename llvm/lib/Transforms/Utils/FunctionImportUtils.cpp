@@ -149,10 +149,10 @@ FunctionImportGlobalProcessing::getPromotedName(const GlobalValue *SGV) {
   if (UseSourceFilenameForPromotedLocals &&
       !SGV->getParent()->getSourceFileName().empty()) {
     SmallString<256> Suffix(SGV->getParent()->getSourceFileName());
-    std::replace_if(std::begin(Suffix), std::end(Suffix),
-                    [&](char ch) { return !isAlnum(ch); }, '_');
-    return ModuleSummaryIndex::getGlobalNameForLocal(
-        SGV->getName(), Suffix);
+    std::replace_if(
+        std::begin(Suffix), std::end(Suffix),
+        [&](char ch) { return !isAlnum(ch); }, '_');
+    return ModuleSummaryIndex::getGlobalNameForLocal(SGV->getName(), Suffix);
   }
 
   return ModuleSummaryIndex::getGlobalNameForLocal(

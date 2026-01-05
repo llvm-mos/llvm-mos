@@ -87,12 +87,12 @@ public:
 
   enum AttrKind {
     // IR-Level Attributes
-    None,                  ///< No attributes have been set
-    #define GET_ATTR_ENUM
-    #include "llvm/IR/Attributes.inc"
-    EndAttrKinds,          ///< Sentinel value useful for loops
-    EmptyKey,              ///< Use as Empty key for DenseMap of AttrKind
-    TombstoneKey,          ///< Use as Tombstone key for DenseMap of AttrKind
+    None, ///< No attributes have been set
+#define GET_ATTR_ENUM
+#include "llvm/IR/Attributes.inc"
+    EndAttrKinds, ///< Sentinel value useful for loops
+    EmptyKey,     ///< Use as Empty key for DenseMap of AttrKind
+    TombstoneKey, ///< Use as Tombstone key for DenseMap of AttrKind
   };
 
   static const unsigned NumIntAttrKinds = LastIntAttr - FirstIntAttr + 1;
@@ -332,13 +332,11 @@ public:
   LLVM_ABI void Profile(FoldingSetNodeID &ID) const;
 
   /// Return a raw pointer that uniquely identifies this attribute.
-  void *getRawPointer() const {
-    return pImpl;
-  }
+  void *getRawPointer() const { return pImpl; }
 
   /// Get an attribute from a raw pointer created by getRawPointer.
   static Attribute fromRawPointer(void *RawPtr) {
-    return Attribute(reinterpret_cast<AttributeImpl*>(RawPtr));
+    return Attribute(reinterpret_cast<AttributeImpl *>(RawPtr));
   }
 };
 
@@ -1035,9 +1033,7 @@ public:
   bool operator!=(const AttributeList &RHS) const { return pImpl != RHS.pImpl; }
 
   /// Return a raw pointer that uniquely identifies this attribute list.
-  void *getRawPointer() const {
-    return pImpl;
-  }
+  void *getRawPointer() const { return pImpl; }
 
   /// Return true if there are no attributes.
   bool isEmpty() const { return pImpl == nullptr; }
@@ -1053,13 +1049,13 @@ public:
 template <> struct DenseMapInfo<AttributeList, void> {
   static AttributeList getEmptyKey() {
     auto Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
+    Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
     return AttributeList(reinterpret_cast<AttributeListImpl *>(Val));
   }
 
   static AttributeList getTombstoneKey() {
     auto Val = static_cast<uintptr_t>(-2);
-    Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
+    Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
     return AttributeList(reinterpret_cast<AttributeListImpl *>(Val));
   }
 

@@ -913,8 +913,8 @@ void DwarfLinkerForBinary::AddressManager::findValidRelocsMachO(
     object::DataRefImpl RelocDataRef = Reloc.getRawDataRefImpl();
     MachO::any_relocation_info MachOReloc = Obj.getRelocation(RelocDataRef);
 
-    if (object::MachOObjectFile::isMachOPairedReloc(Obj.getAnyRelocationType(MachOReloc),
-                           Obj.getArch())) {
+    if (object::MachOObjectFile::isMachOPairedReloc(
+            Obj.getAnyRelocationType(MachOReloc), Obj.getArch())) {
       SkipNext = true;
       Linker.reportWarning("unsupported relocation in " + *Section.getName() +
                                " section.",

@@ -214,8 +214,8 @@ void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   int64_t AbsValue;
   if (Value->evaluateAsAbsolute(AbsValue, getAssemblerPtr())) {
     if (!isUIntN(8 * Size, AbsValue) && !isIntN(8 * Size, AbsValue)) {
-      getContext().reportError(
-          Loc, "value evaluated as " + Twine(AbsValue) + " is out of range.");
+      getContext().reportError(Loc, "value evaluated as " + Twine(AbsValue) +
+                                        " is out of range.");
       return;
     }
     emitIntValue(AbsValue, Size);
@@ -678,8 +678,7 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
-                                         unsigned char Value,
-                                         SMLoc Loc) {
+                                         unsigned char Value, SMLoc Loc) {
   newSpecialFragment<MCOrgFragment>(*Offset, Value, Loc);
 }
 

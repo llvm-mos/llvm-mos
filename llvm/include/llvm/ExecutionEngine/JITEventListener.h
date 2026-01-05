@@ -69,13 +69,13 @@ public:
   static JITEventListener *createIntelJITEventListener();
 
   // Construct an IntelJITEventListener with a test Intel JIT API implementation
-  static JITEventListener *createIntelJITEventListener(
-                                      IntelJITEventsWrapper* AlternativeImpl);
+  static JITEventListener *
+  createIntelJITEventListener(IntelJITEventsWrapper *AlternativeImpl);
 #else
   static JITEventListener *createIntelJITEventListener() { return nullptr; }
 
-  static JITEventListener *createIntelJITEventListener(
-                                      IntelJITEventsWrapper* AlternativeImpl) {
+  static JITEventListener *
+  createIntelJITEventListener(IntelJITEventsWrapper *AlternativeImpl) {
     return nullptr;
   }
 #endif // USE_INTEL_JITEVENTS
@@ -85,13 +85,13 @@ public:
   static JITEventListener *createOProfileJITEventListener();
 
   // Construct an OProfileJITEventListener with a test opagent implementation
-  static JITEventListener *createOProfileJITEventListener(
-                                      OProfileWrapper* AlternativeImpl);
+  static JITEventListener *
+  createOProfileJITEventListener(OProfileWrapper *AlternativeImpl);
 #else
   static JITEventListener *createOProfileJITEventListener() { return nullptr; }
 
-  static JITEventListener *createOProfileJITEventListener(
-                                      OProfileWrapper* AlternativeImpl) {
+  static JITEventListener *
+  createOProfileJITEventListener(OProfileWrapper *AlternativeImpl) {
     return nullptr;
   }
 #endif // USE_OPROFILE
@@ -99,10 +99,7 @@ public:
 #if LLVM_USE_PERF
   static JITEventListener *createPerfJITEventListener();
 #else
-  static JITEventListener *createPerfJITEventListener()
-  {
-    return nullptr;
-  }
+  static JITEventListener *createPerfJITEventListener() { return nullptr; }
 #endif // USE_PERF
 
 private:

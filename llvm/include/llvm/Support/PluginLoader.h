@@ -25,18 +25,18 @@
 #include <string>
 
 namespace llvm {
-  struct PluginLoader {
-    LLVM_ABI void operator=(const std::string &Filename);
-    LLVM_ABI static unsigned getNumPlugins();
-    LLVM_ABI static std::string &getPlugin(unsigned num);
-  };
+struct PluginLoader {
+  LLVM_ABI void operator=(const std::string &Filename);
+  LLVM_ABI static unsigned getNumPlugins();
+  LLVM_ABI static std::string &getPlugin(unsigned num);
+};
 
 #ifndef DONT_GET_PLUGIN_LOADER_OPTION
-  // This causes operator= above to be invoked for every -load option.
-  static cl::opt<PluginLoader, false, cl::parser<std::string>>
-      LoadOpt("load", cl::value_desc("pluginfilename"),
-              cl::desc("Load the specified plugin"));
+// This causes operator= above to be invoked for every -load option.
+static cl::opt<PluginLoader, false, cl::parser<std::string>>
+    LoadOpt("load", cl::value_desc("pluginfilename"),
+            cl::desc("Load the specified plugin"));
 #endif
-}
+} // namespace llvm
 
 #endif

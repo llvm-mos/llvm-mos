@@ -1193,7 +1193,7 @@ static void writeHexDigit(char *Buffer, uint8_t Digit) {
 }
 
 static void outputHex(OutputBuffer &OB, unsigned C) {
-  assert (C != 0);
+  assert(C != 0);
 
   // It's easier to do the math if we can work from right to left, but we need
   // to print the numbers from left to right.  So render this into a temporary

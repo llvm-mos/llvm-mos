@@ -118,7 +118,7 @@ class MachineConstantPool {
   Align PoolAlignment; ///< The alignment for the pool.
   std::vector<MachineConstantPoolEntry> Constants; ///< The pool of constants.
   /// MachineConstantPoolValues that use an existing MachineConstantPoolEntry.
-  DenseSet<MachineConstantPoolValue*> MachineCPVsSharingEntries;
+  DenseSet<MachineConstantPoolValue *> MachineCPVsSharingEntries;
   const DataLayout &DL;
 
   const DataLayout &getDataLayout() const { return DL; }

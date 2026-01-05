@@ -26,10 +26,10 @@ class PDBSymbolData;
 class PDBSymbolFunc;
 class PDBFile;
 uint32_t getTypeLength(const PDBSymbolData &Symbol);
-}
+} // namespace pdb
 typedef llvm::PointerUnion<object::COFFObjectFile *, pdb::PDBFile *>
     PdbOrCoffObj;
-}
+} // namespace llvm
 
 namespace opts {
 
@@ -104,7 +104,7 @@ extern llvm::cl::opt<uint32_t> PaddingThreshold;
 extern llvm::cl::opt<uint32_t> ImmediatePaddingThreshold;
 extern llvm::cl::opt<ClassDefinitionFormat> ClassFormat;
 extern llvm::cl::opt<uint32_t> ClassRecursionDepth;
-}
+} // namespace pretty
 
 namespace bytes {
 struct NumberRange {
@@ -182,7 +182,7 @@ extern llvm::cl::opt<bool> DumpModules;
 extern llvm::cl::opt<bool> DumpModuleFiles;
 extern llvm::cl::opt<bool> DumpFpo;
 extern llvm::cl::opt<bool> RawAll;
-}
+} // namespace dump
 
 namespace pdb2yaml {
 extern llvm::cl::opt<bool> All;
@@ -217,6 +217,6 @@ extern llvm::cl::opt<std::string> OutputFile;
 extern llvm::cl::opt<std::string> Stream;
 extern llvm::cl::opt<bool> ForceName;
 } // namespace exportstream
-}
+} // namespace opts
 
 #endif

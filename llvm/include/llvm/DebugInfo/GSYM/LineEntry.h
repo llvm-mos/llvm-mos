@@ -30,7 +30,7 @@ struct LineEntry {
 
 inline raw_ostream &operator<<(raw_ostream &OS, const LineEntry &LE) {
   return OS << "addr=" << HEX64(LE.Addr) << ", file=" << format("%3u", LE.File)
-      << ", line=" << format("%3u", LE.Line);
+            << ", line=" << format("%3u", LE.Line);
 }
 
 inline bool operator==(const LineEntry &LHS, const LineEntry &RHS) {

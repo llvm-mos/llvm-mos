@@ -198,12 +198,12 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(
     (void)Map;                                                                 \
     assert(Map[0].BreakDown ==                                                 \
                &AArch64GenRegisterBankInfo::PartMappings[PartialMapDstIdx] &&  \
-           Map[0].NumBreakDowns == 1 && "FPR" #DstSize                         \
-                                        " Dst is incorrectly initialized");    \
+           Map[0].NumBreakDowns == 1 &&                                        \
+           "FPR" #DstSize " Dst is incorrectly initialized");                  \
     assert(Map[1].BreakDown ==                                                 \
                &AArch64GenRegisterBankInfo::PartMappings[PartialMapSrcIdx] &&  \
-           Map[1].NumBreakDowns == 1 && "FPR" #SrcSize                         \
-                                        " Src is incorrectly initialized");    \
+           Map[1].NumBreakDowns == 1 &&                                        \
+           "FPR" #SrcSize " Src is incorrectly initialized");                  \
                                                                                \
   } while (false)
 
@@ -1045,7 +1045,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (OpRegBankIdx[0] != PMI_FirstGPR)
       break;
 
-    LLT SrcTy = MRI.getType(MI.getOperand(MI.getNumOperands()-1).getReg());
+    LLT SrcTy = MRI.getType(MI.getOperand(MI.getNumOperands() - 1).getReg());
     // UNMERGE into scalars from a vector should always use FPR.
     // Likewise if any of the uses are FP instructions.
     if (SrcTy.isVector() || SrcTy == LLT::scalar(128) ||

@@ -9,4 +9,4 @@ Target &getTheMOSTarget();
 
 } // namespace llvm
 
-#endif  // not LLVM_LIB_TARGET_MOS_TARGETINFO_MOSTARGETINFO_H
+#endif // not LLVM_LIB_TARGET_MOS_TARGETINFO_MOSTARGETINFO_H

@@ -33,21 +33,21 @@ namespace SystemZII {
 
 enum {
   // See comments in SystemZInstrFormats.td.
-  SimpleBDXLoad          = (1 << 0),
-  SimpleBDXStore         = (1 << 1),
-  Has20BitOffset         = (1 << 2),
-  HasIndex               = (1 << 3),
-  Is128Bit               = (1 << 4),
-  AccessSizeMask         = (31 << 5),
-  AccessSizeShift        = 5,
-  CCValuesMask           = (15 << 10),
-  CCValuesShift          = 10,
-  CompareZeroCCMaskMask  = (15 << 14),
+  SimpleBDXLoad = (1 << 0),
+  SimpleBDXStore = (1 << 1),
+  Has20BitOffset = (1 << 2),
+  HasIndex = (1 << 3),
+  Is128Bit = (1 << 4),
+  AccessSizeMask = (31 << 5),
+  AccessSizeShift = 5,
+  CCValuesMask = (15 << 10),
+  CCValuesShift = 10,
+  CompareZeroCCMaskMask = (15 << 14),
   CompareZeroCCMaskShift = 14,
-  CCMaskFirst            = (1 << 18),
-  CCMaskLast             = (1 << 19),
-  IsLogical              = (1 << 20),
-  CCIfNoSignedWrap       = (1 << 21)
+  CCMaskFirst = (1 << 18),
+  CCMaskLast = (1 << 19),
+  IsLogical = (1 << 20),
+  CCIfNoSignedWrap = (1 << 21)
 };
 
 static inline unsigned getAccessSize(unsigned int Flags) {
@@ -135,7 +135,7 @@ public:
 
   Branch(BranchType type, unsigned ccValid, unsigned ccMask,
          const MachineOperand *target)
-    : Target(target), Type(type), CCValid(ccValid), CCMask(ccMask) {}
+      : Target(target), Type(type), CCValid(ccValid), CCMask(ccMask) {}
 
   bool isIndirect() { return Target != nullptr && Target->isReg(); }
   bool hasMBBTarget() { return Target != nullptr && Target->isMBB(); }
@@ -180,7 +180,7 @@ MachineBasicBlock *splitBlockAfter(MachineBasicBlock::iterator MI,
 // Split MBB before MI and return the new block (the one that contains MI).
 MachineBasicBlock *splitBlockBefore(MachineBasicBlock::iterator MI,
                                     MachineBasicBlock *MBB);
-}
+} // namespace SystemZ
 
 class SystemZInstrInfo : public SystemZGenInstrInfo {
   const SystemZRegisterInfo RI;
@@ -200,11 +200,12 @@ class SystemZInstrInfo : public SystemZGenInstrInfo {
                         unsigned Size) const;
   void expandLoadStackGuard(MachineInstr *MI) const;
 
-  MachineInstrBuilder
-  emitGRX32Move(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
-                unsigned LowLowOpcode, unsigned Size, bool KillSrc,
-                bool UndefSrc) const;
+  MachineInstrBuilder emitGRX32Move(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator MBBI,
+                                    const DebugLoc &DL, unsigned DestReg,
+                                    unsigned SrcReg, unsigned LowLowOpcode,
+                                    unsigned Size, bool KillSrc,
+                                    bool UndefSrc) const;
 
   virtual void anchor();
 
@@ -265,13 +266,12 @@ public:
   bool isProfitableToIfCvt(MachineBasicBlock &MBB, unsigned NumCycles,
                            unsigned ExtraPredCycles,
                            BranchProbability Probability) const override;
-  bool isProfitableToIfCvt(MachineBasicBlock &TMBB,
-                           unsigned NumCyclesT, unsigned ExtraPredCyclesT,
-                           MachineBasicBlock &FMBB,
+  bool isProfitableToIfCvt(MachineBasicBlock &TMBB, unsigned NumCyclesT,
+                           unsigned ExtraPredCyclesT, MachineBasicBlock &FMBB,
                            unsigned NumCyclesF, unsigned ExtraPredCyclesF,
                            BranchProbability Probability) const override;
   bool isProfitableToDupForIfCvt(MachineBasicBlock &MBB, unsigned NumCycles,
-                            BranchProbability Probability) const override;
+                                 BranchProbability Probability) const override;
   bool PredicateInstruction(MachineInstr &MI,
                             ArrayRef<MachineOperand> Pred) const override;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
@@ -298,19 +298,19 @@ public:
                                    bool Invert) const override;
   std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
 
-  MachineInstr *
-  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr,
-                        VirtRegMap *VRM = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops,
+                                      MachineBasicBlock::iterator InsertPt,
+                                      int FrameIndex,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
   MachineInstr *foldMemoryOperandImpl(
       MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
       MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
       LiveIntervals *LIS = nullptr) const override;
   bool expandPostRAPseudo(MachineInstr &MBBI) const override;
-  bool reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const
-    override;
+  bool
+  reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 
   // Return the SystemZRegisterInfo, which this class owns.
   const SystemZRegisterInfo &getRegisterInfo() const { return RI; }
@@ -326,8 +326,8 @@ public:
   SystemZII::Branch getBranchInfo(const MachineInstr &MI) const;
 
   // Get the load and store opcodes for a given register class.
-  void getLoadStoreOpcodes(const TargetRegisterClass *RC,
-                           unsigned &LoadOpcode, unsigned &StoreOpcode) const;
+  void getLoadStoreOpcodes(const TargetRegisterClass *RC, unsigned &LoadOpcode,
+                           unsigned &StoreOpcode) const;
 
   // Opcode is the opcode of an instruction that has an address operand,
   // and the caller wants to perform that instruction's operation on an
@@ -348,14 +348,13 @@ public:
   // Return true if ROTATE AND ... SELECTED BITS can be used to select bits
   // Mask of the R2 operand, given that only the low BitSize bits of Mask are
   // significant.  Set Start and End to the I3 and I4 operands if so.
-  bool isRxSBGMask(uint64_t Mask, unsigned BitSize,
-                   unsigned &Start, unsigned &End) const;
+  bool isRxSBGMask(uint64_t Mask, unsigned BitSize, unsigned &Start,
+                   unsigned &End) const;
 
   // If Opcode is a COMPARE opcode for which an associated fused COMPARE AND *
   // operation exists, return the opcode for the latter, otherwise return 0.
   // MI, if nonnull, is the compare instruction.
-  unsigned getFusedCompare(unsigned Opcode,
-                           SystemZII::FusedCompareType Type,
+  unsigned getFusedCompare(unsigned Opcode, SystemZII::FusedCompareType Type,
                            const MachineInstr *MI = nullptr) const;
 
   // Try to find all CC users of the compare instruction (MBBI) and update
@@ -370,8 +369,7 @@ public:
 
   // Emit code before MBBI in MI to move immediate value Value into
   // physical register Reg.
-  void loadImmediate(MachineBasicBlock &MBB,
-                     MachineBasicBlock::iterator MBBI,
+  void loadImmediate(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      unsigned Reg, uint64_t Value) const;
 
   // Perform target specific instruction verification.
@@ -382,9 +380,8 @@ public:
   // aliasing information, that two MIs access different memory
   // addresses. This function returns true if two MIs access different
   // memory addresses and false otherwise.
-  bool
-  areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
-                                  const MachineInstr &MIb) const override;
+  bool areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
+                                       const MachineInstr &MIb) const override;
 
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;

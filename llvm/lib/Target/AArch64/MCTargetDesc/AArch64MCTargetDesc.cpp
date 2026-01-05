@@ -475,15 +475,16 @@ public:
       uint64_t Off = 0;
       // Check for optional bti c that prefixes adrp in BTI enabled entries
       if (Insn == 0xd503245f) {
-         Off = 4;
-         Insn = support::endian::read32le(PltContents.data() + Byte + Off);
+        Off = 4;
+        Insn = support::endian::read32le(PltContents.data() + Byte + Off);
       }
       // Check for adrp.
       if ((Insn & 0x9f000000) != 0x90000000)
         continue;
       Off += 4;
       uint64_t Imm = (((PltSectionVA + Byte) >> 12) << 12) +
-            (((Insn >> 29) & 3) << 12) + (((Insn >> 5) & 0x3ffff) << 14);
+                     (((Insn >> 29) & 3) << 12) +
+                     (((Insn >> 5) & 0x3ffff) << 14);
       uint32_t Insn2 =
           support::endian::read32le(PltContents.data() + Byte + Off);
       // Check for: ldr Xt, [Xn, #pimm].

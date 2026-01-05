@@ -104,7 +104,8 @@ public:
   /// Checks if the intrinsic is an annotation.
   bool isAssumeLikeIntrinsic() const {
     switch (getIntrinsicID()) {
-    default: break;
+    default:
+      break;
     case Intrinsic::assume:
     case Intrinsic::sideeffect:
     case Intrinsic::pseudoprobe:
@@ -720,7 +721,6 @@ public:
   }
   /// @}
 };
-
 
 /// This is the common base class for constrained floating point intrinsics.
 class ConstrainedFPIntrinsic : public IntrinsicInst {
@@ -1688,7 +1688,7 @@ class GCProjectionInst : public IntrinsicInst {
 public:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::experimental_gc_relocate ||
-      I->getIntrinsicID() == Intrinsic::experimental_gc_result;
+           I->getIntrinsicID() == Intrinsic::experimental_gc_result;
   }
 
   static bool classof(const Value *V) {
@@ -1746,7 +1746,6 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 };
-
 
 /// This represents the llvm.assume intrinsic.
 class AssumeInst : public IntrinsicInst {

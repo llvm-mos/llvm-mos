@@ -64,6 +64,6 @@ LLVM_ABI std::unique_ptr<Module>
 parseIRFile(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
             ParserCallbacks Callbacks = {},
             AsmParserContext *ParserContext = nullptr);
-}
+} // namespace llvm
 
 #endif

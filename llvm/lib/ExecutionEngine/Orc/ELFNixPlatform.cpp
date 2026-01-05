@@ -575,9 +575,8 @@ void ELFNixPlatform::rt_recordInitializers(
 void ELFNixPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
                                      ExecutorAddr Handle,
                                      StringRef SymbolName) {
-  LLVM_DEBUG({
-    dbgs() << "ELFNixPlatform::rt_lookupSymbol(\"" << Handle << "\")\n";
-  });
+  LLVM_DEBUG(
+      { dbgs() << "ELFNixPlatform::rt_lookupSymbol(\"" << Handle << "\")\n"; });
 
   JITDylib *JD = nullptr;
 

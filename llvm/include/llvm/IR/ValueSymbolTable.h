@@ -31,7 +31,7 @@ class Instruction;
 template <bool ExtraIteratorBits> struct ilist_iterator_bits;
 template <class ParentTy> struct ilist_parent;
 template <unsigned InternalLen> class SmallString;
-template <typename ValueSubClass, typename ... Args> class SymbolTableListTraits;
+template <typename ValueSubClass, typename... Args> class SymbolTableListTraits;
 
 /// This class provides a symbol table of name/value pairs. It is essentially
 /// a std::map<std::string,Value*> but has a controlled interface provided by
@@ -48,11 +48,11 @@ class ValueSymbolTable {
                                      ilist_parent<BasicBlock>>;
   friend class Value;
 
-/// @name Types
-/// @{
+  /// @name Types
+  /// @{
 public:
   /// A mapping of names to values.
-  using ValueMap = StringMap<Value*>;
+  using ValueMap = StringMap<Value *>;
 
   /// An iterator over a ValueMap.
   using iterator = ValueMap::iterator;
@@ -60,9 +60,9 @@ public:
   /// A const_iterator over a ValueMap.
   using const_iterator = ValueMap::const_iterator;
 
-/// @}
-/// @name Constructors
-/// @{
+  /// @}
+  /// @name Constructors
+  /// @{
 
   ValueSymbolTable(int MaxNameSize = -1) : vmap(0), MaxNameSize(MaxNameSize) {}
   LLVM_ABI ~ValueSymbolTable();
@@ -136,12 +136,12 @@ private:
   /// @name Internal Data
   /// @{
 
-  ValueMap vmap;                    ///< The map that holds the symbol table.
+  ValueMap vmap;   ///< The map that holds the symbol table.
   int MaxNameSize; ///< The maximum size for each name. If the limit is
                    ///< exceeded, the name is capped.
-  mutable uint32_t LastUnique = 0;  ///< Counter for tracking unique names
+  mutable uint32_t LastUnique = 0; ///< Counter for tracking unique names
 
-/// @}
+  /// @}
 };
 
 } // end namespace llvm

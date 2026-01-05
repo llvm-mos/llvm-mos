@@ -78,8 +78,15 @@ LLVM_ABI void setCurrentDebugTypes(const char **Types, unsigned Count);
 
 #else
 #define isCurrentDebugType(X) (false)
-#define setCurrentDebugType(X) do { (void)(X); } while (false)
-#define setCurrentDebugTypes(X, N) do { (void)(X); (void)(N); } while (false)
+#define setCurrentDebugType(X)                                                 \
+  do {                                                                         \
+    (void)(X);                                                                 \
+  } while (false)
+#define setCurrentDebugTypes(X, N)                                             \
+  do {                                                                         \
+    (void)(X);                                                                 \
+    (void)(N);                                                                 \
+  } while (false)
 #define DEBUG_WITH_TYPE(TYPE, ...)                                             \
   do {                                                                         \
   } while (false)

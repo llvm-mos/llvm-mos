@@ -46,7 +46,7 @@ public:
   ~PassNameParser() override;
 
   void initialize() {
-    cl::parser<const PassInfo*>::initialize();
+    cl::parser<const PassInfo *>::initialize();
 
     // Add all of the passes to the map that got initialized before 'this' did.
     enumeratePasses();
@@ -67,10 +67,11 @@ public:
   // Implement the PassRegistrationListener callbacks used to populate our map
   //
   void passRegistered(const PassInfo *P) override {
-    if (ignorablePass(P)) return;
+    if (ignorablePass(P))
+      return;
     if (findOption(P->getPassArgument().data()) != getNumOptions()) {
-      errs() << "Two passes with the same argument (-"
-           << P->getPassArgument() << ") attempted to be registered!\n";
+      errs() << "Two passes with the same argument (-" << P->getPassArgument()
+             << ") attempted to be registered!\n";
       llvm_unreachable(nullptr);
     }
     addLiteralOption(P->getPassArgument().data(), P, P->getPassName().data());
@@ -80,9 +81,9 @@ public:
   // printOptionInfo - Print out information about this option.  Override the
   // default implementation to sort the table before we print...
   void printOptionInfo(const cl::Option &O, size_t GlobalWidth) const override {
-    PassNameParser *PNP = const_cast<PassNameParser*>(this);
+    PassNameParser *PNP = const_cast<PassNameParser *>(this);
     array_pod_sort(PNP->Values.begin(), PNP->Values.end(), ValCompare);
-    cl::parser<const PassInfo*>::printOptionInfo(O, GlobalWidth);
+    cl::parser<const PassInfo *>::printOptionInfo(O, GlobalWidth);
   }
 
 private:
@@ -93,6 +94,6 @@ private:
   }
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

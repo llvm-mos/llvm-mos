@@ -97,7 +97,7 @@ enum class AuthCheckMethod {
                  "Compare with the result of XPAC (requires Armv8.3-a)")
 
 #define AUTH_CHECK_METHOD_CL_VALUES_LR                                         \
-      AUTH_CHECK_METHOD_CL_VALUES_COMMON,                                      \
+  AUTH_CHECK_METHOD_CL_VALUES_COMMON,                                          \
       clEnumValN(AArch64PAuth::AuthCheckMethod::XPACHint, "xpac-hint",         \
                  "Compare with the result of XPACLRI")
 

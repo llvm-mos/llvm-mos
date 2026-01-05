@@ -119,7 +119,7 @@ namespace {
 
 class X86SpeculativeLoadHardeningPass : public MachineFunctionPass {
 public:
-  X86SpeculativeLoadHardeningPass() : MachineFunctionPass(ID) { }
+  X86SpeculativeLoadHardeningPass() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "X86 speculative load hardening";
@@ -1699,9 +1699,9 @@ void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
 
       // Broadcast our state into a vector register.
       Register VStateReg = MRI->createVirtualRegister(OpRC);
-      unsigned BroadcastOp = Is128Bit ? X86::VPBROADCASTQrZ128rr
-                                      : Is256Bit ? X86::VPBROADCASTQrZ256rr
-                                                 : X86::VPBROADCASTQrZrr;
+      unsigned BroadcastOp = Is128Bit   ? X86::VPBROADCASTQrZ128rr
+                             : Is256Bit ? X86::VPBROADCASTQrZ256rr
+                                        : X86::VPBROADCASTQrZrr;
       auto BroadcastI =
           BuildMI(MBB, InsertPt, Loc, TII->get(BroadcastOp), VStateReg)
               .addReg(StateReg);
@@ -1711,8 +1711,9 @@ void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
                  dbgs() << "\n");
 
       // Merge our potential poison state into the value with a vector or.
-      unsigned OrOp = Is128Bit ? X86::VPORQZ128rr
-                               : Is256Bit ? X86::VPORQZ256rr : X86::VPORQZrr;
+      unsigned OrOp = Is128Bit   ? X86::VPORQZ128rr
+                      : Is256Bit ? X86::VPORQZ256rr
+                                 : X86::VPORQZrr;
       auto OrI = BuildMI(MBB, InsertPt, Loc, TII->get(OrOp), TmpReg)
                      .addReg(VStateReg)
                      .addReg(OpReg);
@@ -1780,7 +1781,8 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
       // If we're already going to harden this use, it is data invariant, it
       // does not interfere with EFLAGS, and within our block.
       if (HardenedInstrs.count(&UseMI)) {
-        if (!X86InstrInfo::isDataInvariantLoad(UseMI) || isEFLAGSDefLive(UseMI)) {
+        if (!X86InstrInfo::isDataInvariantLoad(UseMI) ||
+            isEFLAGSDefLive(UseMI)) {
           // If we've already decided to harden a non-load, we must have sunk
           // some other post-load hardened instruction to it and it must itself
           // be data-invariant.
@@ -1814,8 +1816,8 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
 
       // If this single use isn't data invariant, isn't in this block, or has
       // interfering EFLAGS, we can't sink the hardening to it.
-      if (!X86InstrInfo::isDataInvariant(UseMI) || UseMI.getParent() != MI.getParent() ||
-          isEFLAGSDefLive(UseMI))
+      if (!X86InstrInfo::isDataInvariant(UseMI) ||
+          UseMI.getParent() != MI.getParent() || isEFLAGSDefLive(UseMI))
         return {};
 
       // If this instruction defines multiple registers bail as we won't harden

@@ -41,8 +41,8 @@ public:
                        std::unique_ptr<MCRelocationInfo> RelInfo,
                        LLVMOpInfoCallback getOpInfo,
                        LLVMSymbolLookupCallback symbolLookUp, void *disInfo)
-    : MCSymbolizer(Ctx, std::move(RelInfo)), GetOpInfo(getOpInfo),
-      SymbolLookUp(symbolLookUp), DisInfo(disInfo) {}
+      : MCSymbolizer(Ctx, std::move(RelInfo)), GetOpInfo(getOpInfo),
+        SymbolLookUp(symbolLookUp), DisInfo(disInfo) {}
 
   bool tryAddingSymbolicOperand(MCInst &MI, raw_ostream &CommentStream,
                                 int64_t Value, uint64_t Address, bool IsBranch,
@@ -53,6 +53,6 @@ public:
                                        uint64_t Address) override;
 };
 
-}
+} // namespace llvm
 
 #endif

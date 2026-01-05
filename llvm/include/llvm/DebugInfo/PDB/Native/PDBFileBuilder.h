@@ -29,7 +29,7 @@ struct GUID;
 namespace msf {
 class MSFBuilder;
 struct MSFLayout;
-}
+} // namespace msf
 namespace pdb {
 struct SrcHeaderBlockEntry;
 class DbiStreamBuilder;
@@ -106,7 +106,7 @@ private:
   NamedStreamMap NamedStreams;
   DenseMap<uint32_t, std::string> NamedStreamData;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

@@ -47,7 +47,7 @@ void dumpClassParentWithScopeOperator(const T &Symbol, LinePrinter &Printer,
   WithColor(Printer, PDB_ColorItem::Type).get() << ClassParent->getName();
   Printer << "::";
 }
-}
+} // namespace
 
 FunctionDumper::FunctionDumper(LinePrinter &P)
     : PDBSymDumper(true), Printer(P) {}
@@ -190,8 +190,8 @@ void FunctionDumper::start(const PDBSymbolFunc &Symbol, PointerType Pointer) {
     while (auto Arg = Arguments->getNext()) {
       auto ArgType = Arg->getType();
       ArgType->dump(*this);
-      WithColor(Printer, PDB_ColorItem::Identifier).get() << " "
-                                                          << Arg->getName();
+      WithColor(Printer, PDB_ColorItem::Identifier).get()
+          << " " << Arg->getName();
       if (++Index < Arguments->getChildCount())
         Printer << ", ";
     }

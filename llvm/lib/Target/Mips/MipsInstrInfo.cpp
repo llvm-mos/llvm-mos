@@ -64,9 +64,8 @@ MCInst MipsInstrInfo::getNop() const {
 
 /// insertNoop - If data hazard condition is found insert the target nop
 /// instruction.
-void MipsInstrInfo::
-insertNoop(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI) const
-{
+void MipsInstrInfo::insertNoop(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MI) const {
   DebugLoc DL;
   BuildMI(MBB, MI, DL, get(Mips::NOP));
 }
@@ -108,10 +107,10 @@ void MipsInstrInfo::AnalyzeCondBr(const MachineInstr *Inst, unsigned Opc,
 
   // for both int and fp branches, the last explicit operand is the
   // MBB.
-  BB = Inst->getOperand(NumOp-1).getMBB();
+  BB = Inst->getOperand(NumOp - 1).getMBB();
   Cond.push_back(MachineOperand::CreateImm(Opc));
 
-  for (int i = 0; i < NumOp-1; i++)
+  for (int i = 0; i < NumOp - 1; i++)
     Cond.push_back(Inst->getOperand(i));
 }
 
@@ -120,7 +119,7 @@ bool MipsInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                   MachineBasicBlock *&FBB,
                                   SmallVectorImpl<MachineOperand> &Cond,
                                   bool AllowModify) const {
-  SmallVector<MachineInstr*, 2> BranchInstrs;
+  SmallVector<MachineInstr *, 2> BranchInstrs;
   BranchType BT = analyzeBranch(MBB, TBB, FBB, Cond, AllowModify, BranchInstrs);
 
   return (BT == BT_None) || (BT == BT_Indirect);
@@ -141,12 +140,9 @@ void MipsInstrInfo::BuildCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
   MIB.addMBB(TBB);
 }
 
-unsigned MipsInstrInfo::insertBranch(MachineBasicBlock &MBB,
-                                     MachineBasicBlock *TBB,
-                                     MachineBasicBlock *FBB,
-                                     ArrayRef<MachineOperand> Cond,
-                                     const DebugLoc &DL,
-                                     int *BytesAdded) const {
+unsigned MipsInstrInfo::insertBranch(
+    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
+    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert(!BytesAdded && "code size not handled");
@@ -156,8 +152,7 @@ unsigned MipsInstrInfo::insertBranch(MachineBasicBlock &MBB,
   //  Floating point branches: 1 (opc)
   //  Int BranchZero: 2 (opc, reg)
   //  Int Branch: 3 (opc, reg0, reg1)
-  assert((Cond.size() <= 3) &&
-         "# of Mips branch conditions must be <= 3!");
+  assert((Cond.size() <= 3) && "# of Mips branch conditions must be <= 3!");
 
   // Two-way Conditional branch.
   if (FBB) {
@@ -205,8 +200,7 @@ unsigned MipsInstrInfo::removeBranch(MachineBasicBlock &MBB,
 /// specified Branch instruction.
 bool MipsInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
-  assert( (Cond.size() && Cond.size() <= 3) &&
-          "Invalid Mips branch condition!");
+  assert((Cond.size() && Cond.size() <= 3) && "Invalid Mips branch condition!");
   Cond[0].setImm(getOppositeBranchOpc(Cond[0].getImm()));
   return false;
 }
@@ -310,21 +304,27 @@ bool MipsInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
   case Mips::BC1FL:
   case Mips::BC1T:
   case Mips::BC1TL:
-  case Mips::BEQ:     case Mips::BEQ64:
+  case Mips::BEQ:
+  case Mips::BEQ64:
   case Mips::BEQL:
-  case Mips::BGEZ:    case Mips::BGEZ64:
+  case Mips::BGEZ:
+  case Mips::BGEZ64:
   case Mips::BGEZL:
   case Mips::BGEZAL:
   case Mips::BGEZALL:
-  case Mips::BGTZ:    case Mips::BGTZ64:
+  case Mips::BGTZ:
+  case Mips::BGTZ64:
   case Mips::BGTZL:
-  case Mips::BLEZ:    case Mips::BLEZ64:
+  case Mips::BLEZ:
+  case Mips::BLEZ64:
   case Mips::BLEZL:
-  case Mips::BLTZ:    case Mips::BLTZ64:
+  case Mips::BLTZ:
+  case Mips::BLTZ64:
   case Mips::BLTZL:
   case Mips::BLTZAL:
   case Mips::BLTZALL:
-  case Mips::BNE:     case Mips::BNE64:
+  case Mips::BNE:
+  case Mips::BNE64:
   case Mips::BNEL:
     return isInt<18>(BrOffset);
 
@@ -361,16 +361,26 @@ bool MipsInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
   case Mips::BC1NEZ:
   case Mips::BC2EQZ:
   case Mips::BC2NEZ:
-  case Mips::BEQC:   case Mips::BEQC64:
-  case Mips::BNEC:   case Mips::BNEC64:
-  case Mips::BGEC:   case Mips::BGEC64:
-  case Mips::BGEUC:  case Mips::BGEUC64:
-  case Mips::BGEZC:  case Mips::BGEZC64:
-  case Mips::BGTZC:  case Mips::BGTZC64:
-  case Mips::BLEZC:  case Mips::BLEZC64:
-  case Mips::BLTC:   case Mips::BLTC64:
-  case Mips::BLTUC:  case Mips::BLTUC64:
-  case Mips::BLTZC:  case Mips::BLTZC64:
+  case Mips::BEQC:
+  case Mips::BEQC64:
+  case Mips::BNEC:
+  case Mips::BNEC64:
+  case Mips::BGEC:
+  case Mips::BGEC64:
+  case Mips::BGEUC:
+  case Mips::BGEUC64:
+  case Mips::BGEZC:
+  case Mips::BGEZC64:
+  case Mips::BGTZC:
+  case Mips::BGTZC64:
+  case Mips::BLEZC:
+  case Mips::BLEZC64:
+  case Mips::BLTC:
+  case Mips::BLTC64:
+  case Mips::BLTUC:
+  case Mips::BLTUC64:
+  case Mips::BLTZC:
+  case Mips::BLTZC64:
   case Mips::BNVC:
   case Mips::BOVC:
   case Mips::BGEZALC:
@@ -381,8 +391,10 @@ bool MipsInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
   case Mips::BNEZALC:
     return isInt<18>(BrOffset);
 
-  case Mips::BEQZC:  case Mips::BEQZC64:
-  case Mips::BNEZC:  case Mips::BNEZC64:
+  case Mips::BEQZC:
+  case Mips::BEQZC64:
+  case Mips::BNEZC:
+  case Mips::BNEZC64:
     return isInt<23>(BrOffset);
 
   // microMIPSR6 branches
@@ -470,8 +482,8 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
     case Mips::BNE_MM:
     case Mips::BEQ:
     case Mips::BEQ_MM:
-    // microMIPS has NE,EQ branches that do not have delay slots provided one
-    // of the operands is zero.
+      // microMIPS has NE,EQ branches that do not have delay slots provided one
+      // of the operands is zero.
       if (I->getOperand(1).getReg() == Subtarget.getABI().GetZeroReg())
         canUseShortMicroMipsCTI = true;
       break;
@@ -708,8 +720,8 @@ unsigned MipsInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     return MI.getDesc().getSize();
-  case  TargetOpcode::INLINEASM:
-  case  TargetOpcode::INLINEASM_BR: {       // Inline Asm: Variable size.
+  case TargetOpcode::INLINEASM:
+  case TargetOpcode::INLINEASM_BR: { // Inline Asm: Variable size.
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
@@ -792,7 +804,6 @@ MipsInstrInfo::genInstrWithNewOpc(unsigned NewOpc,
       if (MO.isMCSymbol() && (MO.getTargetFlags() & MipsII::MO_JALR))
         MIB.addSym(MO.getMCSymbol(), MipsII::MO_JALR);
     }
-
 
   } else {
     for (unsigned J = 0, E = I->getDesc().getNumOperands(); J < E; ++J) {
@@ -891,45 +902,45 @@ bool MipsInstrInfo::verifyInstruction(const MachineInstr &MI,
                                       StringRef &ErrInfo) const {
   // Verify that ins and ext instructions are well formed.
   switch (MI.getOpcode()) {
-    case Mips::EXT:
-    case Mips::EXT_MM:
-    case Mips::INS:
-    case Mips::INS_MM:
-    case Mips::DINS:
-      return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 0, 32, 0, 32);
-    case Mips::DINSM:
-      // The ISA spec has a subtle difference between dinsm and dextm
-      // in that it says:
-      // 2 <= size <= 64 for 'dinsm' but 'dextm' has 32 < size <= 64.
-      // To make the bounds checks similar, the range 1 < size <= 64 is checked
-      // for 'dinsm'.
-      return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 1, 64, 32, 64);
-    case Mips::DINSU:
-      // The ISA spec has a subtle difference between dinsu and dextu in that
-      // the size range of dinsu is specified as 1 <= size <= 32 whereas size
-      // for dextu is 0 < size <= 32. The range checked for dinsu here is
-      // 0 < size <= 32, which is equivalent and similar to dextu.
-      return verifyInsExtInstruction(MI, ErrInfo, 32, 64, 0, 32, 32, 64);
-    case Mips::DEXT:
-      return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 0, 32, 0, 63);
-    case Mips::DEXTM:
-      return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 32, 64, 32, 64);
-    case Mips::DEXTU:
-      return verifyInsExtInstruction(MI, ErrInfo, 32, 64, 0, 32, 32, 64);
-    case Mips::TAILCALLREG:
-    case Mips::PseudoIndirectBranch:
-    case Mips::JR:
-    case Mips::JR64:
-    case Mips::JALR:
-    case Mips::JALR64:
-    case Mips::JALRPseudo:
-      if (!Subtarget.useIndirectJumpsHazard())
-        return true;
-
-      ErrInfo = "invalid instruction when using jump guards!";
-      return false;
-    default:
+  case Mips::EXT:
+  case Mips::EXT_MM:
+  case Mips::INS:
+  case Mips::INS_MM:
+  case Mips::DINS:
+    return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 0, 32, 0, 32);
+  case Mips::DINSM:
+    // The ISA spec has a subtle difference between dinsm and dextm
+    // in that it says:
+    // 2 <= size <= 64 for 'dinsm' but 'dextm' has 32 < size <= 64.
+    // To make the bounds checks similar, the range 1 < size <= 64 is checked
+    // for 'dinsm'.
+    return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 1, 64, 32, 64);
+  case Mips::DINSU:
+    // The ISA spec has a subtle difference between dinsu and dextu in that
+    // the size range of dinsu is specified as 1 <= size <= 32 whereas size
+    // for dextu is 0 < size <= 32. The range checked for dinsu here is
+    // 0 < size <= 32, which is equivalent and similar to dextu.
+    return verifyInsExtInstruction(MI, ErrInfo, 32, 64, 0, 32, 32, 64);
+  case Mips::DEXT:
+    return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 0, 32, 0, 63);
+  case Mips::DEXTM:
+    return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 32, 64, 32, 64);
+  case Mips::DEXTU:
+    return verifyInsExtInstruction(MI, ErrInfo, 32, 64, 0, 32, 32, 64);
+  case Mips::TAILCALLREG:
+  case Mips::PseudoIndirectBranch:
+  case Mips::JR:
+  case Mips::JR64:
+  case Mips::JALR:
+  case Mips::JALR64:
+  case Mips::JALRPseudo:
+    if (!Subtarget.useIndirectJumpsHazard())
       return true;
+
+    ErrInfo = "invalid instruction when using jump guards!";
+    return false;
+  default:
+    return true;
   }
 
   return true;
@@ -940,37 +951,36 @@ MipsInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
   return std::make_pair(TF, 0u);
 }
 
-ArrayRef<std::pair<unsigned, const char*>>
+ArrayRef<std::pair<unsigned, const char *>>
 MipsInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
- using namespace MipsII;
+  using namespace MipsII;
 
- static const std::pair<unsigned, const char*> Flags[] = {
-    {MO_GOT,          "mips-got"},
-    {MO_GOT_CALL,     "mips-got-call"},
-    {MO_GPREL,        "mips-gprel"},
-    {MO_ABS_HI,       "mips-abs-hi"},
-    {MO_ABS_LO,       "mips-abs-lo"},
-    {MO_TLSGD,        "mips-tlsgd"},
-    {MO_TLSLDM,       "mips-tlsldm"},
-    {MO_DTPREL_HI,    "mips-dtprel-hi"},
-    {MO_DTPREL_LO,    "mips-dtprel-lo"},
-    {MO_GOTTPREL,     "mips-gottprel"},
-    {MO_TPREL_HI,     "mips-tprel-hi"},
-    {MO_TPREL_LO,     "mips-tprel-lo"},
-    {MO_GPOFF_HI,     "mips-gpoff-hi"},
-    {MO_GPOFF_LO,     "mips-gpoff-lo"},
-    {MO_GOT_DISP,     "mips-got-disp"},
-    {MO_GOT_PAGE,     "mips-got-page"},
-    {MO_GOT_OFST,     "mips-got-ofst"},
-    {MO_HIGHER,       "mips-higher"},
-    {MO_HIGHEST,      "mips-highest"},
-    {MO_GOT_HI16,     "mips-got-hi16"},
-    {MO_GOT_LO16,     "mips-got-lo16"},
-    {MO_CALL_HI16,    "mips-call-hi16"},
-    {MO_CALL_LO16,    "mips-call-lo16"},
-    {MO_JALR,         "mips-jalr"}
-  };
- return ArrayRef(Flags);
+  static const std::pair<unsigned, const char *> Flags[] = {
+      {MO_GOT, "mips-got"},
+      {MO_GOT_CALL, "mips-got-call"},
+      {MO_GPREL, "mips-gprel"},
+      {MO_ABS_HI, "mips-abs-hi"},
+      {MO_ABS_LO, "mips-abs-lo"},
+      {MO_TLSGD, "mips-tlsgd"},
+      {MO_TLSLDM, "mips-tlsldm"},
+      {MO_DTPREL_HI, "mips-dtprel-hi"},
+      {MO_DTPREL_LO, "mips-dtprel-lo"},
+      {MO_GOTTPREL, "mips-gottprel"},
+      {MO_TPREL_HI, "mips-tprel-hi"},
+      {MO_TPREL_LO, "mips-tprel-lo"},
+      {MO_GPOFF_HI, "mips-gpoff-hi"},
+      {MO_GPOFF_LO, "mips-gpoff-lo"},
+      {MO_GOT_DISP, "mips-got-disp"},
+      {MO_GOT_PAGE, "mips-got-page"},
+      {MO_GOT_OFST, "mips-got-ofst"},
+      {MO_HIGHER, "mips-higher"},
+      {MO_HIGHEST, "mips-highest"},
+      {MO_GOT_HI16, "mips-got-hi16"},
+      {MO_GOT_LO16, "mips-got-lo16"},
+      {MO_CALL_HI16, "mips-call-hi16"},
+      {MO_CALL_LO16, "mips-call-lo16"},
+      {MO_JALR, "mips-jalr"}};
+  return ArrayRef(Flags);
 }
 
 std::optional<ParamLoadedValue>

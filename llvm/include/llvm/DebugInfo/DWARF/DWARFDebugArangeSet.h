@@ -34,8 +34,9 @@ public:
     uint64_t CuOffset;
     /// The DWARF version number.
     uint16_t Version;
-    /// The size in bytes of an address on the target architecture. For segmented
-    /// addressing, this is the size of the offset portion of the address.
+    /// The size in bytes of an address on the target architecture. For
+    /// segmented addressing, this is the size of the offset portion of the
+    /// address.
     uint8_t AddrSize;
     /// The size in bytes of a segment descriptor on the target architecture.
     /// If the target system uses a flat address space, this value is 0.

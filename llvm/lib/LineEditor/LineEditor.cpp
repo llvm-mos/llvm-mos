@@ -291,9 +291,7 @@ LineEditor::LineEditor(StringRef ProgName, StringRef HistoryPath, FILE *In,
   Data->Out = Out;
 }
 
-LineEditor::~LineEditor() {
-  ::fwrite("\n", 1, 1, Data->Out);
-}
+LineEditor::~LineEditor() { ::fwrite("\n", 1, 1, Data->Out); }
 
 void LineEditor::saveHistory() {}
 void LineEditor::loadHistory() {}

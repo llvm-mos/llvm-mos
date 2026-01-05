@@ -153,10 +153,10 @@ uint32_t DbiStreamBuilder::calculateSectionMapStreamSize() const {
 
 uint32_t DbiStreamBuilder::calculateNamesOffset() const {
   uint32_t Offset = 0;
-  Offset += sizeof(ulittle16_t);                         // NumModules
-  Offset += sizeof(ulittle16_t);                         // NumSourceFiles
-  Offset += ModiList.size() * sizeof(ulittle16_t);       // ModIndices
-  Offset += ModiList.size() * sizeof(ulittle16_t);       // ModFileCounts
+  Offset += sizeof(ulittle16_t);                   // NumModules
+  Offset += sizeof(ulittle16_t);                   // NumSourceFiles
+  Offset += ModiList.size() * sizeof(ulittle16_t); // ModIndices
+  Offset += ModiList.size() * sizeof(ulittle16_t); // ModFileCounts
   uint32_t NumFileInfos = 0;
   for (const auto &M : ModiList)
     NumFileInfos += M->source_files().size();

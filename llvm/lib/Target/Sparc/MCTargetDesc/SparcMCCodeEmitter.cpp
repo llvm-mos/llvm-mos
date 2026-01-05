@@ -43,8 +43,7 @@ class SparcMCCodeEmitter : public MCCodeEmitter {
   MCContext &Ctx;
 
 public:
-  SparcMCCodeEmitter(const MCInstrInfo &, MCContext &ctx)
-      : Ctx(ctx) {}
+  SparcMCCodeEmitter(const MCInstrInfo &, MCContext &ctx) : Ctx(ctx) {}
   SparcMCCodeEmitter(const SparcMCCodeEmitter &) = delete;
   SparcMCCodeEmitter &operator=(const SparcMCCodeEmitter &) = delete;
   ~SparcMCCodeEmitter() override = default;
@@ -65,11 +64,11 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
   unsigned getCallTargetOpValue(const MCInst &MI, unsigned OpNo,
-                             SmallVectorImpl<MCFixup> &Fixups,
-                             const MCSubtargetInfo &STI) const;
+                                SmallVectorImpl<MCFixup> &Fixups,
+                                const MCSubtargetInfo &STI) const;
   unsigned getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
-                             SmallVectorImpl<MCFixup> &Fixups,
-                             const MCSubtargetInfo &STI) const;
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const;
   unsigned getSImm5OpValue(const MCInst &MI, unsigned OpNo,
                            SmallVectorImpl<MCFixup> &Fixups,
                            const MCSubtargetInfo &STI) const;
@@ -118,13 +117,18 @@ void SparcMCCodeEmitter::encodeInstruction(const MCInst &MI,
   // Some instructions have phantom operands that only contribute a fixup entry.
   unsigned SymOpNo = 0;
   switch (MI.getOpcode()) {
-  default: break;
-  case SP::TLS_CALL:   SymOpNo = 1; break;
+  default:
+    break;
+  case SP::TLS_CALL:
+    SymOpNo = 1;
+    break;
   case SP::GDOP_LDrr:
   case SP::GDOP_LDXrr:
   case SP::TLS_ADDrr:
   case SP::TLS_LDrr:
-  case SP::TLS_LDXrr:  SymOpNo = 3; break;
+  case SP::TLS_LDXrr:
+    SymOpNo = 3;
+    break;
   }
   if (SymOpNo != 0) {
     const MCOperand &MO = MI.getOperand(SymOpNo);
@@ -133,13 +137,13 @@ void SparcMCCodeEmitter::encodeInstruction(const MCInst &MI,
     (void)op; // suppress warning.
   }
 
-  ++MCNumEmitted;  // Keep track of the # of mi's emitted.
+  ++MCNumEmitted; // Keep track of the # of mi's emitted.
 }
 
-unsigned SparcMCCodeEmitter::
-getMachineOpValue(const MCInst &MI, const MCOperand &MO,
-                  SmallVectorImpl<MCFixup> &Fixups,
-                  const MCSubtargetInfo &STI) const {
+unsigned
+SparcMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
   if (MO.isReg())
     return Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
 
@@ -212,10 +216,10 @@ SparcMCCodeEmitter::getSImm13OpValue(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
-unsigned SparcMCCodeEmitter::
-getCallTargetOpValue(const MCInst &MI, unsigned OpNo,
-                     SmallVectorImpl<MCFixup> &Fixups,
-                     const MCSubtargetInfo &STI) const {
+unsigned
+SparcMCCodeEmitter::getCallTargetOpValue(const MCInst &MI, unsigned OpNo,
+                                         SmallVectorImpl<MCFixup> &Fixups,
+                                         const MCSubtargetInfo &STI) const {
   if (MI.getOpcode() == SP::TLS_CALL) {
     // No fixups for __tls_get_addr. Will emit for fixups for tls_symbol in
     // encodeInstruction.
@@ -227,10 +231,10 @@ getCallTargetOpValue(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
-unsigned SparcMCCodeEmitter::
-getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
-                  SmallVectorImpl<MCFixup> &Fixups,
-                  const MCSubtargetInfo &STI) const {
+unsigned
+SparcMCCodeEmitter::getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
+                                           SmallVectorImpl<MCFixup> &Fixups,
+                                           const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
   if (MO.isReg() || MO.isImm())
     return getMachineOpValue(MI, MO, Fixups, STI);

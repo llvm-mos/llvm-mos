@@ -31,97 +31,97 @@ class SectionKind {
     /// Text - Text section, used for functions and other executable code.
     Text,
 
-           /// ExecuteOnly, Text section that is not readable.
-           ExecuteOnly,
+    /// ExecuteOnly, Text section that is not readable.
+    ExecuteOnly,
 
     /// ReadOnly - Data that is never written to at program runtime by the
     /// program or the dynamic linker.  Things in the top-level readonly
     /// SectionKind are not mergeable.
     ReadOnly,
 
-        /// MergableCString - Any null-terminated string which allows merging.
-        /// These values are known to end in a nul value of the specified size,
-        /// not otherwise contain a nul value, and be mergable.  This allows the
-        /// linker to unique the strings if it so desires.
+    /// MergableCString - Any null-terminated string which allows merging.
+    /// These values are known to end in a nul value of the specified size,
+    /// not otherwise contain a nul value, and be mergable.  This allows the
+    /// linker to unique the strings if it so desires.
 
-           /// Mergeable1ByteCString - 1 byte mergable, null terminated, string.
-           Mergeable1ByteCString,
+    /// Mergeable1ByteCString - 1 byte mergable, null terminated, string.
+    Mergeable1ByteCString,
 
-           /// Mergeable2ByteCString - 2 byte mergable, null terminated, string.
-           Mergeable2ByteCString,
+    /// Mergeable2ByteCString - 2 byte mergable, null terminated, string.
+    Mergeable2ByteCString,
 
-           /// Mergeable4ByteCString - 4 byte mergable, null terminated, string.
-           Mergeable4ByteCString,
+    /// Mergeable4ByteCString - 4 byte mergable, null terminated, string.
+    Mergeable4ByteCString,
 
-        /// MergeableConst - These are sections for merging fixed-length
-        /// constants together.  For example, this can be used to unique
-        /// constant pool entries etc.
+    /// MergeableConst - These are sections for merging fixed-length
+    /// constants together.  For example, this can be used to unique
+    /// constant pool entries etc.
 
-            /// MergeableConst4 - This is a section used by 4-byte constants,
-            /// for example, floats.
-            MergeableConst4,
+    /// MergeableConst4 - This is a section used by 4-byte constants,
+    /// for example, floats.
+    MergeableConst4,
 
-            /// MergeableConst8 - This is a section used by 8-byte constants,
-            /// for example, doubles.
-            MergeableConst8,
+    /// MergeableConst8 - This is a section used by 8-byte constants,
+    /// for example, doubles.
+    MergeableConst8,
 
-            /// MergeableConst16 - This is a section used by 16-byte constants,
-            /// for example, vectors.
-            MergeableConst16,
+    /// MergeableConst16 - This is a section used by 16-byte constants,
+    /// for example, vectors.
+    MergeableConst16,
 
-            /// MergeableConst32 - This is a section used by 32-byte constants,
-            /// for example, vectors.
-            MergeableConst32,
+    /// MergeableConst32 - This is a section used by 32-byte constants,
+    /// for example, vectors.
+    MergeableConst32,
 
     /// Writeable - This is the base of all segments that need to be written
     /// to during program runtime.
 
-       /// ThreadLocal - This is the base of all TLS segments.  All TLS
-       /// objects must be writeable, otherwise there is no reason for them to
-       /// be thread local!
+    /// ThreadLocal - This is the base of all TLS segments.  All TLS
+    /// objects must be writeable, otherwise there is no reason for them to
+    /// be thread local!
 
-           /// ThreadBSS - Zero-initialized TLS data objects.
-           ThreadBSS,
+    /// ThreadBSS - Zero-initialized TLS data objects.
+    ThreadBSS,
 
-           /// ThreadData - Initialized TLS data objects.
-           ThreadData,
+    /// ThreadData - Initialized TLS data objects.
+    ThreadData,
 
-           /// ThreadBSSLocal - Zero-initialized TLS data objects with local linkage.
-           ThreadBSSLocal,
+    /// ThreadBSSLocal - Zero-initialized TLS data objects with local linkage.
+    ThreadBSSLocal,
 
-       /// GlobalWriteableData - Writeable data that is global (not thread
-       /// local).
+    /// GlobalWriteableData - Writeable data that is global (not thread
+    /// local).
 
-           /// BSS - Zero initialized writeable data.
-           BSS,
+    /// BSS - Zero initialized writeable data.
+    BSS,
 
-               /// BSSLocal - This is BSS (zero initialized and writable) data
-               /// which has local linkage.
-               BSSLocal,
+    /// BSSLocal - This is BSS (zero initialized and writable) data
+    /// which has local linkage.
+    BSSLocal,
 
-               /// BSSExtern - This is BSS data with normal external linkage.
-               BSSExtern,
+    /// BSSExtern - This is BSS data with normal external linkage.
+    BSSExtern,
 
-           NoInit,
+    NoInit,
 
-           /// Common - Data with common linkage.  These represent tentative
-           /// definitions, which always have a zero initializer and are never
-           /// marked 'constant'.
-           Common,
+    /// Common - Data with common linkage.  These represent tentative
+    /// definitions, which always have a zero initializer and are never
+    /// marked 'constant'.
+    Common,
 
-           /// This is writeable data that has a non-zero initializer.
-           Data,
+    /// This is writeable data that has a non-zero initializer.
+    Data,
 
-           /// ReadOnlyWithRel - These are global variables that are never
-           /// written to by the program, but that have relocations, so they
-           /// must be stuck in a writeable section so that the dynamic linker
-           /// can write to them.  If it chooses to, the dynamic linker can
-           /// mark the pages these globals end up on as read-only after it is
-           /// done with its relocation phase.
-           ReadOnlyWithRel
+    /// ReadOnlyWithRel - These are global variables that are never
+    /// written to by the program, but that have relocations, so they
+    /// must be stuck in a writeable section so that the dynamic linker
+    /// can write to them.  If it chooses to, the dynamic linker can
+    /// mark the pages these globals end up on as read-only after it is
+    /// done with its relocation phase.
+    ReadOnlyWithRel
   } K : 8;
-public:
 
+public:
   bool isMetadata() const { return K == Metadata; }
 
   bool isExclude() const { return K == Exclude; }
@@ -131,8 +131,7 @@ public:
   bool isExecuteOnly() const { return K == ExecuteOnly; }
 
   bool isReadOnly() const {
-    return K == ReadOnly || isMergeableCString() ||
-           isMergeableConst();
+    return K == ReadOnly || isMergeableCString() || isMergeableConst();
   }
 
   bool isMergeableCString() const {
@@ -179,17 +178,16 @@ public:
 
   bool isData() const { return K == Data; }
 
-  bool isReadOnlyWithRel() const {
-    return K == ReadOnlyWithRel;
-  }
+  bool isReadOnlyWithRel() const { return K == ReadOnlyWithRel; }
+
 private:
   static SectionKind get(Kind K) {
     SectionKind Res;
     Res.K = K;
     return Res;
   }
-public:
 
+public:
   static SectionKind getMetadata() { return get(Metadata); }
   static SectionKind getExclude() { return get(Exclude); }
   static SectionKind getText() { return get(Text); }

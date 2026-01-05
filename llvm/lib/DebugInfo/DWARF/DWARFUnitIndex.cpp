@@ -47,17 +47,17 @@ uint32_t llvm::serializeSectionKind(DWARFSectionKind Kind,
   }
   assert(IndexVersion == 2);
   switch (Kind) {
-#define CASE(S,T) \
-  case DW_SECT_##S: \
+#define CASE(S, T)                                                             \
+  case DW_SECT_##S:                                                            \
     return static_cast<uint32_t>(DWARFSectionKindV2::DW_SECT_##T)
-  CASE(INFO, INFO);
-  CASE(EXT_TYPES, TYPES);
-  CASE(ABBREV, ABBREV);
-  CASE(LINE, LINE);
-  CASE(EXT_LOC, LOC);
-  CASE(STR_OFFSETS, STR_OFFSETS);
-  CASE(EXT_MACINFO, MACINFO);
-  CASE(MACRO, MACRO);
+    CASE(INFO, INFO);
+    CASE(EXT_TYPES, TYPES);
+    CASE(ABBREV, ABBREV);
+    CASE(LINE, LINE);
+    CASE(EXT_LOC, LOC);
+    CASE(STR_OFFSETS, STR_OFFSETS);
+    CASE(EXT_MACINFO, MACINFO);
+    CASE(MACRO, MACRO);
 #undef CASE
   default:
     // All other section kinds have no corresponding values in v2 indexes.
@@ -68,22 +68,21 @@ uint32_t llvm::serializeSectionKind(DWARFSectionKind Kind,
 DWARFSectionKind llvm::deserializeSectionKind(uint32_t Value,
                                               unsigned IndexVersion) {
   if (IndexVersion == 5)
-    return isKnownV5SectionID(Value)
-               ? static_cast<DWARFSectionKind>(Value)
-               : DW_SECT_EXT_unknown;
+    return isKnownV5SectionID(Value) ? static_cast<DWARFSectionKind>(Value)
+                                     : DW_SECT_EXT_unknown;
   assert(IndexVersion == 2);
   switch (static_cast<DWARFSectionKindV2>(Value)) {
-#define CASE(S,T) \
-  case DWARFSectionKindV2::DW_SECT_##S: \
+#define CASE(S, T)                                                             \
+  case DWARFSectionKindV2::DW_SECT_##S:                                        \
     return DW_SECT_##T
-  CASE(INFO, INFO);
-  CASE(TYPES, EXT_TYPES);
-  CASE(ABBREV, ABBREV);
-  CASE(LINE, LINE);
-  CASE(LOC, EXT_LOC);
-  CASE(STR_OFFSETS, STR_OFFSETS);
-  CASE(MACINFO, EXT_MACINFO);
-  CASE(MACRO, MACRO);
+    CASE(INFO, INFO);
+    CASE(TYPES, EXT_TYPES);
+    CASE(ABBREV, ABBREV);
+    CASE(LINE, LINE);
+    CASE(LOC, EXT_LOC);
+    CASE(STR_OFFSETS, STR_OFFSETS);
+    CASE(MACINFO, EXT_MACINFO);
+    CASE(MACRO, MACRO);
 #undef CASE
   }
   return DW_SECT_EXT_unknown;
@@ -113,7 +112,8 @@ bool DWARFUnitIndex::Header::parse(DataExtractor IndexData,
 }
 
 void DWARFUnitIndex::Header::dump(raw_ostream &OS) const {
-  OS << format("version = %u, units = %u, slots = %u\n\n", Version, NumUnits, NumBuckets);
+  OS << format("version = %u, units = %u, slots = %u\n\n", Version, NumUnits,
+               NumBuckets);
 }
 
 bool DWARFUnitIndex::parse(DataExtractor IndexData) {

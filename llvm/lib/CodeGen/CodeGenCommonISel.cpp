@@ -25,8 +25,7 @@ using namespace llvm;
 
 /// Add a successor MBB to ParentMBB< creating a new MachineBB for BB if SuccMBB
 /// is 0.
-MachineBasicBlock *
-StackProtectorDescriptor::addSuccessorMBB(
+MachineBasicBlock *StackProtectorDescriptor::addSuccessorMBB(
     const BasicBlock *BB, MachineBasicBlock *ParentMBB, bool IsLikely,
     MachineBasicBlock *SuccMBB) {
   // If SuccBB has not been created yet, create it.
@@ -98,8 +97,8 @@ static bool MIIsInTerminatorSequence(const MachineInstr &MI) {
   // Grab the copy source...
   MachineInstr::const_mop_iterator OPI2 = OPI;
   ++OPI2;
-  assert(OPI2 != MI.operands_end()
-         && "Should have a copy implying we should have 2 arguments.");
+  assert(OPI2 != MI.operands_end() &&
+         "Should have a copy implying we should have 2 arguments.");
 
   // Make sure that the copy dest is not a vreg when the copy source is a
   // physical register.
@@ -158,7 +157,7 @@ llvm::findSplitPointForStackProtector(MachineBasicBlock *BB,
       --Previous;
       if (Previous->isCall())
         return SplitPoint;
-    } while(Previous->getOpcode() != TII.getCallFrameSetupOpcode());
+    } while (Previous->getOpcode() != TII.getCallFrameSetupOpcode());
 
     return Previous;
   }
@@ -223,8 +222,8 @@ static MachineOperand *getSalvageOpsForCopy(const MachineRegisterInfo &MRI,
 }
 
 static MachineOperand *getSalvageOpsForTrunc(const MachineRegisterInfo &MRI,
-                                            MachineInstr &Trunc,
-                                            SmallVectorImpl<uint64_t> &Ops) {
+                                             MachineInstr &Trunc,
+                                             SmallVectorImpl<uint64_t> &Ops) {
   assert(Trunc.getOpcode() == TargetOpcode::G_TRUNC && "Must be a G_TRUNC");
 
   const auto FromLLT = MRI.getType(Trunc.getOperand(1).getReg());

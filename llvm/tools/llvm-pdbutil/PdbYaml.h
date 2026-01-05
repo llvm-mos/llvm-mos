@@ -129,9 +129,9 @@ struct PdbObject {
 
   BumpPtrAllocator &Allocator;
 };
-}
-}
-}
+} // namespace yaml
+} // namespace pdb
+} // namespace llvm
 
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::CoffSectionHeader)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbObject)

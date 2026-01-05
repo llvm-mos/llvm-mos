@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -212,8 +211,7 @@ static void printMF(raw_ostream &OS, const MachineModuleInfo &MMI,
     const auto &SubSrc = Sub.Src;
     const auto &SubDest = Sub.Dest;
     YamlMF.DebugValueSubstitutions.push_back({SubSrc.first, SubSrc.second,
-                                              SubDest.first,
-                                              SubDest.second,
+                                              SubDest.first, SubDest.second,
                                               Sub.Subreg});
   }
   if (const auto *ConstantPool = MF.getConstantPool())
@@ -241,7 +239,7 @@ static void printMF(raw_ostream &OS, const MachineModuleInfo &MMI,
 
   yaml::Output Out(OS);
   if (!SimplifyMIR)
-      Out.setWriteDefaultValues(true);
+    Out.setWriteDefaultValues(true);
   Out << YamlMF;
 }
 
@@ -278,9 +276,8 @@ printStackObjectDbgInfo(const MachineFunction::VariableDbgInfo &DebugVar,
   std::array<std::string *, 3> Outputs{{&Object.DebugVar.Value,
                                         &Object.DebugExpr.Value,
                                         &Object.DebugLoc.Value}};
-  std::array<const Metadata *, 3> Metas{{DebugVar.Var,
-                                        DebugVar.Expr,
-                                        DebugVar.Loc}};
+  std::array<const Metadata *, 3> Metas{
+      {DebugVar.Var, DebugVar.Expr, DebugVar.Loc}};
   for (unsigned i = 0; i < 3; ++i) {
     raw_string_ostream StrOS(*Outputs[i]);
     Metas[i]->printAsOperand(StrOS, MST);
@@ -350,8 +347,8 @@ static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
   YamlMFI.MaxAlignment = MFI.getMaxAlign().value();
   YamlMFI.AdjustsStack = MFI.adjustsStack();
   YamlMFI.HasCalls = MFI.hasCalls();
-  YamlMFI.MaxCallFrameSize = MFI.isMaxCallFrameSizeComputed()
-    ? MFI.getMaxCallFrameSize() : ~0u;
+  YamlMFI.MaxCallFrameSize =
+      MFI.isMaxCallFrameSizeComputed() ? MFI.getMaxCallFrameSize() : ~0u;
   YamlMFI.CVBytesOfCalleeSavedRegisters =
       MFI.getCVBytesOfCalleeSavedRegisters();
   YamlMFI.HasOpaqueSPAdjustment = MFI.hasOpaqueSPAdjustment();
@@ -442,13 +439,13 @@ static void convertStackObjects(yaml::MachineFunction &YMF,
     yaml::MachineStackObject YamlObject;
     YamlObject.ID = ID;
     if (const auto *Alloca = MFI.getObjectAllocation(I))
-      YamlObject.Name.Value = std::string(
-          Alloca->hasName() ? Alloca->getName() : "");
+      YamlObject.Name.Value =
+          std::string(Alloca->hasName() ? Alloca->getName() : "");
     YamlObject.Type = MFI.isSpillSlotObjectIndex(I)
                           ? yaml::MachineStackObject::SpillSlot
-                          : MFI.isVariableSizedObjectIndex(I)
-                                ? yaml::MachineStackObject::VariableSized
-                                : yaml::MachineStackObject::DefaultType;
+                      : MFI.isVariableSizedObjectIndex(I)
+                          ? yaml::MachineStackObject::VariableSized
+                          : yaml::MachineStackObject::DefaultType;
     YamlObject.Offset = MFI.getObjectOffset(I);
     YamlObject.Size = MFI.getObjectSize(I);
     YamlObject.Alignment = MFI.getObjectAlign(I);
@@ -671,9 +668,9 @@ static void convertMJTI(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
 }
 
 void llvm::guessSuccessors(const MachineBasicBlock &MBB,
-                           SmallVectorImpl<MachineBasicBlock*> &Result,
+                           SmallVectorImpl<MachineBasicBlock *> &Result,
                            bool &IsFallthrough) {
-  SmallPtrSet<MachineBasicBlock*,8> Seen;
+  SmallPtrSet<MachineBasicBlock *, 8> Seen;
 
   for (const MachineInstr &MI : MBB) {
     if (MI.isPHI())
@@ -692,14 +689,14 @@ void llvm::guessSuccessors(const MachineBasicBlock &MBB,
 }
 
 static bool canPredictSuccessors(const MachineBasicBlock &MBB) {
-  SmallVector<MachineBasicBlock*,8> GuessedSuccs;
+  SmallVector<MachineBasicBlock *, 8> GuessedSuccs;
   bool GuessedFallthrough;
   guessSuccessors(MBB, GuessedSuccs, GuessedFallthrough);
   if (GuessedFallthrough) {
     const MachineFunction &MF = *MBB.getParent();
     MachineFunction::const_iterator NextI = std::next(MBB.getIterator());
     if (NextI != MF.end()) {
-      MachineBasicBlock *Next = const_cast<MachineBasicBlock*>(&*NextI);
+      MachineBasicBlock *Next = const_cast<MachineBasicBlock *>(&*NextI);
       if (!is_contained(GuessedSuccs, Next))
         GuessedSuccs.push_back(Next);
     }

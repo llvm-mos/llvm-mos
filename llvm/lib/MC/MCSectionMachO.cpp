@@ -26,7 +26,7 @@ using namespace llvm;
 static constexpr struct {
   StringLiteral AssemblerName, EnumName;
 } SectionTypeDescriptors[MachO::LAST_KNOWN_SECTION_TYPE + 1] = {
-    {StringLiteral("regular"), StringLiteral("S_REGULAR")}, // 0x00
+    {StringLiteral("regular"), StringLiteral("S_REGULAR")},   // 0x00
     {StringLiteral("zerofill"), StringLiteral("S_ZEROFILL")}, // 0x01
     {StringLiteral("cstring_literals"),
      StringLiteral("S_CSTRING_LITERALS")}, // 0x02
@@ -74,20 +74,23 @@ static constexpr struct {
   unsigned AttrFlag;
   StringLiteral AssemblerName, EnumName;
 } SectionAttrDescriptors[] = {
-#define ENTRY(ASMNAME, ENUM) \
-  { MachO::ENUM, StringLiteral(ASMNAME), StringLiteral(#ENUM) },
-ENTRY("pure_instructions",   S_ATTR_PURE_INSTRUCTIONS)
-ENTRY("no_toc",              S_ATTR_NO_TOC)
-ENTRY("strip_static_syms",   S_ATTR_STRIP_STATIC_SYMS)
-ENTRY("no_dead_strip",       S_ATTR_NO_DEAD_STRIP)
-ENTRY("live_support",        S_ATTR_LIVE_SUPPORT)
-ENTRY("self_modifying_code", S_ATTR_SELF_MODIFYING_CODE)
-ENTRY("debug",               S_ATTR_DEBUG)
-ENTRY("" /*FIXME*/,          S_ATTR_SOME_INSTRUCTIONS)
-ENTRY("" /*FIXME*/,          S_ATTR_EXT_RELOC)
-ENTRY("" /*FIXME*/,          S_ATTR_LOC_RELOC)
+#define ENTRY(ASMNAME, ENUM)                                                   \
+  {MachO::ENUM, StringLiteral(ASMNAME), StringLiteral(#ENUM)},
+    ENTRY("pure_instructions", S_ATTR_PURE_INSTRUCTIONS)
+        ENTRY("no_toc", S_ATTR_NO_TOC) ENTRY("strip_static_syms",
+                                             S_ATTR_STRIP_STATIC_SYMS)
+            ENTRY("no_dead_strip", S_ATTR_NO_DEAD_STRIP)
+                ENTRY("live_support", S_ATTR_LIVE_SUPPORT)
+                    ENTRY("self_modifying_code", S_ATTR_SELF_MODIFYING_CODE)
+                        ENTRY("debug", S_ATTR_DEBUG)
+                            ENTRY("" /*FIXME*/, S_ATTR_SOME_INSTRUCTIONS)
+                                ENTRY("" /*FIXME*/, S_ATTR_EXT_RELOC) ENTRY(
+                                    "" /*FIXME*/, S_ATTR_LOC_RELOC)
 #undef ENTRY
-  { 0, StringLiteral("none"), StringLiteral("") }, // used if section has no attributes but has a stub size
+                                    {0, StringLiteral("none"),
+                                     StringLiteral(
+                                         "")}, // used if section has no
+                                               // attributes but has a stub size
 };
 
 MCSectionMachO::MCSectionMachO(StringRef Segment, StringRef Section,
@@ -145,8 +148,7 @@ void MCAsmInfoDarwin::printSwitchToSection(const MCSection &Section, uint32_t,
 
   // Check each attribute to see if we have it.
   char Separator = ',';
-  for (unsigned i = 0;
-       SectionAttrs != 0 && SectionAttrDescriptors[i].AttrFlag;
+  for (unsigned i = 0; SectionAttrs != 0 && SectionAttrDescriptors[i].AttrFlag;
        ++i) {
     // Check to see if we have this attribute.
     if ((SectionAttrDescriptors[i].AttrFlag & SectionAttrs) == 0)

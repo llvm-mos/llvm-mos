@@ -33,13 +33,14 @@
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 
 // Enable this macro to debug bugpoint itself.
-//#define DEBUG_BUGPOINT 1
+// #define DEBUG_BUGPOINT 1
 
 using namespace llvm;
 
 static cl::opt<bool>
-    FindBugs("find-bugs", cl::desc("Run many different optimization sequences "
-                                   "on program to find bugs"),
+    FindBugs("find-bugs",
+             cl::desc("Run many different optimization sequences "
+                      "on program to find bugs"),
              cl::init(false));
 
 static cl::list<std::string>
@@ -169,8 +170,7 @@ int main(int argc, char **argv) {
 // Needed to pull in symbols from statically linked extensions, including static
 // registration. It is unused otherwise because bugpoint has no support for
 // NewPM.
-#define HANDLE_EXTENSION(Ext)                                                  \
-  (void)get##Ext##PluginInfo();
+#define HANDLE_EXTENSION(Ext) (void)get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
 
   if (Error E = D.run()) {

@@ -79,7 +79,7 @@ struct LVIThunkInserter : ThunkInserter<LVIThunkInserter> {
     return true;
   }
   void populateThunk(MachineFunction &MF) {
-    assert (MF.size() == 1);
+    assert(MF.size() == 1);
     MachineBasicBlock *Entry = &MF.front();
     Entry->clear();
 
@@ -183,7 +183,7 @@ void RetpolineThunkInserter::populateThunk(MachineFunction &MF) {
   }
 
   const TargetInstrInfo *TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
-  assert (MF.size() == 1);
+  assert(MF.size() == 1);
   MachineBasicBlock *Entry = &MF.front();
   Entry->clear();
 

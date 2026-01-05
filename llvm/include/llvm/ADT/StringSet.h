@@ -40,8 +40,7 @@ public:
     return Base::try_emplace(key);
   }
 
-  template <typename InputIt>
-  void insert(InputIt begin, InputIt end) {
+  template <typename InputIt> void insert(InputIt begin, InputIt end) {
     for (auto it = begin; it != end; ++it)
       insert(*it);
   }

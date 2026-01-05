@@ -179,7 +179,7 @@ Expected<unsigned> getSectionId(const FileToSectionIDMap &FileToSecIDMap,
   auto J = SectionIDs.find(SectionName);
   if (J == SectionIDs.end())
     return make_error<StringError>("No section named \"" + SectionName +
-                                   "\" in file " + FileName,
+                                       "\" in file " + FileName,
                                    inconvertibleErrorCode());
   return J->second;
 }
@@ -210,9 +210,7 @@ public:
                      StringRef SectionName) override;
 
   /// If non null, records subsequent Name -> SectionID mappings.
-  void setSectionIDsMap(SectionIDMap *SecIDMap) {
-    this->SecIDMap = SecIDMap;
-  }
+  void setSectionIDsMap(SectionIDMap *SecIDMap) { this->SecIDMap = SecIDMap; }
 
   void *getPointerToNamedFunction(const std::string &Name,
                                   bool AbortOnFailure = true) override {
@@ -248,11 +246,8 @@ public:
 
   void preallocateSlab(uint64_t Size) {
     std::error_code EC;
-    sys::MemoryBlock MB =
-      sys::Memory::allocateMappedMemory(Size, nullptr,
-                                        sys::Memory::MF_READ |
-                                        sys::Memory::MF_WRITE,
-                                        EC);
+    sys::MemoryBlock MB = sys::Memory::allocateMappedMemory(
+        Size, nullptr, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
     if (!MB.base())
       report_fatal_error(Twine("Can't allocate enough memory: ") +
                          EC.message());
@@ -275,7 +270,7 @@ public:
     else
       DataMemory.push_back(SectionInfo(SectionName, MB, SectionID));
     CurrentSlabOffset += Size;
-    return (uint8_t*)OldSlabOffset;
+    return (uint8_t *)OldSlabOffset;
   }
 
 private:
@@ -295,27 +290,25 @@ uint8_t *TrivialMemoryManager::allocateCodeSection(uintptr_t Size,
                                                    unsigned SectionID,
                                                    StringRef SectionName) {
   if (PrintAllocationRequests)
-    outs() << "allocateCodeSection(Size = " << Size << ", Alignment = "
-           << Alignment << ", SectionName = " << SectionName << ")\n";
+    outs() << "allocateCodeSection(Size = " << Size
+           << ", Alignment = " << Alignment << ", SectionName = " << SectionName
+           << ")\n";
 
   if (SecIDMap)
     (*SecIDMap)[SectionName] = SectionID;
 
   if (UsePreallocation)
-    return allocateFromSlab(Size, Alignment, true /* isCode */,
-                            SectionName, SectionID);
+    return allocateFromSlab(Size, Alignment, true /* isCode */, SectionName,
+                            SectionID);
 
   std::error_code EC;
-  sys::MemoryBlock MB =
-    sys::Memory::allocateMappedMemory(Size, nullptr,
-                                      sys::Memory::MF_READ |
-                                      sys::Memory::MF_WRITE,
-                                      EC);
+  sys::MemoryBlock MB = sys::Memory::allocateMappedMemory(
+      Size, nullptr, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
   if (!MB.base())
     report_fatal_error(Twine("MemoryManager allocation failed: ") +
                        EC.message());
   FunctionMemory.push_back(SectionInfo(SectionName, MB, SectionID));
-  return (uint8_t*)MB.base();
+  return (uint8_t *)MB.base();
 }
 
 uint8_t *TrivialMemoryManager::allocateDataSection(uintptr_t Size,
@@ -324,8 +317,9 @@ uint8_t *TrivialMemoryManager::allocateDataSection(uintptr_t Size,
                                                    StringRef SectionName,
                                                    bool IsReadOnly) {
   if (PrintAllocationRequests)
-    outs() << "allocateDataSection(Size = " << Size << ", Alignment = "
-           << Alignment << ", SectionName = " << SectionName << ")\n";
+    outs() << "allocateDataSection(Size = " << Size
+           << ", Alignment = " << Alignment << ", SectionName = " << SectionName
+           << ")\n";
 
   if (SecIDMap)
     (*SecIDMap)[SectionName] = SectionID;
@@ -335,16 +329,13 @@ uint8_t *TrivialMemoryManager::allocateDataSection(uintptr_t Size,
                             SectionID);
 
   std::error_code EC;
-  sys::MemoryBlock MB =
-    sys::Memory::allocateMappedMemory(Size, nullptr,
-                                      sys::Memory::MF_READ |
-                                      sys::Memory::MF_WRITE,
-                                      EC);
+  sys::MemoryBlock MB = sys::Memory::allocateMappedMemory(
+      Size, nullptr, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
   if (!MB.base())
     report_fatal_error(Twine("MemoryManager allocation failed: ") +
                        EC.message());
   DataMemory.push_back(SectionInfo(SectionName, MB, SectionID));
-  return (uint8_t*)MB.base();
+  return (uint8_t *)MB.base();
 }
 
 // In case the execution needs TLS storage, we define a very small TLS memory
@@ -428,7 +419,7 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
       ErrorAndExit("unable to read input: '" + EC.message() + "'");
 
     Expected<std::unique_ptr<ObjectFile>> MaybeObj(
-      ObjectFile::createObjectFile((*InputBuffer)->getMemBufferRef()));
+        ObjectFile::createObjectFile((*InputBuffer)->getMemBufferRef()));
 
     if (!MaybeObj) {
       std::string Buf;
@@ -445,8 +436,7 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
     ObjectFile *SymbolObj = &Obj;
     if (LoadObjects) {
       // Load the object file
-      LoadedObjInfo =
-        Dyld.loadObject(Obj);
+      LoadedObjInfo = Dyld.loadObject(Obj);
 
       if (Dyld.hasError())
         ErrorAndExit(Dyld.getErrorString());
@@ -509,7 +499,7 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
           object::section_iterator Sec = *SecOrErr;
           Address.SectionIndex = Sec->getIndex();
           uint64_t SectionLoadAddress =
-            LoadedObjInfo->getSectionLoadAddress(*Sec);
+              LoadedObjInfo->getSectionLoadAddress(*Sec);
           if (SectionLoadAddress != 0)
             Addr += SectionLoadAddress - Sec->getAddress();
         } else if (auto SecOrErr = Sym.getSection())
@@ -536,7 +526,8 @@ static void doPreallocation(TrivialMemoryManager &MemMgr) {
   // Allocate a slab of memory upfront, if required. This is used if
   // we want to test small code models.
   if (static_cast<intptr_t>(PreallocMemory) < 0)
-    report_fatal_error("Pre-allocated bytes of memory must be a positive integer.");
+    report_fatal_error(
+        "Pre-allocated bytes of memory must be a positive integer.");
 
   // FIXME: Limit the amount of memory that can be preallocated?
   if (PreallocMemory != 0)
@@ -603,18 +594,17 @@ static int executeInput() {
 
     // Make sure the memory is executable.
     // setExecutable will call InvalidateInstructionCache.
-    if (auto EC = sys::Memory::protectMappedMemory(FM_MB,
-                                                   sys::Memory::MF_READ |
-                                                   sys::Memory::MF_EXEC))
+    if (auto EC = sys::Memory::protectMappedMemory(
+            FM_MB, sys::Memory::MF_READ | sys::Memory::MF_EXEC))
       ErrorAndExit("unable to mark function executable: '" + EC.message() +
                    "'");
   }
 
   // Dispatch to _main().
-  errs() << "loaded '" << EntryPoint << "' at: " << (void*)MainAddress << "\n";
+  errs() << "loaded '" << EntryPoint << "' at: " << (void *)MainAddress << "\n";
 
-  int (*Main)(int, const char**) =
-    (int(*)(int,const char**)) uintptr_t(MainAddress);
+  int (*Main)(int, const char **) =
+      (int (*)(int, const char **))uintptr_t(MainAddress);
   std::vector<const char *> Argv;
   // Use the name of the first input object module as argv[0] for the target.
   Argv.push_back(InputFileList[0].data());
@@ -631,12 +621,12 @@ static int executeInput() {
 }
 
 static int checkAllExpressions(RuntimeDyldChecker &Checker) {
-  for (const auto& CheckerFileName : CheckFiles) {
+  for (const auto &CheckerFileName : CheckFiles) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> CheckerFileBuf =
         MemoryBuffer::getFileOrSTDIN(CheckerFileName);
     if (std::error_code EC = CheckerFileBuf.getError())
-      ErrorAndExit("unable to read input '" + CheckerFileName + "': " +
-                   EC.message());
+      ErrorAndExit("unable to read input '" + CheckerFileName +
+                   "': " + EC.message());
 
     if (!Checker.checkAllRulesInBuffer("# rtdyld-check:",
                                        CheckerFileBuf.get().get()))
@@ -660,9 +650,9 @@ void applySpecificSectionMappings(RuntimeDyld &Dyld,
     std::string FileName = SectionIDStr.substr(0, ComaIdx);
     std::string SectionName = SectionIDStr.substr(ComaIdx + 1);
     unsigned SectionID =
-      ExitOnErr(getSectionId(FileToSecIDMap, FileName, SectionName));
+        ExitOnErr(getSectionId(FileToSecIDMap, FileName, SectionName));
 
-    auto* OldAddr = Dyld.getSectionContent(SectionID).data();
+    auto *OldAddr = Dyld.getSectionContent(SectionID).data();
     std::string NewAddrStr = std::string(Mapping.substr(EqualsIdx + 1));
     uint64_t NewAddr;
 
@@ -678,9 +668,10 @@ void applySpecificSectionMappings(RuntimeDyld &Dyld,
 // Remaps section addresses for -verify mode. The following command line options
 // can be used to customize the layout of the memory within the phony target's
 // address space:
-// -target-addr-start <s> -- Specify where the phony target address range starts.
-// -target-addr-end   <e> -- Specify where the phony target address range ends.
-// -target-section-sep <d> -- Specify how big a gap should be left between the
+// -target-addr-start <s> -- Specify where the phony target address range
+// starts. -target-addr-end   <e> -- Specify where the phony target address
+// range ends. -target-section-sep <d> -- Specify how big a gap should be left
+// between the
 //                            end of one section and the start of the next.
 //                            Defaults to zero. Set to something big
 //                            (e.g. 1 << 32) to stress-test stubs, GOTs, etc.
@@ -690,12 +681,12 @@ static void remapSectionsAndSymbols(const llvm::Triple &TargetTriple,
                                     TrivialMemoryManager &MemMgr) {
 
   // Set up a work list (section addr/size pairs).
-  typedef std::list<const TrivialMemoryManager::SectionInfo*> WorklistT;
+  typedef std::list<const TrivialMemoryManager::SectionInfo *> WorklistT;
   WorklistT Worklist;
 
-  for (const auto& CodeSection : MemMgr.FunctionMemory)
+  for (const auto &CodeSection : MemMgr.FunctionMemory)
     Worklist.push_back(&CodeSection);
-  for (const auto& DataSection : MemMgr.DataMemory)
+  for (const auto &DataSection : MemMgr.DataMemory)
     Worklist.push_back(&DataSection);
 
   // Keep an "already allocated" mapping of section target addresses to sizes.
@@ -707,15 +698,14 @@ static void remapSectionsAndSymbols(const llvm::Triple &TargetTriple,
   // Move the previously applied mappings (whether explicitly specified on the
   // command line, or implicitly set by RuntimeDyld) into the already-allocated
   // map.
-  for (WorklistT::iterator I = Worklist.begin(), E = Worklist.end();
-       I != E;) {
+  for (WorklistT::iterator I = Worklist.begin(), E = Worklist.end(); I != E;) {
     WorklistT::iterator Tmp = I;
     ++I;
 
     auto LoadAddr = Dyld.getSectionLoadAddress((*Tmp)->SectionID);
 
-    if (LoadAddr != static_cast<uint64_t>(
-          reinterpret_cast<uintptr_t>((*Tmp)->MB.base()))) {
+    if (LoadAddr !=
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>((*Tmp)->MB.base()))) {
       // A section will have a LoadAddr of 0 if it wasn't loaded for whatever
       // reason (e.g. zero byte COFF sections). Don't include those sections in
       // the allocation map.
@@ -786,7 +776,7 @@ static int linkAndVerify() {
   Triple TheTriple(Triple::normalize(TripleName));
   std::string ErrorStr;
   const Target *TheTarget =
-    TargetRegistry::lookupTarget("", TheTriple, ErrorStr);
+      TargetRegistry::lookupTarget("", TheTriple, ErrorStr);
   if (!TheTarget)
     ErrorAndExit("Error accessing target '" + TripleName + "': " + ErrorStr);
 
@@ -810,7 +800,7 @@ static int linkAndVerify() {
   MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get());
 
   std::unique_ptr<MCDisassembler> Disassembler(
-    TheTarget->createMCDisassembler(*STI, Ctx));
+      TheTarget->createMCDisassembler(*STI, Ctx));
   if (!Disassembler)
     ErrorAndExit("Unable to create disassembler!");
 
@@ -970,7 +960,7 @@ static int linkAndVerify() {
       ErrorAndExit("unable to read input: '" + EC.message() + "'");
 
     Expected<std::unique_ptr<ObjectFile>> MaybeObj(
-      ObjectFile::createObjectFile((*InputBuffer)->getMemBufferRef()));
+        ObjectFile::createObjectFile((*InputBuffer)->getMemBufferRef()));
 
     if (!MaybeObj) {
       std::string Buf;

@@ -70,7 +70,7 @@ public:
   void EmitUnwindInfo(MCStreamer &Streamer, WinEH::FrameInfo *FI,
                       bool HandlerData) const override;
 };
-}
+} // namespace Win64EH
 } // end namespace llvm
 
 #endif

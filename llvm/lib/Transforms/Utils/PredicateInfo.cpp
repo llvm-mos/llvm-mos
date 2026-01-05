@@ -65,7 +65,7 @@ std::pair<BasicBlock *, BasicBlock *> getBlockEdge(const PredicateBase *PB) {
   const auto *PEdge = cast<PredicateWithEdge>(PB);
   return std::make_pair(PEdge->From, PEdge->To);
 }
-}
+} // namespace
 
 namespace llvm {
 enum LocalNum {
@@ -500,8 +500,8 @@ void PredicateInfoBuilder::buildPredicateInfo() {
 // Given the renaming stack, make all the operands currently on the stack real
 // by inserting them into the IR.  Return the last operation's value.
 Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
-                                             ValueDFSStack &RenameStack,
-                                             Value *OrigOp) {
+                                              ValueDFSStack &RenameStack,
+                                              Value *OrigOp) {
   // Find the first thing we have to materialize
   auto RevIter = RenameStack.rbegin();
   for (; RevIter != RenameStack.rend(); ++RevIter)
@@ -853,4 +853,4 @@ PreservedAnalyses PredicateInfoVerifierPass::run(Function &F,
 
   return PreservedAnalyses::all();
 }
-}
+} // namespace llvm

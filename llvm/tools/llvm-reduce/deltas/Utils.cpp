@@ -40,8 +40,8 @@ Value *llvm::getDefaultValue(Type *T) {
 
 bool llvm::hasAliasUse(Function &F) {
   return any_of(F.users(), [](User *U) {
-      return isa<GlobalAlias>(U) || isa<GlobalIFunc>(U);
-    });
+    return isa<GlobalAlias>(U) || isa<GlobalIFunc>(U);
+  });
 }
 
 void llvm::simpleSimplifyCFG(Function &F, ArrayRef<BasicBlock *> BBs,

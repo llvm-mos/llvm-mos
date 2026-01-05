@@ -48,15 +48,17 @@ private:
   void writeSectionContent(raw_ostream &OS, WasmYAML::ElemSection &Section);
   void writeSectionContent(raw_ostream &OS, WasmYAML::CodeSection &Section);
   void writeSectionContent(raw_ostream &OS, WasmYAML::DataSection &Section);
-  void writeSectionContent(raw_ostream &OS, WasmYAML::DataCountSection &Section);
+  void writeSectionContent(raw_ostream &OS,
+                           WasmYAML::DataCountSection &Section);
 
   // Custom section types
   void writeSectionContent(raw_ostream &OS, WasmYAML::DylinkSection &Section);
   void writeSectionContent(raw_ostream &OS, WasmYAML::NameSection &Section);
   void writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &Section);
-  void writeSectionContent(raw_ostream &OS, WasmYAML::ProducersSection &Section);
   void writeSectionContent(raw_ostream &OS,
-                          WasmYAML::TargetFeaturesSection &Section);
+                           WasmYAML::ProducersSection &Section);
+  void writeSectionContent(raw_ostream &OS,
+                           WasmYAML::TargetFeaturesSection &Section);
   WasmYAML::Object &Obj;
   uint32_t NumImportedFunctions = 0;
   uint32_t NumImportedGlobals = 0;
@@ -370,7 +372,7 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
 }
 
 void WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::TypeSection &Section) {
+                                     WasmYAML::TypeSection &Section) {
   encodeULEB128(Section.Signatures.size(), OS);
   uint32_t ExpectedIndex = 0;
   for (const WasmYAML::Signature &Sig : Section.Signatures) {
@@ -390,7 +392,7 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
 }
 
 void WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::ImportSection &Section) {
+                                     WasmYAML::ImportSection &Section) {
   encodeULEB128(Section.Imports.size(), OS);
   for (const WasmYAML::Import &Import : Section.Imports) {
     writeStringRef(Import.Module, OS);
@@ -420,7 +422,7 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
       NumImportedTables++;
       break;
     default:
-      reportError("unknown import type: " +Twine(Import.Kind));
+      reportError("unknown import type: " + Twine(Import.Kind));
       return;
     }
   }
@@ -434,7 +436,7 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
 }
 
 void WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::ExportSection &Section) {
+                                     WasmYAML::ExportSection &Section) {
   encodeULEB128(Section.Exports.size(), OS);
   for (const WasmYAML::Export &Export : Section.Exports) {
     writeStringRef(Export.Name, OS);
@@ -524,7 +526,7 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
 }
 
 void WasmWriter::writeSectionContent(raw_ostream &OS,
-                                    WasmYAML::CodeSection &Section) {
+                                     WasmYAML::CodeSection &Section) {
   encodeULEB128(Section.Functions.size(), OS);
   uint32_t ExpectedIndex = NumImportedFunctions;
   for (auto &Func : Section.Functions) {
@@ -571,7 +573,7 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
 }
 
 void WasmWriter::writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
-                                  uint32_t SectionIndex) {
+                                   uint32_t SectionIndex) {
   switch (Sec.Type) {
   case wasm::WASM_SEC_CODE:
     writeStringRef("reloc.CODE", OS);

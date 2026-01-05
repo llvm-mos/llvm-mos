@@ -85,6 +85,7 @@ namespace {
 class PPCAsmBackend : public MCAsmBackend {
 protected:
   Triple TT;
+
 public:
   PPCAsmBackend(const Target &T, const Triple &TT)
       : MCAsmBackend(TT.isLittleEndian() ? llvm::endianness::little

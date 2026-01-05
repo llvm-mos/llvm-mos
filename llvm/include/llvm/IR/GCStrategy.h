@@ -78,8 +78,9 @@ protected:
                          /// this function's calls.
                          /// This should only be set if UseStatepoints is set.
 
-  bool NeededSafePoints = false;    ///< if set, calls are inferred to be safepoints
-  bool UsesMetadata = false;     ///< If set, backend must emit metadata tables.
+  bool NeededSafePoints =
+      false;                 ///< if set, calls are inferred to be safepoints
+  bool UsesMetadata = false; ///< If set, backend must emit metadata tables.
 
 public:
   LLVM_ABI GCStrategy();

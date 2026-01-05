@@ -34,6 +34,6 @@ class LoopSinkPass : public PassInfoMixin<LoopSinkPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_LOOPSINK_H

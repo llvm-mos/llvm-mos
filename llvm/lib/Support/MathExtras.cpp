@@ -21,11 +21,11 @@
 namespace llvm {
 
 #if defined(_MSC_VER)
-  // Visual Studio defines the HUGE_VAL class of macros using purposeful
-  // constant arithmetic overflow, which it then warns on when encountered.
-  const float huge_valf = std::numeric_limits<float>::infinity();
+// Visual Studio defines the HUGE_VAL class of macros using purposeful
+// constant arithmetic overflow, which it then warns on when encountered.
+const float huge_valf = std::numeric_limits<float>::infinity();
 #else
-  const float huge_valf = HUGE_VALF;
+const float huge_valf = HUGE_VALF;
 #endif
 
 } // namespace llvm

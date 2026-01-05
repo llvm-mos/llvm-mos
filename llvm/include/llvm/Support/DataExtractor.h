@@ -23,7 +23,7 @@ struct Uint24 {
   Uint24(uint8_t U0, uint8_t U1, uint8_t U2) : Bytes{U0, U1, U2} {}
   uint32_t getAsUint32(bool IsLittleEndian) const {
     int LoIx = IsLittleEndian ? 0 : 2;
-    return Bytes[LoIx] + (Bytes[1] << 8) + (Bytes[2-LoIx] << 16);
+    return Bytes[LoIx] + (Bytes[1] << 8) + (Bytes[2 - LoIx] << 16);
   }
 };
 
@@ -39,6 +39,7 @@ class DataExtractor {
   StringRef Data;
   uint8_t IsLittleEndian;
   uint8_t AddressSize;
+
 public:
   /// A class representing a position in a DataExtractor, as well as any error
   /// encountered during extraction. It enables one to extract a sequence of
@@ -81,7 +82,7 @@ public:
   /// caller. The data must stay around as long as this object is
   /// valid.
   DataExtractor(StringRef Data, bool IsLittleEndian, uint8_t AddressSize)
-    : Data(Data), IsLittleEndian(IsLittleEndian), AddressSize(AddressSize) {}
+      : Data(Data), IsLittleEndian(IsLittleEndian), AddressSize(AddressSize) {}
   DataExtractor(ArrayRef<uint8_t> Data, bool IsLittleEndian,
                 uint8_t AddressSize)
       : Data(StringRef(reinterpret_cast<const char *>(Data.data()),

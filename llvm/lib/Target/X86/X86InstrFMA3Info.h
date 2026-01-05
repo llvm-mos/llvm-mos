@@ -52,30 +52,22 @@ struct X86InstrFMA3Group {
   };
 
   /// Returns the 132 form of FMA opcode.
-  unsigned get132Opcode() const {
-    return Opcodes[Form132];
-  }
+  unsigned get132Opcode() const { return Opcodes[Form132]; }
 
   /// Returns the 213 form of FMA opcode.
-  unsigned get213Opcode() const {
-    return Opcodes[Form213];
-  }
+  unsigned get213Opcode() const { return Opcodes[Form213]; }
 
   /// Returns the 231 form of FMA opcode.
-  unsigned get231Opcode() const {
-    return Opcodes[Form231];
-  }
+  unsigned get231Opcode() const { return Opcodes[Form231]; }
 
   /// Returns true iff the group of FMA opcodes holds intrinsic opcodes.
   bool isIntrinsic() const { return (Attributes & Intrinsic) != 0; }
 
   /// Returns true iff the group of FMA opcodes holds k-merge-masked opcodes.
-  bool isKMergeMasked() const {
-    return (Attributes & KMergeMasked) != 0;
-  }
+  bool isKMergeMasked() const { return (Attributes & KMergeMasked) != 0; }
 
   /// Returns true iff the group of FMA opcodes holds k-zero-masked opcodes.
-  bool isKZeroMasked() const { return (Attributes &KZeroMasked) != 0; }
+  bool isKZeroMasked() const { return (Attributes & KZeroMasked) != 0; }
 
   /// Returns true iff the group of FMA opcodes holds any of k-masked opcodes.
   bool isKMasked() const {

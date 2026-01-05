@@ -101,10 +101,10 @@ public:
   virtual void emitARM64WinCFISavePReg(unsigned Reg, int Offset) {}
 
   /// Build attributes implementation
-  virtual void
-  emitAttributesSubsection(StringRef VendorName,
-                          AArch64BuildAttributes::SubsectionOptional IsOptional,
-                          AArch64BuildAttributes::SubsectionType ParameterType);
+  virtual void emitAttributesSubsection(
+      StringRef VendorName,
+      AArch64BuildAttributes::SubsectionOptional IsOptional,
+      AArch64BuildAttributes::SubsectionType ParameterType);
   virtual void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
                              std::string String);
   void activateAttributesSubsection(StringRef VendorName);
@@ -146,7 +146,7 @@ public:
 class AArch64TargetWinCOFFStreamer : public llvm::AArch64TargetStreamer {
 public:
   AArch64TargetWinCOFFStreamer(llvm::MCStreamer &S)
-    : AArch64TargetStreamer(S) {}
+      : AArch64TargetStreamer(S) {}
 
   // The unwind codes on ARM64 Windows are documented at
   // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
@@ -196,8 +196,8 @@ private:
   void emitARM64WinUnwindCode(unsigned UnwindCode, int Reg, int Offset);
 };
 
-MCTargetStreamer *
-createAArch64ObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
+MCTargetStreamer *createAArch64ObjectTargetStreamer(MCStreamer &S,
+                                                    const MCSubtargetInfo &STI);
 
 MCTargetStreamer *createAArch64NullTargetStreamer(MCStreamer &S);
 

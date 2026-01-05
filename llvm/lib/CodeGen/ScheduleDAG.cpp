@@ -42,17 +42,16 @@ STATISTIC(NumTopoInits,
           "Number of times the topological order has been recomputed");
 
 #ifndef NDEBUG
-static cl::opt<bool> StressSchedOpt(
-  "stress-sched", cl::Hidden, cl::init(false),
-  cl::desc("Stress test instruction scheduling"));
+static cl::opt<bool>
+    StressSchedOpt("stress-sched", cl::Hidden, cl::init(false),
+                   cl::desc("Stress test instruction scheduling"));
 #endif
 
 void SchedulingPriorityQueue::anchor() {}
 
 ScheduleDAG::ScheduleDAG(MachineFunction &mf)
     : TM(mf.getTarget()), TII(mf.getSubtarget().getInstrInfo()),
-      TRI(mf.getSubtarget().getRegisterInfo()), MF(mf),
-      MRI(mf.getRegInfo()) {
+      TRI(mf.getSubtarget().getRegisterInfo()), MF(mf), MRI(mf.getRegInfo()) {
 #ifndef NDEBUG
   StressSched = StressSchedOpt;
 #endif
@@ -67,16 +66,25 @@ void ScheduleDAG::clearDAG() {
 }
 
 const MCInstrDesc *ScheduleDAG::getNodeDesc(const SDNode *Node) const {
-  if (!Node || !Node->isMachineOpcode()) return nullptr;
+  if (!Node || !Node->isMachineOpcode())
+    return nullptr;
   return &TII->get(Node->getMachineOpcode());
 }
 
 LLVM_DUMP_METHOD void SDep::dump(const TargetRegisterInfo *TRI) const {
   switch (getKind()) {
-  case Data:   dbgs() << "Data"; break;
-  case Anti:   dbgs() << "Anti"; break;
-  case Output: dbgs() << "Out "; break;
-  case Order:  dbgs() << "Ord "; break;
+  case Data:
+    dbgs() << "Data";
+    break;
+  case Anti:
+    dbgs() << "Anti";
+    break;
+  case Output:
+    dbgs() << "Out ";
+    break;
+  case Order:
+    dbgs() << "Ord ";
+    break;
   }
 
   switch (getKind()) {
@@ -91,13 +99,23 @@ LLVM_DUMP_METHOD void SDep::dump(const TargetRegisterInfo *TRI) const {
     break;
   case Order:
     dbgs() << " Latency=" << getLatency();
-    switch(Contents.OrdKind) {
-    case Barrier:      dbgs() << " Barrier"; break;
+    switch (Contents.OrdKind) {
+    case Barrier:
+      dbgs() << " Barrier";
+      break;
     case MayAliasMem:
-    case MustAliasMem: dbgs() << " Memory"; break;
-    case Artificial:   dbgs() << " Artificial"; break;
-    case Weak:         dbgs() << " Weak"; break;
-    case Cluster:      dbgs() << " Cluster"; break;
+    case MustAliasMem:
+      dbgs() << " Memory";
+      break;
+    case Artificial:
+      dbgs() << " Artificial";
+      break;
+    case Weak:
+      dbgs() << " Weak";
+      break;
+    case Cluster:
+      dbgs() << " Cluster";
+      break;
     }
     break;
   }
@@ -148,8 +166,7 @@ bool SUnit::addPred(const SDep &D, bool Required) {
   if (!N->isScheduled) {
     if (D.isWeak()) {
       ++WeakPredsLeft;
-    }
-    else {
+    } else {
       assert(NumPredsLeft < std::numeric_limits<unsigned>::max() &&
              "NumPredsLeft will overflow!");
       ++NumPredsLeft;
@@ -158,8 +175,7 @@ bool SUnit::addPred(const SDep &D, bool Required) {
   if (!isScheduled) {
     if (D.isWeak()) {
       ++N->WeakSuccsLeft;
-    }
-    else {
+    } else {
       assert(N->NumSuccsLeft < std::numeric_limits<unsigned>::max() &&
              "NumSuccsLeft will overflow!");
       ++N->NumSuccsLeft;
@@ -215,8 +231,9 @@ void SUnit::removePred(const SDep &D) {
 }
 
 void SUnit::setDepthDirty() {
-  if (!isDepthCurrent) return;
-  SmallVector<SUnit*, 8> WorkList;
+  if (!isDepthCurrent)
+    return;
+  SmallVector<SUnit *, 8> WorkList;
   WorkList.push_back(this);
   do {
     SUnit *SU = WorkList.pop_back_val();
@@ -230,8 +247,9 @@ void SUnit::setDepthDirty() {
 }
 
 void SUnit::setHeightDirty() {
-  if (!isHeightCurrent) return;
-  SmallVector<SUnit*, 8> WorkList;
+  if (!isHeightCurrent)
+    return;
+  SmallVector<SUnit *, 8> WorkList;
   WorkList.push_back(this);
   do {
     SUnit *SU = WorkList.pop_back_val();
@@ -262,7 +280,7 @@ void SUnit::setHeightToAtLeast(unsigned NewHeight) {
 
 /// Calculates the maximal path from the node to the exit.
 void SUnit::ComputeDepth() {
-  SmallVector<SUnit*, 8> WorkList;
+  SmallVector<SUnit *, 8> WorkList;
   WorkList.push_back(this);
   do {
     SUnit *Cur = WorkList.back();
@@ -272,8 +290,8 @@ void SUnit::ComputeDepth() {
     for (const SDep &PredDep : Cur->Preds) {
       SUnit *PredSU = PredDep.getSUnit();
       if (PredSU->isDepthCurrent)
-        MaxPredDepth = std::max(MaxPredDepth,
-                                PredSU->Depth + PredDep.getLatency());
+        MaxPredDepth =
+            std::max(MaxPredDepth, PredSU->Depth + PredDep.getLatency());
       else {
         Done = false;
         WorkList.push_back(PredSU);
@@ -293,7 +311,7 @@ void SUnit::ComputeDepth() {
 
 /// Calculates the maximal path from the node to the entry.
 void SUnit::ComputeHeight() {
-  SmallVector<SUnit*, 8> WorkList;
+  SmallVector<SUnit *, 8> WorkList;
   WorkList.push_back(this);
   do {
     SUnit *Cur = WorkList.back();
@@ -303,8 +321,8 @@ void SUnit::ComputeHeight() {
     for (const SDep &SuccDep : Cur->Succs) {
       SUnit *SuccSU = SuccDep.getSUnit();
       if (SuccSU->isHeightCurrent)
-        MaxSuccHeight = std::max(MaxSuccHeight,
-                                 SuccSU->Height + SuccDep.getLatency());
+        MaxSuccHeight =
+            std::max(MaxSuccHeight, SuccSU->Height + SuccDep.getLatency());
       else {
         Done = false;
         WorkList.push_back(SuccSU);
@@ -409,12 +427,12 @@ unsigned ScheduleDAG::VerifyScheduledDAG(bool isBottomUp) {
     }
     if (SUnit.isScheduled &&
         (isBottomUp ? SUnit.getHeight() : SUnit.getDepth()) >
-          unsigned(std::numeric_limits<int>::max())) {
+            unsigned(std::numeric_limits<int>::max())) {
       if (!AnyNotSched)
         dbgs() << "*** Scheduling failed! ***\n";
       dumpNode(SUnit);
-      dbgs() << "has an unexpected "
-           << (isBottomUp ? "Height" : "Depth") << " value!\n";
+      dbgs() << "has an unexpected " << (isBottomUp ? "Height" : "Depth")
+             << " value!\n";
       AnyNotSched = true;
     }
     if (isBottomUp) {
@@ -473,7 +491,7 @@ void ScheduleDAGTopologicalSort::InitDAGTopologicalSorting() {
   Updates.clear();
 
   unsigned DAGSize = SUnits.size();
-  std::vector<SUnit*> WorkList;
+  std::vector<SUnit *> WorkList;
   WorkList.reserve(DAGSize);
 
   Index2Node.resize(DAGSize);
@@ -516,10 +534,10 @@ void ScheduleDAGTopologicalSort::InitDAGTopologicalSorting() {
 
 #ifndef NDEBUG
   // Check correctness of the ordering
-  for (SUnit &SU : SUnits)  {
+  for (SUnit &SU : SUnits) {
     for (const SDep &PD : SU.Preds) {
       assert(Node2Index[SU.NodeNum] > Node2Index[PD.getSUnit()->NodeNum] &&
-      "Wrong topological sorting");
+             "Wrong topological sorting");
     }
   }
 #endif
@@ -574,7 +592,7 @@ void ScheduleDAGTopologicalSort::RemovePred(SUnit *M, SUnit *N) {
 
 void ScheduleDAGTopologicalSort::DFS(const SUnit *SU, int UpperBound,
                                      bool &HasLoop) {
-  std::vector<const SUnit*> WorkList;
+  std::vector<const SUnit *> WorkList;
   WorkList.reserve(SUnits.size());
 
   WorkList.push_back(SU);
@@ -602,7 +620,7 @@ void ScheduleDAGTopologicalSort::DFS(const SUnit *SU, int UpperBound,
 std::vector<int> ScheduleDAGTopologicalSort::GetSubGraph(const SUnit &StartSU,
                                                          const SUnit &TargetSU,
                                                          bool &Success) {
-  std::vector<const SUnit*> WorkList;
+  std::vector<const SUnit *> WorkList;
   int LowerBound = Node2Index[StartSU.NodeNum];
   int UpperBound = Node2Index[TargetSU.NodeNum];
   bool Found = false;
@@ -680,7 +698,7 @@ std::vector<int> ScheduleDAGTopologicalSort::GetSubGraph(const SUnit &StartSU,
   return Nodes;
 }
 
-void ScheduleDAGTopologicalSort::Shift(BitVector& Visited, int LowerBound,
+void ScheduleDAGTopologicalSort::Shift(BitVector &Visited, int LowerBound,
                                        int UpperBound) {
   std::vector<int> L;
   int shift = 0;
@@ -711,8 +729,7 @@ bool ScheduleDAGTopologicalSort::WillCreateCycle(SUnit *TargetSU, SUnit *SU) {
   if (IsReachable(SU, TargetSU))
     return true;
   for (const SDep &PredDep : TargetSU->Preds)
-    if (PredDep.isAssignedRegDep() &&
-        IsReachable(SU, PredDep.getSUnit()))
+    if (PredDep.isAssignedRegDep() && IsReachable(SU, PredDep.getSUnit()))
       return true;
   return false;
 }
@@ -750,8 +767,8 @@ void ScheduleDAGTopologicalSort::Allocate(int n, int index) {
   Index2Node[index] = n;
 }
 
-ScheduleDAGTopologicalSort::
-ScheduleDAGTopologicalSort(std::vector<SUnit> &sunits, SUnit *exitsu)
-  : SUnits(sunits), ExitSU(exitsu) {}
+ScheduleDAGTopologicalSort::ScheduleDAGTopologicalSort(
+    std::vector<SUnit> &sunits, SUnit *exitsu)
+    : SUnits(sunits), ExitSU(exitsu) {}
 
 ScheduleHazardRecognizer::~ScheduleHazardRecognizer() = default;

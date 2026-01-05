@@ -75,11 +75,11 @@ bool RGPassManager::runOnFunction(Function &F) {
   // Walk Regions
   while (!RQ.empty()) {
 
-    CurrentRegion  = RQ.back();
+    CurrentRegion = RQ.back();
 
     // Run all passes on the current Region.
     for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
-      RegionPass *P = (RegionPass*)getContainedPass(Index);
+      RegionPass *P = (RegionPass *)getContainedPass(Index);
 
       if (isPassDebuggingExecutionsOrMore()) {
         dumpPassInfo(P, EXECUTION_MSG, ON_REGION_MSG,
@@ -113,7 +113,7 @@ bool RGPassManager::runOnFunction(Function &F) {
       if (isPassDebuggingExecutionsOrMore()) {
         if (LocalChanged)
           dumpPassInfo(P, MODIFICATION_MSG, ON_REGION_MSG,
-                                      CurrentRegion->getNameStr());
+                       CurrentRegion->getNameStr());
         dumpPreservedSet(P);
       }
 
@@ -149,7 +149,7 @@ bool RGPassManager::runOnFunction(Function &F) {
 
   // Finalization
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
-    RegionPass *P = (RegionPass*)getContainedPass(Index);
+    RegionPass *P = (RegionPass *)getContainedPass(Index);
     Changed |= P->doFinalization();
   }
 
@@ -163,11 +163,11 @@ bool RGPassManager::runOnFunction(Function &F) {
 
 /// Print passes managed by this manager
 void RGPassManager::dumpPassStructure(unsigned Offset) {
-  errs().indent(Offset*2) << "Region Pass Manager\n";
+  errs().indent(Offset * 2) << "Region Pass Manager\n";
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
     Pass *P = getContainedPass(Index);
     P->dumpPassStructure(Offset + 1);
-    dumpLastUses(P, Offset+1);
+    dumpLastUses(P, Offset + 1);
   }
 }
 
@@ -177,7 +177,7 @@ namespace {
 class PrintRegionPass : public RegionPass {
 private:
   std::string Banner;
-  raw_ostream &Out;       // raw_ostream to print on.
+  raw_ostream &Out; // raw_ostream to print on.
 
 public:
   static char ID;
@@ -206,7 +206,7 @@ public:
 };
 
 char PrintRegionPass::ID = 0;
-}  //end anonymous namespace
+} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 // RegionPass
@@ -224,18 +224,17 @@ void RegionPass::preparePassManager(PMStack &PMS) {
          PMS.top()->getPassManagerType() > PMT_RegionPassManager)
     PMS.pop();
 
-
   // If this pass is destroying high level information that is used
   // by other passes that are managed by LPM then do not insert
   // this pass in current LPM. Use new RGPassManager.
   if (PMS.top()->getPassManagerType() == PMT_RegionPassManager &&
-    !PMS.top()->preserveHigherLevelAnalysis(this))
+      !PMS.top()->preserveHigherLevelAnalysis(this))
     PMS.pop();
 }
 
 /// Assign pass manager to manage this pass.
 void RegionPass::assignPassManager(PMStack &PMS,
-                                 PassManagerType PreferredType) {
+                                   PassManagerType PreferredType) {
   // Find RGPassManager
   while (!PMS.empty() &&
          PMS.top()->getPassManagerType() > PMT_RegionPassManager)
@@ -245,10 +244,10 @@ void RegionPass::assignPassManager(PMStack &PMS,
 
   // Create new Region Pass Manager if it does not exist.
   if (PMS.top()->getPassManagerType() == PMT_RegionPassManager)
-    RGPM = (RGPassManager*)PMS.top();
+    RGPM = (RGPassManager *)PMS.top();
   else {
 
-    assert (!PMS.empty() && "Unable to create Region Pass Manager");
+    assert(!PMS.empty() && "Unable to create Region Pass Manager");
     PMDataManager *PMD = PMS.top();
 
     // [1] Create new Region Pass Manager
@@ -272,13 +271,11 @@ void RegionPass::assignPassManager(PMStack &PMS,
 
 /// Get the printer pass
 Pass *RegionPass::createPrinterPass(raw_ostream &O,
-                                  const std::string &Banner) const {
+                                    const std::string &Banner) const {
   return new PrintRegionPass(Banner, O);
 }
 
-static std::string getDescription(const Region &R) {
-  return "region";
-}
+static std::string getDescription(const Region &R) { return "region"; }
 
 bool RegionPass::skipRegion(Region &R) const {
   Function &F = *R.getEntry()->getParent();

@@ -23,7 +23,8 @@ class AsmToken {
 public:
   enum TokenKind {
     // Markers
-    Eof, Error,
+    Eof,
+    Error,
 
     // String values.
     Identifier,
@@ -43,16 +44,43 @@ public:
     EndOfStatement,
     Colon,
     Space,
-    Plus, Minus, Tilde,
+    Plus,
+    Minus,
+    Tilde,
     Slash,     // '/'
     BackSlash, // '\'
-    LParen, RParen, LBrac, RBrac, LCurly, RCurly,
-    Question, Star, Dot, Comma, Dollar, Equal, EqualEqual,
+    LParen,
+    RParen,
+    LBrac,
+    RBrac,
+    LCurly,
+    RCurly,
+    Question,
+    Star,
+    Dot,
+    Comma,
+    Dollar,
+    Equal,
+    EqualEqual,
 
-    Pipe, PipePipe, Caret,
-    Amp, AmpAmp, Exclaim, ExclaimEqual, Percent, Hash,
-    Less, LessEqual, LessLess, LessGreater,
-    Greater, GreaterEqual, GreaterGreater, At, MinusGreater,
+    Pipe,
+    PipePipe,
+    Caret,
+    Amp,
+    AmpAmp,
+    Exclaim,
+    ExclaimEqual,
+    Percent,
+    Hash,
+    Less,
+    LessEqual,
+    LessLess,
+    LessGreater,
+    Greater,
+    GreaterEqual,
+    GreaterGreater,
+    At,
+    MinusGreater,
   };
 
 private:

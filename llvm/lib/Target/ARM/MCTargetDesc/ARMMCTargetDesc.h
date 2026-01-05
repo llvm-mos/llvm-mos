@@ -13,8 +13,8 @@
 #ifndef LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMMCTARGETDESC_H
 #define LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMMCTARGETDESC_H
 
-#include "llvm/Support/DataTypes.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/DataTypes.h"
 #include <memory>
 #include <string>
 
@@ -44,8 +44,7 @@ void initLLVMToCVRegMapping(MCRegisterInfo *MRI);
 bool isPredicated(const MCInst &MI, const MCInstrInfo *MCII);
 bool isCPSRDefined(const MCInst &MI, const MCInstrInfo *MCII);
 
-template<class Inst>
-bool isLDMBaseRegInList(const Inst &MI) {
+template <class Inst> bool isLDMBaseRegInList(const Inst &MI) {
   auto BaseReg = MI.getOperand(0).getReg();
   for (unsigned I = 1, E = MI.getNumOperands(); I < E; ++I) {
     const auto &Op = MI.getOperand(I);
@@ -62,7 +61,7 @@ uint64_t evaluateBranchTarget(const MCInstrDesc &InstDesc, uint64_t Addr,
 /// do not need to go through TargetRegistry.
 MCSubtargetInfo *createARMMCSubtargetInfo(const Triple &TT, StringRef CPU,
                                           StringRef FS);
-}
+} // namespace ARM_MC
 
 MCTargetStreamer *createARMNullTargetStreamer(MCStreamer &S);
 MCTargetStreamer *createARMTargetAsmStreamer(MCStreamer &S,
@@ -100,12 +99,10 @@ std::unique_ptr<MCObjectTargetWriter> createARMELFObjectWriter(uint8_t OSABI);
 
 /// Construct an ARM Mach-O object writer.
 std::unique_ptr<MCObjectTargetWriter>
-createARMMachObjectWriter(bool Is64Bit, uint32_t CPUType,
-                          uint32_t CPUSubtype);
+createARMMachObjectWriter(bool Is64Bit, uint32_t CPUType, uint32_t CPUSubtype);
 
 /// Construct an ARM PE/COFF object writer.
-std::unique_ptr<MCObjectTargetWriter>
-createARMWinCOFFObjectWriter();
+std::unique_ptr<MCObjectTargetWriter> createARMWinCOFFObjectWriter();
 
 /// Construct ARM Mach-O relocation info.
 MCRelocationInfo *createARMMachORelocationInfo(MCContext &Ctx);
@@ -126,7 +123,7 @@ bool isCDECoproc(size_t Coproc, const MCSubtargetInfo &STI);
 
 } // end namespace ARM
 
-} // End llvm namespace
+} // namespace llvm
 
 // Defines symbolic names for ARM registers.  This defines a mapping from
 // register name to register number.

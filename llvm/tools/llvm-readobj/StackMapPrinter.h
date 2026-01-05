@@ -18,14 +18,14 @@ namespace llvm {
 template <typename StackMapParserT>
 void prettyPrintStackMap(ScopedPrinter &W, const StackMapParserT &SMP) {
 
-  W.printNumber("LLVM StackMap Version",  SMP.getVersion());
+  W.printNumber("LLVM StackMap Version", SMP.getVersion());
   W.printNumber("Num Functions", SMP.getNumFunctions());
 
   // Functions:
   for (const auto &F : SMP.functions())
     W.startLine() << "  Function address: " << F.getFunctionAddress()
-       << ", stack size: " << F.getStackSize()
-       << ", callsite record count: " << F.getRecordCount() << "\n";
+                  << ", stack size: " << F.getStackSize()
+                  << ", callsite record count: " << F.getRecordCount() << "\n";
 
   // Constants:
   W.printNumber("Num Constants", SMP.getNumConstants());
@@ -70,12 +70,12 @@ void prettyPrintStackMap(ScopedPrinter &W, const StackMapParserT &SMP) {
     raw_ostream &OS = W.startLine();
     OS << "    " << R.getNumLiveOuts() << " live-outs: [ ";
     for (const auto &LO : R.liveouts())
-      OS << "R#" << LO.getDwarfRegNum() << " ("
-         << LO.getSizeInBytes() << "-bytes) ";
+      OS << "R#" << LO.getDwarfRegNum() << " (" << LO.getSizeInBytes()
+         << "-bytes) ";
     OS << "]\n";
   }
 }
 
-}
+} // namespace llvm
 
 #endif

@@ -1583,8 +1583,7 @@ m_NUWAddLike(const LHS &L, const RHS &R) {
   return m_CombineOr(m_NUWAdd(L, R), m_DisjointOr(L, R));
 }
 
-template <typename LHS, typename RHS>
-struct XorLike_match {
+template <typename LHS, typename RHS> struct XorLike_match {
   LHS L;
   RHS R;
 
@@ -1594,7 +1593,7 @@ struct XorLike_match {
     if (auto *Op = dyn_cast<BinaryOperator>(V)) {
       if (Op->getOpcode() == Instruction::Sub && Op->hasNoUnsignedWrap() &&
           PatternMatch::match(Op->getOperand(0), m_LowBitMask()))
-		  ; // Pass
+        ; // Pass
       else if (Op->getOpcode() != Instruction::Xor)
         return false;
       return (L.match(Op->getOperand(0)) && R.match(Op->getOperand(1))) ||

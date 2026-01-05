@@ -237,8 +237,7 @@ static void reportGISelDiagnostic(DiagnosticSeverity Severity,
                                   const TargetPassConfig &TPC,
                                   MachineOptimizationRemarkEmitter &MORE,
                                   MachineOptimizationRemarkMissed &R) {
-  bool IsFatal = Severity == DS_Error &&
-                 TPC.isGlobalISelAbortEnabled();
+  bool IsFatal = Severity == DS_Error && TPC.isGlobalISelAbortEnabled();
   // Print the function name explicitly if we don't have a debug location (which
   // makes the diagnostic less useful) or if we're going to emit a raw error.
   if (!R.getLocation().isValid() || IsFatal)
@@ -267,8 +266,8 @@ void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
                               MachineOptimizationRemarkEmitter &MORE,
                               const char *PassName, StringRef Msg,
                               const MachineInstr &MI) {
-  MachineOptimizationRemarkMissed R(PassName, "GISelFailure: ",
-                                    MI.getDebugLoc(), MI.getParent());
+  MachineOptimizationRemarkMissed R(
+      PassName, "GISelFailure: ", MI.getDebugLoc(), MI.getParent());
   R << Msg;
   // Printing MI is expensive;  only do it if expensive remarks are enabled.
   if (TPC.isGlobalISelAbortEnabled() || MORE.allowExtraAnalysis(PassName))
@@ -455,8 +454,8 @@ std::optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
                         Reg->VReg};
 }
 
-const ConstantFP *
-llvm::getConstantFPVRegVal(Register VReg, const MachineRegisterInfo &MRI) {
+const ConstantFP *llvm::getConstantFPVRegVal(Register VReg,
+                                             const MachineRegisterInfo &MRI) {
   MachineInstr *MI = MRI.getVRegDef(VReg);
   if (TargetOpcode::G_FCONSTANT != MI->getOpcode())
     return nullptr;
@@ -924,7 +923,8 @@ Register llvm::getFunctionLiveInPhysReg(MachineFunction &MF,
     MachineInstr *Def = MRI.getVRegDef(LiveIn);
     if (Def) {
       // FIXME: Should the verifier check this is in the entry block?
-      assert(Def->getParent() == &EntryMBB && "live-in copy not in entry block");
+      assert(Def->getParent() == &EntryMBB &&
+             "live-in copy not in entry block");
       return LiveIn;
     }
 
@@ -939,7 +939,7 @@ Register llvm::getFunctionLiveInPhysReg(MachineFunction &MF,
   }
 
   BuildMI(EntryMBB, EntryMBB.begin(), DL, TII.get(TargetOpcode::COPY), LiveIn)
-    .addReg(PhysReg);
+      .addReg(PhysReg);
   if (!EntryMBB.isLiveIn(PhysReg))
     EntryMBB.addLiveIn(PhysReg);
   return LiveIn;
@@ -1442,7 +1442,7 @@ llvm::getIConstantSplatVal(const Register Reg, const MachineRegisterInfo &MRI) {
   if (auto SplatValAndReg =
           getAnyConstantSplat(Reg, MRI, /* AllowUndef */ false)) {
     if (std::optional<ValueAndVReg> ValAndVReg =
-        getIConstantVRegValWithLookThrough(SplatValAndReg->VReg, MRI))
+            getIConstantVRegValWithLookThrough(SplatValAndReg->VReg, MRI))
       return ValAndVReg->Value;
   }
 

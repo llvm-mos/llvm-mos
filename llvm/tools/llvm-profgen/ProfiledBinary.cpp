@@ -156,9 +156,8 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
     for (auto &ProbeFrame : reverse(ProbeContext)) {
       StringRef CallerName = ProbeFrame.first;
       LineLocation CallsiteLoc(ProbeFrame.second, 0);
-      SizeContext =
-          SizeContext->getOrCreateChildContext(CallsiteLoc,
-                                               FunctionId(CallerName));
+      SizeContext = SizeContext->getOrCreateChildContext(
+          CallsiteLoc, FunctionId(CallerName));
     }
     // Add 0 size to make known.
     SizeContext->addFunctionSize(0);

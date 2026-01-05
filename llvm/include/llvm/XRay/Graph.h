@@ -430,9 +430,7 @@ public:
 
   /// Looks for a vertex with identifier I, returns 1 if one exists, and
   /// 0 otherwise
-  size_type count(const VertexIdentifier &I) const {
-    return Vertices.count(I);
-  }
+  size_type count(const VertexIdentifier &I) const { return Vertices.count(I); }
 
   /// Looks for an edge with Identifier I, returns 1 if one exists and 0
   /// otherwise

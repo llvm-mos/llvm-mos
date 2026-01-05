@@ -57,12 +57,12 @@ static cl::opt<unsigned> ObjectSizeOffsetVisitorMaxVisitInstructions(
     cl::init(100));
 
 enum AllocType : uint8_t {
-  OpNewLike          = 1<<0, // allocates; never returns null
-  MallocLike         = 1<<1, // allocates; may return null
-  StrDupLike         = 1<<2,
-  MallocOrOpNewLike  = MallocLike | OpNewLike,
-  AllocLike          = MallocOrOpNewLike | StrDupLike,
-  AnyAlloc           = AllocLike
+  OpNewLike = 1 << 0,  // allocates; never returns null
+  MallocLike = 1 << 1, // allocates; may return null
+  StrDupLike = 1 << 2,
+  MallocOrOpNewLike = MallocLike | OpNewLike,
+  AllocLike = MallocOrOpNewLike | StrDupLike,
+  AnyAlloc = AllocLike
 };
 
 enum class MallocFamily {
@@ -186,10 +186,10 @@ getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
   if (!TLI || !TLI->getLibFunc(*Callee, TLIFn) || !TLI->has(TLIFn))
     return std::nullopt;
 
-  const auto *Iter = find_if(
-      AllocationFnData, [TLIFn](const std::pair<LibFunc, AllocFnsTy> &P) {
-        return P.first == TLIFn;
-      });
+  const auto *Iter = find_if(AllocationFnData,
+                             [TLIFn](const std::pair<LibFunc, AllocFnsTy> &P) {
+                               return P.first == TLIFn;
+                             });
 
   if (Iter == std::end(AllocationFnData))
     return std::nullopt;
@@ -205,11 +205,9 @@ getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
 
   if (FTy->getReturnType()->isPointerTy() &&
       FTy->getNumParams() == FnData->NumParams &&
-      (FstParam < 0 ||
-       (FTy->getParamType(FstParam)->isIntegerTy(32) ||
-        FTy->getParamType(FstParam)->isIntegerTy(64))) &&
-      (SndParam < 0 ||
-       FTy->getParamType(SndParam)->isIntegerTy(32) ||
+      (FstParam < 0 || (FTy->getParamType(FstParam)->isIntegerTy(32) ||
+                        FTy->getParamType(FstParam)->isIntegerTy(64))) &&
+      (SndParam < 0 || FTy->getParamType(SndParam)->isIntegerTy(32) ||
        FTy->getParamType(SndParam)->isIntegerTy(64)))
     return *FnData;
   return std::nullopt;
@@ -303,7 +301,8 @@ bool llvm::isNewLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates memory similar to malloc or calloc.
-bool llvm::isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
+bool llvm::isMallocOrCallocLikeFn(const Value *V,
+                                  const TargetLibraryInfo *TLI) {
   // TODO: Function behavior does not match name.
   return getAllocationData(V, MallocOrOpNewLike, TLI).has_value();
 }
@@ -386,7 +385,7 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
     // Strndup limits strlen.
     if (FnData->FstParam > 0) {
       const ConstantInt *Arg =
-        dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(FnData->FstParam)));
+          dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(FnData->FstParam)));
       if (!Arg)
         return std::nullopt;
 
@@ -398,7 +397,7 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
   }
 
   const ConstantInt *Arg =
-    dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(FnData->FstParam)));
+      dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(FnData->FstParam)));
   if (!Arg)
     return std::nullopt;
 
@@ -675,10 +674,11 @@ Value *llvm::lowerObjectSizeCall(
   auto *ResultType = cast<IntegerType>(ObjectSize->getType());
   bool StaticOnly = cast<ConstantInt>(ObjectSize->getArgOperand(3))->isZero();
   if (StaticOnly) {
-    // FIXME: Does it make sense to just return a failure value if the size won't
-    // fit in the output and `!MustSucceed`?
+    // FIXME: Does it make sense to just return a failure value if the size
+    // won't fit in the output and `!MustSucceed`?
     uint64_t Size;
-    if (getObjectSize(ObjectSize->getArgOperand(0), Size, DL, TLI, EvalOptions) &&
+    if (getObjectSize(ObjectSize->getArgOperand(0), Size, DL, TLI,
+                      EvalOptions) &&
         isUIntN(ResultType->getBitWidth(), Size))
       return ConstantInt::get(ResultType, Size);
   } else {
@@ -974,7 +974,7 @@ OffsetSpan ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
 OffsetSpan ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
   Type *MemoryTy = A.getPointeeInMemoryValueType();
   // No interprocedural analysis is done at the moment.
-  if (!MemoryTy|| !MemoryTy->isSized()) {
+  if (!MemoryTy || !MemoryTy->isSized()) {
     ++ObjectVisitorArgument;
     return ObjectSizeOffsetVisitor::unknown();
   }
@@ -1313,8 +1313,7 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::compute_(Value *V) {
   } else if (isa<Argument>(V) ||
              (isa<ConstantExpr>(V) &&
               cast<ConstantExpr>(V)->getOpcode() == Instruction::IntToPtr) ||
-             isa<GlobalAlias>(V) ||
-             isa<GlobalVariable>(V)) {
+             isa<GlobalAlias>(V) || isa<GlobalVariable>(V)) {
     // Ignore values where we cannot do more than ObjectSizeVisitor.
     Result = ObjectSizeOffsetEvaluator::unknown();
   } else {
@@ -1403,7 +1402,7 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitLoadInst(LoadInst &LI) {
 
 SizeOffsetValue ObjectSizeOffsetEvaluator::visitPHINode(PHINode &PHI) {
   // Create 2 PHIs: one for size and another for offset.
-  PHINode *SizePHI   = Builder.CreatePHI(IntTy, PHI.getNumIncomingValues());
+  PHINode *SizePHI = Builder.CreatePHI(IntTy, PHI.getNumIncomingValues());
   PHINode *OffsetPHI = Builder.CreatePHI(IntTy, PHI.getNumIncomingValues());
 
   // Insert right away in the cache to handle recursive PHIs.

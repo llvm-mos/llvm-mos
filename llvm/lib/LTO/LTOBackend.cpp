@@ -479,38 +479,36 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
   unsigned ThreadCount = 0;
   const Target *T = &TM->getTarget();
 
-  const auto HandleModulePartition =
-      [&](std::unique_ptr<Module> MPart) {
-        // We want to clone the module in a new context to multi-thread the
-        // codegen. We do it by serializing partition modules to bitcode
-        // (while still on the main thread, in order to avoid data races) and
-        // spinning up new threads which deserialize the partitions into
-        // separate contexts.
-        // FIXME: Provide a more direct way to do this in LLVM.
-        SmallString<0> BC;
-        raw_svector_ostream BCOS(BC);
-        WriteBitcodeToFile(*MPart, BCOS);
+  const auto HandleModulePartition = [&](std::unique_ptr<Module> MPart) {
+    // We want to clone the module in a new context to multi-thread the
+    // codegen. We do it by serializing partition modules to bitcode
+    // (while still on the main thread, in order to avoid data races) and
+    // spinning up new threads which deserialize the partitions into
+    // separate contexts.
+    // FIXME: Provide a more direct way to do this in LLVM.
+    SmallString<0> BC;
+    raw_svector_ostream BCOS(BC);
+    WriteBitcodeToFile(*MPart, BCOS);
 
-        // Enqueue the task
-        CodegenThreadPool.async(
-            [&](const SmallString<0> &BC, unsigned ThreadId) {
-              LTOLLVMContext Ctx(C);
-              Expected<std::unique_ptr<Module>> MOrErr =
-                  parseBitcodeFile(MemoryBufferRef(BC.str(), "ld-temp.o"), Ctx);
-              if (!MOrErr)
-                report_fatal_error("Failed to read bitcode");
-              std::unique_ptr<Module> MPartInCtx = std::move(MOrErr.get());
+    // Enqueue the task
+    CodegenThreadPool.async(
+        [&](const SmallString<0> &BC, unsigned ThreadId) {
+          LTOLLVMContext Ctx(C);
+          Expected<std::unique_ptr<Module>> MOrErr =
+              parseBitcodeFile(MemoryBufferRef(BC.str(), "ld-temp.o"), Ctx);
+          if (!MOrErr)
+            report_fatal_error("Failed to read bitcode");
+          std::unique_ptr<Module> MPartInCtx = std::move(MOrErr.get());
 
-              std::unique_ptr<TargetMachine> TM =
-                  createTargetMachine(C, T, *MPartInCtx);
+          std::unique_ptr<TargetMachine> TM =
+              createTargetMachine(C, T, *MPartInCtx);
 
-              codegen(C, TM.get(), AddStream, ThreadId, *MPartInCtx,
-                      CombinedIndex);
-            },
-            // Pass BC using std::move to ensure that it get moved rather than
-            // copied into the thread's context.
-            std::move(BC), ThreadCount++);
-      };
+          codegen(C, TM.get(), AddStream, ThreadId, *MPartInCtx, CombinedIndex);
+        },
+        // Pass BC using std::move to ensure that it get moved rather than
+        // copied into the thread's context.
+        std::move(BC), ThreadCount++);
+  };
 
   // Try target-specific module splitting first, then fallback to the default.
   if (!TM->splitModule(Mod, ParallelCodeGenParallelismLevel,
@@ -580,7 +578,7 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
 static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
                             const ModuleSummaryIndex &Index) {
   llvm::TimeTraceScope timeScope("Drop dead symbols");
-  std::vector<GlobalValue*> DeadGVs;
+  std::vector<GlobalValue *> DeadGVs;
   for (auto &GV : Mod.global_values())
     if (GlobalValueSummary *GVS = DefinedGlobals.lookup(GV.getGUID()))
       if (!Index.isGlobalValueLive(GVS)) {
@@ -637,25 +635,24 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   if (Conf.PreOptModuleHook && !Conf.PreOptModuleHook(Task, Mod))
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
-  auto OptimizeAndCodegen =
-      [&](Module &Mod, TargetMachine *TM,
-          LLVMRemarkFileHandle DiagnosticOutputFile) {
-        // Perform optimization and code generation for ThinLTO.
-        if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
-                 /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
-                 CmdArgs))
-          return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+  auto OptimizeAndCodegen = [&](Module &Mod, TargetMachine *TM,
+                                LLVMRemarkFileHandle DiagnosticOutputFile) {
+    // Perform optimization and code generation for ThinLTO.
+    if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
+             /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
+             CmdArgs))
+      return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
-        // Save the current module before the first codegen round.
-        // Note that the second codegen round runs only `codegen()` without
-        // running `opt()`. We're not reaching here as it's bailed out earlier
-        // with `CodeGenOnly` which has been set in `SecondRoundThinBackend`.
-        if (IRAddStream)
-          cgdata::saveModuleForTwoRounds(Mod, Task, IRAddStream);
+    // Save the current module before the first codegen round.
+    // Note that the second codegen round runs only `codegen()` without
+    // running `opt()`. We're not reaching here as it's bailed out earlier
+    // with `CodeGenOnly` which has been set in `SecondRoundThinBackend`.
+    if (IRAddStream)
+      cgdata::saveModuleForTwoRounds(Mod, Task, IRAddStream);
 
-        codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
-        return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
-      };
+    codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
+    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+  };
 
   if (ThinLTOAssumeMerged)
     return OptimizeAndCodegen(Mod, TM.get(), std::move(DiagnosticOutputFile));

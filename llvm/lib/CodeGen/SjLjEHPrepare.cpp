@@ -95,8 +95,8 @@ PreservedAnalyses SjLjEHPreparePass::run(Function &F,
 }
 
 char SjLjEHPrepare::ID = 0;
-INITIALIZE_PASS(SjLjEHPrepare, DEBUG_TYPE, "Prepare SjLj exceptions",
-                false, false)
+INITIALIZE_PASS(SjLjEHPrepare, DEBUG_TYPE, "Prepare SjLj exceptions", false,
+                false)
 
 // Public Interface To the SjLjEHPrepare pass.
 FunctionPass *llvm::createSjLjEHPreparePass(const TargetMachine *TM) {
@@ -134,7 +134,7 @@ void SjLjEHPrepareImpl::insertCallSiteStore(Instruction *I, int Number) {
   Type *Int32Ty = Type::getInt32Ty(I->getContext());
   Value *Zero = ConstantInt::get(Int32Ty, 0);
   Value *One = ConstantInt::get(Int32Ty, 1);
-  Value *Idxs[2] = { Zero, One };
+  Value *Idxs[2] = {Zero, One};
   Value *CallSite =
       Builder.CreateGEP(FunctionContextTy, FuncCtx, Idxs, "call_site");
 

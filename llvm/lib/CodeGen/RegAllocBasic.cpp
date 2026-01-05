@@ -113,10 +113,7 @@ void RABasic::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-void RABasic::releaseMemory() {
-  SpillerInstance.reset();
-}
-
+void RABasic::releaseMemory() { SpillerInstance.reset(); }
 
 // Spill or split all live virtual registers currently unified under PhysReg
 // that interfere with VirtReg. The newly spilled or split live intervals are
@@ -250,9 +247,7 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   return true;
 }
 
-FunctionPass* llvm::createBasicRegisterAllocator() {
-  return new RABasic();
-}
+FunctionPass *llvm::createBasicRegisterAllocator() { return new RABasic(); }
 
 FunctionPass *llvm::createBasicRegisterAllocator(RegAllocFilterFunc F) {
   return new RABasic(F);

@@ -94,9 +94,8 @@ int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
       });
 }
 
-double
-MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
-                                      const MCSchedClassDesc &SCDesc) {
+double MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
+                                             const MCSchedClassDesc &SCDesc) {
   std::optional<double> MinThroughput;
   const MCSchedModel &SM = STI.getSchedModel();
   const MCWriteProcResEntry *I = STI.getWriteProcResBegin(&SCDesc);
@@ -119,10 +118,9 @@ MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
   return ((double)SCDesc.NumMicroOps) / SM.IssueWidth;
 }
 
-double
-MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
-                                      const MCInstrInfo &MCII,
-                                      const MCInst &Inst) const {
+double MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
+                                             const MCInstrInfo &MCII,
+                                             const MCInst &Inst) const {
   unsigned SchedClass = MCII.get(Inst.getOpcode()).getSchedClass();
   const MCSchedClassDesc *SCDesc = getSchedClassDesc(SchedClass);
 
@@ -143,9 +141,8 @@ MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
   llvm_unreachable("unsupported variant scheduling class");
 }
 
-double
-MCSchedModel::getReciprocalThroughput(unsigned SchedClass,
-                                      const InstrItineraryData &IID) {
+double MCSchedModel::getReciprocalThroughput(unsigned SchedClass,
+                                             const InstrItineraryData &IID) {
   std::optional<double> Throughput;
   const InstrStage *I = IID.beginStage(SchedClass);
   const InstrStage *E = IID.endStage(SchedClass);

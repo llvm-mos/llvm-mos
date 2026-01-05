@@ -46,13 +46,9 @@ struct BitSetInfo {
   // represent addresses 8 bytes apart.
   unsigned AlignLog2;
 
-  bool isSingleOffset() const {
-    return Bits.size() == 1;
-  }
+  bool isSingleOffset() const { return Bits.size() == 1; }
 
-  bool isAllOnes() const {
-    return Bits.size() == BitSize;
-  }
+  bool isAllOnes() const { return Bits.size() == BitSize; }
 
   LLVM_ABI bool containsGlobalOffset(uint64_t Offset) const;
 
@@ -178,9 +174,7 @@ struct ByteArrayBuilder {
   /// The number of bytes allocated so far for each of the bits.
   uint64_t BitAllocs[BitsPerByte];
 
-  ByteArrayBuilder() {
-    memset(BitAllocs, 0, sizeof(BitAllocs));
-  }
+  ByteArrayBuilder() { memset(BitAllocs, 0, sizeof(BitAllocs)); }
 
   /// Allocate BitSize bits in the byte array where Bits contains the bits to
   /// set. AllocByteOffset is set to the offset within the byte array and

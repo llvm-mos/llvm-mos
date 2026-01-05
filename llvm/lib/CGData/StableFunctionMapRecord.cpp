@@ -56,13 +56,12 @@ getStableFunctionEntries(const StableFunctionMap &SFM) {
     for (auto &Func : P.second.Entries)
       FuncEntries.emplace_back(Func.get());
 
-  llvm::stable_sort(
-      FuncEntries, [&](auto &A, auto &B) {
-        return std::tuple(A->Hash, SFM.getNameForId(A->ModuleNameId),
-                          SFM.getNameForId(A->FunctionNameId)) <
-               std::tuple(B->Hash, SFM.getNameForId(B->ModuleNameId),
-                          SFM.getNameForId(B->FunctionNameId));
-      });
+  llvm::stable_sort(FuncEntries, [&](auto &A, auto &B) {
+    return std::tuple(A->Hash, SFM.getNameForId(A->ModuleNameId),
+                      SFM.getNameForId(A->FunctionNameId)) <
+           std::tuple(B->Hash, SFM.getNameForId(B->ModuleNameId),
+                      SFM.getNameForId(B->FunctionNameId));
+  });
   return FuncEntries;
 }
 

@@ -115,8 +115,7 @@ struct LoopVersioningLICM {
   // LoopAccessInfo will take place only when it's necessary.
   LoopVersioningLICM(AliasAnalysis *AA, ScalarEvolution *SE,
                      OptimizationRemarkEmitter *ORE,
-                     LoopAccessInfoManager &LAIs, LoopInfo &LI,
-                     Loop *CurLoop)
+                     LoopAccessInfoManager &LAIs, LoopInfo &LI, Loop *CurLoop)
       : AA(AA), SE(SE), LAIs(LAIs), LI(LI), CurLoop(CurLoop),
         LoopDepthThreshold(LVLoopDepthThreshold),
         InvariantThreshold(LVInvarThreshold), ORE(ORE) {}

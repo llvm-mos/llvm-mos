@@ -73,17 +73,18 @@ using namespace llvm;
 
 #define DEBUG_TYPE "globalopt"
 
-STATISTIC(NumMarked    , "Number of globals marked constant");
-STATISTIC(NumUnnamed   , "Number of globals marked unnamed_addr");
-STATISTIC(NumSRA       , "Number of aggregate globals broken into scalars");
-STATISTIC(NumSubstitute,"Number of globals with initializers stored into them");
-STATISTIC(NumDeleted   , "Number of globals deleted");
-STATISTIC(NumGlobUses  , "Number of global uses devirtualized");
-STATISTIC(NumLocalized , "Number of globals localized");
-STATISTIC(NumShrunkToBool  , "Number of global vars shrunk to booleans");
-STATISTIC(NumFastCallFns   , "Number of functions converted to fastcc");
+STATISTIC(NumMarked, "Number of globals marked constant");
+STATISTIC(NumUnnamed, "Number of globals marked unnamed_addr");
+STATISTIC(NumSRA, "Number of aggregate globals broken into scalars");
+STATISTIC(NumSubstitute,
+          "Number of globals with initializers stored into them");
+STATISTIC(NumDeleted, "Number of globals deleted");
+STATISTIC(NumGlobUses, "Number of global uses devirtualized");
+STATISTIC(NumLocalized, "Number of globals localized");
+STATISTIC(NumShrunkToBool, "Number of global vars shrunk to booleans");
+STATISTIC(NumFastCallFns, "Number of functions converted to fastcc");
 STATISTIC(NumCtorsEvaluated, "Number of static ctors evaluated");
-STATISTIC(NumNestRemoved   , "Number of nest attributes removed");
+STATISTIC(NumNestRemoved, "Number of nest attributes removed");
 STATISTIC(NumAliasesResolved, "Number of global aliases resolved");
 STATISTIC(NumAliasesRemoved, "Number of global aliases eliminated");
 STATISTIC(NumCXXDtorsRemoved, "Number of global C++ destructors removed");
@@ -133,30 +134,34 @@ static bool isLeakCheckerRoot(GlobalVariable *GV) {
   do {
     Type *Ty = Types.pop_back_val();
     switch (Ty->getTypeID()) {
-      default: break;
-      case Type::PointerTyID:
+    default:
+      break;
+    case Type::PointerTyID:
+      return true;
+    case Type::FixedVectorTyID:
+    case Type::ScalableVectorTyID:
+      if (cast<VectorType>(Ty)->getElementType()->isPointerTy())
         return true;
-      case Type::FixedVectorTyID:
-      case Type::ScalableVectorTyID:
-        if (cast<VectorType>(Ty)->getElementType()->isPointerTy())
+      break;
+    case Type::ArrayTyID:
+      Types.push_back(cast<ArrayType>(Ty)->getElementType());
+      break;
+    case Type::StructTyID: {
+      StructType *STy = cast<StructType>(Ty);
+      if (STy->isOpaque())
+        return true;
+      for (Type *InnerTy : STy->elements()) {
+        if (isa<PointerType>(InnerTy))
           return true;
-        break;
-      case Type::ArrayTyID:
-        Types.push_back(cast<ArrayType>(Ty)->getElementType());
-        break;
-      case Type::StructTyID: {
-        StructType *STy = cast<StructType>(Ty);
-        if (STy->isOpaque()) return true;
-        for (Type *InnerTy : STy->elements()) {
-          if (isa<PointerType>(InnerTy)) return true;
-          if (isa<StructType>(InnerTy) || isa<ArrayType>(InnerTy) ||
-              isa<VectorType>(InnerTy))
-            Types.push_back(InnerTy);
-        }
-        break;
+        if (isa<StructType>(InnerTy) || isa<ArrayType>(InnerTy) ||
+            isa<VectorType>(InnerTy))
+          Types.push_back(InnerTy);
       }
+      break;
     }
-    if (--Limit == 0) return true;
+    }
+    if (--Limit == 0)
+      return true;
   } while (!Types.empty());
   return false;
 }
@@ -656,8 +661,9 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
 /// Return true if all users of the specified value will trap if the value is
 /// dynamically null.  PHIs keeps track of any phi nodes we've seen to avoid
 /// reprocessing them.
-static bool AllUsesOfValueWillTrapIfNull(const Value *V,
-                                        SmallPtrSetImpl<const PHINode*> &PHIs) {
+static bool
+AllUsesOfValueWillTrapIfNull(const Value *V,
+                             SmallPtrSetImpl<const PHINode *> &PHIs) {
   for (const User *U : V->users()) {
     if (const Instruction *I = dyn_cast<Instruction>(U)) {
       // If null pointer is considered valid, then all uses are non-trapping.
@@ -669,21 +675,22 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
       // Will trap.
     } else if (const StoreInst *SI = dyn_cast<StoreInst>(U)) {
       if (SI->getOperand(0) == V) {
-        return false;  // Storing the value.
+        return false; // Storing the value.
       }
     } else if (const CallInst *CI = dyn_cast<CallInst>(U)) {
       if (CI->getCalledOperand() != V) {
-        return false;  // Not calling the ptr
+        return false; // Not calling the ptr
       }
     } else if (const InvokeInst *II = dyn_cast<InvokeInst>(U)) {
       if (II->getCalledOperand() != V) {
-        return false;  // Not calling the ptr
+        return false; // Not calling the ptr
       }
     } else if (const AddrSpaceCastInst *CI = dyn_cast<AddrSpaceCastInst>(U)) {
       if (!AllUsesOfValueWillTrapIfNull(CI, PHIs))
         return false;
     } else if (const GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(U)) {
-      if (!AllUsesOfValueWillTrapIfNull(GEPI, PHIs)) return false;
+      if (!AllUsesOfValueWillTrapIfNull(GEPI, PHIs))
+        return false;
     } else if (const PHINode *PN = dyn_cast<PHINode>(U)) {
       // If we've already seen this phi node, ignore it, it has already been
       // checked.
@@ -765,7 +772,7 @@ static void allUsesOfLoadAndStores(GlobalVariable *GV,
 
 static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
   bool Changed = false;
-  for (auto UI = V->user_begin(), E = V->user_end(); UI != E; ) {
+  for (auto UI = V->user_begin(), E = V->user_end(); UI != E;) {
     Instruction *I = cast<Instruction>(*UI++);
     // Uses are non-trapping if null pointer is considered valid.
     // Non address-space 0 globals are already pruned by the caller.
@@ -807,15 +814,15 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
       }
     } else if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(I)) {
       // Should handle GEP here.
-      SmallVector<Constant*, 8> Idxs;
-      Idxs.reserve(GEPI->getNumOperands()-1);
+      SmallVector<Constant *, 8> Idxs;
+      Idxs.reserve(GEPI->getNumOperands() - 1);
       for (User::op_iterator i = GEPI->op_begin() + 1, e = GEPI->op_end();
            i != e; ++i)
         if (Constant *C = dyn_cast<Constant>(*i))
           Idxs.push_back(C);
         else
           break;
-      if (Idxs.size() == GEPI->getNumOperands()-1)
+      if (Idxs.size() == GEPI->getNumOperands() - 1)
         Changed |= OptimizeAwayTrappingUsesOfValue(
             GEPI, ConstantExpr::getGetElementPtr(GEPI->getSourceElementType(),
                                                  NewV, Idxs));
@@ -900,7 +907,7 @@ static bool OptimizeAwayTrappingUsesOfLoads(
 /// foldable.
 static void ConstantPropUsersOf(Value *V, const DataLayout &DL,
                                 TargetLibraryInfo *TLI) {
-  for (Value::user_iterator UI = V->user_begin(), E = V->user_end(); UI != E; )
+  for (Value::user_iterator UI = V->user_begin(), E = V->user_end(); UI != E;)
     if (Instruction *I = dyn_cast<Instruction>(*UI++))
       if (Constant *NewC = ConstantFoldInstruction(I, DL, TLI)) {
         I->replaceAllUsesWith(NewC);
@@ -919,17 +926,15 @@ static void ConstantPropUsersOf(Value *V, const DataLayout &DL,
 /// Because it is always the result of the specified malloc, there is no reason
 /// to actually DO the malloc.  Instead, turn the malloc into a global, and any
 /// loads of GV as uses of the new global.
-static GlobalVariable *
-OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
-                                  uint64_t AllocSize, Constant *InitVal,
-                                  const DataLayout &DL,
-                                  TargetLibraryInfo *TLI) {
+static GlobalVariable *OptimizeGlobalAddressOfAllocation(
+    GlobalVariable *GV, CallInst *CI, uint64_t AllocSize, Constant *InitVal,
+    const DataLayout &DL, TargetLibraryInfo *TLI) {
   LLVM_DEBUG(errs() << "PROMOTING GLOBAL: " << *GV << "  CALL = " << *CI
                     << '\n');
 
   // Create global of type [AllocSize x i8].
-  Type *GlobalType = ArrayType::get(Type::getInt8Ty(GV->getContext()),
-                                    AllocSize);
+  Type *GlobalType =
+      ArrayType::get(Type::getInt8Ty(GV->getContext()), AllocSize);
 
   // Create the new global variable.  The contents of the allocated memory is
   // undefined initially, so initialize with an undef value.
@@ -998,7 +1003,8 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
       cast<LoadInst>(LV)->setDebugLoc(LI->getDebugLoc());
       InitBoolUsed = true;
       switch (ICI->getPredicate()) {
-      default: llvm_unreachable("Unknown ICmp Predicate!");
+      default:
+        llvm_unreachable("Unknown ICmp Predicate!");
       case ICmpInst::ICMP_ULT: // X < null -> always false
         LV = ConstantInt::getFalse(GV->getContext());
         break;
@@ -1012,7 +1018,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
         break;
       case ICmpInst::ICMP_NE:
       case ICmpInst::ICMP_UGT:
-        break;  // no change.
+        break; // no change.
       }
       ICI->replaceAllUsesWith(LV);
       ICI->eraseFromParent();
@@ -1022,7 +1028,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
 
   // If the initialization boolean was used, insert it, otherwise delete it.
   if (!InitBoolUsed) {
-    while (!InitBool->use_empty())  // Delete initializations
+    while (!InitBool->use_empty()) // Delete initializations
       cast<StoreInst>(InitBool->user_back())->eraseFromParent();
     delete InitBool;
   } else
@@ -1172,8 +1178,8 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
   // simplification.  In these cases, we typically end up with "cond ? v1 : v2"
   // where v1 and v2 both require constant pool loads, a big loss.
   if (GVElType == Type::getInt1Ty(GV->getContext()) ||
-      GVElType->isFloatingPointTy() ||
-      GVElType->isPointerTy() || GVElType->isVectorTy())
+      GVElType->isFloatingPointTy() || GVElType->isPointerTy() ||
+      GVElType->isVectorTy())
     return false;
 
   // Walk the use list of the global seeing if all the uses are load or store.
@@ -1188,13 +1194,10 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
   LLVM_DEBUG(dbgs() << "   *** SHRINKING TO BOOL: " << *GV << "\n");
 
   // Create the new global, initializing it to false.
-  GlobalVariable *NewGV = new GlobalVariable(Type::getInt1Ty(GV->getContext()),
-                                             false,
-                                             GlobalValue::InternalLinkage,
-                                        ConstantInt::getFalse(GV->getContext()),
-                                             GV->getName()+".b",
-                                             GV->getThreadLocalMode(),
-                                             GV->getType()->getAddressSpace());
+  GlobalVariable *NewGV = new GlobalVariable(
+      Type::getInt1Ty(GV->getContext()), false, GlobalValue::InternalLinkage,
+      ConstantInt::getFalse(GV->getContext()), GV->getName() + ".b",
+      GV->getThreadLocalMode(), GV->getType()->getAddressSpace());
   NewGV->copyAttributesFrom(GV);
   GV->getParent()->insertGlobalVariable(GV->getIterator(), NewGV);
 
@@ -1219,7 +1222,7 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
       uint64_t ValOther = CI->getZExtValue();
       uint64_t ValMinus = ValOther - ValInit;
 
-      for(auto *GVe : GVs){
+      for (auto *GVe : GVs) {
         DIGlobalVariable *DGV = GVe->getVariable();
         DIExpression *E = GVe->getExpression();
         const DataLayout &DL = GV->getDataLayout();
@@ -1234,27 +1237,30 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
         // val * (ValOther - ValInit) + ValInit:
         // DW_OP_deref DW_OP_constu <ValMinus>
         // DW_OP_mul DW_OP_constu <ValInit> DW_OP_plus DW_OP_stack_value
-        SmallVector<uint64_t, 12> Ops = {
-            dwarf::DW_OP_deref_size, SizeInOctets,
-            dwarf::DW_OP_constu, ValMinus,
-            dwarf::DW_OP_mul, dwarf::DW_OP_constu, ValInit,
-            dwarf::DW_OP_plus};
+        SmallVector<uint64_t, 12> Ops = {dwarf::DW_OP_deref_size,
+                                         SizeInOctets,
+                                         dwarf::DW_OP_constu,
+                                         ValMinus,
+                                         dwarf::DW_OP_mul,
+                                         dwarf::DW_OP_constu,
+                                         ValInit,
+                                         dwarf::DW_OP_plus};
         bool WithStackValue = true;
         E = DIExpression::prependOpcodes(E, Ops, WithStackValue);
         DIGlobalVariableExpression *DGVE =
-          DIGlobalVariableExpression::get(NewGV->getContext(), DGV, E);
+            DIGlobalVariableExpression::get(NewGV->getContext(), DGV, E);
         NewGV->addDebugInfo(DGVE);
-     }
-     EmitOneOrZero = false;
+      }
+      EmitOneOrZero = false;
     }
   }
 
   if (EmitOneOrZero) {
-     // FIXME: This will only emit address for debugger on which will
-     // be written only 0 or 1.
-     for(auto *GV : GVs)
-       NewGV->addDebugInfo(GV);
-   }
+    // FIXME: This will only emit address for debugger on which will
+    // be written only 0 or 1.
+    for (auto *GV : GVs)
+      NewGV->addDebugInfo(GV);
+  }
 
   while (!GV->use_empty()) {
     Instruction *UI = cast<Instruction>(GV->user_back());
@@ -1264,8 +1270,8 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
       // Only do this if we weren't storing a loaded value.
       Value *StoreVal;
       if (StoringOther || SI->getOperand(0) == InitVal) {
-        StoreVal = ConstantInt::get(Type::getInt1Ty(GV->getContext()),
-                                    StoringOther);
+        StoreVal =
+            ConstantInt::get(Type::getInt1Ty(GV->getContext()), StoringOther);
       } else {
         // Otherwise, we are storing a previously loaded copy.  To do this,
         // change the copy from copying the original value to just copying the
@@ -1472,8 +1478,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
   // are just replacing static memory to stack memory.
   //
   // If the global is in different address space, don't bring it to stack.
-  if (!GS.HasMultipleAccessingFunctions &&
-      GS.AccessingFunction &&
+  if (!GS.HasMultipleAccessingFunctions && GS.AccessingFunction &&
       GV->getValueType()->isSingleValueType() &&
       GV->getType()->getAddressSpace() == DL.getAllocaAddrSpace() &&
       !GV->isExternallyInitialized() &&
@@ -1527,7 +1532,6 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
       Changed = true;
     }
     return Changed;
-
   }
   if (GS.StoredType <= GlobalStatus::InitializerStored) {
     LLVM_DEBUG(dbgs() << "MARKING CONSTANT: " << *GV << "\n");
@@ -1652,8 +1656,9 @@ processGlobal(GlobalValue &GV,
 
   bool Changed = false;
   if (!GS.IsCompared && !GV.hasGlobalUnnamedAddr()) {
-    auto NewUnnamedAddr = GV.hasLocalLinkage() ? GlobalValue::UnnamedAddr::Global
-                                               : GlobalValue::UnnamedAddr::Local;
+    auto NewUnnamedAddr = GV.hasLocalLinkage()
+                              ? GlobalValue::UnnamedAddr::Global
+                              : GlobalValue::UnnamedAddr::Local;
     if (NewUnnamedAddr != GV.getUnnamedAddr()) {
       GV.setUnnamedAddr(NewUnnamedAddr);
       NumUnnamed++;
@@ -1720,7 +1725,7 @@ static bool hasChangeableCCImpl(Function *F) {
   // Can't change CC of the function that either has musttail calls, or is a
   // musttail callee itself
   for (User *U : F->users()) {
-    CallInst* CI = dyn_cast<CallInst>(U);
+    CallInst *CI = dyn_cast<CallInst>(U);
     if (!CI)
       continue;
 
@@ -2082,8 +2087,8 @@ static bool EvaluateStaticConstructor(Function *F, const DataLayout &DL,
   // Call the function.
   Evaluator Eval(DL, TLI);
   Constant *RetValDummy;
-  bool EvalSuccess = Eval.EvaluateFunction(F, RetValDummy,
-                                           SmallVector<Constant*, 0>());
+  bool EvalSuccess =
+      Eval.EvaluateFunction(F, RetValDummy, SmallVector<Constant *, 0>());
 
   if (EvalSuccess) {
     ++NumCtorsEvaluated;
@@ -2410,7 +2415,7 @@ static bool OptimizeEmptyGlobalAtExitDtors(Function *CXAAtExitFn, bool isCXX) {
       continue;
 
     Function *DtorFn =
-      dyn_cast<Function>(CI->getArgOperand(0)->stripPointerCasts());
+        dyn_cast<Function>(CI->getArgOperand(0)->stripPointerCasts());
     if (!DtorFn || !IsEmptyAtExitFunction(*DtorFn))
       continue;
 
@@ -2786,37 +2791,36 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
 }
 
 PreservedAnalyses GlobalOptPass::run(Module &M, ModuleAnalysisManager &AM) {
-    auto &DL = M.getDataLayout();
-    auto &FAM =
-        AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-    auto LookupDomTree = [&FAM](Function &F) -> DominatorTree &{
-      return FAM.getResult<DominatorTreeAnalysis>(F);
-    };
-    auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
-      return FAM.getResult<TargetLibraryAnalysis>(F);
-    };
-    auto GetTTI = [&FAM](Function &F) -> TargetTransformInfo & {
-      return FAM.getResult<TargetIRAnalysis>(F);
-    };
+  auto &DL = M.getDataLayout();
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto LookupDomTree = [&FAM](Function &F) -> DominatorTree & {
+    return FAM.getResult<DominatorTreeAnalysis>(F);
+  };
+  auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
+    return FAM.getResult<TargetLibraryAnalysis>(F);
+  };
+  auto GetTTI = [&FAM](Function &F) -> TargetTransformInfo & {
+    return FAM.getResult<TargetIRAnalysis>(F);
+  };
 
-    auto GetBFI = [&FAM](Function &F) -> BlockFrequencyInfo & {
-      return FAM.getResult<BlockFrequencyAnalysis>(F);
-    };
-    auto ChangedCFGCallback = [&FAM](Function &F) {
-      FAM.invalidate(F, PreservedAnalyses::none());
-    };
-    auto DeleteFnCallback = [&FAM](Function &F) { FAM.clear(F, F.getName()); };
+  auto GetBFI = [&FAM](Function &F) -> BlockFrequencyInfo & {
+    return FAM.getResult<BlockFrequencyAnalysis>(F);
+  };
+  auto ChangedCFGCallback = [&FAM](Function &F) {
+    FAM.invalidate(F, PreservedAnalyses::none());
+  };
+  auto DeleteFnCallback = [&FAM](Function &F) { FAM.clear(F, F.getName()); };
 
-    if (!optimizeGlobalsInModule(M, DL, GetTLI, GetTTI, GetBFI, LookupDomTree,
-                                 ChangedCFGCallback, DeleteFnCallback))
-      return PreservedAnalyses::all();
+  if (!optimizeGlobalsInModule(M, DL, GetTLI, GetTTI, GetBFI, LookupDomTree,
+                               ChangedCFGCallback, DeleteFnCallback))
+    return PreservedAnalyses::all();
 
-    PreservedAnalyses PA = PreservedAnalyses::none();
-    // We made sure to clear analyses for deleted functions.
-    PA.preserve<FunctionAnalysisManagerModuleProxy>();
-    // The only place we modify the CFG is when calling
-    // removeUnreachableBlocks(), but there we make sure to invalidate analyses
-    // for modified functions.
-    PA.preserveSet<CFGAnalyses>();
-    return PA;
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  // We made sure to clear analyses for deleted functions.
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  // The only place we modify the CFG is when calling
+  // removeUnreachableBlocks(), but there we make sure to invalidate analyses
+  // for modified functions.
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

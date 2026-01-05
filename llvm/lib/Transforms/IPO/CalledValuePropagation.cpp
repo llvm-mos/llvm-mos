@@ -78,9 +78,7 @@ public:
 
   /// Get a reference to the functions held by this lattice value. The number
   /// of functions will be zero for states other than FunctionSet.
-  const std::vector<Function *> &getFunctions() const {
-    return Functions;
-  }
+  const std::vector<Function *> &getFunctions() const { return Functions; }
 
   /// Returns true if the lattice value is in the FunctionSet state.
   bool isFunctionSet() const { return LatticeState == FunctionSet; }

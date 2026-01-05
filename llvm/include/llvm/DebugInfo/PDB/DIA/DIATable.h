@@ -25,7 +25,7 @@ public:
 private:
   CComPtr<IDiaTable> Table;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif // LLVM_DEBUGINFO_PDB_DIA_DIATABLE_H

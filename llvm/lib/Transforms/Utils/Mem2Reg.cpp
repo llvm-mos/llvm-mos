@@ -102,8 +102,9 @@ struct PromoteLegacyPass : public FunctionPass {
 
 char PromoteLegacyPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(PromoteLegacyPass, "mem2reg", "Promote Memory to "
-                                                    "Register",
+INITIALIZE_PASS_BEGIN(PromoteLegacyPass, "mem2reg",
+                      "Promote Memory to "
+                      "Register",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)

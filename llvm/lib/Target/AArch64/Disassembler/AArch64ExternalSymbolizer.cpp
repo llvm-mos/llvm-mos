@@ -87,22 +87,21 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
       }
       if (ReferenceType == LLVMDisassembler_ReferenceType_Out_SymbolStub)
         CommentStream << "symbol stub for: " << ReferenceName;
-      else if (ReferenceType ==
-               LLVMDisassembler_ReferenceType_Out_Objc_Message)
+      else if (ReferenceType == LLVMDisassembler_ReferenceType_Out_Objc_Message)
         CommentStream << "Objc message: " << ReferenceName;
     } else if (MI.getOpcode() == AArch64::ADRP) {
-        ReferenceType = LLVMDisassembler_ReferenceType_In_ARM64_ADRP;
-        // otool expects the fully encoded ADRP instruction to be passed in as
-        // the value here, so reconstruct it:
-        const MCRegisterInfo &MCRI = *Ctx.getRegisterInfo();
-        uint32_t EncodedInst = 0x90000000;
-        EncodedInst |= (Value & 0x3) << 29; // immlo
-        EncodedInst |= ((Value >> 2) & 0x7FFFF) << 5; // immhi
-        EncodedInst |= MCRI.getEncodingValue(MI.getOperand(0).getReg()); // reg
-        SymbolLookUp(DisInfo, EncodedInst, &ReferenceType, Address,
-                     &ReferenceName);
-        CommentStream << format("0x%llx", (0xfffffffffffff000LL & Address) +
-                                              Value * 0x1000);
+      ReferenceType = LLVMDisassembler_ReferenceType_In_ARM64_ADRP;
+      // otool expects the fully encoded ADRP instruction to be passed in as
+      // the value here, so reconstruct it:
+      const MCRegisterInfo &MCRI = *Ctx.getRegisterInfo();
+      uint32_t EncodedInst = 0x90000000;
+      EncodedInst |= (Value & 0x3) << 29;                              // immlo
+      EncodedInst |= ((Value >> 2) & 0x7FFFF) << 5;                    // immhi
+      EncodedInst |= MCRI.getEncodingValue(MI.getOperand(0).getReg()); // reg
+      SymbolLookUp(DisInfo, EncodedInst, &ReferenceType, Address,
+                   &ReferenceName);
+      CommentStream << format("0x%llx", (0xfffffffffffff000LL & Address) +
+                                            Value * 0x1000);
     } else if (MI.getOpcode() == AArch64::ADDXri ||
                MI.getOpcode() == AArch64::LDRXui ||
                MI.getOpcode() == AArch64::LDRXl ||
@@ -118,16 +117,16 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
       } else if (MI.getOpcode() == AArch64::ADR) {
         ReferenceType = LLVMDisassembler_ReferenceType_In_ARM64_ADR;
         SymbolLookUp(DisInfo, Address + Value, &ReferenceType, Address,
-                            &ReferenceName);
+                     &ReferenceName);
       } else {
         const MCRegisterInfo &MCRI = *Ctx.getRegisterInfo();
         // otool expects the fully encoded ADD/LDR instruction to be passed in
         // as the value here, so reconstruct it:
         unsigned EncodedInst =
-          MI.getOpcode() == AArch64::ADDXri ? 0x91000000: 0xF9400000;
+            MI.getOpcode() == AArch64::ADDXri ? 0x91000000 : 0xF9400000;
         EncodedInst |= Value << 10; // imm12 [+ shift:2 for ADD]
-        EncodedInst |=
-          MCRI.getEncodingValue(MI.getOperand(1).getReg()) << 5; // Rn
+        EncodedInst |= MCRI.getEncodingValue(MI.getOperand(1).getReg())
+                       << 5;                                             // Rn
         EncodedInst |= MCRI.getEncodingValue(MI.getOperand(0).getReg()); // Rd
 
         SymbolLookUp(DisInfo, EncodedInst, &ReferenceType, Address,
@@ -141,10 +140,9 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
         CommentStream.write_escaped(ReferenceName);
         CommentStream << "\"";
       } else if (ReferenceType ==
-               LLVMDisassembler_ReferenceType_Out_Objc_CFString_Ref)
+                 LLVMDisassembler_ReferenceType_Out_Objc_CFString_Ref)
         CommentStream << "Objc cfstring ref: @\"" << ReferenceName << "\"";
-      else if (ReferenceType ==
-               LLVMDisassembler_ReferenceType_Out_Objc_Message)
+      else if (ReferenceType == LLVMDisassembler_ReferenceType_Out_Objc_Message)
         CommentStream << "Objc message: " << ReferenceName;
       else if (ReferenceType ==
                LLVMDisassembler_ReferenceType_Out_Objc_Message_Ref)

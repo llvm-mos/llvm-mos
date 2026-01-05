@@ -72,7 +72,7 @@ public:
                                        ilist_parent<BasicBlock>>;
 
 private:
-  DebugLoc DbgLoc;                         // 'dbg' Metadata cache.
+  DebugLoc DbgLoc; // 'dbg' Metadata cache.
 
   /// Relative order of this instruction in its parent basic block. Used for
   /// O(1) local dominance checks between instructions.
@@ -168,8 +168,10 @@ public:
 
   /// Specialize the methods defined in Value, as we know that an instruction
   /// can only be used by other instructions.
-  Instruction       *user_back()       { return cast<Instruction>(*user_begin());}
-  const Instruction *user_back() const { return cast<Instruction>(*user_begin());}
+  Instruction *user_back() { return cast<Instruction>(*user_begin()); }
+  const Instruction *user_back() const {
+    return cast<Instruction>(*user_begin());
+  }
 
   /// Return the module owning the function this instruction belongs to
   /// or nullptr it the function does not have a module.
@@ -179,7 +181,7 @@ public:
   LLVM_ABI const Module *getModule() const;
   Module *getModule() {
     return const_cast<Module *>(
-                           static_cast<const Instruction *>(this)->getModule());
+        static_cast<const Instruction *>(this)->getModule());
   }
 
   /// Return the function this instruction belongs to.
@@ -189,7 +191,7 @@ public:
   LLVM_ABI const Function *getFunction() const;
   Function *getFunction() {
     return const_cast<Function *>(
-                         static_cast<const Instruction *>(this)->getFunction());
+        static_cast<const Instruction *>(this)->getFunction());
   }
 
   /// Get the data layout of the module this instruction belongs to.
@@ -358,9 +360,7 @@ public:
   }
 
   /// Return true if this is an arithmetic shift right.
-  inline bool isArithmeticShift() const {
-    return getOpcode() == AShr;
-  }
+  inline bool isArithmeticShift() const { return getOpcode() == AShr; }
 
   /// Determine if the Opcode is and/or/xor.
   static inline bool isBitwiseLogicOp(unsigned Opcode) {
@@ -368,9 +368,7 @@ public:
   }
 
   /// Return true if this is and/or/xor.
-  inline bool isBitwiseLogicOp() const {
-    return isBitwiseLogicOp(getOpcode());
-  }
+  inline bool isBitwiseLogicOp() const { return isBitwiseLogicOp(getOpcode()); }
 
   /// Determine if the Opcode is one of the CastInst instructions.
   static inline bool isCast(unsigned Opcode) {
@@ -435,7 +433,8 @@ public:
   /// Get the metadata of given kind attached to this Instruction.
   /// If the metadata is not found then return null.
   MDNode *getMetadata(StringRef Kind) const {
-    if (!hasMetadata()) return nullptr;
+    if (!hasMetadata())
+      return nullptr;
     return getMetadataImpl(Kind);
   }
 
@@ -750,8 +749,8 @@ public:
   ///
   LLVM_ABI bool isAssociative() const LLVM_READONLY;
   static bool isAssociative(unsigned Opcode) {
-    return Opcode == And || Opcode == Or || Opcode == Xor ||
-           Opcode == Add || Opcode == Mul;
+    return Opcode == And || Opcode == Or || Opcode == Xor || Opcode == Add ||
+           Opcode == Mul;
   }
 
   /// Return true if the instruction is commutative:
@@ -764,13 +763,17 @@ public:
   LLVM_ABI bool isCommutative() const LLVM_READONLY;
   static bool isCommutative(unsigned Opcode) {
     switch (Opcode) {
-    case Add: case FAdd:
-    case Mul: case FMul:
-    case And: case Or: case Xor:
+    case Add:
+    case FAdd:
+    case Mul:
+    case FMul:
+    case And:
+    case Or:
+    case Xor:
       return true;
     default:
       return false;
-  }
+    }
   }
 
   /// Return true if the instruction is idempotent:
@@ -794,9 +797,7 @@ public:
   /// In LLVM, the Xor operator is nilpotent.
   ///
   bool isNilpotent() const { return isNilpotent(getOpcode()); }
-  static bool isNilpotent(unsigned Opcode) {
-    return Opcode == Xor;
-  }
+  static bool isNilpotent(unsigned Opcode) { return Opcode == Xor; }
 
   /// Return true if this instruction may modify memory.
   LLVM_ABI bool mayWriteToMemory() const LLVM_READONLY;
@@ -981,52 +982,52 @@ public:
   //----------------------------------------------------------------------
   // Exported enumerations.
   //
-  enum TermOps {       // These terminate basic blocks
-#define  FIRST_TERM_INST(N)             TermOpsBegin = N,
+  enum TermOps { // These terminate basic blocks
+#define FIRST_TERM_INST(N) TermOpsBegin = N,
 #define HANDLE_TERM_INST(N, OPC, CLASS) OPC = N,
-#define   LAST_TERM_INST(N)             TermOpsEnd = N+1
+#define LAST_TERM_INST(N) TermOpsEnd = N + 1
 #include "llvm/IR/Instruction.def"
   };
 
   enum UnaryOps {
-#define  FIRST_UNARY_INST(N)             UnaryOpsBegin = N,
+#define FIRST_UNARY_INST(N) UnaryOpsBegin = N,
 #define HANDLE_UNARY_INST(N, OPC, CLASS) OPC = N,
-#define   LAST_UNARY_INST(N)             UnaryOpsEnd = N+1
+#define LAST_UNARY_INST(N) UnaryOpsEnd = N + 1
 #include "llvm/IR/Instruction.def"
   };
 
   enum BinaryOps {
-#define  FIRST_BINARY_INST(N)             BinaryOpsBegin = N,
+#define FIRST_BINARY_INST(N) BinaryOpsBegin = N,
 #define HANDLE_BINARY_INST(N, OPC, CLASS) OPC = N,
-#define   LAST_BINARY_INST(N)             BinaryOpsEnd = N+1
+#define LAST_BINARY_INST(N) BinaryOpsEnd = N + 1
 #include "llvm/IR/Instruction.def"
   };
 
   enum MemoryOps {
-#define  FIRST_MEMORY_INST(N)             MemoryOpsBegin = N,
+#define FIRST_MEMORY_INST(N) MemoryOpsBegin = N,
 #define HANDLE_MEMORY_INST(N, OPC, CLASS) OPC = N,
-#define   LAST_MEMORY_INST(N)             MemoryOpsEnd = N+1
+#define LAST_MEMORY_INST(N) MemoryOpsEnd = N + 1
 #include "llvm/IR/Instruction.def"
   };
 
   enum CastOps {
-#define  FIRST_CAST_INST(N)             CastOpsBegin = N,
+#define FIRST_CAST_INST(N) CastOpsBegin = N,
 #define HANDLE_CAST_INST(N, OPC, CLASS) OPC = N,
-#define   LAST_CAST_INST(N)             CastOpsEnd = N+1
+#define LAST_CAST_INST(N) CastOpsEnd = N + 1
 #include "llvm/IR/Instruction.def"
   };
 
   enum FuncletPadOps {
-#define  FIRST_FUNCLETPAD_INST(N)             FuncletPadOpsBegin = N,
+#define FIRST_FUNCLETPAD_INST(N) FuncletPadOpsBegin = N,
 #define HANDLE_FUNCLETPAD_INST(N, OPC, CLASS) OPC = N,
-#define   LAST_FUNCLETPAD_INST(N)             FuncletPadOpsEnd = N+1
+#define LAST_FUNCLETPAD_INST(N) FuncletPadOpsEnd = N + 1
 #include "llvm/IR/Instruction.def"
   };
 
   enum OtherOps {
-#define  FIRST_OTHER_INST(N)             OtherOpsBegin = N,
+#define FIRST_OTHER_INST(N) OtherOpsBegin = N,
 #define HANDLE_OTHER_INST(N, OPC, CLASS) OPC = N,
-#define   LAST_OTHER_INST(N)             OtherOpsEnd = N+1
+#define LAST_OTHER_INST(N) OtherOpsEnd = N + 1
 #include "llvm/IR/Instruction.def"
   };
 

@@ -33,12 +33,12 @@ void X86MachineFunctionInfo::initializeBaseYamlFields(
   AMXProgModel = YamlMFI.AMXProgModel;
 }
 
-void X86MachineFunctionInfo::anchor() { }
+void X86MachineFunctionInfo::anchor() {}
 
 void X86MachineFunctionInfo::setRestoreBasePointer(const MachineFunction *MF) {
   if (!RestoreBasePointerOffset) {
     const X86RegisterInfo *RegInfo = static_cast<const X86RegisterInfo *>(
-      MF->getSubtarget().getRegisterInfo());
+        MF->getSubtarget().getRegisterInfo());
     unsigned SlotSize = RegInfo->getSlotSize();
     for (const MCPhysReg *CSR = MF->getRegInfo().getCalleeSavedRegs();
          unsigned Reg = *CSR; ++CSR) {
@@ -47,4 +47,3 @@ void X86MachineFunctionInfo::setRestoreBasePointer(const MachineFunction *MF) {
     }
   }
 }
-

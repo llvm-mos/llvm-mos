@@ -71,8 +71,8 @@ struct DOTGraphTraits<DOTMachineFuncInfo *> : public DefaultDOTGraphTraits {
           HandleBasicBlock =
               [](raw_string_ostream &OS,
                  const MachineBasicBlock &Node) -> void { OS << Node; },
-      function_ref<void(std::string &, unsigned &, unsigned)>
-          HandleComment = eraseComment) {
+      function_ref<void(std::string &, unsigned &, unsigned)> HandleComment =
+          eraseComment) {
     return CompleteNodeLabelString(Node, HandleBasicBlock, HandleComment);
   }
 

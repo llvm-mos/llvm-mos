@@ -219,8 +219,8 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
       if (!OperandsMapping[0]) {
         if (MI.isRegSequence()) {
           // For reg_sequence, the result size does not match the input.
-          unsigned ResultSize = getSizeInBits(MI.getOperand(0).getReg(),
-                                              MRI, TRI);
+          unsigned ResultSize =
+              getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
           OperandsMapping[0] = &getValueMapping(0, ResultSize, *CurRegBank);
         } else {
           OperandsMapping[0] = ValMapping;
@@ -397,8 +397,8 @@ RegisterBankInfo::getInstructionMappingImpl(
   ++NumInstructionMappingsCreated;
 
   auto &InstrMapping = It->second;
-  InstrMapping = std::make_unique<InstructionMapping>(
-      ID, Cost, OperandsMapping, NumOperands);
+  InstrMapping = std::make_unique<InstructionMapping>(ID, Cost, OperandsMapping,
+                                                      NumOperands);
   return *InstrMapping;
 }
 

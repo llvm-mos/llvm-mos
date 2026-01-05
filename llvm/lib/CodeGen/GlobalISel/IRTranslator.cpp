@@ -101,14 +101,14 @@ static cl::opt<bool>
 char IRTranslator::ID = 0;
 
 INITIALIZE_PASS_BEGIN(IRTranslator, DEBUG_TYPE, "IRTranslator LLVM IR -> MI",
-                false, false)
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(StackProtector)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(IRTranslator, DEBUG_TYPE, "IRTranslator LLVM IR -> MI",
-                false, false)
+                    false, false)
 
 static void reportTranslationError(MachineFunction &MF,
                                    const TargetPassConfig &TPC,
@@ -167,7 +167,6 @@ public:
 };
 } // namespace
 #endif // ifndef NDEBUG
-
 
 void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<StackProtector>();
@@ -364,8 +363,8 @@ bool IRTranslator::translateCompare(const User &U,
   if (CmpInst::isIntPredicate(Pred))
     MIRBuilder.buildICmp(Pred, Res, Op0, Op1, Flags);
   else if (Pred == CmpInst::FCMP_FALSE)
-    MIRBuilder.buildCopy(
-        Res, getOrCreateVReg(*Constant::getNullValue(U.getType())));
+    MIRBuilder.buildCopy(Res,
+                         getOrCreateVReg(*Constant::getNullValue(U.getType())));
   else if (Pred == CmpInst::FCMP_TRUE)
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));
@@ -955,8 +954,8 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
     assert(CB.PredInfo.Pred == CmpInst::ICMP_SLE &&
            "Can only handle SLE ranges");
 
-    const APInt& Low = cast<ConstantInt>(CB.CmpLHS)->getValue();
-    const APInt& High = cast<ConstantInt>(CB.CmpRHS)->getValue();
+    const APInt &Low = cast<ConstantInt>(CB.CmpLHS)->getValue();
+    const APInt &High = cast<ConstantInt>(CB.CmpRHS)->getValue();
 
     Register CmpOpReg = getOrCreateVReg(*CB.CmpMHS);
     if (cast<ConstantInt>(CB.CmpLHS)->isMinValue(true)) {
@@ -991,16 +990,12 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
   MIB.setDebugLoc(OldDbgLoc);
 }
 
-bool IRTranslator::lowerJumpTableWorkItem(SwitchCG::SwitchWorkListItem W,
-                                          MachineBasicBlock *SwitchMBB,
-                                          MachineBasicBlock *CurMBB,
-                                          MachineBasicBlock *DefaultMBB,
-                                          MachineIRBuilder &MIB,
-                                          MachineFunction::iterator BBI,
-                                          BranchProbability UnhandledProbs,
-                                          SwitchCG::CaseClusterIt I,
-                                          MachineBasicBlock *Fallthrough,
-                                          bool FallthroughUnreachable) {
+bool IRTranslator::lowerJumpTableWorkItem(
+    SwitchCG::SwitchWorkListItem W, MachineBasicBlock *SwitchMBB,
+    MachineBasicBlock *CurMBB, MachineBasicBlock *DefaultMBB,
+    MachineIRBuilder &MIB, MachineFunction::iterator BBI,
+    BranchProbability UnhandledProbs, SwitchCG::CaseClusterIt I,
+    MachineBasicBlock *Fallthrough, bool FallthroughUnreachable) {
   using namespace SwitchCG;
   MachineFunction *CurMF = SwitchMBB->getParent();
   // FIXME: Optimize away range check based on pivot comparisons.
@@ -1062,14 +1057,11 @@ bool IRTranslator::lowerJumpTableWorkItem(SwitchCG::SwitchWorkListItem W,
   }
   return true;
 }
-bool IRTranslator::lowerSwitchRangeWorkItem(SwitchCG::CaseClusterIt I,
-                                            Value *Cond,
-                                            MachineBasicBlock *Fallthrough,
-                                            bool FallthroughUnreachable,
-                                            BranchProbability UnhandledProbs,
-                                            MachineBasicBlock *CurMBB,
-                                            MachineIRBuilder &MIB,
-                                            MachineBasicBlock *SwitchMBB) {
+bool IRTranslator::lowerSwitchRangeWorkItem(
+    SwitchCG::CaseClusterIt I, Value *Cond, MachineBasicBlock *Fallthrough,
+    bool FallthroughUnreachable, BranchProbability UnhandledProbs,
+    MachineBasicBlock *CurMBB, MachineIRBuilder &MIB,
+    MachineBasicBlock *SwitchMBB) {
   using namespace SwitchCG;
   const Value *RHS, *LHS, *MHS;
   CmpInst::Predicate Pred;
@@ -1704,8 +1696,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   }
 
   if (Offset != 0) {
-    auto OffsetMIB =
-        MIRBuilder.buildConstant(OffsetTy, Offset);
+    auto OffsetMIB = MIRBuilder.buildConstant(OffsetTy, Offset);
 
     MIRBuilder.buildPtrAdd(getOrCreateVReg(U), BaseReg, OffsetMIB.getReg(0),
                            PtrAddFlagsWithConst(Offset));
@@ -1906,145 +1897,145 @@ bool IRTranslator::translateFixedPointIntrinsic(unsigned Op, const CallInst &CI,
   Register Src0 = getOrCreateVReg(*CI.getOperand(0));
   Register Src1 = getOrCreateVReg(*CI.getOperand(1));
   uint64_t Scale = cast<ConstantInt>(CI.getOperand(2))->getZExtValue();
-  MIRBuilder.buildInstr(Op, {Dst}, { Src0, Src1, Scale });
+  MIRBuilder.buildInstr(Op, {Dst}, {Src0, Src1, Scale});
   return true;
 }
 
 unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
   switch (ID) {
-    default:
-      break;
-    case Intrinsic::acos:
-      return TargetOpcode::G_FACOS;
-    case Intrinsic::asin:
-      return TargetOpcode::G_FASIN;
-    case Intrinsic::atan:
-      return TargetOpcode::G_FATAN;
-    case Intrinsic::atan2:
-      return TargetOpcode::G_FATAN2;
-    case Intrinsic::bswap:
-      return TargetOpcode::G_BSWAP;
-    case Intrinsic::bitreverse:
-      return TargetOpcode::G_BITREVERSE;
-    case Intrinsic::fshl:
-      return TargetOpcode::G_FSHL;
-    case Intrinsic::fshr:
-      return TargetOpcode::G_FSHR;
-    case Intrinsic::ceil:
-      return TargetOpcode::G_FCEIL;
-    case Intrinsic::cos:
-      return TargetOpcode::G_FCOS;
-    case Intrinsic::cosh:
-      return TargetOpcode::G_FCOSH;
-    case Intrinsic::ctpop:
-      return TargetOpcode::G_CTPOP;
-    case Intrinsic::exp:
-      return TargetOpcode::G_FEXP;
-    case Intrinsic::exp2:
-      return TargetOpcode::G_FEXP2;
-    case Intrinsic::exp10:
-      return TargetOpcode::G_FEXP10;
-    case Intrinsic::fabs:
-      return TargetOpcode::G_FABS;
-    case Intrinsic::copysign:
-      return TargetOpcode::G_FCOPYSIGN;
-    case Intrinsic::minnum:
-      return TargetOpcode::G_FMINNUM;
-    case Intrinsic::maxnum:
-      return TargetOpcode::G_FMAXNUM;
-    case Intrinsic::minimum:
-      return TargetOpcode::G_FMINIMUM;
-    case Intrinsic::maximum:
-      return TargetOpcode::G_FMAXIMUM;
-    case Intrinsic::minimumnum:
-      return TargetOpcode::G_FMINIMUMNUM;
-    case Intrinsic::maximumnum:
-      return TargetOpcode::G_FMAXIMUMNUM;
-    case Intrinsic::canonicalize:
-      return TargetOpcode::G_FCANONICALIZE;
-    case Intrinsic::floor:
-      return TargetOpcode::G_FFLOOR;
-    case Intrinsic::fma:
-      return TargetOpcode::G_FMA;
-    case Intrinsic::log:
-      return TargetOpcode::G_FLOG;
-    case Intrinsic::log2:
-      return TargetOpcode::G_FLOG2;
-    case Intrinsic::log10:
-      return TargetOpcode::G_FLOG10;
-    case Intrinsic::ldexp:
-      return TargetOpcode::G_FLDEXP;
-    case Intrinsic::nearbyint:
-      return TargetOpcode::G_FNEARBYINT;
-    case Intrinsic::pow:
-      return TargetOpcode::G_FPOW;
-    case Intrinsic::powi:
-      return TargetOpcode::G_FPOWI;
-    case Intrinsic::rint:
-      return TargetOpcode::G_FRINT;
-    case Intrinsic::round:
-      return TargetOpcode::G_INTRINSIC_ROUND;
-    case Intrinsic::roundeven:
-      return TargetOpcode::G_INTRINSIC_ROUNDEVEN;
-    case Intrinsic::sin:
-      return TargetOpcode::G_FSIN;
-    case Intrinsic::sinh:
-      return TargetOpcode::G_FSINH;
-    case Intrinsic::sqrt:
-      return TargetOpcode::G_FSQRT;
-    case Intrinsic::tan:
-      return TargetOpcode::G_FTAN;
-    case Intrinsic::tanh:
-      return TargetOpcode::G_FTANH;
-    case Intrinsic::trunc:
-      return TargetOpcode::G_INTRINSIC_TRUNC;
-    case Intrinsic::readcyclecounter:
-      return TargetOpcode::G_READCYCLECOUNTER;
-    case Intrinsic::readsteadycounter:
-      return TargetOpcode::G_READSTEADYCOUNTER;
-    case Intrinsic::ptrmask:
-      return TargetOpcode::G_PTRMASK;
-    case Intrinsic::lrint:
-      return TargetOpcode::G_INTRINSIC_LRINT;
-    case Intrinsic::llrint:
-      return TargetOpcode::G_INTRINSIC_LLRINT;
-    // FADD/FMUL require checking the FMF, so are handled elsewhere.
-    case Intrinsic::vector_reduce_fmin:
-      return TargetOpcode::G_VECREDUCE_FMIN;
-    case Intrinsic::vector_reduce_fmax:
-      return TargetOpcode::G_VECREDUCE_FMAX;
-    case Intrinsic::vector_reduce_fminimum:
-      return TargetOpcode::G_VECREDUCE_FMINIMUM;
-    case Intrinsic::vector_reduce_fmaximum:
-      return TargetOpcode::G_VECREDUCE_FMAXIMUM;
-    case Intrinsic::vector_reduce_add:
-      return TargetOpcode::G_VECREDUCE_ADD;
-    case Intrinsic::vector_reduce_mul:
-      return TargetOpcode::G_VECREDUCE_MUL;
-    case Intrinsic::vector_reduce_and:
-      return TargetOpcode::G_VECREDUCE_AND;
-    case Intrinsic::vector_reduce_or:
-      return TargetOpcode::G_VECREDUCE_OR;
-    case Intrinsic::vector_reduce_xor:
-      return TargetOpcode::G_VECREDUCE_XOR;
-    case Intrinsic::vector_reduce_smax:
-      return TargetOpcode::G_VECREDUCE_SMAX;
-    case Intrinsic::vector_reduce_smin:
-      return TargetOpcode::G_VECREDUCE_SMIN;
-    case Intrinsic::vector_reduce_umax:
-      return TargetOpcode::G_VECREDUCE_UMAX;
-    case Intrinsic::vector_reduce_umin:
-      return TargetOpcode::G_VECREDUCE_UMIN;
-    case Intrinsic::experimental_vector_compress:
-      return TargetOpcode::G_VECTOR_COMPRESS;
-    case Intrinsic::lround:
-      return TargetOpcode::G_LROUND;
-    case Intrinsic::llround:
-      return TargetOpcode::G_LLROUND;
-    case Intrinsic::get_fpenv:
-      return TargetOpcode::G_GET_FPENV;
-    case Intrinsic::get_fpmode:
-      return TargetOpcode::G_GET_FPMODE;
+  default:
+    break;
+  case Intrinsic::acos:
+    return TargetOpcode::G_FACOS;
+  case Intrinsic::asin:
+    return TargetOpcode::G_FASIN;
+  case Intrinsic::atan:
+    return TargetOpcode::G_FATAN;
+  case Intrinsic::atan2:
+    return TargetOpcode::G_FATAN2;
+  case Intrinsic::bswap:
+    return TargetOpcode::G_BSWAP;
+  case Intrinsic::bitreverse:
+    return TargetOpcode::G_BITREVERSE;
+  case Intrinsic::fshl:
+    return TargetOpcode::G_FSHL;
+  case Intrinsic::fshr:
+    return TargetOpcode::G_FSHR;
+  case Intrinsic::ceil:
+    return TargetOpcode::G_FCEIL;
+  case Intrinsic::cos:
+    return TargetOpcode::G_FCOS;
+  case Intrinsic::cosh:
+    return TargetOpcode::G_FCOSH;
+  case Intrinsic::ctpop:
+    return TargetOpcode::G_CTPOP;
+  case Intrinsic::exp:
+    return TargetOpcode::G_FEXP;
+  case Intrinsic::exp2:
+    return TargetOpcode::G_FEXP2;
+  case Intrinsic::exp10:
+    return TargetOpcode::G_FEXP10;
+  case Intrinsic::fabs:
+    return TargetOpcode::G_FABS;
+  case Intrinsic::copysign:
+    return TargetOpcode::G_FCOPYSIGN;
+  case Intrinsic::minnum:
+    return TargetOpcode::G_FMINNUM;
+  case Intrinsic::maxnum:
+    return TargetOpcode::G_FMAXNUM;
+  case Intrinsic::minimum:
+    return TargetOpcode::G_FMINIMUM;
+  case Intrinsic::maximum:
+    return TargetOpcode::G_FMAXIMUM;
+  case Intrinsic::minimumnum:
+    return TargetOpcode::G_FMINIMUMNUM;
+  case Intrinsic::maximumnum:
+    return TargetOpcode::G_FMAXIMUMNUM;
+  case Intrinsic::canonicalize:
+    return TargetOpcode::G_FCANONICALIZE;
+  case Intrinsic::floor:
+    return TargetOpcode::G_FFLOOR;
+  case Intrinsic::fma:
+    return TargetOpcode::G_FMA;
+  case Intrinsic::log:
+    return TargetOpcode::G_FLOG;
+  case Intrinsic::log2:
+    return TargetOpcode::G_FLOG2;
+  case Intrinsic::log10:
+    return TargetOpcode::G_FLOG10;
+  case Intrinsic::ldexp:
+    return TargetOpcode::G_FLDEXP;
+  case Intrinsic::nearbyint:
+    return TargetOpcode::G_FNEARBYINT;
+  case Intrinsic::pow:
+    return TargetOpcode::G_FPOW;
+  case Intrinsic::powi:
+    return TargetOpcode::G_FPOWI;
+  case Intrinsic::rint:
+    return TargetOpcode::G_FRINT;
+  case Intrinsic::round:
+    return TargetOpcode::G_INTRINSIC_ROUND;
+  case Intrinsic::roundeven:
+    return TargetOpcode::G_INTRINSIC_ROUNDEVEN;
+  case Intrinsic::sin:
+    return TargetOpcode::G_FSIN;
+  case Intrinsic::sinh:
+    return TargetOpcode::G_FSINH;
+  case Intrinsic::sqrt:
+    return TargetOpcode::G_FSQRT;
+  case Intrinsic::tan:
+    return TargetOpcode::G_FTAN;
+  case Intrinsic::tanh:
+    return TargetOpcode::G_FTANH;
+  case Intrinsic::trunc:
+    return TargetOpcode::G_INTRINSIC_TRUNC;
+  case Intrinsic::readcyclecounter:
+    return TargetOpcode::G_READCYCLECOUNTER;
+  case Intrinsic::readsteadycounter:
+    return TargetOpcode::G_READSTEADYCOUNTER;
+  case Intrinsic::ptrmask:
+    return TargetOpcode::G_PTRMASK;
+  case Intrinsic::lrint:
+    return TargetOpcode::G_INTRINSIC_LRINT;
+  case Intrinsic::llrint:
+    return TargetOpcode::G_INTRINSIC_LLRINT;
+  // FADD/FMUL require checking the FMF, so are handled elsewhere.
+  case Intrinsic::vector_reduce_fmin:
+    return TargetOpcode::G_VECREDUCE_FMIN;
+  case Intrinsic::vector_reduce_fmax:
+    return TargetOpcode::G_VECREDUCE_FMAX;
+  case Intrinsic::vector_reduce_fminimum:
+    return TargetOpcode::G_VECREDUCE_FMINIMUM;
+  case Intrinsic::vector_reduce_fmaximum:
+    return TargetOpcode::G_VECREDUCE_FMAXIMUM;
+  case Intrinsic::vector_reduce_add:
+    return TargetOpcode::G_VECREDUCE_ADD;
+  case Intrinsic::vector_reduce_mul:
+    return TargetOpcode::G_VECREDUCE_MUL;
+  case Intrinsic::vector_reduce_and:
+    return TargetOpcode::G_VECREDUCE_AND;
+  case Intrinsic::vector_reduce_or:
+    return TargetOpcode::G_VECREDUCE_OR;
+  case Intrinsic::vector_reduce_xor:
+    return TargetOpcode::G_VECREDUCE_XOR;
+  case Intrinsic::vector_reduce_smax:
+    return TargetOpcode::G_VECREDUCE_SMAX;
+  case Intrinsic::vector_reduce_smin:
+    return TargetOpcode::G_VECREDUCE_SMIN;
+  case Intrinsic::vector_reduce_umax:
+    return TargetOpcode::G_VECREDUCE_UMAX;
+  case Intrinsic::vector_reduce_umin:
+    return TargetOpcode::G_VECREDUCE_UMIN;
+  case Intrinsic::experimental_vector_compress:
+    return TargetOpcode::G_VECTOR_COMPRESS;
+  case Intrinsic::lround:
+    return TargetOpcode::G_LROUND;
+  case Intrinsic::llround:
+    return TargetOpcode::G_LLROUND;
+  case Intrinsic::get_fpenv:
+    return TargetOpcode::G_GET_FPENV;
+  case Intrinsic::get_fpmode:
+    return TargetOpcode::G_GET_FPMODE;
   }
   return Intrinsic::not_intrinsic;
 }
@@ -2094,7 +2085,7 @@ static unsigned getConstrainedOpcode(Intrinsic::ID ID) {
 }
 
 bool IRTranslator::translateConstrainedFPIntrinsic(
-  const ConstrainedFPIntrinsic &FPI, MachineIRBuilder &MIRBuilder) {
+    const ConstrainedFPIntrinsic &FPI, MachineIRBuilder &MIRBuilder) {
   fp::ExceptionBehavior EB = *FPI.getExceptionBehavior();
 
   unsigned Opcode = getConstrainedOpcode(FPI.getIntrinsicID());
@@ -2234,17 +2225,18 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::dbg_declare: {
     const DbgDeclareInst &DI = cast<DbgDeclareInst>(CI);
     assert(DI.getVariable() && "Missing variable");
-    translateDbgDeclareRecord(DI.getAddress(), DI.hasArgList(), DI.getVariable(),
-                       DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
+    translateDbgDeclareRecord(DI.getAddress(), DI.hasArgList(),
+                              DI.getVariable(), DI.getExpression(),
+                              DI.getDebugLoc(), MIRBuilder);
     return true;
   }
   case Intrinsic::dbg_label: {
     const DbgLabelInst &DI = cast<DbgLabelInst>(CI);
     assert(DI.getLabel() && "Missing label");
 
-    assert(DI.getLabel()->isValidLocationForIntrinsic(
-               MIRBuilder.getDebugLoc()) &&
-           "Expected inlined-at fields to agree");
+    assert(
+        DI.getLabel()->isValidLocationForIntrinsic(MIRBuilder.getDebugLoc()) &&
+        "Expected inlined-at fields to agree");
 
     MIRBuilder.buildDbgLabel(DI.getLabel());
     return true;
@@ -2275,7 +2267,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst &DI = cast<DbgValueInst>(CI);
     translateDbgValueRecord(DI.getValue(), DI.hasArgList(), DI.getVariable(),
-                       DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
+                            DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
     return true;
   }
   case Intrinsic::uadd_with_overflow:
@@ -2314,21 +2306,29 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     // TODO: Preserve "int min is poison" arg in GMIR?
     return translateUnaryOp(TargetOpcode::G_ABS, CI, MIRBuilder);
   case Intrinsic::smul_fix:
-    return translateFixedPointIntrinsic(TargetOpcode::G_SMULFIX, CI, MIRBuilder);
+    return translateFixedPointIntrinsic(TargetOpcode::G_SMULFIX, CI,
+                                        MIRBuilder);
   case Intrinsic::umul_fix:
-    return translateFixedPointIntrinsic(TargetOpcode::G_UMULFIX, CI, MIRBuilder);
+    return translateFixedPointIntrinsic(TargetOpcode::G_UMULFIX, CI,
+                                        MIRBuilder);
   case Intrinsic::smul_fix_sat:
-    return translateFixedPointIntrinsic(TargetOpcode::G_SMULFIXSAT, CI, MIRBuilder);
+    return translateFixedPointIntrinsic(TargetOpcode::G_SMULFIXSAT, CI,
+                                        MIRBuilder);
   case Intrinsic::umul_fix_sat:
-    return translateFixedPointIntrinsic(TargetOpcode::G_UMULFIXSAT, CI, MIRBuilder);
+    return translateFixedPointIntrinsic(TargetOpcode::G_UMULFIXSAT, CI,
+                                        MIRBuilder);
   case Intrinsic::sdiv_fix:
-    return translateFixedPointIntrinsic(TargetOpcode::G_SDIVFIX, CI, MIRBuilder);
+    return translateFixedPointIntrinsic(TargetOpcode::G_SDIVFIX, CI,
+                                        MIRBuilder);
   case Intrinsic::udiv_fix:
-    return translateFixedPointIntrinsic(TargetOpcode::G_UDIVFIX, CI, MIRBuilder);
+    return translateFixedPointIntrinsic(TargetOpcode::G_UDIVFIX, CI,
+                                        MIRBuilder);
   case Intrinsic::sdiv_fix_sat:
-    return translateFixedPointIntrinsic(TargetOpcode::G_SDIVFIXSAT, CI, MIRBuilder);
+    return translateFixedPointIntrinsic(TargetOpcode::G_SDIVFIXSAT, CI,
+                                        MIRBuilder);
   case Intrinsic::udiv_fix_sat:
-    return translateFixedPointIntrinsic(TargetOpcode::G_UDIVFIXSAT, CI, MIRBuilder);
+    return translateFixedPointIntrinsic(TargetOpcode::G_UDIVFIXSAT, CI,
+                                        MIRBuilder);
   case Intrinsic::fmuladd: {
     const TargetMachine &TM = MF->getTarget();
     Register Dst = getOrCreateVReg(CI);
@@ -2450,11 +2450,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::ctlz: {
     ConstantInt *Cst = cast<ConstantInt>(CI.getArgOperand(1));
     bool isTrailing = ID == Intrinsic::cttz;
-    unsigned Opcode = isTrailing
-                          ? Cst->isZero() ? TargetOpcode::G_CTTZ
-                                          : TargetOpcode::G_CTTZ_ZERO_UNDEF
-                          : Cst->isZero() ? TargetOpcode::G_CTLZ
-                                          : TargetOpcode::G_CTLZ_ZERO_UNDEF;
+    unsigned Opcode = isTrailing      ? Cst->isZero()
+                                            ? TargetOpcode::G_CTTZ
+                                            : TargetOpcode::G_CTTZ_ZERO_UNDEF
+                      : Cst->isZero() ? TargetOpcode::G_CTLZ
+                                      : TargetOpcode::G_CTLZ_ZERO_UNDEF;
     MIRBuilder.buildInstr(Opcode, {getOrCreateVReg(CI)},
                           {getOrCreateVReg(*CI.getArgOperand(0))});
     return true;
@@ -2493,8 +2493,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::write_register: {
     Value *Arg = CI.getArgOperand(0);
     MIRBuilder.buildInstr(TargetOpcode::G_WRITE_REGISTER)
-      .addMetadata(cast<MDNode>(cast<MetadataAsValue>(Arg)->getMetadata()))
-      .addUse(getOrCreateVReg(*CI.getArgOperand(1)));
+        .addMetadata(cast<MDNode>(cast<MetadataAsValue>(Arg)->getMetadata()))
+        .addUse(getOrCreateVReg(*CI.getArgOperand(1)));
     return true;
   }
   case Intrinsic::localescape: {
@@ -2677,7 +2677,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateVectorDeinterleave2Intrinsic(CI, MIRBuilder);
   }
 
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)  \
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
     return translateConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(CI),
@@ -2921,8 +2921,7 @@ bool IRTranslator::translateIntrinsic(
 }
 
 bool IRTranslator::findUnwindDestinations(
-    const BasicBlock *EHPadBB,
-    BranchProbability Prob,
+    const BasicBlock *EHPadBB, BranchProbability Prob,
     SmallVectorImpl<std::pair<MachineBasicBlock *, BranchProbability>>
         &UnwindDests) {
   EHPersonality Personality = classifyEHPersonality(
@@ -3005,8 +3004,8 @@ bool IRTranslator::translateInvoke(const User &U,
   // FIXME: support Windows dllimport function calls and calls through
   // weak symbols.
   if (Fn && (Fn->hasDLLImportStorageClass() ||
-            (MF->getTarget().getTargetTriple().isOSWindows() &&
-             Fn->hasExternalWeakLinkage())))
+             (MF->getTarget().getTargetTriple().isOSWindows() &&
+              Fn->hasExternalWeakLinkage())))
     return false;
 
   bool LowerInlineAsm = I.isInlineAsm();
@@ -3093,8 +3092,7 @@ bool IRTranslator::translateLandingPad(const User &U,
 
   // Add a label to mark the beginning of the landing pad.  Deletion of the
   // landing pad can thus be detected via the MachineModuleInfo.
-  MIRBuilder.buildInstr(TargetOpcode::EH_LABEL)
-    .addSym(MF->addLandingPad(&MBB));
+  MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(MF->addLandingPad(&MBB));
 
   // If the unwinder does not preserve all registers, ensure that the
   // function marks the clobbered registers as used.
@@ -3570,8 +3568,7 @@ bool IRTranslator::translateAtomicRMW(const User &U,
   return true;
 }
 
-bool IRTranslator::translateFence(const User &U,
-                                  MachineIRBuilder &MIRBuilder) {
+bool IRTranslator::translateFence(const User &U, MachineIRBuilder &MIRBuilder) {
   const FenceInst &Fence = cast<FenceInst>(U);
   MIRBuilder.buildFence(static_cast<unsigned>(Fence.getOrdering()),
                         Fence.getSyncScopeID());
@@ -3629,10 +3626,10 @@ void IRTranslator::finishPendingPhis() {
 }
 
 void IRTranslator::translateDbgValueRecord(Value *V, bool HasArgList,
-                                     const DILocalVariable *Variable,
-                                     const DIExpression *Expression,
-                                     const DebugLoc &DL,
-                                     MachineIRBuilder &MIRBuilder) {
+                                           const DILocalVariable *Variable,
+                                           const DIExpression *Expression,
+                                           const DebugLoc &DL,
+                                           MachineIRBuilder &MIRBuilder) {
   assert(Variable->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   // Act as if we're handling a debug intrinsic.
@@ -3675,10 +3672,10 @@ void IRTranslator::translateDbgValueRecord(Value *V, bool HasArgList,
 }
 
 void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
-                                     const DILocalVariable *Variable,
-                                     const DIExpression *Expression,
-                                     const DebugLoc &DL,
-                                     MachineIRBuilder &MIRBuilder) {
+                                             const DILocalVariable *Variable,
+                                             const DIExpression *Expression,
+                                             const DebugLoc &DL,
+                                             MachineIRBuilder &MIRBuilder) {
   if (!Address || isa<UndefValue>(Address)) {
     LLVM_DEBUG(dbgs() << "Dropping debug info for " << *Variable << "\n");
     return;
@@ -3690,13 +3687,12 @@ void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
   if (AI && AI->isStaticAlloca()) {
     // Static allocas are tracked at the MF level, no need for DBG_VALUE
     // instructions (in fact, they get ignored if they *do* exist).
-    MF->setVariableDbgInfo(Variable, Expression,
-                           getOrCreateFrameIndex(*AI), DL);
+    MF->setVariableDbgInfo(Variable, Expression, getOrCreateFrameIndex(*AI),
+                           DL);
     return;
   }
 
-  if (translateIfEntryValueArgument(true, Address, Variable,
-                                    Expression, DL,
+  if (translateIfEntryValueArgument(true, Address, Variable, Expression, DL,
                                     MIRBuilder))
     return;
 
@@ -3708,7 +3704,7 @@ void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
 }
 
 void IRTranslator::translateDbgInfo(const Instruction &Inst,
-                                      MachineIRBuilder &MIRBuilder) {
+                                    MachineIRBuilder &MIRBuilder) {
   for (DbgRecord &DR : Inst.getDbgRecordRange()) {
     if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
       MIRBuilder.setDebugLoc(DLR->getDebugLoc());
@@ -3799,7 +3795,7 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     }
     EntryBuilder->buildBuildVector(Reg, Ops);
   } else if (auto CE = dyn_cast<ConstantExpr>(&C)) {
-    switch(CE->getOpcode()) {
+    switch (CE->getOpcode()) {
 #define HANDLE_INST(NUM, OPCODE, CLASS)                                        \
   case Instruction::OPCODE:                                                    \
     return translate##OPCODE(*CE, *EntryBuilder.get());
@@ -4165,7 +4161,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
   // Create all blocks, in IR order, to preserve the layout.
   FuncInfo.MBBMap.resize(F.getMaxBlockNumber());
-  for (const BasicBlock &BB: F) {
+  for (const BasicBlock &BB : F) {
     auto *&MBB = FuncInfo.MBBMap[BB.getNumber()];
 
     MBB = MF->CreateMachineBasicBlock(&BB);
@@ -4194,7 +4190,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
   // Lower the actual args into this basic block.
   SmallVector<ArrayRef<Register>, 8> VRegArgs;
-  for (const Argument &Arg: F.args()) {
+  for (const Argument &Arg : F.args()) {
     if (DL->getTypeStoreSize(Arg.getType()).isZero())
       continue; // Don't handle zero sized types.
     ArrayRef<Register> VRegs = getOrCreateVRegs(Arg);

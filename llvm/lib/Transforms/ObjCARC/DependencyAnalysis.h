@@ -25,10 +25,10 @@
 #include "llvm/Analysis/ObjCARCInstKind.h"
 
 namespace llvm {
-  class BasicBlock;
-  class Instruction;
-  class Value;
-}
+class BasicBlock;
+class Instruction;
+class Value;
+} // namespace llvm
 
 namespace llvm {
 namespace objcarc {
@@ -44,8 +44,8 @@ enum DependenceKind {
   NeedsPositiveRetainCount,
   AutoreleasePoolBoundary,
   CanChangeRetainCount,
-  RetainAutoreleaseDep,       ///< Blocks objc_retainAutorelease.
-  RetainAutoreleaseRVDep      ///< Blocks objc_retainAutoreleaseReturnValue.
+  RetainAutoreleaseDep,  ///< Blocks objc_retainAutorelease.
+  RetainAutoreleaseRVDep ///< Blocks objc_retainAutoreleaseReturnValue.
 };
 
 /// Find dependent instructions. If there is exactly one dependent instruction,
@@ -55,9 +55,8 @@ llvm::Instruction *findSingleDependency(DependenceKind Flavor, const Value *Arg,
                                         Instruction *StartInst,
                                         ProvenanceAnalysis &PA);
 
-bool
-Depends(DependenceKind Flavor, Instruction *Inst, const Value *Arg,
-        ProvenanceAnalysis &PA);
+bool Depends(DependenceKind Flavor, Instruction *Inst, const Value *Arg,
+             ProvenanceAnalysis &PA);
 
 /// Test whether the given instruction can "use" the given pointer's object in a
 /// way that requires the reference count to be positive.

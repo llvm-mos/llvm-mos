@@ -35,10 +35,9 @@ static struct RegisterJIT {
   RegisterJIT() { MCJIT::Register(); }
 } JITRegistrator;
 
-}
+} // namespace
 
-extern "C" void LLVMLinkInMCJIT() {
-}
+extern "C" void LLVMLinkInMCJIT() {}
 
 ExecutionEngine *
 MCJIT::createJIT(std::unique_ptr<Module> M, std::string *ErrorStr,
@@ -137,7 +136,7 @@ void MCJIT::addArchive(object::OwningBinary<object::Archive> A) {
   Archives.push_back(std::move(A));
 }
 
-void MCJIT::setObjectCache(ObjectCache* NewCache) {
+void MCJIT::setObjectCache(ObjectCache *NewCache) {
   std::lock_guard<sys::Mutex> locked(lock);
   ObjCache = NewCache;
 }
@@ -213,7 +212,7 @@ void MCJIT::generateCodeForModule(Module *M) {
   // Load the object into the dynamic linker.
   // MCJIT now owns the ObjectImage pointer (via its LoadedObjects list).
   Expected<std::unique_ptr<object::ObjectFile>> LoadedObject =
-    object::ObjectFile::createObjectFile(ObjectToLoad->getMemBufferRef());
+      object::ObjectFile::createObjectFile(ObjectToLoad->getMemBufferRef());
   if (!LoadedObject) {
     std::string Buf;
     raw_string_ostream OS(Buf);
@@ -221,7 +220,7 @@ void MCJIT::generateCodeForModule(Module *M) {
     report_fatal_error(Twine(Buf));
   }
   std::unique_ptr<RuntimeDyld::LoadedObjectInfo> L =
-    Dyld.loadObject(*LoadedObject.get());
+      Dyld.loadObject(*LoadedObject.get());
 
   if (Dyld.hasError())
     report_fatal_error(Dyld.getErrorString());
@@ -271,7 +270,8 @@ void MCJIT::finalizeModule(Module *M) {
   std::lock_guard<sys::Mutex> locked(lock);
 
   // This must be a module which has already been added to this MCJIT instance.
-  assert(OwnedModules.ownsModule(M) && "MCJIT::finalizeModule: Unknown module.");
+  assert(OwnedModules.ownsModule(M) &&
+         "MCJIT::finalizeModule: Unknown module.");
 
   // If the module hasn't been compiled, just do that.
   if (!OwnedModules.hasModuleBeenLoaded(M))
@@ -282,8 +282,7 @@ void MCJIT::finalizeModule(Module *M) {
 
 JITSymbol MCJIT::findExistingSymbol(const std::string &Name) {
   if (void *Addr = getPointerToGlobalIfAvailable(Name))
-    return JITSymbol(static_cast<uint64_t>(
-                         reinterpret_cast<uintptr_t>(Addr)),
+    return JITSymbol(static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Addr)),
                      JITSymbolFlags::Exported);
 
   return Dyld.getSymbol(Name);
@@ -333,8 +332,7 @@ uint64_t MCJIT::getSymbolAddress(const std::string &Name,
   return 0;
 }
 
-JITSymbol MCJIT::findSymbol(const std::string &Name,
-                            bool CheckFunctionsOnly) {
+JITSymbol MCJIT::findSymbol(const std::string &Name, bool CheckFunctionsOnly) {
   std::lock_guard<sys::Mutex> locked(lock);
 
   // First, check to see if we already have this symbol.
@@ -383,7 +381,7 @@ JITSymbol MCJIT::findSymbol(const std::string &Name,
   // FIXME: Should we instead have a LazySymbolCreator callback?
   if (LazyFunctionCreator) {
     auto Addr = static_cast<uint64_t>(
-                  reinterpret_cast<uintptr_t>(LazyFunctionCreator(Name)));
+        reinterpret_cast<uintptr_t>(LazyFunctionCreator(Name)));
     return JITSymbol(Addr, JITSymbolFlags::Exported);
   }
 
@@ -422,7 +420,8 @@ void *MCJIT::getPointerToFunction(Function *F) {
   }
 
   Module *M = F->getParent();
-  bool HasBeenAddedButNotLoaded = OwnedModules.hasModuleBeenAddedButNotLoaded(M);
+  bool HasBeenAddedButNotLoaded =
+      OwnedModules.hasModuleBeenAddedButNotLoaded(M);
 
   // Make sure the relevant module has been compiled and loaded.
   if (HasBeenAddedButNotLoaded)
@@ -439,7 +438,7 @@ void *MCJIT::getPointerToFunction(Function *F) {
   //
   // This is the accessor for the target address, so make sure to check the
   // load address of the symbol, not the local address.
-  return (void*)Dyld.getSymbol(Name).getAddress();
+  return (void *)Dyld.getSymbol(Name).getAddress();
 }
 
 void MCJIT::runStaticConstructorsDestructorsInModulePtrSet(
@@ -470,10 +469,10 @@ Function *MCJIT::FindFunctionNamedInModulePtrSet(StringRef FnName,
   return nullptr;
 }
 
-GlobalVariable *MCJIT::FindGlobalVariableNamedInModulePtrSet(StringRef Name,
-                                                             bool AllowInternal,
-                                                             ModulePtrSet::iterator I,
-                                                             ModulePtrSet::iterator E) {
+GlobalVariable *
+MCJIT::FindGlobalVariableNamedInModulePtrSet(StringRef Name, bool AllowInternal,
+                                             ModulePtrSet::iterator I,
+                                             ModulePtrSet::iterator E) {
   for (; I != E; ++I) {
     GlobalVariable *GV = (*I)->getGlobalVariable(Name, AllowInternal);
     if (GV && !GV->isDeclaration())
@@ -481,7 +480,6 @@ GlobalVariable *MCJIT::FindGlobalVariableNamedInModulePtrSet(StringRef Name,
   }
   return nullptr;
 }
-
 
 Function *MCJIT::FindFunctionNamed(StringRef FnName) {
   Function *F = FindFunctionNamedInModulePtrSet(
@@ -495,15 +493,19 @@ Function *MCJIT::FindFunctionNamed(StringRef FnName) {
   return F;
 }
 
-GlobalVariable *MCJIT::FindGlobalVariableNamed(StringRef Name, bool AllowInternal) {
+GlobalVariable *MCJIT::FindGlobalVariableNamed(StringRef Name,
+                                               bool AllowInternal) {
   GlobalVariable *GV = FindGlobalVariableNamedInModulePtrSet(
-      Name, AllowInternal, OwnedModules.begin_added(), OwnedModules.end_added());
+      Name, AllowInternal, OwnedModules.begin_added(),
+      OwnedModules.end_added());
   if (!GV)
-    GV = FindGlobalVariableNamedInModulePtrSet(Name, AllowInternal, OwnedModules.begin_loaded(),
-                                        OwnedModules.end_loaded());
+    GV = FindGlobalVariableNamedInModulePtrSet(Name, AllowInternal,
+                                               OwnedModules.begin_loaded(),
+                                               OwnedModules.end_loaded());
   if (!GV)
-    GV = FindGlobalVariableNamedInModulePtrSet(Name, AllowInternal, OwnedModules.begin_finalized(),
-                                        OwnedModules.end_finalized());
+    GV = FindGlobalVariableNamedInModulePtrSet(Name, AllowInternal,
+                                               OwnedModules.begin_finalized(),
+                                               OwnedModules.end_finalized());
   return GV;
 }
 
@@ -531,7 +533,7 @@ GenericValue MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
           FTy->getParamType(1)->isPointerTy() &&
           FTy->getParamType(2)->isPointerTy()) {
         int (*PF)(int, char **, const char **) =
-          (int(*)(int, char **, const char **))(intptr_t)FPtr;
+            (int (*)(int, char **, const char **))(intptr_t)FPtr;
 
         // Call the function.
         GenericValue rv;
@@ -544,7 +546,7 @@ GenericValue MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
     case 2:
       if (FTy->getParamType(0)->isIntegerTy(32) &&
           FTy->getParamType(1)->isPointerTy()) {
-        int (*PF)(int, char **) = (int(*)(int, char **))(intptr_t)FPtr;
+        int (*PF)(int, char **) = (int (*)(int, char **))(intptr_t)FPtr;
 
         // Call the function.
         GenericValue rv;
@@ -554,10 +556,9 @@ GenericValue MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
       }
       break;
     case 1:
-      if (FTy->getNumParams() == 1 &&
-          FTy->getParamType(0)->isIntegerTy(32)) {
+      if (FTy->getNumParams() == 1 && FTy->getParamType(0)->isIntegerTy(32)) {
         GenericValue rv;
-        int (*PF)(int) = (int(*)(int))(intptr_t)FPtr;
+        int (*PF)(int) = (int (*)(int))(intptr_t)FPtr;
         rv.IntVal = APInt(32, PF(ArgValues[0].IntVal.getZExtValue()));
         return rv;
       }
@@ -569,19 +570,20 @@ GenericValue MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
   if (ArgValues.empty()) {
     GenericValue rv;
     switch (RetTy->getTypeID()) {
-    default: llvm_unreachable("Unknown return type for function call!");
+    default:
+      llvm_unreachable("Unknown return type for function call!");
     case Type::IntegerTyID: {
       unsigned BitWidth = cast<IntegerType>(RetTy)->getBitWidth();
       if (BitWidth == 1)
-        rv.IntVal = APInt(BitWidth, ((bool(*)())(intptr_t)FPtr)());
+        rv.IntVal = APInt(BitWidth, ((bool (*)())(intptr_t)FPtr)());
       else if (BitWidth <= 8)
-        rv.IntVal = APInt(BitWidth, ((char(*)())(intptr_t)FPtr)());
+        rv.IntVal = APInt(BitWidth, ((char (*)())(intptr_t)FPtr)());
       else if (BitWidth <= 16)
-        rv.IntVal = APInt(BitWidth, ((short(*)())(intptr_t)FPtr)());
+        rv.IntVal = APInt(BitWidth, ((short (*)())(intptr_t)FPtr)());
       else if (BitWidth <= 32)
-        rv.IntVal = APInt(BitWidth, ((int(*)())(intptr_t)FPtr)());
+        rv.IntVal = APInt(BitWidth, ((int (*)())(intptr_t)FPtr)());
       else if (BitWidth <= 64)
-        rv.IntVal = APInt(BitWidth, ((int64_t(*)())(intptr_t)FPtr)());
+        rv.IntVal = APInt(BitWidth, ((int64_t (*)())(intptr_t)FPtr)());
       else
         llvm_unreachable("Integer types > 64 bits not supported");
       return rv;
@@ -590,17 +592,17 @@ GenericValue MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
       rv.IntVal = APInt(32, ((int (*)())(intptr_t)FPtr)(), true);
       return rv;
     case Type::FloatTyID:
-      rv.FloatVal = ((float(*)())(intptr_t)FPtr)();
+      rv.FloatVal = ((float (*)())(intptr_t)FPtr)();
       return rv;
     case Type::DoubleTyID:
-      rv.DoubleVal = ((double(*)())(intptr_t)FPtr)();
+      rv.DoubleVal = ((double (*)())(intptr_t)FPtr)();
       return rv;
     case Type::X86_FP80TyID:
     case Type::FP128TyID:
     case Type::PPC_FP128TyID:
       llvm_unreachable("long double not supported yet");
     case Type::PointerTyID:
-      return PTOGV(((void*(*)())(intptr_t)FPtr)());
+      return PTOGV(((void *(*)())(intptr_t)FPtr)());
     }
   }
 
@@ -614,8 +616,7 @@ void *MCJIT::getPointerToNamedFunction(StringRef Name, bool AbortOnFailure) {
   if (!isSymbolSearchingDisabled()) {
     if (auto Sym = Resolver.findSymbol(std::string(Name))) {
       if (auto AddrOrErr = Sym.getAddress())
-        return reinterpret_cast<void*>(
-                 static_cast<uintptr_t>(*AddrOrErr));
+        return reinterpret_cast<void *>(static_cast<uintptr_t>(*AddrOrErr));
     } else if (auto Err = Sym.takeError())
       report_fatal_error(std::move(Err));
   }
@@ -626,7 +627,7 @@ void *MCJIT::getPointerToNamedFunction(StringRef Name, bool AbortOnFailure) {
       return RP;
 
   if (AbortOnFailure) {
-    report_fatal_error("Program used external function '"+Name+
+    report_fatal_error("Program used external function '" + Name +
                        "' which could not be resolved!");
   }
   return nullptr;
@@ -668,8 +669,7 @@ void MCJIT::notifyFreeingObject(const object::ObjectFile &Obj) {
     L->notifyFreeingObject(Key);
 }
 
-JITSymbol
-LinkingSymbolResolver::findSymbol(const std::string &Name) {
+JITSymbol LinkingSymbolResolver::findSymbol(const std::string &Name) {
   auto Result = ParentEngine.findSymbol(Name, false);
   if (Result)
     return Result;

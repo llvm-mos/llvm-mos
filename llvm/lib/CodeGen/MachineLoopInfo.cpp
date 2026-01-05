@@ -244,7 +244,8 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I,
       continue;
 
     Register Reg = MO.getReg();
-    if (Reg == 0) continue;
+    if (Reg == 0)
+      continue;
 
     if (ExcludeReg == Reg)
       continue;
@@ -277,8 +278,7 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I,
     if (!MO.readsReg())
       continue;
 
-    assert(MRI->getVRegDef(Reg) &&
-           "Machine instr not mapped for this vreg?!");
+    assert(MRI->getVRegDef(Reg) && "Machine instr not mapped for this vreg?!");
 
     // If the loop contains the definition of an operand, then the instruction
     // isn't loop invariant.
@@ -291,7 +291,5 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I,
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MachineLoop::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void MachineLoop::dump() const { print(dbgs()); }
 #endif

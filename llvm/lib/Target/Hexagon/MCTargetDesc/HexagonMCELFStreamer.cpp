@@ -43,11 +43,10 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> GPSize
-  ("gpsize", cl::NotHidden,
-   cl::desc("Global Pointer Addressing Size.  The default size is 8."),
-   cl::Prefix,
-   cl::init(8));
+static cl::opt<unsigned>
+    GPSize("gpsize", cl::NotHidden,
+           cl::desc("Global Pointer Addressing Size.  The default size is 8."),
+           cl::Prefix, cl::init(8));
 
 HexagonMCELFStreamer::HexagonMCELFStreamer(
     MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
@@ -220,6 +219,6 @@ MCStreamer *createHexagonELFStreamer(Triple const &TT, MCContext &Context,
                                      std::unique_ptr<MCCodeEmitter> CE) {
   return new HexagonMCELFStreamer(Context, std::move(MAB), std::move(OW),
                                   std::move(CE));
-  }
+}
 
 } // end namespace llvm

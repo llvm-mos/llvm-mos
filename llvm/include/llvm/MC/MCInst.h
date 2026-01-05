@@ -248,12 +248,12 @@ public:
                             const MCContext *Ctx = nullptr) const;
 };
 
-inline raw_ostream& operator<<(raw_ostream &OS, const MCOperand &MO) {
+inline raw_ostream &operator<<(raw_ostream &OS, const MCOperand &MO) {
   MO.print(OS);
   return OS;
 }
 
-inline raw_ostream& operator<<(raw_ostream &OS, const MCInst &MI) {
+inline raw_ostream &operator<<(raw_ostream &OS, const MCInst &MI) {
   MI.print(OS);
   return OS;
 }

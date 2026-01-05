@@ -210,8 +210,8 @@ static std::string escapeString(StringRef Label) {
 //
 // FIXME: Refactor this and account subcommand to reduce code duplication.
 Error GraphRenderer::accountRecord(const XRayRecord &Record) {
-  using std::make_error_code;
   using std::errc;
+  using std::make_error_code;
   if (CurrentMaxTSC == 0)
     CurrentMaxTSC = Record.TSC;
 
@@ -278,7 +278,8 @@ Error GraphRenderer::accountRecord(const XRayRecord &Record) {
 
 template <typename U>
 void GraphRenderer::getStats(U begin, U end, GraphRenderer::TimeStat &S) {
-  if (begin == end) return;
+  if (begin == end)
+    return;
   std::ptrdiff_t MedianOff = S.Count / 2;
   std::nth_element(begin, begin + MedianOff, end);
   S.Median = *(begin + MedianOff);

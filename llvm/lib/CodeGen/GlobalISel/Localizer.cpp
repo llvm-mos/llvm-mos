@@ -135,8 +135,7 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
         // Set a new register for the definition.
         Register NewReg = MRI->cloneVirtualRegister(Reg);
         LocalizedMI->getOperand(0).setReg(NewReg);
-        NewVRegIt =
-            MBBWithLocalDef.try_emplace(MBBAndReg, NewReg).first;
+        NewVRegIt = MBBWithLocalDef.try_emplace(MBBAndReg, NewReg).first;
         LLVM_DEBUG(dbgs() << "Inserted: " << *LocalizedMI);
       }
       LLVM_DEBUG(dbgs() << "Update use with: " << printReg(NewVRegIt->second)

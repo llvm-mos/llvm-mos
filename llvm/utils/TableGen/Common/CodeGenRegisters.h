@@ -596,9 +596,9 @@ struct RegUnitSet {
 
   std::string Name;
   std::vector<unsigned> Units;
-  unsigned Weight = 0; // Cache the sum of all unit weights.
-  unsigned Order = 0;  // Cache the sort key.
-  bool IsFineGrained = false;  // Disable pruning.
+  unsigned Weight = 0;        // Cache the sum of all unit weights.
+  unsigned Order = 0;         // Cache the sort key.
+  bool IsFineGrained = false; // Disable pruning.
 
   RegUnitSet(std::string Name) : Name(std::move(Name)) {}
 };

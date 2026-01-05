@@ -244,7 +244,8 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
 void X86AsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
                                        raw_ostream &O) {
   switch (MO.getType()) {
-  default: llvm_unreachable("unknown symbol type!");
+  default:
+    llvm_unreachable("unknown symbol type!");
   case MachineOperand::MO_ConstantPoolIndex:
     GetCPISymbol(MO.getIndex())->print(O, MAI);
     printOffset(MO.getOffset(), O);
@@ -293,7 +294,7 @@ void X86AsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
   switch (MO.getTargetFlags()) {
   default:
     llvm_unreachable("Unknown target flag on GV operand");
-  case X86II::MO_NO_FLAG:    // No flag.
+  case X86II::MO_NO_FLAG: // No flag.
     break;
   case X86II::MO_DARWIN_NONLAZY:
   case X86II::MO_DLLIMPORT:
@@ -310,26 +311,58 @@ void X86AsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
     O << '-';
     MF->getPICBaseSymbol()->print(O, MAI);
     break;
-  case X86II::MO_TLSGD:     O << "@TLSGD";     break;
-  case X86II::MO_TLSLD:     O << "@TLSLD";     break;
-  case X86II::MO_TLSLDM:    O << "@TLSLDM";    break;
-  case X86II::MO_GOTTPOFF:  O << "@GOTTPOFF";  break;
-  case X86II::MO_INDNTPOFF: O << "@INDNTPOFF"; break;
-  case X86II::MO_TPOFF:     O << "@TPOFF";     break;
-  case X86II::MO_DTPOFF:    O << "@DTPOFF";    break;
-  case X86II::MO_NTPOFF:    O << "@NTPOFF";    break;
-  case X86II::MO_GOTNTPOFF: O << "@GOTNTPOFF"; break;
-  case X86II::MO_GOTPCREL:  O << "@GOTPCREL";  break;
-  case X86II::MO_GOTPCREL_NORELAX: O << "@GOTPCREL_NORELAX"; break;
-  case X86II::MO_GOT:       O << "@GOT";       break;
-  case X86II::MO_GOTOFF:    O << "@GOTOFF";    break;
-  case X86II::MO_PLT:       O << "@PLT";       break;
-  case X86II::MO_TLVP:      O << "@TLVP";      break;
+  case X86II::MO_TLSGD:
+    O << "@TLSGD";
+    break;
+  case X86II::MO_TLSLD:
+    O << "@TLSLD";
+    break;
+  case X86II::MO_TLSLDM:
+    O << "@TLSLDM";
+    break;
+  case X86II::MO_GOTTPOFF:
+    O << "@GOTTPOFF";
+    break;
+  case X86II::MO_INDNTPOFF:
+    O << "@INDNTPOFF";
+    break;
+  case X86II::MO_TPOFF:
+    O << "@TPOFF";
+    break;
+  case X86II::MO_DTPOFF:
+    O << "@DTPOFF";
+    break;
+  case X86II::MO_NTPOFF:
+    O << "@NTPOFF";
+    break;
+  case X86II::MO_GOTNTPOFF:
+    O << "@GOTNTPOFF";
+    break;
+  case X86II::MO_GOTPCREL:
+    O << "@GOTPCREL";
+    break;
+  case X86II::MO_GOTPCREL_NORELAX:
+    O << "@GOTPCREL_NORELAX";
+    break;
+  case X86II::MO_GOT:
+    O << "@GOT";
+    break;
+  case X86II::MO_GOTOFF:
+    O << "@GOTOFF";
+    break;
+  case X86II::MO_PLT:
+    O << "@PLT";
+    break;
+  case X86II::MO_TLVP:
+    O << "@TLVP";
+    break;
   case X86II::MO_TLVP_PIC_BASE:
     O << "@TLVP" << '-';
     MF->getPICBaseSymbol()->print(O, MAI);
     break;
-  case X86II::MO_SECREL:    O << "@SECREL32";  break;
+  case X86II::MO_SECREL:
+    O << "@SECREL32";
+    break;
   }
 }
 
@@ -338,7 +371,8 @@ void X86AsmPrinter::PrintOperand(const MachineInstr *MI, unsigned OpNo,
   const MachineOperand &MO = MI->getOperand(OpNo);
   const bool IsATT = MI->getInlineAsmDialect() == InlineAsm::AD_ATT;
   switch (MO.getType()) {
-  default: llvm_unreachable("unknown operand type!");
+  default:
+    llvm_unreachable("unknown operand type!");
   case MachineOperand::MO_Register: {
     if (IsATT)
       O << '%';
@@ -401,7 +435,8 @@ void X86AsmPrinter::PrintPCRelImm(const MachineInstr *MI, unsigned OpNo,
                                   raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(OpNo);
   switch (MO.getType()) {
-  default: llvm_unreachable("Unknown pcrel immediate operand");
+  default:
+    llvm_unreachable("Unknown pcrel immediate operand");
   case MachineOperand::MO_Register:
     // pc-relativeness was handled when computing the value in the reg.
     PrintOperand(MI, OpNo, O);
@@ -448,8 +483,7 @@ void X86AsmPrinter::PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
     O << "+8";
 
   if (HasParenPart) {
-    assert(IndexReg.getReg() != X86::ESP &&
-           "X86 doesn't allow scaling by ESP");
+    assert(IndexReg.getReg() != X86::ESP && "X86 doesn't allow scaling by ESP");
 
     O << '(';
     if (HasBaseReg)
@@ -544,7 +578,8 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
   }
 
   if (IndexReg.getReg()) {
-    if (NeedPlus) O << " + ";
+    if (NeedPlus)
+      O << " + ";
     if (ScaleVal != 1)
       O << ScaleVal << '*';
     PrintOperand(MI, OpNo + X86::AddrIndexReg, O);
@@ -552,7 +587,8 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
   }
 
   if (!DispSpec.isImm()) {
-    if (NeedPlus) O << " + ";
+    if (NeedPlus)
+      O << " + ";
     // Do not add `offset` operator. Matches the behaviour of
     // X86IntelInstPrinter::printMemReference.
     PrintSymbolOperand(DispSpec, O);
@@ -658,15 +694,14 @@ static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
   Register Reg = MO.getReg();
   bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
 
-  if (!X86::GR8RegClass.contains(Reg) &&
-      !X86::GR16RegClass.contains(Reg) &&
-      !X86::GR32RegClass.contains(Reg) &&
-      !X86::GR64RegClass.contains(Reg))
+  if (!X86::GR8RegClass.contains(Reg) && !X86::GR16RegClass.contains(Reg) &&
+      !X86::GR32RegClass.contains(Reg) && !X86::GR64RegClass.contains(Reg))
     return true;
 
   switch (Mode) {
-  default: return true;  // Unknown mode.
-  case 'b': // Print QImode register
+  default:
+    return true; // Unknown mode.
+  case 'b':      // Print QImode register
     Reg = getX86SubSuperRegister(Reg, 8);
     break;
   case 'h': // Print QImode high register
@@ -739,7 +774,8 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                     const char *ExtraCode, raw_ostream &O) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
-    if (ExtraCode[1] != 0) return true; // Unknown modifier.
+    if (ExtraCode[1] != 0)
+      return true; // Unknown modifier.
 
     const MachineOperand &MO = MI->getOperand(OpNo);
 
@@ -846,27 +882,29 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                           const char *ExtraCode,
                                           raw_ostream &O) {
   if (ExtraCode && ExtraCode[0]) {
-    if (ExtraCode[1] != 0) return true; // Unknown modifier.
+    if (ExtraCode[1] != 0)
+      return true; // Unknown modifier.
 
     switch (ExtraCode[0]) {
-    default: return true;  // Unknown modifier.
-    case 'b': // Print QImode register
-    case 'h': // Print QImode high register
-    case 'w': // Print HImode register
-    case 'k': // Print SImode register
-    case 'q': // Print SImode register
+    default:
+      return true; // Unknown modifier.
+    case 'b':      // Print QImode register
+    case 'h':      // Print QImode high register
+    case 'w':      // Print HImode register
+    case 'k':      // Print SImode register
+    case 'q':      // Print SImode register
       // These only apply to registers, ignore on mem.
       break;
     case 'H':
       if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
-        return true;  // Unsupported modifier in Intel inline assembly.
+        return true; // Unsupported modifier in Intel inline assembly.
       } else {
         PrintMemReference(MI, OpNo, O, "H");
       }
       return false;
-   // Print memory only with displacement. The Modifer 'P' is used in inline
-   // asm to present a call symbol or a global symbol which can not use base
-   // reg or index reg.
+      // Print memory only with displacement. The Modifer 'P' is used in inline
+      // asm to present a call symbol or a global symbol which can not use base
+      // reg or index reg.
     case 'P':
       if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
         PrintIntelMemReference(MI, OpNo, O, "disp-only");
@@ -954,7 +992,7 @@ emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
 
   if (MCSym.getInt())
     // External to current translation unit.
-    OutStreamer.emitIntValue(0, 4/*size*/);
+    OutStreamer.emitIntValue(0, 4 /*size*/);
   else
     // Internal to current translation unit.
     //

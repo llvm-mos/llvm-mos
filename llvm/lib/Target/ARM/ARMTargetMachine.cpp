@@ -58,29 +58,29 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-DisableA15SDOptimization("disable-a15-sd-optimization", cl::Hidden,
-                   cl::desc("Inhibit optimization of S->D register accesses on A15"),
-                   cl::init(false));
+static cl::opt<bool> DisableA15SDOptimization(
+    "disable-a15-sd-optimization", cl::Hidden,
+    cl::desc("Inhibit optimization of S->D register accesses on A15"),
+    cl::init(false));
+
+static cl::opt<bool> EnableAtomicTidy(
+    "arm-atomic-cfg-tidy", cl::Hidden,
+    cl::desc("Run SimplifyCFG after expanding atomic operations"
+             " to make use of cmpxchg flow-based information"),
+    cl::init(true));
 
 static cl::opt<bool>
-EnableAtomicTidy("arm-atomic-cfg-tidy", cl::Hidden,
-                 cl::desc("Run SimplifyCFG after expanding atomic operations"
-                          " to make use of cmpxchg flow-based information"),
-                 cl::init(true));
-
-static cl::opt<bool>
-EnableARMLoadStoreOpt("arm-load-store-opt", cl::Hidden,
-                      cl::desc("Enable ARM load/store optimization pass"),
-                      cl::init(true));
+    EnableARMLoadStoreOpt("arm-load-store-opt", cl::Hidden,
+                          cl::desc("Enable ARM load/store optimization pass"),
+                          cl::init(true));
 
 // FIXME: Unify control over GlobalMerge.
 static cl::opt<cl::boolOrDefault>
-EnableGlobalMerge("arm-global-merge", cl::Hidden,
-                  cl::desc("Enable the global merge pass"));
+    EnableGlobalMerge("arm-global-merge", cl::Hidden,
+                      cl::desc("Enable the global merge pass"));
 
 namespace llvm {
-  void initializeARMExecutionDomainFixPass(PassRegistry&);
+void initializeARMExecutionDomainFixPass(PassRegistry &);
 }
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
@@ -244,7 +244,9 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
                                        F.hasMinSize(), DM);
 
     if (!I->isThumb() && !I->hasARMOps())
-      F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
+      F.getContext().emitError(
+          "Function '" + F.getName() +
+          "' uses ARM "
           "instructions, but the target does not support ARM mode execution.");
   }
 
@@ -326,19 +328,17 @@ class ARMExecutionDomainFix : public ExecutionDomainFix {
 public:
   static char ID;
   ARMExecutionDomainFix() : ExecutionDomainFix(ID, ARM::DPRRegClass) {}
-  StringRef getPassName() const override {
-    return "ARM Execution Domain Fix";
-  }
+  StringRef getPassName() const override { return "ARM Execution Domain Fix"; }
 };
 char ARMExecutionDomainFix::ID;
 
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(ARMExecutionDomainFix, "arm-execution-domain-fix",
-  "ARM Execution Domain Fix", false, false)
+                      "ARM Execution Domain Fix", false, false)
 INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(ARMExecutionDomainFix, "arm-execution-domain-fix",
-  "ARM Execution Domain Fix", false, false)
+                    "ARM Execution Domain Fix", false, false)
 
 TargetPassConfig *ARMBaseTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new ARMPassConfig(*this, PM);
@@ -468,7 +468,8 @@ void ARMPassConfig::addPreRegAlloc() {
     addPass(createMLxExpansionPass());
 
     if (EnableARMLoadStoreOpt)
-      addPass(createARMLoadStoreOptimizationPass(/* pre-register alloc */ true));
+      addPass(
+          createARMLoadStoreOptimizationPass(/* pre-register alloc */ true));
 
     if (!DisableA15SDOptimization)
       addPass(createA15SDOptimizerPass());

@@ -157,4 +157,4 @@ inline bool is_TC4x(unsigned SchedClass) {
 }
 } // namespace llvm
 
-#endif  // LLVM_LIB_TARGET_HEXAGON_HEXAGONDEPTIMINGCLASSES_H
+#endif // LLVM_LIB_TARGET_HEXAGON_HEXAGONDEPTIMINGCLASSES_H

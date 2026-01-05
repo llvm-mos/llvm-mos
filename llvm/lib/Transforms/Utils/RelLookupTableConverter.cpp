@@ -111,8 +111,7 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
     if (!GlovalVarOp || !GlovalVarOp->isConstant())
       return false;
 
-    if (!GlovalVarOp->hasLocalLinkage() ||
-        !GlovalVarOp->isDSOLocal() ||
+    if (!GlovalVarOp->hasLocalLinkage() || !GlovalVarOp->isDSOLocal() ||
         !GlovalVarOp->isImplicitDSOLocal())
       return false;
 

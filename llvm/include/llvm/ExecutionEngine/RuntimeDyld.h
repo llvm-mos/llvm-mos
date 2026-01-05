@@ -159,12 +159,13 @@ public:
     virtual void deregisterEHFrames() = 0;
 
     /// This method is called when object loading is complete and section page
-    /// permissions can be applied.  It is up to the memory manager implementation
-    /// to decide whether or not to act on this method.  The memory manager will
-    /// typically allocate all sections as read-write and then apply specific
-    /// permissions when this method is called.  Code sections cannot be executed
-    /// until this function has been called.  In addition, any cache coherency
-    /// operations needed to reliably use the memory are also performed.
+    /// permissions can be applied.  It is up to the memory manager
+    /// implementation to decide whether or not to act on this method.  The
+    /// memory manager will typically allocate all sections as read-write and
+    /// then apply specific permissions when this method is called.  Code
+    /// sections cannot be executed until this function has been called.  In
+    /// addition, any cache coherency operations needed to reliably use the
+    /// memory are also performed.
     ///
     /// Returns true if an error occurred, false otherwise.
     virtual bool finalizeMemory(std::string *ErrMsg = nullptr) = 0;

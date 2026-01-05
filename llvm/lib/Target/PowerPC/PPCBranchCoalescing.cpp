@@ -174,8 +174,7 @@ public:
                        CoalescingCandidateInfo &TargetRegion);
   bool canMoveToBeginning(const MachineInstr &MI,
                           const MachineBasicBlock &MBB) const;
-  bool canMoveToEnd(const MachineInstr &MI,
-                    const MachineBasicBlock &MBB) const;
+  bool canMoveToEnd(const MachineInstr &MI, const MachineBasicBlock &MBB) const;
   bool canMerge(CoalescingCandidateInfo &SourceRegion,
                 CoalescingCandidateInfo &TargetRegion) const;
   void moveAndUpdatePHIs(MachineBasicBlock *SourceRegionMBB,
@@ -191,12 +190,12 @@ FunctionPass *llvm::createPPCBranchCoalescingPass() {
   return new PPCBranchCoalescing();
 }
 
-INITIALIZE_PASS_BEGIN(PPCBranchCoalescing, DEBUG_TYPE,
-                      "Branch Coalescing", false, false)
+INITIALIZE_PASS_BEGIN(PPCBranchCoalescing, DEBUG_TYPE, "Branch Coalescing",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(PPCBranchCoalescing, DEBUG_TYPE, "Branch Coalescing",
-                    false, false)
+INITIALIZE_PASS_END(PPCBranchCoalescing, DEBUG_TYPE, "Branch Coalescing", false,
+                    false)
 
 PPCBranchCoalescing::CoalescingCandidateInfo::CoalescingCandidateInfo()
     : BranchBlock(nullptr), BranchTargetBlock(nullptr),
@@ -296,9 +295,9 @@ bool PPCBranchCoalescing::canCoalesceBranch(CoalescingCandidateInfo &Cand) {
   // BranchBlock and that BranchTargetBlock is a successor to BranchBlock.
   // Ensure the single fall though block is empty.
   MachineBasicBlock *Succ =
-    (*Cand.BranchBlock->succ_begin() == Cand.BranchTargetBlock)
-    ? *Cand.BranchBlock->succ_rbegin()
-    : *Cand.BranchBlock->succ_begin();
+      (*Cand.BranchBlock->succ_begin() == Cand.BranchTargetBlock)
+          ? *Cand.BranchBlock->succ_rbegin()
+          : *Cand.BranchBlock->succ_begin();
 
   assert(Succ && "Expecting a valid fall-through block\n");
 
@@ -343,7 +342,8 @@ bool PPCBranchCoalescing::identicalOperands(
 
     if (Op1.isIdenticalTo(Op2)) {
       // filter out instructions with physical-register uses
-      if (Op1.isReg() && Op1.getReg().isPhysical()
+      if (Op1.isReg() &&
+          Op1.getReg().isPhysical()
           // If the physical register is constant then we can assume the value
           // has not changed between uses.
           && !(Op1.isUse() && MRI->isConstantPhysReg(Op1.getReg()))) {
@@ -387,7 +387,7 @@ bool PPCBranchCoalescing::identicalOperands(
 /// \param[in] TargetMBB block to move PHI instructions to
 ///
 void PPCBranchCoalescing::moveAndUpdatePHIs(MachineBasicBlock *SourceMBB,
-                                         MachineBasicBlock *TargetMBB) {
+                                            MachineBasicBlock *TargetMBB) {
 
   MachineBasicBlock::iterator MI = SourceMBB->begin();
   MachineBasicBlock::iterator ME = SourceMBB->getFirstNonPHI();
@@ -419,9 +419,8 @@ void PPCBranchCoalescing::moveAndUpdatePHIs(MachineBasicBlock *SourceMBB,
 /// \return true if it is safe to move MI to beginning of TargetMBB,
 ///         false otherwise.
 ///
-bool PPCBranchCoalescing::canMoveToBeginning(const MachineInstr &MI,
-                                          const MachineBasicBlock &TargetMBB
-                                          ) const {
+bool PPCBranchCoalescing::canMoveToBeginning(
+    const MachineInstr &MI, const MachineBasicBlock &TargetMBB) const {
 
   LLVM_DEBUG(dbgs() << "Checking if " << MI << " can move to beginning of "
                     << TargetMBB.getNumber() << "\n");
@@ -450,9 +449,8 @@ bool PPCBranchCoalescing::canMoveToBeginning(const MachineInstr &MI,
 /// \return true if it is safe to move MI to end of TargetMBB,
 ///         false otherwise.
 ///
-bool PPCBranchCoalescing::canMoveToEnd(const MachineInstr &MI,
-                                    const MachineBasicBlock &TargetMBB
-                                    ) const {
+bool PPCBranchCoalescing::canMoveToEnd(
+    const MachineInstr &MI, const MachineBasicBlock &TargetMBB) const {
 
   LLVM_DEBUG(dbgs() << "Checking if " << MI << " can move to end of "
                     << TargetMBB.getNumber() << "\n");
@@ -488,7 +486,8 @@ bool PPCBranchCoalescing::validateCandidates(
     CoalescingCandidateInfo &TargetRegion) const {
 
   if (TargetRegion.BranchTargetBlock != SourceRegion.BranchBlock)
-    llvm_unreachable("Expecting SourceRegion to immediately follow TargetRegion");
+    llvm_unreachable(
+        "Expecting SourceRegion to immediately follow TargetRegion");
   else if (!MDT->dominates(TargetRegion.BranchBlock, SourceRegion.BranchBlock))
     llvm_unreachable("Expecting TargetRegion to dominate SourceRegion");
   else if (!MPDT->dominates(SourceRegion.BranchBlock, TargetRegion.BranchBlock))
@@ -526,8 +525,9 @@ bool PPCBranchCoalescing::validateCandidates(
 /// \return true if all instructions in SourceRegion.BranchBlock can be merged
 ///         into a block in TargetRegion, false otherwise.
 ///
-bool PPCBranchCoalescing::canMerge(CoalescingCandidateInfo &SourceRegion,
-                                CoalescingCandidateInfo &TargetRegion) const {
+bool PPCBranchCoalescing::canMerge(
+    CoalescingCandidateInfo &SourceRegion,
+    CoalescingCandidateInfo &TargetRegion) const {
   if (!validateCandidates(SourceRegion, TargetRegion))
     return false;
 
@@ -633,8 +633,9 @@ bool PPCBranchCoalescing::canMerge(CoalescingCandidateInfo &SourceRegion,
 /// \param[in] SourceRegion The candidate to move blocks from
 /// \param[in] TargetRegion The candidate to move blocks to
 ///
-bool PPCBranchCoalescing::mergeCandidates(CoalescingCandidateInfo &SourceRegion,
-                                       CoalescingCandidateInfo &TargetRegion) {
+bool PPCBranchCoalescing::mergeCandidates(
+    CoalescingCandidateInfo &SourceRegion,
+    CoalescingCandidateInfo &TargetRegion) {
 
   if (SourceRegion.MustMoveUp && SourceRegion.MustMoveDown) {
     llvm_unreachable("Cannot have both MustMoveDown and MustMoveUp set!");

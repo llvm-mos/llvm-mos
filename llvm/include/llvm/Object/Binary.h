@@ -122,17 +122,13 @@ public:
 
   bool isTapiUniversal() const { return TypeID == ID_TapiUniversal; }
 
-  bool isELF() const {
-    return TypeID >= ID_ELF32L && TypeID <= ID_ELF64B;
-  }
+  bool isELF() const { return TypeID >= ID_ELF32L && TypeID <= ID_ELF64B; }
 
   bool isMachO() const {
     return TypeID >= ID_MachO32L && TypeID <= ID_MachO64B;
   }
 
-  bool isCOFF() const {
-    return TypeID == ID_COFF;
-  }
+  bool isCOFF() const { return TypeID == ID_COFF; }
 
   bool isXCOFF() const { return TypeID == ID_XCOFF32 || TypeID == ID_XCOFF64; }
 
@@ -140,13 +136,9 @@ public:
 
   bool isOffloadFile() const { return TypeID == ID_Offload; }
 
-  bool isCOFFImportFile() const {
-    return TypeID == ID_COFFImportFile;
-  }
+  bool isCOFFImportFile() const { return TypeID == ID_COFFImportFile; }
 
-  bool isIR() const {
-    return TypeID == ID_IR;
-  }
+  bool isIR() const { return TypeID == ID_IR; }
 
   bool isGOFF() const { return TypeID == ID_GOFF; }
 
@@ -204,13 +196,13 @@ template <typename T> class OwningBinary {
 public:
   OwningBinary();
   OwningBinary(std::unique_ptr<T> Bin, std::unique_ptr<MemoryBuffer> Buf);
-  OwningBinary(OwningBinary<T>&& Other);
+  OwningBinary(OwningBinary<T> &&Other);
   OwningBinary<T> &operator=(OwningBinary<T> &&Other);
 
   std::pair<std::unique_ptr<T>, std::unique_ptr<MemoryBuffer>> takeBinary();
 
-  T* getBinary();
-  const T* getBinary() const;
+  T *getBinary();
+  const T *getBinary() const;
 };
 
 template <typename T>
@@ -237,11 +229,9 @@ OwningBinary<T>::takeBinary() {
   return std::make_pair(std::move(Bin), std::move(Buf));
 }
 
-template <typename T> T* OwningBinary<T>::getBinary() {
-  return Bin.get();
-}
+template <typename T> T *OwningBinary<T>::getBinary() { return Bin.get(); }
 
-template <typename T> const T* OwningBinary<T>::getBinary() const {
+template <typename T> const T *OwningBinary<T>::getBinary() const {
   return Bin.get();
 }
 

@@ -26,7 +26,6 @@ protected:
                         bool IsPCRel) const override;
 };
 
-
 } // end anonymous namespace
 
 AMDGPUELFObjectWriter::AMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
@@ -70,7 +69,8 @@ unsigned AMDGPUELFObjectWriter::getRelocType(const MCFixup &Fixup,
 
   MCFixupKind Kind = Fixup.getKind();
   switch (Kind) {
-  default: break;
+  default:
+    break;
   case FK_Data_4:
   case FK_SecRel_4:
     return IsPCRel ? ELF::R_AMDGPU_REL32 : ELF::R_AMDGPU_ABS32;

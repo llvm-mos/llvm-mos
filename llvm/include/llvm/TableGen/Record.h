@@ -410,7 +410,8 @@ public:
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const Init &I) {
-  I.print(OS); return OS;
+  I.print(OS);
+  return OS;
 }
 
 /// This is the common superclass of types that have a specific,
@@ -462,9 +463,7 @@ public:
   UnsetInit(const UnsetInit &) = delete;
   UnsetInit &operator=(const UnsetInit &) = delete;
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_UnsetInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_UnsetInit; }
 
   /// Get the singleton unset Init.
   static UnsetInit *get(RecordKeeper &RK);
@@ -565,9 +564,7 @@ public:
   BitInit(const BitInit &) = delete;
   BitInit &operator=(BitInit &) = delete;
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_BitInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_BitInit; }
 
   static BitInit *get(RecordKeeper &RK, bool V);
 
@@ -601,9 +598,7 @@ public:
   // Do not use sized deallocation due to trailing objects.
   void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_BitsInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_BitsInit; }
 
   static BitsInit *get(RecordKeeper &RK, ArrayRef<const Init *> Range);
 
@@ -642,9 +637,7 @@ public:
   IntInit(const IntInit &) = delete;
   IntInit &operator=(const IntInit &) = delete;
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_IntInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_IntInit; }
 
   static IntInit *get(RecordKeeper &RK, int64_t V);
 
@@ -711,9 +704,7 @@ public:
   StringInit(const StringInit &) = delete;
   StringInit &operator=(const StringInit &) = delete;
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_StringInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_StringInit; }
 
   static const StringInit *get(RecordKeeper &RK, StringRef,
                                StringFormat Fmt = SF_String);
@@ -765,9 +756,7 @@ public:
   // Do not use sized deallocation due to trailing objects.
   void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_ListInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_ListInit; }
   static const ListInit *get(ArrayRef<const Init *> Range, const RecTy *EltTy);
 
   void Profile(FoldingSetNodeID &ID) const;
@@ -823,8 +812,7 @@ public:
   OpInit &operator=(OpInit &) = delete;
 
   static bool classof(const Init *I) {
-    return I->getKind() >= IK_FirstOpInit &&
-           I->getKind() <= IK_LastOpInit;
+    return I->getKind() >= IK_FirstOpInit && I->getKind() <= IK_LastOpInit;
   }
 
   const Init *getBit(unsigned Bit) const final;
@@ -861,9 +849,7 @@ public:
   UnOpInit(const UnOpInit &) = delete;
   UnOpInit &operator=(const UnOpInit &) = delete;
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_UnOpInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_UnOpInit; }
 
   static const UnOpInit *get(UnaryOp opc, const Init *lhs, const RecTy *Type);
 
@@ -927,9 +913,7 @@ public:
   BinOpInit(const BinOpInit &) = delete;
   BinOpInit &operator=(const BinOpInit &) = delete;
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_BinOpInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_BinOpInit; }
 
   static const BinOpInit *get(BinaryOp opc, const Init *lhs, const Init *rhs,
                               const RecTy *Type);
@@ -981,9 +965,7 @@ public:
   TernOpInit(const TernOpInit &) = delete;
   TernOpInit &operator=(const TernOpInit &) = delete;
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_TernOpInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_TernOpInit; }
 
   static const TernOpInit *get(TernaryOp opc, const Init *lhs, const Init *mhs,
                                const Init *rhs, const RecTy *Type);
@@ -1025,9 +1007,7 @@ public:
   CondOpInit(const CondOpInit &) = delete;
   CondOpInit &operator=(const CondOpInit &) = delete;
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_CondOpInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_CondOpInit; }
 
   static const CondOpInit *get(ArrayRef<const Init *> Conds,
                                ArrayRef<const Init *> Values,
@@ -1064,17 +1044,17 @@ public:
   using const_case_iterator = SmallVectorImpl<const Init *>::const_iterator;
   using const_val_iterator = SmallVectorImpl<const Init *>::const_iterator;
 
-  inline const_case_iterator  arg_begin() const { return getConds().begin(); }
-  inline const_case_iterator  arg_end  () const { return getConds().end(); }
+  inline const_case_iterator arg_begin() const { return getConds().begin(); }
+  inline const_case_iterator arg_end() const { return getConds().end(); }
 
-  inline size_t              case_size () const { return NumConds; }
-  inline bool                case_empty() const { return NumConds == 0; }
+  inline size_t case_size() const { return NumConds; }
+  inline bool case_empty() const { return NumConds == 0; }
 
-  inline const_val_iterator name_begin() const { return getVals().begin();}
-  inline const_val_iterator name_end  () const { return getVals().end(); }
+  inline const_val_iterator name_begin() const { return getVals().begin(); }
+  inline const_val_iterator name_end() const { return getVals().end(); }
 
-  inline size_t              val_size () const { return NumConds; }
-  inline bool                val_empty() const { return NumConds == 0; }
+  inline size_t val_size() const { return NumConds; }
+  inline bool val_empty() const { return NumConds == 0; }
 
   const Init *getBit(unsigned Bit) const override;
 };
@@ -1227,9 +1207,7 @@ public:
   VarInit(const VarInit &) = delete;
   VarInit &operator=(const VarInit &) = delete;
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_VarInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_VarInit; }
 
   static const VarInit *get(StringRef VN, const RecTy *T);
   static const VarInit *get(const Init *VN, const RecTy *T);
@@ -1272,9 +1250,7 @@ public:
   VarBitInit(const VarBitInit &) = delete;
   VarBitInit &operator=(const VarBitInit &) = delete;
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_VarBitInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_VarBitInit; }
 
   static const VarBitInit *get(const TypedInit *T, unsigned B);
 
@@ -1302,9 +1278,7 @@ public:
   DefInit(const DefInit &) = delete;
   DefInit &operator=(const DefInit &) = delete;
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_DefInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_DefInit; }
 
   const Init *convertInitializerTo(const RecTy *Ty) const override;
 
@@ -1344,9 +1318,7 @@ public:
   // Do not use sized deallocation due to trailing objects.
   void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_VarDefInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_VarDefInit; }
   static const VarDefInit *get(SMLoc Loc, const Record *Class,
                                ArrayRef<const ArgumentInit *> Args);
 
@@ -1364,8 +1336,8 @@ public:
   const_iterator args_begin() const { return args().begin(); }
   const_iterator args_end() const { return args().end(); }
 
-  size_t         args_size () const { return NumArgs; }
-  bool           args_empty() const { return NumArgs == 0; }
+  size_t args_size() const { return NumArgs; }
+  bool args_empty() const { return NumArgs == 0; }
 
   ArrayRef<const ArgumentInit *> args() const {
     return getTrailingObjects(NumArgs);
@@ -1397,9 +1369,7 @@ public:
   FieldInit(const FieldInit &) = delete;
   FieldInit &operator=(const FieldInit &) = delete;
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_FieldInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_FieldInit; }
 
   static const FieldInit *get(const Init *R, const StringInit *FN);
 
@@ -1441,9 +1411,7 @@ public:
   DagInit(const DagInit &) = delete;
   DagInit &operator=(const DagInit &) = delete;
 
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_DagInit;
-  }
+  static bool classof(const Init *I) { return I->getKind() == IK_DagInit; }
 
   static const DagInit *get(const Init *V, const StringInit *VN,
                             ArrayRef<const Init *> Args,
@@ -1518,14 +1486,16 @@ public:
   using const_name_iterator =
       SmallVectorImpl<const StringInit *>::const_iterator;
 
-  inline const_arg_iterator  arg_begin() const { return getArgs().begin(); }
-  inline const_arg_iterator  arg_end  () const { return getArgs().end(); }
+  inline const_arg_iterator arg_begin() const { return getArgs().begin(); }
+  inline const_arg_iterator arg_end() const { return getArgs().end(); }
 
-  inline size_t              arg_size () const { return NumArgs; }
-  inline bool                arg_empty() const { return NumArgs == 0; }
+  inline size_t arg_size() const { return NumArgs; }
+  inline bool arg_empty() const { return NumArgs == 0; }
 
-  inline const_name_iterator name_begin() const { return getArgNames().begin();}
-  inline const_name_iterator name_end  () const { return getArgNames().end(); }
+  inline const_name_iterator name_begin() const {
+    return getArgNames().begin();
+  }
+  inline const_name_iterator name_end() const { return getArgNames().end(); }
 
   const Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off dag");
@@ -1585,9 +1555,7 @@ public:
   }
 
   /// Is this a template argument?
-  bool isTemplateArg() const {
-    return TyAndKind.getInt() == FK_TemplateArg;
-  }
+  bool isTemplateArg() const { return TyAndKind.getInt() == FK_TemplateArg; }
 
   /// Get the type of the field value as a RecTy.
   const RecTy *getType() const { return TyAndKind.getPointer(); }
@@ -1783,7 +1751,8 @@ public:
 
   const RecordVal *getValue(const Init *Name) const {
     for (const RecordVal &Val : Values)
-      if (Val.Name == Name) return &Val;
+      if (Val.Name == Name)
+        return &Val;
     return nullptr;
   }
 
@@ -1884,9 +1853,7 @@ public:
   /// recursion / infinite loops.
   void resolveReferences(Resolver &R, const RecordVal *SkipVal = nullptr);
 
-  RecordKeeper &getRecords() const {
-    return TrackedRecords;
-  }
+  RecordKeeper &getRecords() const { return TrackedRecords; }
 
   void dump() const;
 
@@ -2111,7 +2078,7 @@ struct LessRecordFieldName {
 
 struct LessRecordRegister {
   struct RecordParts {
-    SmallVector<std::pair< bool, StringRef>, 4> Parts;
+    SmallVector<std::pair<bool, StringRef>, 4> Parts;
 
     RecordParts(StringRef Rec) {
       if (Rec.empty())
@@ -2150,35 +2117,37 @@ struct LessRecordRegister {
 
     size_t LHSNumParts = LHSParts.size();
     size_t RHSNumParts = RHSParts.size();
-    assert (LHSNumParts && RHSNumParts && "Expected at least one part!");
+    assert(LHSNumParts && RHSNumParts && "Expected at least one part!");
 
     if (LHSNumParts != RHSNumParts)
       return LHSNumParts < RHSNumParts;
 
     // We expect the registers to be of the form [_a-zA-Z]+([0-9]*[_a-zA-Z]*)*.
-    for (size_t I = 0, E = LHSNumParts; I < E; I+=2) {
+    for (size_t I = 0, E = LHSNumParts; I < E; I += 2) {
       std::pair<bool, StringRef> LHSPart = LHSParts.getPart(I);
       std::pair<bool, StringRef> RHSPart = RHSParts.getPart(I);
       // Expect even part to always be alpha.
-      assert (LHSPart.first == false && RHSPart.first == false &&
-              "Expected both parts to be alpha.");
+      assert(LHSPart.first == false && RHSPart.first == false &&
+             "Expected both parts to be alpha.");
       if (int Res = LHSPart.second.compare(RHSPart.second))
         return Res < 0;
     }
-    for (size_t I = 1, E = LHSNumParts; I < E; I+=2) {
+    for (size_t I = 1, E = LHSNumParts; I < E; I += 2) {
       std::pair<bool, StringRef> LHSPart = LHSParts.getPart(I);
       std::pair<bool, StringRef> RHSPart = RHSParts.getPart(I);
       // Expect odd part to always be numeric.
-      assert (LHSPart.first == true && RHSPart.first == true &&
-              "Expected both parts to be numeric.");
+      assert(LHSPart.first == true && RHSPart.first == true &&
+             "Expected both parts to be numeric.");
       if (LHSPart.second.size() != RHSPart.second.size())
         return LHSPart.second.size() < RHSPart.second.size();
 
       unsigned LHSVal, RHSVal;
 
-      bool LHSFailed = LHSPart.second.getAsInteger(10, LHSVal); (void)LHSFailed;
+      bool LHSFailed = LHSPart.second.getAsInteger(10, LHSVal);
+      (void)LHSFailed;
       assert(!LHSFailed && "Unable to convert LHS to integer.");
-      bool RHSFailed = RHSPart.second.getAsInteger(10, RHSVal); (void)RHSFailed;
+      bool RHSFailed = RHSPart.second.getAsInteger(10, RHSVal);
+      (void)RHSFailed;
       assert(!RHSFailed && "Unable to convert RHS to integer.");
 
       if (LHSVal != RHSVal)
@@ -2271,8 +2240,7 @@ class ShadowResolver final : public Resolver {
   DenseSet<const Init *> Shadowed;
 
 public:
-  explicit ShadowResolver(Resolver &R)
-      : Resolver(R.getCurrentRecord()), R(R) {
+  explicit ShadowResolver(Resolver &R) : Resolver(R.getCurrentRecord()), R(R) {
     setFinal(R.isFinal());
   }
 

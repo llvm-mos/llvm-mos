@@ -128,7 +128,7 @@ enum NodeType : unsigned {
 class HexagonSubtarget;
 
 class HexagonTargetLowering : public TargetLowering {
-  int VarArgsFrameOffset;   // Frame offset to start of varargs area.
+  int VarArgsFrameOffset; // Frame offset to start of varargs area.
   const HexagonTargetMachine &HTM;
   const HexagonSubtarget &Subtarget;
 
@@ -139,11 +139,12 @@ public:
   /// IsEligibleForTailCallOptimization - Check whether the call is eligible
   /// for tail call optimization. Targets which want to do tail call
   /// optimization should implement this function.
-  bool IsEligibleForTailCallOptimization(SDValue Callee,
-      CallingConv::ID CalleeCC, bool isVarArg, bool isCalleeStructRet,
-      bool isCallerStructRet, const SmallVectorImpl<ISD::OutputArg> &Outs,
+  bool IsEligibleForTailCallOptimization(
+      SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,
+      bool isCalleeStructRet, bool isCallerStructRet,
+      const SmallVectorImpl<ISD::OutputArg> &Outs,
       const SmallVectorImpl<SDValue> &OutVals,
-      const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG& DAG) const;
+      const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const;
 
   bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
                           MachineFunction &MF,
@@ -168,14 +169,14 @@ public:
   /// instructions. fmuladd intrinsics will be expanded to FMAs when this
   /// method returns true (and FMAs are legal), otherwise fmuladd is
   /// expanded to mul + add.
-  bool isFMAFasterThanFMulAndFAdd(const MachineFunction &,
-                                  EVT) const override;
+  bool isFMAFasterThanFMulAndFAdd(const MachineFunction &, EVT) const override;
 
   // Should we expand the build vector with shuffles?
-  bool shouldExpandBuildVectorWithShuffles(EVT VT,
-      unsigned DefinedValues) const override;
+  bool
+  shouldExpandBuildVectorWithShuffles(EVT VT,
+                                      unsigned DefinedValues) const override;
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-      unsigned Index) const override;
+                               unsigned Index) const override;
 
   bool isTargetCanonicalConstantNode(SDValue Op) const override;
 
@@ -221,27 +222,28 @@ public:
   SDValue LowerREADSTEADYCOUNTER(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_LABEL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
-  SDValue
-  LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-                       const SmallVectorImpl<ISD::InputArg> &Ins,
-                       const SDLoc &dl, SelectionDAG &DAG,
-                       SmallVectorImpl<SDValue> &InVals) const override;
+  SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
+                               bool isVarArg,
+                               const SmallVectorImpl<ISD::InputArg> &Ins,
+                               const SDLoc &dl, SelectionDAG &DAG,
+                               SmallVectorImpl<SDValue> &InVals) const override;
   SDValue LowerGLOBALADDRESS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerToTLSGeneralDynamicModel(GlobalAddressSDNode *GA,
-      SelectionDAG &DAG) const;
+                                        SelectionDAG &DAG) const;
   SDValue LowerToTLSInitialExecModel(GlobalAddressSDNode *GA,
-      SelectionDAG &DAG) const;
+                                     SelectionDAG &DAG) const;
   SDValue LowerToTLSLocalExecModel(GlobalAddressSDNode *GA,
-      SelectionDAG &DAG) const;
+                                   SelectionDAG &DAG) const;
   SDValue GetDynamicTLSAddr(SelectionDAG &DAG, SDValue Chain,
-      GlobalAddressSDNode *GA, SDValue InGlue, EVT PtrVT,
-      unsigned ReturnReg, unsigned char OperandGlues) const;
+                            GlobalAddressSDNode *GA, SDValue InGlue, EVT PtrVT,
+                            unsigned ReturnReg,
+                            unsigned char OperandGlues) const;
   SDValue LowerGLOBAL_OFFSET_TABLE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
-      SmallVectorImpl<SDValue> &InVals) const override;
+                    SmallVectorImpl<SDValue> &InVals) const override;
   SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                           CallingConv::ID CallConv, bool isVarArg,
                           const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -253,24 +255,24 @@ public:
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSELECT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG& DAG) const;
+  SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
 
-  bool CanLowerReturn(CallingConv::ID CallConv,
-                      MachineFunction &MF, bool isVarArg,
+  bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
+                      bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       LLVMContext &Context, const Type *RetTy) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      const SmallVectorImpl<SDValue> &OutVals,
-                      const SDLoc &dl, SelectionDAG &DAG) const override;
+                      const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
+                      SelectionDAG &DAG) const override;
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
   bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
 
-  Register getRegisterByName(const char* RegName, LLT VT,
+  Register getRegisterByName(const char *RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
   unsigned getVectorTypeBreakdownForCallingConv(LLVMContext &Context,
@@ -308,9 +310,8 @@ public:
       return EVT::getVectorVT(C, MVT::i1, VT.getVectorNumElements());
   }
 
-  bool getPostIndexedAddressParts(SDNode *N, SDNode *Op,
-                                  SDValue &Base, SDValue &Offset,
-                                  ISD::MemIndexedMode &AM,
+  bool getPostIndexedAddressParts(SDNode *N, SDNode *Op, SDValue &Base,
+                                  SDValue &Offset, ISD::MemIndexedMode &AM,
                                   SelectionDAG &DAG) const override;
 
   ConstraintType getConstraintType(StringRef Constraint) const override;
@@ -327,8 +328,8 @@ public:
   /// The type may be VoidTy, in which case only return true if the addressing
   /// mode is legal for a load/store of any legal type.
   /// TODO: Handle pre/postinc as well.
-  bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
-                             Type *Ty, unsigned AS,
+  bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
+                             unsigned AS,
                              Instruction *I = nullptr) const override;
   /// Return true if folding a constant offset with the given GlobalAddress
   /// is legal.  It is frequently not legal in PIC relocation models.
@@ -357,8 +358,8 @@ public:
                                       unsigned *Fast) const override;
 
   /// Returns relocation base for the given PIC jumptable.
-  SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG)
-                                   const override;
+  SDValue getPICJumpTableRelocBase(SDValue Table,
+                                   SelectionDAG &DAG) const override;
 
   /// Returns true if it is beneficial to convert a load of a constant
   /// to just the constant itself.
@@ -396,17 +397,17 @@ private:
                                  SelectionDAG &DAG) const;
   SDValue replaceMemWithUndef(SDValue Op, SelectionDAG &DAG) const;
 
-  std::pair<SDValue,int> getBaseAndOffset(SDValue Addr) const;
+  std::pair<SDValue, int> getBaseAndOffset(SDValue Addr) const;
 
   bool getBuildVectorConstInts(ArrayRef<SDValue> Values, MVT VecTy,
                                SelectionDAG &DAG,
-                               MutableArrayRef<ConstantInt*> Consts) const;
+                               MutableArrayRef<ConstantInt *> Consts) const;
   SDValue buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl, MVT VecTy,
                         SelectionDAG &DAG) const;
   SDValue buildVector64(ArrayRef<SDValue> Elem, const SDLoc &dl, MVT VecTy,
                         SelectionDAG &DAG) const;
-  SDValue extractVector(SDValue VecV, SDValue IdxV, const SDLoc &dl,
-                        MVT ValTy, MVT ResTy, SelectionDAG &DAG) const;
+  SDValue extractVector(SDValue VecV, SDValue IdxV, const SDLoc &dl, MVT ValTy,
+                        MVT ResTy, SelectionDAG &DAG) const;
   SDValue extractVectorPred(SDValue VecV, SDValue IdxV, const SDLoc &dl,
                             MVT ValTy, MVT ResTy, SelectionDAG &DAG) const;
   SDValue insertVector(SDValue VecV, SDValue ValV, SDValue IdxV,
@@ -441,12 +442,10 @@ private:
   SDValue getInt(unsigned IntId, MVT ResTy, ArrayRef<SDValue> Ops,
                  const SDLoc &dl, SelectionDAG &DAG) const;
 
-  MVT ty(SDValue Op) const {
-    return Op.getValueType().getSimpleVT();
-  }
+  MVT ty(SDValue Op) const { return Op.getValueType().getSimpleVT(); }
   TypePair ty(const VectorPair &Ops) const {
-    return { Ops.first.getValueType().getSimpleVT(),
-             Ops.second.getValueType().getSimpleVT() };
+    return {Ops.first.getValueType().getSimpleVT(),
+            Ops.second.getValueType().getSimpleVT()};
   }
   MVT tyScalar(MVT Ty) const {
     if (!Ty.isVector())
@@ -459,7 +458,7 @@ private:
     unsigned TyWidth = Ty.getSizeInBits();
     unsigned ElemWidth = ElemTy.getSizeInBits();
     assert((TyWidth % ElemWidth) == 0);
-    return MVT::getVectorVT(ElemTy, TyWidth/ElemWidth);
+    return MVT::getVectorVT(ElemTy, TyWidth / ElemWidth);
   }
 
   MVT typeJoin(const TypePair &Tys) const;
@@ -519,9 +518,8 @@ private:
                             MVT VecTy, SelectionDAG &DAG) const;
   SDValue buildHvxVectorPred(ArrayRef<SDValue> Values, const SDLoc &dl,
                              MVT VecTy, SelectionDAG &DAG) const;
-  SDValue createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
-                              unsigned BitBytes, bool ZeroFill,
-                              SelectionDAG &DAG) const;
+  SDValue createHvxPrefixPred(SDValue PredV, const SDLoc &dl, unsigned BitBytes,
+                              bool ZeroFill, SelectionDAG &DAG) const;
   SDValue extractHvxElementReg(SDValue VecV, SDValue IdxV, const SDLoc &dl,
                                MVT ResTy, SelectionDAG &DAG) const;
   SDValue extractHvxElementPred(SDValue VecV, SDValue IdxV, const SDLoc &dl,
@@ -531,8 +529,8 @@ private:
   SDValue insertHvxElementPred(SDValue VecV, SDValue IdxV, SDValue ValV,
                                const SDLoc &dl, SelectionDAG &DAG) const;
   SDValue extractHvxSubvectorReg(SDValue OrigOp, SDValue VecV, SDValue IdxV,
-                                 const SDLoc &dl, MVT ResTy, SelectionDAG &DAG)
-                                 const;
+                                 const SDLoc &dl, MVT ResTy,
+                                 SelectionDAG &DAG) const;
   SDValue extractHvxSubvectorPred(SDValue VecV, SDValue IdxV, const SDLoc &dl,
                                   MVT ResTy, SelectionDAG &DAG) const;
   SDValue insertHvxSubvectorReg(SDValue VecV, SDValue SubV, SDValue IdxV,
@@ -599,9 +597,8 @@ private:
   SDValue CreateTLWrapper(SDValue Op, SelectionDAG &DAG) const;
   SDValue RemoveTLWrapper(SDValue Op, SelectionDAG &DAG) const;
 
-  std::pair<const TargetRegisterClass*, uint8_t>
-  findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)
-      const override;
+  std::pair<const TargetRegisterClass *, uint8_t>
+  findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT) const override;
 
   bool shouldSplitToHvx(MVT Ty, SelectionDAG &DAG) const;
   bool shouldWidenToHvx(MVT Ty, SelectionDAG &DAG) const;
@@ -613,12 +610,12 @@ private:
                              SelectionDAG &DAG) const;
 
   SDValue combineTruncateBeforeLegal(SDValue Op, DAGCombinerInfo &DCI) const;
-  SDValue combineConcatVectorsBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
-      const;
-  SDValue combineVectorShuffleBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
-      const;
+  SDValue combineConcatVectorsBeforeLegal(SDValue Op,
+                                          DAGCombinerInfo &DCI) const;
+  SDValue combineVectorShuffleBeforeLegal(SDValue Op,
+                                          DAGCombinerInfo &DCI) const;
 
-  SDValue PerformHvxDAGCombine(SDNode * N, DAGCombinerInfo & DCI) const;
+  SDValue PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 };
 
 } // end namespace llvm

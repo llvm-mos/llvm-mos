@@ -23,8 +23,7 @@ class MachineInstr;
 //
 // FIXME: Does it make sense to factor out common code with the
 // instcombinerWorkList?
-template<unsigned N>
-class GISelWorkList {
+template <unsigned N> class GISelWorkList {
   SmallVector<MachineInstr *, N> Worklist;
   DenseMap<MachineInstr *, unsigned> WorklistMap;
 
@@ -106,7 +105,7 @@ public:
     MachineInstr *I;
     do {
       I = Worklist.pop_back_val();
-    } while(!I);
+    } while (!I);
     assert(I && "Pop back on empty worklist");
     WorklistMap.erase(I);
     return I;

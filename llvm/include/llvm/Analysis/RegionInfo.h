@@ -69,8 +69,7 @@ class raw_ostream;
 // Class to be specialized for different users of RegionInfo
 // (i.e. BasicBlocks or MachineBasicBlocks). This is only to avoid needing to
 // pass around an unreasonable number of template parameters.
-template <class FuncT_>
-struct RegionTraits {
+template <class FuncT_> struct RegionTraits {
   // FuncT
   // BlockT
   // RegionT
@@ -79,8 +78,7 @@ struct RegionTraits {
   using BrokenT = typename FuncT_::UnknownRegionTypeError;
 };
 
-template <>
-struct RegionTraits<Function> {
+template <> struct RegionTraits<Function> {
   using FuncT = Function;
   using BlockT = BasicBlock;
   using RegionT = Region;
@@ -106,13 +104,11 @@ struct RegionTraits<Function> {
 /// and the iteration returns every BasicBlock.  If the Flat mode is not
 /// selected for SubRegions just one RegionNode containing the subregion is
 /// returned.
-template <class GraphType>
-class FlatIt {};
+template <class GraphType> class FlatIt {};
 
 /// A RegionNode represents a subregion or a BasicBlock that is part of a
 /// Region.
-template <class Tr>
-class RegionNodeBase {
+template <class Tr> class RegionNodeBase {
   friend class RegionBase<Tr>;
 
 public:
@@ -248,8 +244,7 @@ public:
 ///
 /// The first call returns a textual representation of the program structure
 /// tree, the second one creates a graphical representation using graphviz.
-template <class Tr>
-class RegionBase : public RegionNodeBase<Tr> {
+template <class Tr> class RegionBase : public RegionNodeBase<Tr> {
   friend class RegionInfoBase<Tr>;
 
   using FuncT = typename Tr::FuncT;
@@ -317,9 +312,7 @@ public:
 
   /// Get the entry BasicBlock of the Region.
   /// @return The entry BasicBlock of the region.
-  BlockT *getEntry() const {
-    return RegionNodeBase<Tr>::getEntry();
-  }
+  BlockT *getEntry() const { return RegionNodeBase<Tr>::getEntry(); }
 
   /// Replace the entry basic block of the region with the new basic
   ///        block.
@@ -359,9 +352,7 @@ public:
   /// Get the parent of the Region.
   /// @return The parent of the Region or NULL if this is a top level
   ///         Region.
-  RegionT *getParent() const {
-    return RegionNodeBase<Tr>::getParent();
-  }
+  RegionT *getParent() const { return RegionNodeBase<Tr>::getParent(); }
 
   /// Get the RegionNode representing the current Region.
   /// @return The RegionNode representing the current Region.
@@ -668,8 +659,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const RegionNodeBase<Tr> &Node);
 /// The RegionInfo pass detects all canonical regions in a function. The Regions
 /// are connected using the parent relation. This builds a Program Structure
 /// Tree.
-template <class Tr>
-class RegionInfoBase {
+template <class Tr> class RegionInfoBase {
   friend class RegionInfo;
   friend class MachineRegionInfo;
 
@@ -692,9 +682,9 @@ class RegionInfoBase {
   RegionInfoBase();
 
   RegionInfoBase(RegionInfoBase &&Arg)
-    : DT(std::move(Arg.DT)), PDT(std::move(Arg.PDT)), DF(std::move(Arg.DF)),
-      TopLevelRegion(std::move(Arg.TopLevelRegion)),
-      BBtoRegion(std::move(Arg.BBtoRegion)) {
+      : DT(std::move(Arg.DT)), PDT(std::move(Arg.PDT)), DF(std::move(Arg.DF)),
+        TopLevelRegion(std::move(Arg.TopLevelRegion)),
+        BBtoRegion(std::move(Arg.BBtoRegion)) {
     Arg.wipe();
   }
 
@@ -725,7 +715,7 @@ protected:
   ///
   /// This is a post-move helper. Regions hold references to the owning
   /// RegionInfo object. After a move these need to be fixed.
-  template<typename TheRegionT>
+  template <typename TheRegionT>
   void updateRegionTree(RegionInfoT &RI, TheRegionT *R) {
     if (!R)
       return;

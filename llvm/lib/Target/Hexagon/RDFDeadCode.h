@@ -23,43 +23,43 @@
 #ifndef RDF_DEADCODE_H
 #define RDF_DEADCODE_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/RDFGraph.h"
 #include "llvm/CodeGen/RDFLiveness.h"
-#include "llvm/ADT/SetVector.h"
 
 namespace llvm {
-  class MachineRegisterInfo;
+class MachineRegisterInfo;
 
 namespace rdf {
-  struct DeadCodeElimination {
-    DeadCodeElimination(DataFlowGraph &dfg, MachineRegisterInfo &mri)
+struct DeadCodeElimination {
+  DeadCodeElimination(DataFlowGraph &dfg, MachineRegisterInfo &mri)
       : Trace(false), DFG(dfg), MRI(mri), LV(mri, dfg) {}
 
-    bool collect();
-    bool erase(const SetVector<NodeId> &Nodes);
-    void trace(bool On) { Trace = On; }
-    bool trace() const { return Trace; }
+  bool collect();
+  bool erase(const SetVector<NodeId> &Nodes);
+  void trace(bool On) { Trace = On; }
+  bool trace() const { return Trace; }
 
-    SetVector<NodeId> getDeadNodes() { return DeadNodes; }
-    SetVector<NodeId> getDeadInstrs() { return DeadInstrs; }
-    DataFlowGraph &getDFG() { return DFG; }
+  SetVector<NodeId> getDeadNodes() { return DeadNodes; }
+  SetVector<NodeId> getDeadInstrs() { return DeadInstrs; }
+  DataFlowGraph &getDFG() { return DFG; }
 
-  private:
-    bool Trace;
-    SetVector<NodeId> LiveNodes;
-    SetVector<NodeId> DeadNodes;
-    SetVector<NodeId> DeadInstrs;
-    DataFlowGraph &DFG;
-    MachineRegisterInfo &MRI;
-    Liveness LV;
+private:
+  bool Trace;
+  SetVector<NodeId> LiveNodes;
+  SetVector<NodeId> DeadNodes;
+  SetVector<NodeId> DeadInstrs;
+  DataFlowGraph &DFG;
+  MachineRegisterInfo &MRI;
+  Liveness LV;
 
-    template<typename T> struct SetQueue;
+  template <typename T> struct SetQueue;
 
-    bool isLiveInstr(NodeAddr<StmtNode*> S) const;
-    void scanInstr(NodeAddr<InstrNode*> IA, SetQueue<NodeId> &WorkQ);
-    void processDef(NodeAddr<DefNode*> DA, SetQueue<NodeId> &WorkQ);
-    void processUse(NodeAddr<UseNode*> UA, SetQueue<NodeId> &WorkQ);
-  };
+  bool isLiveInstr(NodeAddr<StmtNode *> S) const;
+  void scanInstr(NodeAddr<InstrNode *> IA, SetQueue<NodeId> &WorkQ);
+  void processDef(NodeAddr<DefNode *> DA, SetQueue<NodeId> &WorkQ);
+  void processUse(NodeAddr<UseNode *> UA, SetQueue<NodeId> &WorkQ);
+};
 } // namespace rdf
 } // namespace llvm
 

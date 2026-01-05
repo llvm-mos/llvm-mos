@@ -23,12 +23,14 @@ namespace llvm {
 /// A parser for the latest stackmap format.  At the moment, latest=V3.
 template <llvm::endianness Endianness> class StackMapParser {
 public:
-  template <typename AccessorT>
-  class AccessorIterator {
+  template <typename AccessorT> class AccessorIterator {
   public:
     AccessorIterator(AccessorT A) : A(A) {}
 
-    AccessorIterator& operator++() { A = A.next(); return *this; }
+    AccessorIterator &operator++() {
+      A = A.next();
+      return *this;
+    }
     AccessorIterator operator++(int) {
       auto tmp = *this;
       ++*this;
@@ -43,8 +45,8 @@ public:
       return !(*this == Other);
     }
 
-    AccessorT& operator*() { return A; }
-    AccessorT* operator->() { return &A; }
+    AccessorT &operator*() { return A; }
+    AccessorT *operator->() { return &A; }
 
   private:
     AccessorT A;
@@ -56,9 +58,7 @@ public:
 
   public:
     /// Get the function address.
-    uint64_t getFunctionAddress() const {
-      return read<uint64_t>(P);
-    }
+    uint64_t getFunctionAddress() const { return read<uint64_t>(P); }
 
     /// Get the function's stack size.
     uint64_t getStackSize() const {
@@ -103,7 +103,11 @@ public:
   };
 
   enum class LocationKind : uint8_t {
-    Register = 1, Direct = 2, Indirect = 3, Constant = 4, ConstantIndex = 5
+    Register = 1,
+    Direct = 2,
+    Indirect = 3,
+    Constant = 4,
+    ConstantIndex = 5
   };
 
   /// Accessor for location records.
@@ -113,15 +117,10 @@ public:
 
   public:
     /// Get the Kind for this location.
-    LocationKind getKind() const {
-      return LocationKind(P[KindOffset]);
-    }
+    LocationKind getKind() const { return LocationKind(P[KindOffset]); }
 
     /// Get the Size for this location.
-    unsigned getSizeInBytes() const {
-        return read<uint16_t>(P + SizeOffset);
-
-    }
+    unsigned getSizeInBytes() const { return read<uint16_t>(P + SizeOffset); }
 
     /// Get the Dwarf register number for this location.
     uint16_t getDwarfRegNum() const {
@@ -177,9 +176,7 @@ public:
     }
 
     /// Get the size in bytes of live [sub]register.
-    unsigned getSizeInBytes() const {
-      return read<uint8_t>(P + SizeOffset);
-    }
+    unsigned getSizeInBytes() const { return read<uint8_t>(P + SizeOffset); }
 
   private:
     LiveOutAccessor(const uint8_t *P) : P(P) {}
@@ -190,7 +187,7 @@ public:
 
     static const int DwarfRegNumOffset = 0;
     static const int SizeOffset =
-      DwarfRegNumOffset + sizeof(uint16_t) + sizeof(uint8_t);
+        DwarfRegNumOffset + sizeof(uint16_t) + sizeof(uint8_t);
     static const int LiveOutAccessorSize = sizeof(uint32_t);
 
     const uint8_t *P;
@@ -205,9 +202,7 @@ public:
     using liveout_iterator = AccessorIterator<LiveOutAccessor>;
 
     /// Get the patchpoint/stackmap ID for this record.
-    uint64_t getID() const {
-      return read<uint64_t>(P + PatchpointIDOffset);
-    }
+    uint64_t getID() const { return read<uint64_t>(P + PatchpointIDOffset); }
 
     /// Get the instruction offset (from the start of the containing function)
     /// for this record.
@@ -223,7 +218,7 @@ public:
     /// Get the location with the given index.
     LocationAccessor getLocation(unsigned LocationIndex) const {
       unsigned LocationOffset =
-        LocationListOffset + LocationIndex * LocationSize;
+          LocationListOffset + LocationIndex * LocationSize;
       return LocationAccessor(P + LocationOffset);
     }
 
@@ -249,8 +244,8 @@ public:
 
     /// Get the live-out with the given index.
     LiveOutAccessor getLiveOut(unsigned LiveOutIndex) const {
-      unsigned LiveOutOffset =
-        getNumLiveOutsOffset() + sizeof(uint16_t) + LiveOutIndex * LiveOutSize;
+      unsigned LiveOutOffset = getNumLiveOutsOffset() + sizeof(uint16_t) +
+                               LiveOutIndex * LiveOutSize;
       return LiveOutAccessor(P + LiveOutOffset);
     }
 
@@ -273,28 +268,26 @@ public:
     RecordAccessor(const uint8_t *P) : P(P) {}
 
     unsigned getNumLiveOutsOffset() const {
-      unsigned LocOffset = 
-          ((LocationListOffset + LocationSize * getNumLocations()) + 7) & ~0x7; 
+      unsigned LocOffset =
+          ((LocationListOffset + LocationSize * getNumLocations()) + 7) & ~0x7;
       return LocOffset + sizeof(uint16_t);
     }
 
     unsigned getSizeInBytes() const {
-      unsigned RecordSize =
-        getNumLiveOutsOffset() + sizeof(uint16_t) + getNumLiveOuts() * LiveOutSize;
+      unsigned RecordSize = getNumLiveOutsOffset() + sizeof(uint16_t) +
+                            getNumLiveOuts() * LiveOutSize;
       return (RecordSize + 7) & ~0x7;
     }
 
-    RecordAccessor next() const {
-      return RecordAccessor(P + getSizeInBytes());
-    }
+    RecordAccessor next() const { return RecordAccessor(P + getSizeInBytes()); }
 
     static const unsigned PatchpointIDOffset = 0;
     static const unsigned InstructionOffsetOffset =
-      PatchpointIDOffset + sizeof(uint64_t);
+        PatchpointIDOffset + sizeof(uint64_t);
     static const unsigned NumLocationsOffset =
-      InstructionOffsetOffset + sizeof(uint32_t) + sizeof(uint16_t);
+        InstructionOffsetOffset + sizeof(uint32_t) + sizeof(uint16_t);
     static const unsigned LocationListOffset =
-      NumLocationsOffset + sizeof(uint16_t);
+        NumLocationsOffset + sizeof(uint16_t);
     static const unsigned LocationSize = sizeof(uint64_t) + sizeof(uint32_t);
     static const unsigned LiveOutSize = sizeof(uint32_t);
 
@@ -311,12 +304,13 @@ public:
            "StackMapParser can only parse version 3 stackmaps");
 
     unsigned CurrentRecordOffset =
-      ConstantsListOffset + getNumConstants() * ConstantSize;
+        ConstantsListOffset + getNumConstants() * ConstantSize;
 
     for (unsigned I = 0, E = getNumRecords(); I != E; ++I) {
       StackMapRecordOffsets.push_back(CurrentRecordOffset);
       CurrentRecordOffset +=
-        RecordAccessor(&StackMapSection[CurrentRecordOffset]).getSizeInBytes();
+          RecordAccessor(&StackMapSection[CurrentRecordOffset])
+              .getSizeInBytes();
     }
   }
 
@@ -372,9 +366,8 @@ public:
 
   /// End iterator for functions.
   function_iterator functions_end() const {
-    return function_iterator(
-             FunctionAccessor(StackMapSection.data() +
-                              getFunctionOffset(getNumFunctions())));
+    return function_iterator(FunctionAccessor(
+        StackMapSection.data() + getFunctionOffset(getNumFunctions())));
   }
 
   /// Iterator range for functions.
@@ -395,9 +388,8 @@ public:
 
   /// End iterator for constants.
   constant_iterator constants_end() const {
-    return constant_iterator(
-             ConstantAccessor(StackMapSection.data() +
-                              getConstantOffset(getNumConstants())));
+    return constant_iterator(ConstantAccessor(
+        StackMapSection.data() + getConstantOffset(getNumConstants())));
   }
 
   /// Iterator range for constants.
@@ -434,16 +426,18 @@ public:
   }
 
 private:
-  template <typename T>
-  static T read(const uint8_t *P) {
+  template <typename T> static T read(const uint8_t *P) {
     return support::endian::read<T, Endianness>(P);
   }
 
   static const unsigned HeaderOffset = 0;
   static const unsigned NumFunctionsOffset = HeaderOffset + sizeof(uint32_t);
-  static const unsigned NumConstantsOffset = NumFunctionsOffset + sizeof(uint32_t);
-  static const unsigned NumRecordsOffset = NumConstantsOffset + sizeof(uint32_t);
-  static const unsigned FunctionListOffset = NumRecordsOffset + sizeof(uint32_t);
+  static const unsigned NumConstantsOffset =
+      NumFunctionsOffset + sizeof(uint32_t);
+  static const unsigned NumRecordsOffset =
+      NumConstantsOffset + sizeof(uint32_t);
+  static const unsigned FunctionListOffset =
+      NumRecordsOffset + sizeof(uint32_t);
 
   static const unsigned FunctionSize = 3 * sizeof(uint64_t);
   static const unsigned ConstantSize = sizeof(uint64_t);

@@ -131,9 +131,7 @@ public:
   static ConstantInt *getSigned(IntegerType *Ty, int64_t V) {
     return get(Ty, V, true);
   }
-  static Constant *getSigned(Type *Ty, int64_t V) {
-    return get(Ty, V, true);
-  }
+  static Constant *getSigned(Type *Ty, int64_t V) { return get(Ty, V, true); }
 
   /// Return a ConstantInt with the specified value and an implied Type. The
   /// type is the integer type that corresponds to the bit width of the value.
@@ -1012,9 +1010,7 @@ public:
   }
 
   /// NoCFIValue is always a pointer.
-  PointerType *getType() const {
-    return cast<PointerType>(Value::getType());
-  }
+  PointerType *getType() const { return cast<PointerType>(Value::getType()); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {

@@ -222,9 +222,9 @@ public:
   void addValues(ArrayRef<DbgValueLoc> Vals) {
     Values.append(Vals.begin(), Vals.end());
     sortUniqueValues();
-    assert((Values.size() == 1 || all_of(Values, [](DbgValueLoc V) {
-              return V.isFragment();
-            })) && "must either have a single value or multiple pieces");
+    assert((Values.size() == 1 ||
+            all_of(Values, [](DbgValueLoc V) { return V.isFragment(); })) &&
+           "must either have a single value or multiple pieces");
   }
 
   // Sort the pieces by offset.
@@ -244,10 +244,8 @@ public:
   }
 
   /// Lower this entry into a DWARF expression.
-  void finalize(const AsmPrinter &AP,
-                DebugLocStream::ListBuilder &List,
-                const DIBasicType *BT,
-                DwarfCompileUnit &TheCU);
+  void finalize(const AsmPrinter &AP, DebugLocStream::ListBuilder &List,
+                const DIBasicType *BT, DwarfCompileUnit &TheCU);
 };
 
 /// Compare two DbgValueLocEntries for equality.
@@ -277,12 +275,11 @@ inline bool operator==(const DbgValueLoc &A, const DbgValueLoc &B) {
 }
 
 /// Compare two fragments based on their offset.
-inline bool operator<(const DbgValueLoc &A,
-                      const DbgValueLoc &B) {
+inline bool operator<(const DbgValueLoc &A, const DbgValueLoc &B) {
   return A.getExpression()->getFragmentInfo()->OffsetInBits <
          B.getExpression()->getFragmentInfo()->OffsetInBits;
 }
 
-}
+} // namespace llvm
 
 #endif

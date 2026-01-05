@@ -108,7 +108,7 @@ public:
   InterfaceFile(std::unique_ptr<SymbolSet> &&InputSymbols)
       : SymbolsSet(std::move(InputSymbols)) {}
 
-  InterfaceFile() : SymbolsSet(std::make_unique<SymbolSet>()){};
+  InterfaceFile() : SymbolsSet(std::make_unique<SymbolSet>()) {};
   /// Set the path from which this file was generated (if applicable).
   ///
   /// \param Path_ The path to the source file.

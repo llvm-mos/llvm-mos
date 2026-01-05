@@ -98,9 +98,7 @@ struct OffsetNamePair {
   uint32_t Offset;
   StringRef Name;
 
-  bool operator<(const OffsetNamePair &R) const {
-    return Offset < R.Offset;
-  }
+  bool operator<(const OffsetNamePair &R) const { return Offset < R.Offset; }
 };
 
 } // end anonymous namespace
@@ -221,7 +219,8 @@ Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
 // Return true if this is a 32-bit x86 PE COFF module.
 bool SymbolizableObjectFile::isWin32Module() const {
   auto *CoffObject = dyn_cast<COFFObjectFile>(Module);
-  return CoffObject && CoffObject->getMachine() == COFF::IMAGE_FILE_MACHINE_I386;
+  return CoffObject &&
+         CoffObject->getMachine() == COFF::IMAGE_FILE_MACHINE_I386;
 }
 
 uint64_t SymbolizableObjectFile::getModulePreferredBase() const {

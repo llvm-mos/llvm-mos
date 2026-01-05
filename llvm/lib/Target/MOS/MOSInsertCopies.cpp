@@ -79,7 +79,8 @@ bool MOSInsertCopies::runOnMachineFunction(MachineFunction &MF) {
         break;
       }
 
-      for (unsigned Idx = 0, EndIdx = I->getNumExplicitDefs(); Idx != EndIdx; ++Idx) {
+      for (unsigned Idx = 0, EndIdx = I->getNumExplicitDefs(); Idx != EndIdx;
+           ++Idx) {
         MachineOperand &DstOp = I->getOperand(Idx);
         if (!DstOp.isReg() || !DstOp.isTied() || !DstOp.getReg().isVirtual())
           continue;

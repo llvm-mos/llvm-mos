@@ -119,8 +119,8 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
   }
 
   case MachineOperand::MO_FrameIndex:
-    return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
-                               MO.getIndex(), MO.getOffset());
+    return stable_hash_combine(MO.getType(), MO.getTargetFlags(), MO.getIndex(),
+                               MO.getOffset());
   case MachineOperand::MO_JumpTableIndex:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
                                MO.getIndex());

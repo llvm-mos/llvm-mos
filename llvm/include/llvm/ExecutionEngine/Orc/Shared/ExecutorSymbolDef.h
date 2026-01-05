@@ -56,7 +56,7 @@ public:
 
   ExecutorSymbolDef() = default;
   ExecutorSymbolDef(ExecutorAddr Addr, JITSymbolFlags Flags)
-    : Addr(Addr), Flags(Flags) {}
+      : Addr(Addr), Flags(Flags) {}
 
   const ExecutorAddr &getAddress() const { return Addr; }
 

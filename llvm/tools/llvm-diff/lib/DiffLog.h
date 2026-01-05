@@ -17,67 +17,67 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
-  class Instruction;
-  class Value;
-  class Consumer;
+class Instruction;
+class Value;
+class Consumer;
 
-  /// Trichotomy assumption
-  enum DiffChange { DC_match, DC_left, DC_right };
+/// Trichotomy assumption
+enum DiffChange { DC_match, DC_left, DC_right };
 
-  /// A temporary-object class for building up log messages.
-  class LogBuilder {
-    Consumer *consumer;
+/// A temporary-object class for building up log messages.
+class LogBuilder {
+  Consumer *consumer;
 
-    /// The use of a stored StringRef here is okay because
-    /// LogBuilder should be used only as a temporary, and as a
-    /// temporary it will be destructed before whatever temporary
-    /// might be initializing this format.
-    StringRef Format;
+  /// The use of a stored StringRef here is okay because
+  /// LogBuilder should be used only as a temporary, and as a
+  /// temporary it will be destructed before whatever temporary
+  /// might be initializing this format.
+  StringRef Format;
 
-    SmallVector<const Value *, 4> Arguments;
+  SmallVector<const Value *, 4> Arguments;
 
-  public:
-    LogBuilder(Consumer &c, StringRef Format) : consumer(&c), Format(Format) {}
-    LogBuilder(LogBuilder &&L)
-        : consumer(L.consumer), Format(L.Format),
-          Arguments(std::move(L.Arguments)) {
-      L.consumer = nullptr;
-    }
+public:
+  LogBuilder(Consumer &c, StringRef Format) : consumer(&c), Format(Format) {}
+  LogBuilder(LogBuilder &&L)
+      : consumer(L.consumer), Format(L.Format),
+        Arguments(std::move(L.Arguments)) {
+    L.consumer = nullptr;
+  }
 
-    LogBuilder &operator<<(const Value *V) {
-      Arguments.push_back(V);
-      return *this;
-    }
+  LogBuilder &operator<<(const Value *V) {
+    Arguments.push_back(V);
+    return *this;
+  }
 
-    ~LogBuilder();
+  ~LogBuilder();
 
-    StringRef getFormat() const;
-    unsigned getNumArguments() const;
-    const Value *getArgument(unsigned I) const;
-  };
+  StringRef getFormat() const;
+  unsigned getNumArguments() const;
+  const Value *getArgument(unsigned I) const;
+};
 
-  /// A temporary-object class for building up diff messages.
-  class DiffLogBuilder {
-    typedef std::pair<const Instruction *, const Instruction *> DiffRecord;
-    SmallVector<DiffRecord, 20> Diff;
+/// A temporary-object class for building up diff messages.
+class DiffLogBuilder {
+  typedef std::pair<const Instruction *, const Instruction *> DiffRecord;
+  SmallVector<DiffRecord, 20> Diff;
 
-    Consumer &consumer;
+  Consumer &consumer;
 
-  public:
-    DiffLogBuilder(Consumer &c) : consumer(c) {}
-    ~DiffLogBuilder();
+public:
+  DiffLogBuilder(Consumer &c) : consumer(c) {}
+  ~DiffLogBuilder();
 
-    void addMatch(const Instruction *L, const Instruction *R);
-    // HACK: VS 2010 has a bug in the stdlib that requires this.
-    void addLeft(const Instruction *L);
-    void addRight(const Instruction *R);
+  void addMatch(const Instruction *L, const Instruction *R);
+  // HACK: VS 2010 has a bug in the stdlib that requires this.
+  void addLeft(const Instruction *L);
+  void addRight(const Instruction *R);
 
-    unsigned getNumLines() const;
-    DiffChange getLineKind(unsigned I) const;
-    const Instruction *getLeft(unsigned I) const;
-    const Instruction *getRight(unsigned I) const;
-  };
+  unsigned getNumLines() const;
+  DiffChange getLineKind(unsigned I) const;
+  const Instruction *getLeft(unsigned I) const;
+  const Instruction *getRight(unsigned I) const;
+};
 
-}
+} // namespace llvm
 
 #endif

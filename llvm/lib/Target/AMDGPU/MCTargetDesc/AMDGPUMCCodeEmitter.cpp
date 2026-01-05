@@ -111,8 +111,7 @@ static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
 
 // Returns the encoding value to use if the given integer is an integer inline
 // immediate value, or 0 if it is not.
-template <typename IntTy>
-static uint32_t getIntInlineImmEncoding(IntTy Imm) {
+template <typename IntTy> static uint32_t getIntInlineImmEncoding(IntTy Imm) {
   if (Imm >= 0 && Imm <= 64)
     return 128 + Imm;
 
@@ -385,7 +384,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                             const MCSubtargetInfo &STI) const {
   int Opcode = MI.getOpcode();
   APInt Encoding, Scratch;
-  getBinaryCodeForInstr(MI, Fixups, Encoding, Scratch,  STI);
+  getBinaryCodeForInstr(MI, Fixups, Encoding, Scratch, STI);
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   unsigned bytes = Desc.getSize();
 
@@ -421,10 +420,10 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   // NSA encoding.
   if (AMDGPU::isGFX10Plus(STI) && Desc.TSFlags & SIInstrFlags::MIMG) {
-    int vaddr0 = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
-                                            AMDGPU::OpName::vaddr0);
-    int srsrc = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
-                                           AMDGPU::OpName::srsrc);
+    int vaddr0 =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vaddr0);
+    int srsrc =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::srsrc);
     assert(vaddr0 >= 0 && srsrc > vaddr0);
     unsigned NumExtraAddrs = srsrc - vaddr0 - 1;
     unsigned NumPadding = (-NumExtraAddrs) & 3;
@@ -607,7 +606,7 @@ void AMDGPUMCCodeEmitter::getMachineOpValue(const MCInst &MI,
                                             const MCOperand &MO, APInt &Op,
                                             SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {
-  if (MO.isReg()){
+  if (MO.isReg()) {
     unsigned Enc = MRI.getEncodingValue(MO.getReg());
     unsigned Idx = Enc & AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
     bool IsVGPROrAGPR =

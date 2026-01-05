@@ -215,7 +215,7 @@ AbstractInterpreter *
 AbstractInterpreter::createLLI(const char *Argv0, std::string &Message,
                                const std::vector<std::string> *ToolArgs) {
   if (ErrorOr<std::string> LLIPath =
-      FindProgramByName("lli", Argv0, (void *)(intptr_t)&createLLI)) {
+          FindProgramByName("lli", Argv0, (void *)(intptr_t)&createLLI)) {
     Message = "Found lli: " + *LLIPath + "\n";
     return new LLI(*LLIPath, ToolArgs);
   } else {
@@ -716,11 +716,10 @@ Expected<int> CC::ExecuteProgram(const std::string &ProgramFile,
   // Now that we have a binary, run it!
   outs() << "<program>";
   outs().flush();
-  LLVM_DEBUG(
-      errs() << "\nAbout to run:\t";
-      for (unsigned i = 0, e = ProgramArgs.size(); i != e; ++i) errs()
-      << " " << ProgramArgs[i];
-      errs() << "\n";);
+  LLVM_DEBUG(errs() << "\nAbout to run:\t";
+             for (unsigned i = 0, e = ProgramArgs.size(); i != e; ++i) errs()
+             << " " << ProgramArgs[i];
+             errs() << "\n";);
 
   FileRemover OutputBinaryRemover(OutputBinary.str(), !SaveTemps);
 
@@ -801,8 +800,8 @@ Error CC::MakeSharedObject(const std::string &InputFile, FileType fileType,
     CCArgs.push_back("-mcpu=v9");
 
   CCArgs.push_back("-o");
-  CCArgs.push_back(OutputFile);         // Output to the right filename.
-  CCArgs.push_back("-O2");              // Optimize the program a bit.
+  CCArgs.push_back(OutputFile); // Output to the right filename.
+  CCArgs.push_back("-O2");      // Optimize the program a bit.
 
   // Add any arguments intended for CC. We locate them here because this is
   // most likely -L and -l options that need to come before other libraries but
@@ -828,8 +827,8 @@ CC *CC::create(const char *Argv0, std::string &Message,
                const std::vector<std::string> *Args) {
   auto CCPath = FindProgramByName(CCBinary, Argv0, (void *)(intptr_t)&create);
   if (!CCPath) {
-    Message = "Cannot find `" + CCBinary + "' in PATH: " +
-              CCPath.getError().message() + "\n";
+    Message = "Cannot find `" + CCBinary +
+              "' in PATH: " + CCPath.getError().message() + "\n";
     return nullptr;
   }
 
@@ -837,8 +836,8 @@ CC *CC::create(const char *Argv0, std::string &Message,
   if (!RemoteClient.empty()) {
     auto Path = sys::findProgramByName(RemoteClient);
     if (!Path) {
-      Message = "Cannot find `" + RemoteClient + "' in PATH: " +
-                Path.getError().message() + "\n";
+      Message = "Cannot find `" + RemoteClient +
+                "' in PATH: " + Path.getError().message() + "\n";
       return nullptr;
     }
     RemoteClientPath = *Path;

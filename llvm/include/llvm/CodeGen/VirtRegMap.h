@@ -259,6 +259,6 @@ public:
   }
 };
 
-} // end llvm namespace
+} // namespace llvm
 
 #endif // LLVM_CODEGEN_VIRTREGMAP_H

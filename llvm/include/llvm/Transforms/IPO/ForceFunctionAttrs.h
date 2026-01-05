@@ -24,6 +24,6 @@ struct ForceFunctionAttrsPass : PassInfoMixin<ForceFunctionAttrsPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_FORCEFUNCTIONATTRS_H

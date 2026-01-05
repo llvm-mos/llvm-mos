@@ -19,7 +19,6 @@ namespace llvm {
 class RuntimeDyldMachOAArch64
     : public RuntimeDyldMachOCRTPBase<RuntimeDyldMachOAArch64> {
 public:
-
   typedef uint64_t TargetPtrT;
 
   RuntimeDyldMachOAArch64(RuntimeDyld::MemoryManager &MM,
@@ -125,7 +124,7 @@ public:
       // or add / sub instructions.
       auto *p = reinterpret_cast<support::aligned_ulittle32_t *>(LocalAddress);
       assert((((*p & 0x3B000000) == 0x39000000) ||
-              ((*p & 0x11C00000) == 0x11000000)   ) &&
+              ((*p & 0x11C00000) == 0x11000000)) &&
              "Expected load / store  or add/sub instruction.");
 
       // Get the 12 bit addend encoded in the instruction.
@@ -229,7 +228,7 @@ public:
       // or add / sub instructions.
       auto *p = reinterpret_cast<support::aligned_ulittle32_t *>(LocalAddress);
       assert((((*p & 0x3B000000) == 0x39000000) ||
-              ((*p & 0x11C00000) == 0x11000000)   ) &&
+              ((*p & 0x11C00000) == 0x11000000)) &&
              "Expected load / store  or add/sub instruction.");
 
       // Check which instruction we are decoding to obtain the implicit shift
@@ -269,13 +268,10 @@ public:
     }
   }
 
-  Expected<relocation_iterator>
-  processRelocationRef(unsigned SectionID, relocation_iterator RelI,
-                       const ObjectFile &BaseObjT,
-                       ObjSectionToIDMap &ObjSectionToID,
-                       StubMap &Stubs) override {
-    const MachOObjectFile &Obj =
-      static_cast<const MachOObjectFile &>(BaseObjT);
+  Expected<relocation_iterator> processRelocationRef(
+      unsigned SectionID, relocation_iterator RelI, const ObjectFile &BaseObjT,
+      ObjSectionToIDMap &ObjSectionToID, StubMap &Stubs) override {
+    const MachOObjectFile &Obj = static_cast<const MachOObjectFile &>(BaseObjT);
     MachO::any_relocation_info RelInfo =
         Obj.getRelocation(RelI->getRawDataRefImpl());
 
@@ -318,8 +314,9 @@ public:
     else
       return Addend.takeError();
 
-    assert((ExplicitAddend == 0 || RE.Addend == 0) && "Relocation has "\
-      "ARM64_RELOC_ADDEND and embedded addend in the instruction.");
+    assert((ExplicitAddend == 0 || RE.Addend == 0) &&
+           "Relocation has "
+           "ARM64_RELOC_ADDEND and embedded addend in the instruction.");
     if (ExplicitAddend)
       RE.Addend = ExplicitAddend;
 
@@ -358,7 +355,7 @@ public:
     const SectionEntry &Section = Sections[RE.SectionID];
     uint8_t *LocalAddress = Section.getAddressWithOffset(RE.Offset);
     MachO::RelocationInfoType RelType =
-      static_cast<MachO::RelocationInfoType>(RE.RelType);
+        static_cast<MachO::RelocationInfoType>(RE.RelType);
 
     switch (RelType) {
     default:
@@ -400,7 +397,7 @@ public:
       // Adjust for PC-relative relocation and offset.
       uint64_t FinalAddress = Section.getLoadAddressWithOffset(RE.Offset);
       int64_t PCRelVal =
-        ((Value + RE.Addend) & (-4096)) - (FinalAddress & (-4096));
+          ((Value + RE.Addend) & (-4096)) - (FinalAddress & (-4096));
       encodeAddend(LocalAddress, /*Size=*/4, RelType, PCRelVal);
       break;
     }
@@ -434,7 +431,7 @@ public:
   }
 
   Error finalizeSection(const ObjectFile &Obj, unsigned SectionID,
-                       const SectionRef &Section) {
+                        const SectionRef &Section) {
     return Error::success();
   }
 
@@ -480,8 +477,7 @@ private:
   processSubtractRelocation(unsigned SectionID, relocation_iterator RelI,
                             const ObjectFile &BaseObjT,
                             ObjSectionToIDMap &ObjSectionToID) {
-    const MachOObjectFile &Obj =
-        static_cast<const MachOObjectFile&>(BaseObjT);
+    const MachOObjectFile &Obj = static_cast<const MachOObjectFile &>(BaseObjT);
     MachO::any_relocation_info RE =
         Obj.getRelocation(RelI->getRawDataRefImpl());
 
@@ -497,7 +493,7 @@ private:
     unsigned SectionBID = SubtrahendI->second.getSectionID();
     uint64_t SectionBOffset = SubtrahendI->second.getOffset();
     int64_t Addend =
-      SignExtend64(readBytesUnaligned(LocalAddress, NumBytes), NumBytes * 8);
+        SignExtend64(readBytesUnaligned(LocalAddress, NumBytes), NumBytes * 8);
 
     ++RelI;
     Expected<StringRef> MinuendNameOrErr = RelI->getSymbol()->getName();
@@ -507,9 +503,9 @@ private:
     unsigned SectionAID = MinuendI->second.getSectionID();
     uint64_t SectionAOffset = MinuendI->second.getOffset();
 
-    RelocationEntry R(SectionID, Offset, MachO::ARM64_RELOC_SUBTRACTOR, (uint64_t)Addend,
-                      SectionAID, SectionAOffset, SectionBID, SectionBOffset,
-                      false, Size);
+    RelocationEntry R(SectionID, Offset, MachO::ARM64_RELOC_SUBTRACTOR,
+                      (uint64_t)Addend, SectionAID, SectionAOffset, SectionBID,
+                      SectionBOffset, false, Size);
 
     addRelocationForSection(R, SectionAID);
 
@@ -518,23 +514,33 @@ private:
 
   static const char *getRelocName(uint32_t RelocType) {
     switch (RelocType) {
-      case MachO::ARM64_RELOC_UNSIGNED: return "ARM64_RELOC_UNSIGNED";
-      case MachO::ARM64_RELOC_SUBTRACTOR: return "ARM64_RELOC_SUBTRACTOR";
-      case MachO::ARM64_RELOC_BRANCH26: return "ARM64_RELOC_BRANCH26";
-      case MachO::ARM64_RELOC_PAGE21: return "ARM64_RELOC_PAGE21";
-      case MachO::ARM64_RELOC_PAGEOFF12: return "ARM64_RELOC_PAGEOFF12";
-      case MachO::ARM64_RELOC_GOT_LOAD_PAGE21: return "ARM64_RELOC_GOT_LOAD_PAGE21";
-      case MachO::ARM64_RELOC_GOT_LOAD_PAGEOFF12: return "ARM64_RELOC_GOT_LOAD_PAGEOFF12";
-      case MachO::ARM64_RELOC_POINTER_TO_GOT: return "ARM64_RELOC_POINTER_TO_GOT";
-      case MachO::ARM64_RELOC_TLVP_LOAD_PAGE21: return "ARM64_RELOC_TLVP_LOAD_PAGE21";
-      case MachO::ARM64_RELOC_TLVP_LOAD_PAGEOFF12: return "ARM64_RELOC_TLVP_LOAD_PAGEOFF12";
-      case MachO::ARM64_RELOC_ADDEND: return "ARM64_RELOC_ADDEND";
+    case MachO::ARM64_RELOC_UNSIGNED:
+      return "ARM64_RELOC_UNSIGNED";
+    case MachO::ARM64_RELOC_SUBTRACTOR:
+      return "ARM64_RELOC_SUBTRACTOR";
+    case MachO::ARM64_RELOC_BRANCH26:
+      return "ARM64_RELOC_BRANCH26";
+    case MachO::ARM64_RELOC_PAGE21:
+      return "ARM64_RELOC_PAGE21";
+    case MachO::ARM64_RELOC_PAGEOFF12:
+      return "ARM64_RELOC_PAGEOFF12";
+    case MachO::ARM64_RELOC_GOT_LOAD_PAGE21:
+      return "ARM64_RELOC_GOT_LOAD_PAGE21";
+    case MachO::ARM64_RELOC_GOT_LOAD_PAGEOFF12:
+      return "ARM64_RELOC_GOT_LOAD_PAGEOFF12";
+    case MachO::ARM64_RELOC_POINTER_TO_GOT:
+      return "ARM64_RELOC_POINTER_TO_GOT";
+    case MachO::ARM64_RELOC_TLVP_LOAD_PAGE21:
+      return "ARM64_RELOC_TLVP_LOAD_PAGE21";
+    case MachO::ARM64_RELOC_TLVP_LOAD_PAGEOFF12:
+      return "ARM64_RELOC_TLVP_LOAD_PAGEOFF12";
+    case MachO::ARM64_RELOC_ADDEND:
+      return "ARM64_RELOC_ADDEND";
     }
     return "Unrecognized arm64 addend";
   }
-
 };
-}
+} // namespace llvm
 
 #undef DEBUG_TYPE
 

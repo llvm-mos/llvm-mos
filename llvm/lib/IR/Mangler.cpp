@@ -107,9 +107,9 @@ static void addByteCountSuffix(raw_ostream &OS, const Function *F,
       continue;
 
     // 'Dereference' type in case of byval or inalloca parameter attribute.
-    uint64_t AllocSize = A.hasPassPointeeByValueCopyAttr() ?
-      A.getPassPointeeByValueCopySize(DL) :
-      DL.getTypeAllocSize(A.getType());
+    uint64_t AllocSize = A.hasPassPointeeByValueCopyAttr()
+                             ? A.getPassPointeeByValueCopySize(DL)
+                             : DL.getTypeAllocSize(A.getType());
 
     // Size should be aligned to pointer size.
     ArgWords += alignTo(AllocSize, PtrSize);

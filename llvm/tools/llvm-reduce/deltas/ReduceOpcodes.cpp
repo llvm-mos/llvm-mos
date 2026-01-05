@@ -22,9 +22,7 @@ using namespace llvm;
 
 // Assume outgoing undef arguments aren't relevant.
 // TODO: Maybe skip any trivial constant arguments.
-static bool shouldIgnoreArgument(const Value *V) {
-  return isa<UndefValue>(V);
-}
+static bool shouldIgnoreArgument(const Value *V) { return isa<UndefValue>(V); }
 
 static Value *replaceIntrinsic(Module &M, IntrinsicInst *II,
                                Intrinsic::ID NewIID,

@@ -26,14 +26,13 @@ namespace llvm {
 namespace support {
 
 // These are named values for common alignments.
-enum {aligned = 0, unaligned = 1};
+enum { aligned = 0, unaligned = 1 };
 
 namespace detail {
 
 /// ::value is either alignment, or alignof(T) if alignment is 0.
-template<class T, int alignment>
-struct PickAlignment {
- enum { value = alignment == 0 ? alignof(T) : alignment };
+template <class T, int alignment> struct PickAlignment {
+  enum { value = alignment == 0 ? alignof(T) : alignment };
 };
 
 } // end namespace detail

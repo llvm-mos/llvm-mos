@@ -854,9 +854,7 @@ public:
 
 #undef GETVALUE
 
-  uintptr_t getEntryAddress() const {
-    return getRawDataRefImpl().p;
-  }
+  uintptr_t getEntryAddress() const { return getRawDataRefImpl().p; }
 
   LLVM_ABI Expected<StringRef> getName() const;
   LLVM_ABI Expected<bool> isFunction() const;
@@ -871,8 +869,7 @@ private:
 
 class xcoff_symbol_iterator : public symbol_iterator {
 public:
-  xcoff_symbol_iterator(const basic_symbol_iterator &B)
-      : symbol_iterator(B) {}
+  xcoff_symbol_iterator(const basic_symbol_iterator &B) : symbol_iterator(B) {}
 
   xcoff_symbol_iterator(const XCOFFSymbolRef *Symbol)
       : symbol_iterator(*Symbol) {}

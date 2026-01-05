@@ -40,8 +40,9 @@ static cl::opt<GVDAGType> ViewMachineBlockFreqPropagationDAG(
                clEnumValN(GVDT_Integer, "integer",
                           "display a graph using the raw "
                           "integer fractional block frequency representation."),
-               clEnumValN(GVDT_Count, "count", "display a graph using the real "
-                                               "profile count if available.")));
+               clEnumValN(GVDT_Count, "count",
+                          "display a graph using the real "
+                          "profile count if available.")));
 
 namespace llvm {
 // Similar option above, but used to control BFI display only after MBP pass

@@ -24,10 +24,10 @@ enum class RuntimeFunctionFlag {
 };
 
 enum class ReturnType {
-  RT_POP,             /// return via pop {pc} (L flag must be set)
-  RT_B,               /// 16-bit branch
-  RT_BW,              /// 32-bit branch
-  RT_NoEpilogue,      /// no epilogue (fragment)
+  RT_POP,        /// return via pop {pc} (L flag must be set)
+  RT_B,          /// 16-bit branch
+  RT_BW,         /// 32-bit branch
+  RT_NoEpilogue, /// no epilogue (fragment)
 };
 
 /// RuntimeFunction - An entry in the table of procedure data (.pdata)
@@ -107,11 +107,11 @@ public:
   const support::ulittle32_t UnwindData;
 
   RuntimeFunction(const support::ulittle32_t *Data)
-    : BeginAddress(Data[0]), UnwindData(Data[1]) {}
+      : BeginAddress(Data[0]), UnwindData(Data[1]) {}
 
   RuntimeFunction(const support::ulittle32_t BeginAddress,
                   const support::ulittle32_t UnwindData)
-    : BeginAddress(BeginAddress), UnwindData(UnwindData) {}
+      : BeginAddress(BeginAddress), UnwindData(UnwindData) {}
 
   RuntimeFunctionFlag Flag() const {
     return RuntimeFunctionFlag(UnwindData & 0x3);
@@ -399,28 +399,18 @@ struct EpilogueScope {
 
   EpilogueScope(const support::ulittle32_t Data) : ES(Data) {}
   // Same for both ARM and AArch64.
-  uint32_t EpilogueStartOffset() const {
-    return (ES & 0x0003ffff);
-  }
+  uint32_t EpilogueStartOffset() const { return (ES & 0x0003ffff); }
 
   // Different implementations for ARM and AArch64.
-  uint8_t ResARM() const {
-    return ((ES & 0x000c0000) >> 18);
-  }
+  uint8_t ResARM() const { return ((ES & 0x000c0000) >> 18); }
 
-  uint8_t ResAArch64() const {
-    return ((ES & 0x000f0000) >> 18);
-  }
+  uint8_t ResAArch64() const { return ((ES & 0x000f0000) >> 18); }
 
   // Condition is only applicable to ARM.
-  uint8_t Condition() const {
-    return ((ES & 0x00f00000) >> 20);
-  }
+  uint8_t Condition() const { return ((ES & 0x00f00000) >> 20); }
 
   // Different implementations for ARM and AArch64.
-  uint8_t EpilogueStartIndexARM() const {
-    return ((ES & 0xff000000) >> 24);
-  }
+  uint8_t EpilogueStartIndexARM() const { return ((ES & 0xff000000) >> 24); }
 
   uint16_t EpilogueStartIndexAArch64() const {
     return ((ES & 0xffc00000) >> 22);
@@ -434,32 +424,22 @@ struct ExceptionDataRecord {
   const support::ulittle32_t *Data;
   bool isAArch64;
 
-  ExceptionDataRecord(const support::ulittle32_t *Data, bool isAArch64) :
-    Data(Data), isAArch64(isAArch64) {}
+  ExceptionDataRecord(const support::ulittle32_t *Data, bool isAArch64)
+      : Data(Data), isAArch64(isAArch64) {}
 
-  uint32_t FunctionLength() const {
-    return (Data[0] & 0x0003ffff);
-  }
+  uint32_t FunctionLength() const { return (Data[0] & 0x0003ffff); }
 
-  uint32_t FunctionLengthInBytesARM() const {
-    return FunctionLength() << 1;
-  }
+  uint32_t FunctionLengthInBytesARM() const { return FunctionLength() << 1; }
 
   uint32_t FunctionLengthInBytesAArch64() const {
     return FunctionLength() << 2;
   }
 
-  uint8_t Vers() const {
-    return (Data[0] & 0x000C0000) >> 18;
-  }
+  uint8_t Vers() const { return (Data[0] & 0x000C0000) >> 18; }
 
-  bool X() const {
-    return ((Data[0] & 0x00100000) >> 20);
-  }
+  bool X() const { return ((Data[0] & 0x00100000) >> 20); }
 
-  bool E() const {
-    return ((Data[0] & 0x00200000) >> 21);
-  }
+  bool E() const { return ((Data[0] & 0x00200000) >> 21); }
 
   bool F() const {
     assert(!isAArch64 && "Fragments are only supported on ARMv7 WinEH");
@@ -491,10 +471,8 @@ struct ExceptionDataRecord {
   }
 
   ArrayRef<uint8_t> UnwindByteCode() const {
-    const size_t Offset = HeaderWords(*this)
-                        + (E() ? 0 :  EpilogueCount());
-    const uint8_t *ByteCode =
-      reinterpret_cast<const uint8_t *>(&Data[Offset]);
+    const size_t Offset = HeaderWords(*this) + (E() ? 0 : EpilogueCount());
+    const uint8_t *ByteCode = reinterpret_cast<const uint8_t *>(&Data[Offset]);
     return ArrayRef(ByteCode, CodeWords() * sizeof(uint32_t));
   }
 
@@ -515,8 +493,8 @@ inline size_t HeaderWords(const ExceptionDataRecord &XR) {
     return (XR.Data[0] & 0xffc00000) ? 1 : 2;
   return (XR.Data[0] & 0xff800000) ? 1 : 2;
 }
-}
-}
-}
+} // namespace WinEH
+} // namespace ARM
+} // namespace llvm
 
 #endif

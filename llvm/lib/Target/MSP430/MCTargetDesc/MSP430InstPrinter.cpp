@@ -69,7 +69,7 @@ void MSP430InstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 void MSP430InstPrinter::printSrcMemOperand(const MCInst *MI, unsigned OpNo,
                                            raw_ostream &O) {
   const MCOperand &Base = MI->getOperand(OpNo);
-  const MCOperand &Disp = MI->getOperand(OpNo+1);
+  const MCOperand &Disp = MI->getOperand(OpNo + 1);
 
   // Print displacement first
 
@@ -90,8 +90,7 @@ void MSP430InstPrinter::printSrcMemOperand(const MCInst *MI, unsigned OpNo,
   }
 
   // Print register base field
-  if ((Base.getReg() != MSP430::SR) &&
-      (Base.getReg() != MSP430::PC))
+  if ((Base.getReg() != MSP430::SR) && (Base.getReg() != MSP430::PC))
     O << '(' << getRegisterName(Base.getReg()) << ')';
 }
 
@@ -113,27 +112,27 @@ void MSP430InstPrinter::printCCOperand(const MCInst *MI, unsigned OpNo,
 
   switch (CC) {
   default:
-   llvm_unreachable("Unsupported CC code");
+    llvm_unreachable("Unsupported CC code");
   case MSP430CC::COND_E:
-   O << "eq";
-   break;
+    O << "eq";
+    break;
   case MSP430CC::COND_NE:
-   O << "ne";
-   break;
+    O << "ne";
+    break;
   case MSP430CC::COND_HS:
-   O << "hs";
-   break;
+    O << "hs";
+    break;
   case MSP430CC::COND_LO:
-   O << "lo";
-   break;
+    O << "lo";
+    break;
   case MSP430CC::COND_GE:
-   O << "ge";
-   break;
+    O << "ge";
+    break;
   case MSP430CC::COND_L:
-   O << 'l';
-   break;
+    O << 'l';
+    break;
   case MSP430CC::COND_N:
-   O << 'n';
-   break;
+    O << 'n';
+    break;
   }
 }

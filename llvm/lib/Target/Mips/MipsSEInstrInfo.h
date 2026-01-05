@@ -115,13 +115,12 @@ private:
   void expandExtractElementF64(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I, bool isMicroMips,
                                bool FP64) const;
-  void expandBuildPairF64(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator I, bool isMicroMips,
-                          bool FP64) const;
+  void expandBuildPairF64(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                          bool isMicroMips, bool FP64) const;
   void expandEhReturn(MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator I) const;
 };
 
-}
+} // namespace llvm
 
 #endif

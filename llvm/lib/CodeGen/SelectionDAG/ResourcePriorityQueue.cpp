@@ -65,8 +65,7 @@ ResourcePriorityQueue::ResourcePriorityQueue(SelectionDAGISel *IS)
 
 ResourcePriorityQueue::~ResourcePriorityQueue() = default;
 
-unsigned
-ResourcePriorityQueue::numberRCValPredInSU(SUnit *SU, unsigned RCId) {
+unsigned ResourcePriorityQueue::numberRCValPredInSU(SUnit *SU, unsigned RCId) {
   unsigned NumberDeps = 0;
   for (SDep &Pred : SU->Preds) {
     if (Pred.isCtrl())
@@ -81,20 +80,26 @@ ResourcePriorityQueue::numberRCValPredInSU(SUnit *SU, unsigned RCId) {
     // If value is passed to CopyToReg, it is probably
     // live outside BB.
     switch (ScegN->getOpcode()) {
-      default:  break;
-      case ISD::TokenFactor:    break;
-      case ISD::CopyFromReg:    NumberDeps++;  break;
-      case ISD::CopyToReg:      break;
-      case ISD::INLINEASM:      break;
-      case ISD::INLINEASM_BR:   break;
+    default:
+      break;
+    case ISD::TokenFactor:
+      break;
+    case ISD::CopyFromReg:
+      NumberDeps++;
+      break;
+    case ISD::CopyToReg:
+      break;
+    case ISD::INLINEASM:
+      break;
+    case ISD::INLINEASM_BR:
+      break;
     }
     if (!ScegN->isMachineOpcode())
       continue;
 
     for (unsigned i = 0, e = ScegN->getNumValues(); i != e; ++i) {
       MVT VT = ScegN->getSimpleValueType(i);
-      if (TLI->isTypeLegal(VT)
-          && (TLI->getRegClassFor(VT)->getID() == RCId)) {
+      if (TLI->isTypeLegal(VT) && (TLI->getRegClassFor(VT)->getID() == RCId)) {
         NumberDeps++;
         break;
       }
@@ -103,8 +108,7 @@ ResourcePriorityQueue::numberRCValPredInSU(SUnit *SU, unsigned RCId) {
   return NumberDeps;
 }
 
-unsigned ResourcePriorityQueue::numberRCValSuccInSU(SUnit *SU,
-                                                    unsigned RCId) {
+unsigned ResourcePriorityQueue::numberRCValSuccInSU(SUnit *SU, unsigned RCId) {
   unsigned NumberDeps = 0;
   for (const SDep &Succ : SU->Succs) {
     if (Succ.isCtrl())
@@ -118,12 +122,19 @@ unsigned ResourcePriorityQueue::numberRCValSuccInSU(SUnit *SU,
     // If value is passed to CopyToReg, it is probably
     // live outside BB.
     switch (ScegN->getOpcode()) {
-      default:  break;
-      case ISD::TokenFactor:    break;
-      case ISD::CopyFromReg:    break;
-      case ISD::CopyToReg:      NumberDeps++;  break;
-      case ISD::INLINEASM:      break;
-      case ISD::INLINEASM_BR:   break;
+    default:
+      break;
+    case ISD::TokenFactor:
+      break;
+    case ISD::CopyFromReg:
+      break;
+    case ISD::CopyToReg:
+      NumberDeps++;
+      break;
+    case ISD::INLINEASM:
+      break;
+    case ISD::INLINEASM_BR:
+      break;
     }
     if (!ScegN->isMachineOpcode())
       continue;
@@ -131,8 +142,7 @@ unsigned ResourcePriorityQueue::numberRCValSuccInSU(SUnit *SU,
     for (unsigned i = 0, e = ScegN->getNumOperands(); i != e; ++i) {
       const SDValue &Op = ScegN->getOperand(i);
       MVT VT = Op.getNode()->getSimpleValueType(Op.getResNo());
-      if (TLI->isTypeLegal(VT)
-          && (TLI->getRegClassFor(VT)->getID() == RCId)) {
+      if (TLI->isTypeLegal(VT) && (TLI->getRegClassFor(VT)->getID() == RCId)) {
         NumberDeps++;
         break;
       }
@@ -190,21 +200,24 @@ bool resource_sort::operator()(const SUnit *LHS, const SUnit *RHS) const {
   // The most important heuristic is scheduling the critical path.
   unsigned LHSLatency = PQ->getLatency(LHSNum);
   unsigned RHSLatency = PQ->getLatency(RHSNum);
-  if (LHSLatency < RHSLatency) return true;
-  if (LHSLatency > RHSLatency) return false;
+  if (LHSLatency < RHSLatency)
+    return true;
+  if (LHSLatency > RHSLatency)
+    return false;
 
   // After that, if two nodes have identical latencies, look to see if one will
   // unblock more other nodes than the other.
   unsigned LHSBlocked = PQ->getNumSolelyBlockNodes(LHSNum);
   unsigned RHSBlocked = PQ->getNumSolelyBlockNodes(RHSNum);
-  if (LHSBlocked < RHSBlocked) return true;
-  if (LHSBlocked > RHSBlocked) return false;
+  if (LHSBlocked < RHSBlocked)
+    return true;
+  if (LHSBlocked > RHSBlocked)
+    return false;
 
   // Finally, just to provide a stable ordering, use the node number as a
   // deciding factor.
   return LHSNum < RHSNum;
 }
-
 
 /// getSingleUnscheduledPred - If there is exactly one unscheduled predecessor
 /// of SU, return it, otherwise return null.
@@ -251,16 +264,16 @@ bool ResourcePriorityQueue::isResourceAvailable(SUnit *SU) {
   if (SU->getNode()->isMachineOpcode())
     switch (SU->getNode()->getMachineOpcode()) {
     default:
-      if (!ResourcesModel->canReserveResources(&TII->get(
-          SU->getNode()->getMachineOpcode())))
-           return false;
+      if (!ResourcesModel->canReserveResources(
+              &TII->get(SU->getNode()->getMachineOpcode())))
+        return false;
       break;
     case TargetOpcode::EXTRACT_SUBREG:
     case TargetOpcode::INSERT_SUBREG:
     case TargetOpcode::SUBREG_TO_REG:
     case TargetOpcode::REG_SEQUENCE:
     case TargetOpcode::IMPLICIT_DEF:
-        break;
+      break;
     }
 
   // Now see if there are no other dependencies
@@ -291,8 +304,8 @@ void ResourcePriorityQueue::reserveResources(SUnit *SU) {
   if (SU->getNode() && SU->getNode()->isMachineOpcode()) {
     switch (SU->getNode()->getMachineOpcode()) {
     default:
-      ResourcesModel->reserveResources(&TII->get(
-        SU->getNode()->getMachineOpcode()));
+      ResourcesModel->reserveResources(
+          &TII->get(SU->getNode()->getMachineOpcode()));
       break;
     case TargetOpcode::EXTRACT_SUBREG:
     case TargetOpcode::INSERT_SUBREG:
@@ -325,22 +338,21 @@ int ResourcePriorityQueue::rawRegPressureDelta(SUnit *SU, unsigned RCId) {
 
   // Gen estimate.
   for (unsigned i = 0, e = SU->getNode()->getNumValues(); i != e; ++i) {
-      MVT VT = SU->getNode()->getSimpleValueType(i);
-      if (TLI->isTypeLegal(VT)
-          && TLI->getRegClassFor(VT)
-          && TLI->getRegClassFor(VT)->getID() == RCId)
-        RegBalance += numberRCValSuccInSU(SU, RCId);
+    MVT VT = SU->getNode()->getSimpleValueType(i);
+    if (TLI->isTypeLegal(VT) && TLI->getRegClassFor(VT) &&
+        TLI->getRegClassFor(VT)->getID() == RCId)
+      RegBalance += numberRCValSuccInSU(SU, RCId);
   }
   // Kill estimate.
   for (unsigned i = 0, e = SU->getNode()->getNumOperands(); i != e; ++i) {
-      const SDValue &Op = SU->getNode()->getOperand(i);
-      MVT VT = Op.getNode()->getSimpleValueType(Op.getResNo());
-      if (isa<ConstantSDNode>(Op.getNode()))
-        continue;
+    const SDValue &Op = SU->getNode()->getOperand(i);
+    MVT VT = Op.getNode()->getSimpleValueType(Op.getResNo());
+    if (isa<ConstantSDNode>(Op.getNode()))
+      continue;
 
-      if (TLI->isTypeLegal(VT) && TLI->getRegClassFor(VT)
-          && TLI->getRegClassFor(VT)->getID() == RCId)
-        RegBalance -= numberRCValPredInSU(SU, RCId);
+    if (TLI->isTypeLegal(VT) && TLI->getRegClassFor(VT) &&
+        TLI->getRegClassFor(VT)->getID() == RCId)
+      RegBalance -= numberRCValPredInSU(SU, RCId);
   }
   return RegBalance;
 }
@@ -360,13 +372,12 @@ int ResourcePriorityQueue::regPressureDelta(SUnit *SU, bool RawPressure) {
   if (RawPressure) {
     for (const TargetRegisterClass *RC : TRI->regclasses())
       RegBalance += rawRegPressureDelta(SU, RC->getID());
-  }
-  else {
+  } else {
     for (const TargetRegisterClass *RC : TRI->regclasses()) {
-      if ((RegPressure[RC->getID()] +
-           rawRegPressureDelta(SU, RC->getID()) > 0) &&
-          (RegPressure[RC->getID()] +
-           rawRegPressureDelta(SU, RC->getID())  >= RegLimit[RC->getID()]))
+      if ((RegPressure[RC->getID()] + rawRegPressureDelta(SU, RC->getID()) >
+           0) &&
+          (RegPressure[RC->getID()] + rawRegPressureDelta(SU, RC->getID()) >=
+           RegLimit[RC->getID()]))
         RegBalance += rawRegPressureDelta(SU, RC->getID());
     }
   }
@@ -412,7 +423,7 @@ int ResourcePriorityQueue::SUSchedulingCost(SUnit *SU) {
 
     // Consider change to reg pressure from scheduling
     // this SU.
-    ResCount -= (regPressureDelta(SU,true) * ScaleOne);
+    ResCount -= (regPressureDelta(SU, true) * ScaleOne);
   }
   // Default heuristic, greeady and
   // critical path driven.
@@ -436,11 +447,11 @@ int ResourcePriorityQueue::SUSchedulingCost(SUnit *SU) {
     if (N->isMachineOpcode()) {
       const MCInstrDesc &TID = TII->get(N->getMachineOpcode());
       if (TID.isCall())
-        ResCount += (PriorityTwo + (ScaleThree*N->getNumValues()));
-    }
-    else
+        ResCount += (PriorityTwo + (ScaleThree * N->getNumValues()));
+    } else
       switch (N->getOpcode()) {
-      default:  break;
+      default:
+        break;
       case ISD::TokenFactor:
       case ISD::CopyFromReg:
       case ISD::CopyToReg:
@@ -455,7 +466,6 @@ int ResourcePriorityQueue::SUSchedulingCost(SUnit *SU) {
   }
   return ResCount;
 }
-
 
 /// Main resource tracking point.
 void ResourcePriorityQueue::scheduledNode(SUnit *SU) {
@@ -489,10 +499,10 @@ void ResourcePriorityQueue::scheduledNode(SUnit *SU) {
       if (TLI->isTypeLegal(VT)) {
         const TargetRegisterClass *RC = TLI->getRegClassFor(VT);
         if (RC) {
-          if (RegPressure[RC->getID()] >
-            (numberRCValPredInSU(SU, RC->getID())))
+          if (RegPressure[RC->getID()] > (numberRCValPredInSU(SU, RC->getID())))
             RegPressure[RC->getID()] -= numberRCValPredInSU(SU, RC->getID());
-          else RegPressure[RC->getID()] = 0;
+          else
+            RegPressure[RC->getID()] = 0;
         }
       }
     }
@@ -523,8 +533,7 @@ void ResourcePriorityQueue::scheduledNode(SUnit *SU) {
     else
       ParallelLiveRanges = 0;
 
-  }
-  else
+  } else
     ParallelLiveRanges += SU->NumRegDefsLeft;
 
   // Track parallel live chains.
@@ -533,7 +542,7 @@ void ResourcePriorityQueue::scheduledNode(SUnit *SU) {
 }
 
 void ResourcePriorityQueue::initNumRegDefsLeft(SUnit *SU) {
-  unsigned  NodeNumDefs = 0;
+  unsigned NodeNumDefs = 0;
   for (SDNode *N = SU->getNode(); N; N = N->getGluedNode())
     if (N->isMachineOpcode()) {
       const MCInstrDesc &TID = TII->get(N->getMachineOpcode());
@@ -543,17 +552,17 @@ void ResourcePriorityQueue::initNumRegDefsLeft(SUnit *SU) {
         break;
       }
       NodeNumDefs = std::min(N->getNumValues(), TID.getNumDefs());
-    }
-    else
-      switch(N->getOpcode()) {
-        default:     break;
-        case ISD::CopyFromReg:
-          NodeNumDefs++;
-          break;
-        case ISD::INLINEASM:
-        case ISD::INLINEASM_BR:
-          NodeNumDefs++;
-          break;
+    } else
+      switch (N->getOpcode()) {
+      default:
+        break;
+      case ISD::CopyFromReg:
+        NodeNumDefs++;
+        break;
+      case ISD::INLINEASM:
+      case ISD::INLINEASM_BR:
+        NodeNumDefs++;
+        break;
       }
 
   SU->NumRegDefsLeft = NodeNumDefs;
@@ -566,7 +575,8 @@ void ResourcePriorityQueue::initNumRegDefsLeft(SUnit *SU) {
 /// scheduled will make this node available, so it is better than some other
 /// node of the same priority that will not make a node available.
 void ResourcePriorityQueue::adjustPriorityOfUnscheduledPreds(SUnit *SU) {
-  if (SU->isAvailable) return;  // All preds scheduled.
+  if (SU->isAvailable)
+    return; // All preds scheduled.
 
   SUnit *OnlyAvailablePred = getSingleUnscheduledPred(SU);
   if (!OnlyAvailablePred || !OnlyAvailablePred->isAvailable)
@@ -580,7 +590,6 @@ void ResourcePriorityQueue::adjustPriorityOfUnscheduledPreds(SUnit *SU) {
   // NumNodesSolelyBlocking value.
   push(OnlyAvailablePred);
 }
-
 
 /// Main access point - returns next instructions
 /// to be placed in scheduling sequence.
@@ -614,7 +623,6 @@ SUnit *ResourcePriorityQueue::pop() {
 
   return V;
 }
-
 
 void ResourcePriorityQueue::remove(SUnit *SU) {
   assert(!Queue.empty() && "Queue is empty!");

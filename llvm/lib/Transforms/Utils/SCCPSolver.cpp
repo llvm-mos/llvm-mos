@@ -206,7 +206,8 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     Value *Op0 = Inst.getOperand(0);
     if (!isNonNegative(Op0))
       return false;
-    NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", Inst.getIterator());
+    NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "",
+                                         Inst.getIterator());
     NewInst->setIsExact(Inst.isExact());
     break;
   }
@@ -218,7 +219,8 @@ static bool replaceSignedInst(SCCPSolver &Solver,
       return false;
     auto NewOpcode = Inst.getOpcode() == Instruction::SDiv ? Instruction::UDiv
                                                            : Instruction::URem;
-    NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", Inst.getIterator());
+    NewInst =
+        BinaryOperator::Create(NewOpcode, Op0, Op1, "", Inst.getIterator());
     if (Inst.getOpcode() == Instruction::SDiv)
       NewInst->setIsExact(Inst.isExact());
     break;
@@ -393,9 +395,9 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
 
   // SCCP can only determine non-feasible edges for br, switch and indirectbr.
   Instruction *TI = BB->getTerminator();
-  assert((isa<BranchInst>(TI) || isa<SwitchInst>(TI) ||
-          isa<IndirectBrInst>(TI)) &&
-         "Terminator must be a br, switch or indirectbr");
+  assert(
+      (isa<BranchInst>(TI) || isa<SwitchInst>(TI) || isa<IndirectBrInst>(TI)) &&
+      "Terminator must be a br, switch or indirectbr");
 
   if (FeasibleSuccessors.size() == 0) {
     // Branch on undef/poison, replace with unreachable.
@@ -808,12 +810,9 @@ private:
   }
 
   void visitCallBase(CallBase &CB);
-  void visitResumeInst(ResumeInst &I) { /*returns void*/
-  }
-  void visitUnreachableInst(UnreachableInst &I) { /*returns void*/
-  }
-  void visitFenceInst(FenceInst &I) { /*returns void*/
-  }
+  void visitResumeInst(ResumeInst &I) { /*returns void*/ }
+  void visitUnreachableInst(UnreachableInst &I) { /*returns void*/ }
+  void visitFenceInst(FenceInst &I) { /*returns void*/ }
 
   void visitInstruction(Instruction &I);
 
@@ -990,8 +989,8 @@ public:
 
   Constant *getConstantOrNull(Value *V) const;
 
-  void setLatticeValueForSpecializationArguments(Function *F,
-                                       const SmallVectorImpl<ArgInfo> &Args);
+  void setLatticeValueForSpecializationArguments(
+      Function *F, const SmallVectorImpl<ArgInfo> &Args);
 
   void markFunctionUnreachable(Function *F) {
     for (auto &BB : *F)
@@ -1170,8 +1169,8 @@ Constant *SCCPInstVisitor::getConstantOrNull(Value *V) const {
   return Const;
 }
 
-void SCCPInstVisitor::setLatticeValueForSpecializationArguments(Function *F,
-                                        const SmallVectorImpl<ArgInfo> &Args) {
+void SCCPInstVisitor::setLatticeValueForSpecializationArguments(
+    Function *F, const SmallVectorImpl<ArgInfo> &Args) {
   assert(!Args.empty() && "Specialization without arguments");
   assert(F->arg_size() == Args[0].Formal->getParent()->arg_size() &&
          "Functions should have the same number of arguments");
@@ -1961,7 +1960,7 @@ void SCCPInstVisitor::handleCallOverdefined(CallBase &CB) {
       if (A.get()->getType()->isStructTy())
         return markOverdefined(&CB); // Can't handle struct args.
       if (A.get()->getType()->isMetadataTy())
-        continue;                    // Carried in CB, not allowed in Operands.
+        continue; // Carried in CB, not allowed in Operands.
       const ValueLatticeElement &State = getValueState(A);
 
       if (State.isUnknownOrUndef())
@@ -2290,9 +2289,7 @@ void SCCPSolver::addPredicateInfo(Function &F, DominatorTree &DT,
   Visitor->addPredicateInfo(F, DT, AC);
 }
 
-void SCCPSolver::removeSSACopies(Function &F) {
-  Visitor->removeSSACopies(F);
-}
+void SCCPSolver::removeSSACopies(Function &F) { Visitor->removeSSACopies(F); }
 
 bool SCCPSolver::markBlockExecutable(BasicBlock *BB) {
   return Visitor->markBlockExecutable(BB);
@@ -2341,8 +2338,8 @@ void SCCPSolver::solveWhileResolvedUndefsIn(Module &M) {
   Visitor->solveWhileResolvedUndefsIn(M);
 }
 
-void
-SCCPSolver::solveWhileResolvedUndefsIn(SmallVectorImpl<Function *> &WorkList) {
+void SCCPSolver::solveWhileResolvedUndefsIn(
+    SmallVectorImpl<Function *> &WorkList) {
   Visitor->solveWhileResolvedUndefsIn(WorkList);
 }
 
@@ -2408,8 +2405,8 @@ Constant *SCCPSolver::getConstantOrNull(Value *V) const {
   return Visitor->getConstantOrNull(V);
 }
 
-void SCCPSolver::setLatticeValueForSpecializationArguments(Function *F,
-                                   const SmallVectorImpl<ArgInfo> &Args) {
+void SCCPSolver::setLatticeValueForSpecializationArguments(
+    Function *F, const SmallVectorImpl<ArgInfo> &Args) {
   Visitor->setLatticeValueForSpecializationArguments(F, Args);
 }
 

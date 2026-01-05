@@ -112,8 +112,8 @@ private:
   std::unique_ptr<MCInstrInfo> MII;
   std::unique_ptr<MCSubtargetInfo> MSTI;
   std::unique_ptr<MCInstPrinter> MIP; // Owned by AsmPrinter
-  MCCodeEmitter *MCE; // Owned by MCStreamer
-  MCStreamer *MS;     // Owned by AsmPrinter
+  MCCodeEmitter *MCE;                 // Owned by MCStreamer
+  MCStreamer *MS;                     // Owned by AsmPrinter
   std::unique_ptr<TargetMachine> TM;
   std::unique_ptr<AsmPrinter> Asm;
   /// @}

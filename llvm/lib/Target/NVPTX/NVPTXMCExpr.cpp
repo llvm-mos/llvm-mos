@@ -27,7 +27,8 @@ void NVPTXFloatMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   APFloat APF = getAPFloat();
 
   switch (Kind) {
-  default: llvm_unreachable("Invalid kind!");
+  default:
+    llvm_unreachable("Invalid kind!");
   case VK_NVPTX_HALF_PREC_FLOAT:
     // ptxas does not have a way to specify half-precision floats.
     // Instead we have to print and load fp16 constants as .b16
@@ -56,7 +57,7 @@ void NVPTXFloatMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   OS << format_hex_no_prefix(API.getZExtValue(), NumHex, /*Upper=*/true);
 }
 
-const NVPTXGenericMCSymbolRefExpr*
+const NVPTXGenericMCSymbolRefExpr *
 NVPTXGenericMCSymbolRefExpr::create(const MCSymbolRefExpr *SymExpr,
                                     MCContext &Ctx) {
   return new (Ctx) NVPTXGenericMCSymbolRefExpr(SymExpr);

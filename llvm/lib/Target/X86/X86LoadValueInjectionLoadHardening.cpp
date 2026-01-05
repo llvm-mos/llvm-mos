@@ -367,7 +367,7 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
             auto Use = DFG.addr<UseNode *>(UseID);
             if (Use.Addr->getFlags() & NodeAttrs::PhiRef) { // phi node
               NodeAddr<PhiNode *> Phi = Use.Addr->getOwner(DFG);
-              for (const auto& I : L.getRealUses(Phi.Id)) {
+              for (const auto &I : L.getRealUses(Phi.Id)) {
                 if (DFG.getPRI().alias(RegisterRef(I.first), DefReg)) {
                   for (const auto &UA : I.second)
                     Uses.emplace(UA.first);

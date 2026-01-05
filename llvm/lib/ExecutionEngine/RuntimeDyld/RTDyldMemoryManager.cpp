@@ -10,16 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Config/config.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include "llvm/Config/config.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdlib>
 
 #ifdef __linux__
-  // These includes used by RTDyldMemoryManager::getPointerToNamedFunction()
-  // for Glibc trickery. See comments in this function for more information.
+// These includes used by RTDyldMemoryManager::getPointerToNamedFunction()
+// for Glibc trickery. See comments in this function for more information.
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -125,7 +125,7 @@ void RTDyldMemoryManager::deregisterEHFramesInProcess(uint8_t *Addr,
 #endif
 
 void RTDyldMemoryManager::registerEHFrames(uint8_t *Addr, uint64_t LoadAddr,
-                                          size_t Size) {
+                                           size_t Size) {
   registerEHFramesInProcess(Addr, Size);
   EHFrames.push_back({Addr, Size});
 }
@@ -136,9 +136,7 @@ void RTDyldMemoryManager::deregisterEHFrames() {
   EHFrames.clear();
 }
 
-static int jit_noop() {
-  return 0;
-}
+static int jit_noop() { return 0; }
 
 // ARM math functions are statically linked on Android from libgcc.a, but not
 // available at runtime for dynamic linking. On Linux these are usually placed
@@ -150,54 +148,54 @@ static int jit_noop() {
 // user-requested symbol in getSymbolAddress with ARM_MATH_CHECK. The test
 // assumes that all functions start with __aeabi_ and getSymbolAddress must be
 // modified if that changes.
-#define ARM_MATH_IMPORTS(PP) \
-  PP(__aeabi_d2f) \
-  PP(__aeabi_d2iz) \
-  PP(__aeabi_d2lz) \
-  PP(__aeabi_d2uiz) \
-  PP(__aeabi_d2ulz) \
-  PP(__aeabi_dadd) \
-  PP(__aeabi_dcmpeq) \
-  PP(__aeabi_dcmpge) \
-  PP(__aeabi_dcmpgt) \
-  PP(__aeabi_dcmple) \
-  PP(__aeabi_dcmplt) \
-  PP(__aeabi_dcmpun) \
-  PP(__aeabi_ddiv) \
-  PP(__aeabi_dmul) \
-  PP(__aeabi_dsub) \
-  PP(__aeabi_f2d) \
-  PP(__aeabi_f2iz) \
-  PP(__aeabi_f2lz) \
-  PP(__aeabi_f2uiz) \
-  PP(__aeabi_f2ulz) \
-  PP(__aeabi_fadd) \
-  PP(__aeabi_fcmpeq) \
-  PP(__aeabi_fcmpge) \
-  PP(__aeabi_fcmpgt) \
-  PP(__aeabi_fcmple) \
-  PP(__aeabi_fcmplt) \
-  PP(__aeabi_fcmpun) \
-  PP(__aeabi_fdiv) \
-  PP(__aeabi_fmul) \
-  PP(__aeabi_fsub) \
-  PP(__aeabi_i2d) \
-  PP(__aeabi_i2f) \
-  PP(__aeabi_idiv) \
-  PP(__aeabi_idivmod) \
-  PP(__aeabi_l2d) \
-  PP(__aeabi_l2f) \
-  PP(__aeabi_lasr) \
-  PP(__aeabi_ldivmod) \
-  PP(__aeabi_llsl) \
-  PP(__aeabi_llsr) \
-  PP(__aeabi_lmul) \
-  PP(__aeabi_ui2d) \
-  PP(__aeabi_ui2f) \
-  PP(__aeabi_uidiv) \
-  PP(__aeabi_uidivmod) \
-  PP(__aeabi_ul2d) \
-  PP(__aeabi_ul2f) \
+#define ARM_MATH_IMPORTS(PP)                                                   \
+  PP(__aeabi_d2f)                                                              \
+  PP(__aeabi_d2iz)                                                             \
+  PP(__aeabi_d2lz)                                                             \
+  PP(__aeabi_d2uiz)                                                            \
+  PP(__aeabi_d2ulz)                                                            \
+  PP(__aeabi_dadd)                                                             \
+  PP(__aeabi_dcmpeq)                                                           \
+  PP(__aeabi_dcmpge)                                                           \
+  PP(__aeabi_dcmpgt)                                                           \
+  PP(__aeabi_dcmple)                                                           \
+  PP(__aeabi_dcmplt)                                                           \
+  PP(__aeabi_dcmpun)                                                           \
+  PP(__aeabi_ddiv)                                                             \
+  PP(__aeabi_dmul)                                                             \
+  PP(__aeabi_dsub)                                                             \
+  PP(__aeabi_f2d)                                                              \
+  PP(__aeabi_f2iz)                                                             \
+  PP(__aeabi_f2lz)                                                             \
+  PP(__aeabi_f2uiz)                                                            \
+  PP(__aeabi_f2ulz)                                                            \
+  PP(__aeabi_fadd)                                                             \
+  PP(__aeabi_fcmpeq)                                                           \
+  PP(__aeabi_fcmpge)                                                           \
+  PP(__aeabi_fcmpgt)                                                           \
+  PP(__aeabi_fcmple)                                                           \
+  PP(__aeabi_fcmplt)                                                           \
+  PP(__aeabi_fcmpun)                                                           \
+  PP(__aeabi_fdiv)                                                             \
+  PP(__aeabi_fmul)                                                             \
+  PP(__aeabi_fsub)                                                             \
+  PP(__aeabi_i2d)                                                              \
+  PP(__aeabi_i2f)                                                              \
+  PP(__aeabi_idiv)                                                             \
+  PP(__aeabi_idivmod)                                                          \
+  PP(__aeabi_l2d)                                                              \
+  PP(__aeabi_l2f)                                                              \
+  PP(__aeabi_lasr)                                                             \
+  PP(__aeabi_ldivmod)                                                          \
+  PP(__aeabi_llsl)                                                             \
+  PP(__aeabi_llsr)                                                             \
+  PP(__aeabi_lmul)                                                             \
+  PP(__aeabi_ui2d)                                                             \
+  PP(__aeabi_ui2f)                                                             \
+  PP(__aeabi_uidiv)                                                            \
+  PP(__aeabi_uidivmod)                                                         \
+  PP(__aeabi_ul2d)                                                             \
+  PP(__aeabi_ul2f)                                                             \
   PP(__aeabi_uldivmod)
 
 // Declare statically linked math functions on ARM. The function declarations
@@ -210,8 +208,8 @@ ARM_MATH_IMPORTS(ARM_MATH_DECL)
 #undef ARM_MATH_DECL
 #endif
 
-#if defined(__linux__) && defined(__GLIBC__) && \
-      (defined(__i386__) || defined(__x86_64__))
+#if defined(__linux__) && defined(__GLIBC__) &&                                \
+    (defined(__i386__) || defined(__x86_64__))
 extern "C" LLVM_ATTRIBUTE_WEAK void __morestack();
 #endif
 
@@ -230,14 +228,22 @@ RTDyldMemoryManager::getSymbolAddressInProcess(const std::string &Name) {
   // not inlined, and hiding their real definitions in a separate archive file
   // that the dynamic linker can't see. For more info, search for
   // 'libc_nonshared.a' on Google, or read http://llvm.org/PR274.
-  if (Name == "stat") return (uint64_t)&stat;
-  if (Name == "fstat") return (uint64_t)&fstat;
-  if (Name == "lstat") return (uint64_t)&lstat;
-  if (Name == "stat64") return (uint64_t)&stat64;
-  if (Name == "fstat64") return (uint64_t)&fstat64;
-  if (Name == "lstat64") return (uint64_t)&lstat64;
-  if (Name == "atexit") return (uint64_t)&atexit;
-  if (Name == "mknod") return (uint64_t)&mknod;
+  if (Name == "stat")
+    return (uint64_t)&stat;
+  if (Name == "fstat")
+    return (uint64_t)&fstat;
+  if (Name == "lstat")
+    return (uint64_t)&lstat;
+  if (Name == "stat64")
+    return (uint64_t)&stat64;
+  if (Name == "fstat64")
+    return (uint64_t)&fstat64;
+  if (Name == "lstat64")
+    return (uint64_t)&lstat64;
+  if (Name == "atexit")
+    return (uint64_t)&atexit;
+  if (Name == "mknod")
+    return (uint64_t)&mknod;
 
 #if defined(__i386__) || defined(__x86_64__)
   // __morestack lives in libgcc, a static library.
@@ -251,7 +257,9 @@ RTDyldMemoryManager::getSymbolAddressInProcess(const std::string &Name) {
   if (Name.compare(0, 8, "__aeabi_") == 0) {
     // Check if the user has requested any of the functions listed in
     // ARM_MATH_IMPORTS, and if so redirect to the statically linked symbol.
-#define ARM_MATH_CHECK(fn) if (Name == #fn) return (uint64_t)&fn;
+#define ARM_MATH_CHECK(fn)                                                     \
+  if (Name == #fn)                                                             \
+    return (uint64_t)&fn;
     ARM_MATH_IMPORTS(ARM_MATH_CHECK)
 #undef ARM_MATH_CHECK
   }
@@ -263,7 +271,8 @@ RTDyldMemoryManager::getSymbolAddressInProcess(const std::string &Name) {
   // (and register wrong callee's dtors with atexit(3)).
   // We expect ExecutionEngine::runStaticConstructorsDestructors()
   // is called before ExecutionEngine::runFunctionAsMain() is called.
-  if (Name == "__main") return (uint64_t)&jit_noop;
+  if (Name == "__main")
+    return (uint64_t)&jit_noop;
 
   const char *NameStr = Name.c_str();
 
@@ -285,7 +294,7 @@ void *RTDyldMemoryManager::getPointerToNamedFunction(const std::string &Name,
     report_fatal_error(Twine("Program used external function '") + Name +
                        "' which could not be resolved!");
 
-  return (void*)Addr;
+  return (void *)Addr;
 }
 
 void RTDyldMemoryManager::anchor() {}

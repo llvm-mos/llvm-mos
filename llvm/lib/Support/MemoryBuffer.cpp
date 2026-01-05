@@ -93,8 +93,7 @@ void *operator new(size_t N, const NamedBufferAlloc &Alloc) {
 
 namespace {
 /// MemoryBufferMem - Named MemoryBuffer pointing to a block of memory.
-template<typename MB>
-class MemoryBufferMem : public MB {
+template <typename MB> class MemoryBufferMem : public MB {
 public:
   MemoryBufferMem(StringRef InputData, bool RequiresNullTerminator) {
     MemoryBuffer::init(InputData.begin(), InputData.end(),
@@ -201,8 +200,7 @@ constexpr sys::fs::mapped_file_region::mapmode
 /// Memory maps a file descriptor using sys::fs::mapped_file_region.
 ///
 /// This handles converting the offset into a legal offset on the platform.
-template<typename MB>
-class MemoryBufferMMapFile : public MB {
+template <typename MB> class MemoryBufferMMapFile : public MB {
   sys::fs::mapped_file_region MFR;
 
   static uint64_t getLegalMapOffset(uint64_t Offset) {
@@ -218,8 +216,8 @@ class MemoryBufferMMapFile : public MB {
   }
 
 public:
-  MemoryBufferMMapFile(bool RequiresNullTerminator, sys::fs::file_t FD, uint64_t Len,
-                       uint64_t Offset, std::error_code &EC)
+  MemoryBufferMMapFile(bool RequiresNullTerminator, sys::fs::file_t FD,
+                       uint64_t Len, uint64_t Offset, std::error_code &EC)
       : MFR(FD, Mapmode<MB>, getLegalMapSize(Len, Offset),
             getLegalMapOffset(Offset), EC) {
     if (!EC) {
@@ -352,13 +350,9 @@ WritableMemoryBuffer::getNewMemBuffer(size_t Size, const Twine &BufferName) {
   return SB;
 }
 
-static bool shouldUseMmap(sys::fs::file_t FD,
-                          size_t FileSize,
-                          size_t MapSize,
-                          off_t Offset,
-                          bool RequiresNullTerminator,
-                          int PageSize,
-                          bool IsVolatile) {
+static bool shouldUseMmap(sys::fs::file_t FD, size_t FileSize, size_t MapSize,
+                          off_t Offset, bool RequiresNullTerminator,
+                          int PageSize, bool IsVolatile) {
 #if defined(__MVS__)
   // zOS Enhanced ASCII auto convert does not support mmap.
   return false;
@@ -398,12 +392,12 @@ static bool shouldUseMmap(sys::fs::file_t FD,
 
   // Don't try to map files that are exactly a multiple of the system page size
   // if we need a null terminator.
-  if ((FileSize & (PageSize -1)) == 0)
+  if ((FileSize & (PageSize - 1)) == 0)
     return false;
 
 #if defined(__CYGWIN__)
-  // Don't try to map files that are exactly a multiple of the physical page size
-  // if we need a null terminator.
+  // Don't try to map files that are exactly a multiple of the physical page
+  // size if we need a null terminator.
   // FIXME: We should reorganize again getPageSize() on Win32.
   if ((FileSize & (4096 - 1)) == 0)
     return false;

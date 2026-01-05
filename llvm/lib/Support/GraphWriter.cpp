@@ -56,33 +56,41 @@ void llvm::initGraphWriterOptions() {}
 std::string llvm::DOT::EscapeString(const std::string &Label) {
   std::string Str(Label);
   for (unsigned i = 0; i != Str.length(); ++i)
-  switch (Str[i]) {
+    switch (Str[i]) {
     case '\n':
-      Str.insert(Str.begin()+i, '\\');  // Escape character...
+      Str.insert(Str.begin() + i, '\\'); // Escape character...
       ++i;
       Str[i] = 'n';
       break;
     case '\t':
-      Str.insert(Str.begin()+i, ' ');  // Convert to two spaces
+      Str.insert(Str.begin() + i, ' '); // Convert to two spaces
       ++i;
       Str[i] = ' ';
       break;
     case '\\':
-      if (i+1 != Str.length())
-        switch (Str[i+1]) {
-          case 'l': continue; // don't disturb \l
-          case '|': case '{': case '}':
-            Str.erase(Str.begin()+i); continue;
-          default: break;
+      if (i + 1 != Str.length())
+        switch (Str[i + 1]) {
+        case 'l':
+          continue; // don't disturb \l
+        case '|':
+        case '{':
+        case '}':
+          Str.erase(Str.begin() + i);
+          continue;
+        default:
+          break;
         }
       [[fallthrough]];
-    case '{': case '}':
-    case '<': case '>':
-    case '|': case '"':
-      Str.insert(Str.begin()+i, '\\');  // Escape character...
-      ++i;  // don't infinite loop
+    case '{':
+    case '}':
+    case '<':
+    case '>':
+    case '|':
+    case '"':
+      Str.insert(Str.begin() + i, '\\'); // Escape character...
+      ++i;                               // don't infinite loop
       break;
-  }
+    }
   return Str;
 }
 
@@ -90,10 +98,10 @@ std::string llvm::DOT::EscapeString(const std::string &Label) {
 /// from a reasonable number of colors.
 StringRef llvm::DOT::getColorString(unsigned ColorNumber) {
   static const int NumColors = 20;
-  static const char* Colors[NumColors] = {
-    "aaaaaa", "aa0000", "00aa00", "aa5500", "0055ff", "aa00aa", "00aaaa",
-    "555555", "ff5555", "55ff55", "ffff55", "5555ff", "ff55ff", "55ffff",
-    "ffaaaa", "aaffaa", "ffffaa", "aaaaff", "ffaaff", "aaffff"};
+  static const char *Colors[NumColors] = {
+      "aaaaaa", "aa0000", "00aa00", "aa5500", "0055ff", "aa00aa", "00aaaa",
+      "555555", "ff5555", "55ff55", "ffff55", "5555ff", "ff55ff", "55ffff",
+      "ffaaaa", "aaffaa", "ffffaa", "aaaaff", "ffaaff", "aaffff"};
   return Colors[ColorNumber % NumColors];
 }
 

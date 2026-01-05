@@ -40,11 +40,10 @@ using namespace llvm::PatternMatch;
 /// expressions together. It uses CastInst::isEliminableCastPair to determine
 /// the opcode. Consequently its just a wrapper around that function.
 /// Determine if it is valid to fold a cast of a cast
-static unsigned
-foldConstantCastPair(
-  unsigned opc,          ///< opcode of the second cast constant expression
-  ConstantExpr *Op,      ///< the first cast constant expression
-  Type *DstTy            ///< destination type of the first cast
+static unsigned foldConstantCastPair(
+    unsigned opc,     ///< opcode of the second cast constant expression
+    ConstantExpr *Op, ///< the first cast constant expression
+    Type *DstTy       ///< destination type of the first cast
 ) {
   assert(Op && Op->isCast() && "Can't fold cast of cast without a cast!");
   assert(DstTy && DstTy->isFirstClassType() && "Invalid cast destination type");
@@ -218,7 +217,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
       const APInt &api = CI->getValue();
       APFloat apf(DestTy->getScalarType()->getFltSemantics(),
                   APInt::getZero(DestTy->getScalarSizeInBits()));
-      apf.convertFromAPInt(api, opc==Instruction::SIToFP,
+      apf.convertFromAPInt(api, opc == Instruction::SIToFP,
                            APFloat::rmNearestTiesToEven);
       return ConstantFP::get(DestTy, apf);
     }
@@ -253,23 +252,25 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
   }
 }
 
-Constant *llvm::ConstantFoldSelectInstruction(Constant *Cond,
-                                              Constant *V1, Constant *V2) {
+Constant *llvm::ConstantFoldSelectInstruction(Constant *Cond, Constant *V1,
+                                              Constant *V2) {
   // Check for i1 and vector true/false conditions.
-  if (Cond->isNullValue()) return V2;
-  if (Cond->isAllOnesValue()) return V1;
+  if (Cond->isNullValue())
+    return V2;
+  if (Cond->isAllOnesValue())
+    return V1;
 
   // If the condition is a vector constant, fold the result elementwise.
   if (ConstantVector *CondV = dyn_cast<ConstantVector>(Cond)) {
     auto *V1VTy = CondV->getType();
-    SmallVector<Constant*, 16> Result;
+    SmallVector<Constant *, 16> Result;
     Type *Ty = IntegerType::get(CondV->getContext(), 32);
     for (unsigned i = 0, e = V1VTy->getNumElements(); i != e; ++i) {
       Constant *V;
-      Constant *V1Element = ConstantExpr::getExtractElement(V1,
-                                                    ConstantInt::get(Ty, i));
-      Constant *V2Element = ConstantExpr::getExtractElement(V2,
-                                                    ConstantInt::get(Ty, i));
+      Constant *V1Element =
+          ConstantExpr::getExtractElement(V1, ConstantInt::get(Ty, i));
+      Constant *V2Element =
+          ConstantExpr::getExtractElement(V2, ConstantInt::get(Ty, i));
       auto *Cond = cast<Constant>(CondV->getOperand(i));
       if (isa<PoisonValue>(Cond)) {
         V = PoisonValue::get(V1Element->getType());
@@ -278,7 +279,8 @@ Constant *llvm::ConstantFoldSelectInstruction(Constant *Cond,
       } else if (isa<UndefValue>(Cond)) {
         V = isa<UndefValue>(V1Element) ? V1Element : V2Element;
       } else {
-        if (!isa<ConstantInt>(Cond)) break;
+        if (!isa<ConstantInt>(Cond))
+          break;
         V = Cond->isNullValue() ? V2Element : V1Element;
       }
       Result.push_back(V);
@@ -293,11 +295,13 @@ Constant *llvm::ConstantFoldSelectInstruction(Constant *Cond,
     return PoisonValue::get(V1->getType());
 
   if (isa<UndefValue>(Cond)) {
-    if (isa<UndefValue>(V1)) return V1;
+    if (isa<UndefValue>(V1))
+      return V1;
     return V2;
   }
 
-  if (V1 == V2) return V1;
+  if (V1 == V2)
+    return V1;
 
   if (isa<PoisonValue>(V1))
     return V2;
@@ -325,8 +329,10 @@ Constant *llvm::ConstantFoldSelectInstruction(Constant *Cond,
     // TODO: Recursively analyze aggregates or other constants.
     return false;
   };
-  if (isa<UndefValue>(V1) && NotPoison(V2)) return V2;
-  if (isa<UndefValue>(V2) && NotPoison(V1)) return V1;
+  if (isa<UndefValue>(V1) && NotPoison(V2))
+    return V2;
+  if (isa<UndefValue>(V2) && NotPoison(V1))
+    return V1;
 
   return nullptr;
 }
@@ -407,7 +413,8 @@ Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,
     return Val;
 
   ConstantInt *CIdx = dyn_cast<ConstantInt>(Idx);
-  if (!CIdx) return nullptr;
+  if (!CIdx)
+    return nullptr;
 
   // Do not iterate on scalable vector. The num of elements is unknown at
   // compile-time.
@@ -420,7 +427,7 @@ Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,
   if (CIdx->uge(NumElts))
     return PoisonValue::get(Val->getType());
 
-  SmallVector<Constant*, 16> Result;
+  SmallVector<Constant *, 16> Result;
   Result.reserve(NumElts);
   auto *Ty = Type::getInt32Ty(Val->getContext());
   uint64_t IdxVal = CIdx->getZExtValue();
@@ -459,7 +466,8 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
 
     // For scalable vectors, make sure this doesn't fold back into a
     // shufflevector.
-    if (!MaskEltCount.isScalable() || Elt->isNullValue() || isa<UndefValue>(Elt))
+    if (!MaskEltCount.isScalable() || Elt->isNullValue() ||
+        isa<UndefValue>(Elt))
       return ConstantVector::getSplat(MaskEltCount, Elt);
   }
 
@@ -471,7 +479,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
   unsigned SrcNumElts = V1VTy->getElementCount().getKnownMinValue();
 
   // Loop over the shuffle mask, evaluating each element.
-  SmallVector<Constant*, 32> Result;
+  SmallVector<Constant *, 32> Result;
   for (unsigned i = 0; i != MaskNumElts; ++i) {
     int Elt = Mask[i];
     if (Elt == -1) {
@@ -479,13 +487,12 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
       continue;
     }
     Constant *InElt;
-    if (unsigned(Elt) >= SrcNumElts*2)
+    if (unsigned(Elt) >= SrcNumElts * 2)
       InElt = UndefValue::get(EltTy);
     else if (unsigned(Elt) >= SrcNumElts) {
       Type *Ty = IntegerType::get(V2->getContext(), 32);
-      InElt =
-        ConstantExpr::getExtractElement(V2,
-                                        ConstantInt::get(Ty, Elt - SrcNumElts));
+      InElt = ConstantExpr::getExtractElement(
+          V2, ConstantInt::get(Ty, Elt - SrcNumElts));
     } else {
       Type *Ty = IntegerType::get(V1->getContext(), 32);
       InElt = ConstantExpr::getExtractElement(V1, ConstantInt::get(Ty, Elt));
@@ -508,8 +515,7 @@ Constant *llvm::ConstantFoldExtractValueInstruction(Constant *Agg,
   return nullptr;
 }
 
-Constant *llvm::ConstantFoldInsertValueInstruction(Constant *Agg,
-                                                   Constant *Val,
+Constant *llvm::ConstantFoldInsertValueInstruction(Constant *Agg, Constant *Val,
                                                    ArrayRef<unsigned> Idxs) {
   // Base case: no indices, so replace the entire value.
   if (Idxs.empty())
@@ -521,10 +527,11 @@ Constant *llvm::ConstantFoldInsertValueInstruction(Constant *Agg,
   else
     NumElts = cast<ArrayType>(Agg->getType())->getNumElements();
 
-  SmallVector<Constant*, 32> Result;
+  SmallVector<Constant *, 32> Result;
   for (unsigned i = 0; i != NumElts; ++i) {
     Constant *C = Agg->getAggregateElement(i);
-    if (!C) return nullptr;
+    if (!C)
+      return nullptr;
 
     if (Idxs[0] == i)
       C = ConstantFoldInsertValueInstruction(C, Val, Idxs.slice(1));
@@ -637,7 +644,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
     case Instruction::And:
       if (isa<UndefValue>(C1) && isa<UndefValue>(C2)) // undef & undef -> undef
         return C1;
-      return Constant::getNullValue(C1->getType());   // undef & X -> 0
+      return Constant::getNullValue(C1->getType()); // undef & X -> 0
     case Instruction::Mul: {
       // undef * undef -> undef
       if (isa<UndefValue>(C1) && isa<UndefValue>(C2))
@@ -667,7 +674,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         return PoisonValue::get(C2->getType());
       // undef % X -> 0       otherwise
       return Constant::getNullValue(C1->getType());
-    case Instruction::Or:                          // X | undef -> -1
+    case Instruction::Or:                             // X | undef -> -1
       if (isa<UndefValue>(C1) && isa<UndefValue>(C2)) // undef | undef -> undef
         return C1;
       return Constant::getAllOnesValue(C1->getType()); // undef | X -> ~0
@@ -728,14 +735,14 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
     case Instruction::UDiv:
     case Instruction::SDiv:
       if (CI2->isZero())
-        return PoisonValue::get(CI2->getType());              // X / 0 == poison
+        return PoisonValue::get(CI2->getType()); // X / 0 == poison
       break;
     case Instruction::URem:
     case Instruction::SRem:
       if (CI2->isOne())
-        return Constant::getNullValue(CI2->getType());        // X % 1 == 0
+        return Constant::getNullValue(CI2->getType()); // X % 1 == 0
       if (CI2->isZero())
-        return PoisonValue::get(CI2->getType());              // X % 0 == poison
+        return PoisonValue::get(CI2->getType()); // X % 0 == poison
       break;
     case Instruction::And:
       assert(!CI2->isZero() && "And zero handled above");
@@ -807,7 +814,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       case Instruction::SDiv:
         assert(!CI2->isZero() && "Div by zero handled above");
         if (C2V.isAllOnes() && C1V.isMinSignedValue())
-          return PoisonValue::get(CI1->getType());   // MIN_INT / -1 -> poison
+          return PoisonValue::get(CI1->getType()); // MIN_INT / -1 -> poison
         return ConstantInt::get(CI1->getType(), C1V.sdiv(C2V));
       case Instruction::URem:
         assert(!CI2->isZero() && "Div by zero handled above");
@@ -845,7 +852,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
     if (ConstantFP *CFP2 = dyn_cast<ConstantFP>(C2)) {
       const APFloat &C1V = CFP1->getValueAPF();
       const APFloat &C2V = CFP2->getValueAPF();
-      APFloat C3V = C1V;  // copy for modification
+      APFloat C3V = C1V; // copy for modification
       switch (Opcode) {
       default:
         break;
@@ -886,7 +893,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
 
     if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
       // Fold each element and create a vector constant from those constants.
-      SmallVector<Constant*, 16> Result;
+      SmallVector<Constant *, 16> Result;
       Type *Ty = IntegerType::get(FVTy->getContext(), 32);
       for (unsigned i = 0, e = FVTy->getNumElements(); i != e; ++i) {
         Constant *ExtractIdx = ConstantInt::get(Ty, i);
@@ -987,7 +994,8 @@ static ICmpInst::Predicate areGlobalsPotentiallyEqual(const GlobalValue *GV1,
 static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2) {
   assert(V1->getType() == V2->getType() &&
          "Cannot compare different types of values!");
-  if (V1 == V2) return ICmpInst::ICMP_EQ;
+  if (V1 == V2)
+    return ICmpInst::ICMP_EQ;
 
   // The following folds only apply to pointers.
   if (!V1->getType()->isPointerTy())
@@ -1180,7 +1188,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
 
     // If we can constant fold the comparison of each element, constant fold
     // the whole vector comparison.
-    SmallVector<Constant*, 4> ResElts;
+    SmallVector<Constant *, 4> ResElts;
     Type *Ty = IntegerType::get(C1->getContext(), 32);
     // Compare the elements, producing an i1 result or constant expr.
     for (unsigned I = 0, E = C1VTy->getElementCount().getKnownMinValue();
@@ -1209,52 +1217,77 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
     }
   } else {
     // Evaluate the relation between the two constants, per the predicate.
-    int Result = -1;  // -1 = unknown, 0 = known false, 1 = known true.
+    int Result = -1; // -1 = unknown, 0 = known false, 1 = known true.
     switch (evaluateICmpRelation(C1, C2)) {
-    default: llvm_unreachable("Unknown relational!");
+    default:
+      llvm_unreachable("Unknown relational!");
     case ICmpInst::BAD_ICMP_PREDICATE:
-      break;  // Couldn't determine anything about these constants.
-    case ICmpInst::ICMP_EQ:   // We know the constants are equal!
+      break; // Couldn't determine anything about these constants.
+    case ICmpInst::ICMP_EQ: // We know the constants are equal!
       // If we know the constants are equal, we can decide the result of this
       // computation precisely.
       Result = ICmpInst::isTrueWhenEqual(Predicate);
       break;
     case ICmpInst::ICMP_ULT:
       switch (Predicate) {
-      case ICmpInst::ICMP_ULT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_ULE:
-        Result = 1; break;
-      case ICmpInst::ICMP_UGT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_UGE:
-        Result = 0; break;
+      case ICmpInst::ICMP_ULT:
+      case ICmpInst::ICMP_NE:
+      case ICmpInst::ICMP_ULE:
+        Result = 1;
+        break;
+      case ICmpInst::ICMP_UGT:
+      case ICmpInst::ICMP_EQ:
+      case ICmpInst::ICMP_UGE:
+        Result = 0;
+        break;
       default:
         break;
       }
       break;
     case ICmpInst::ICMP_SLT:
       switch (Predicate) {
-      case ICmpInst::ICMP_SLT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_SLE:
-        Result = 1; break;
-      case ICmpInst::ICMP_SGT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_SGE:
-        Result = 0; break;
+      case ICmpInst::ICMP_SLT:
+      case ICmpInst::ICMP_NE:
+      case ICmpInst::ICMP_SLE:
+        Result = 1;
+        break;
+      case ICmpInst::ICMP_SGT:
+      case ICmpInst::ICMP_EQ:
+      case ICmpInst::ICMP_SGE:
+        Result = 0;
+        break;
       default:
         break;
       }
       break;
     case ICmpInst::ICMP_UGT:
       switch (Predicate) {
-      case ICmpInst::ICMP_UGT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_UGE:
-        Result = 1; break;
-      case ICmpInst::ICMP_ULT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_ULE:
-        Result = 0; break;
+      case ICmpInst::ICMP_UGT:
+      case ICmpInst::ICMP_NE:
+      case ICmpInst::ICMP_UGE:
+        Result = 1;
+        break;
+      case ICmpInst::ICMP_ULT:
+      case ICmpInst::ICMP_EQ:
+      case ICmpInst::ICMP_ULE:
+        Result = 0;
+        break;
       default:
         break;
       }
       break;
     case ICmpInst::ICMP_SGT:
       switch (Predicate) {
-      case ICmpInst::ICMP_SGT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_SGE:
-        Result = 1; break;
-      case ICmpInst::ICMP_SLT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_SLE:
-        Result = 0; break;
+      case ICmpInst::ICMP_SGT:
+      case ICmpInst::ICMP_NE:
+      case ICmpInst::ICMP_SGE:
+        Result = 1;
+        break;
+      case ICmpInst::ICMP_SLT:
+      case ICmpInst::ICMP_EQ:
+      case ICmpInst::ICMP_SLE:
+        Result = 0;
+        break;
       default:
         break;
       }
@@ -1310,7 +1343,8 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
 Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
                                           std::optional<ConstantRange> InRange,
                                           ArrayRef<Value *> Idxs) {
-  if (Idxs.empty()) return C;
+  if (Idxs.empty())
+    return C;
 
   Type *GEPTy = GetElementPtrInst::getGEPReturnType(
       C, ArrayRef((Value *const *)Idxs.data(), Idxs.size()));

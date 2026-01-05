@@ -77,7 +77,8 @@ protected:
   DwarfUnit(dwarf::Tag, const DICompileUnit *Node, AsmPrinter *A,
             DwarfDebug *DW, DwarfFile *DWU, unsigned UniqueID = 0);
 
-  bool applySubprogramDefinitionAttributes(const DISubprogram *SP, DIE &SPDie, bool Minimal);
+  bool applySubprogramDefinitionAttributes(const DISubprogram *SP, DIE &SPDie,
+                                           bool Minimal);
 
   bool isShareableAcrossCUs(const DINode *D) const;
 
@@ -101,7 +102,7 @@ public:
   /// Gets Unique ID for this unit.
   unsigned getUniqueID() const { return UniqueID; }
   // Accessors.
-  AsmPrinter* getAsmPrinter() const { return Asm; }
+  AsmPrinter *getAsmPrinter() const { return Asm; }
   /// Get the the symbol for start of the section for this unit.
   MCSymbol *getLabelBegin() const {
     assert(LabelBegin && "LabelBegin is not initialized");
@@ -171,7 +172,7 @@ public:
 
   /// Add an integer attribute data and value; value may be any width.
   void addInt(DIE &Die, dwarf::Attribute Attribute, const APInt &Integer,
-	      bool Unsigned);
+              bool Unsigned);
 
   /// Add a string attribute data and value.
   ///
@@ -398,7 +399,7 @@ private:
   /// Set D as anonymous type for index which can be reused later.
   void setIndexTyDie(DIE *D) { IndexTyDie = D; }
 
-  virtual void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) = 0;
+  virtual void finishNonUnitTypeDIE(DIE &D, const DICompositeType *CTy) = 0;
 
   virtual bool isDwoUnit() const = 0;
   const MCSymbol *getCrossSectionRelativeBaseAddress() const override;
@@ -416,7 +417,7 @@ class DwarfTypeUnit final : public DwarfUnit {
   bool UsedLineTable = false;
 
   unsigned getOrCreateSourceID(const DIFile *File) override;
-  void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) override;
+  void finishNonUnitTypeDIE(DIE &D, const DICompositeType *CTy) override;
   bool isDwoUnit() const override;
 
 public:
@@ -441,5 +442,5 @@ public:
                          const DIScope *Context) override;
   DwarfCompileUnit &getCU() override { return CU; }
 };
-} // end llvm namespace
+} // namespace llvm
 #endif

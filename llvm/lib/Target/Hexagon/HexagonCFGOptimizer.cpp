@@ -50,22 +50,20 @@ char HexagonCFGOptimizer::ID = 0;
 
 static bool IsConditionalBranch(int Opc) {
   switch (Opc) {
-    case Hexagon::J2_jumpt:
-    case Hexagon::J2_jumptpt:
-    case Hexagon::J2_jumpf:
-    case Hexagon::J2_jumpfpt:
-    case Hexagon::J2_jumptnew:
-    case Hexagon::J2_jumpfnew:
-    case Hexagon::J2_jumptnewpt:
-    case Hexagon::J2_jumpfnewpt:
-      return true;
+  case Hexagon::J2_jumpt:
+  case Hexagon::J2_jumptpt:
+  case Hexagon::J2_jumpf:
+  case Hexagon::J2_jumpfpt:
+  case Hexagon::J2_jumptnew:
+  case Hexagon::J2_jumpfnew:
+  case Hexagon::J2_jumptnewpt:
+  case Hexagon::J2_jumpfnewpt:
+    return true;
   }
   return false;
 }
 
-static bool IsUnconditionalJump(int Opc) {
-  return (Opc == Hexagon::J2_jump);
-}
+static bool IsUnconditionalJump(int Opc) { return (Opc == Hexagon::J2_jump); }
 
 void HexagonCFGOptimizer::InvertAndChangeJumpTarget(
     MachineInstr &MI, MachineBasicBlock *NewTarget) {
@@ -143,10 +141,10 @@ bool HexagonCFGOptimizer::runOnMachineFunction(MachineFunction &Fn) {
         //   BB4: ...
         unsigned NumSuccs = MBB.succ_size();
         MachineBasicBlock::succ_iterator SI = MBB.succ_begin();
-        MachineBasicBlock* FirstSucc = *SI;
-        MachineBasicBlock* SecondSucc = *(++SI);
-        MachineBasicBlock* LayoutSucc = nullptr;
-        MachineBasicBlock* JumpAroundTarget = nullptr;
+        MachineBasicBlock *FirstSucc = *SI;
+        MachineBasicBlock *SecondSucc = *(++SI);
+        MachineBasicBlock *LayoutSucc = nullptr;
+        MachineBasicBlock *JumpAroundTarget = nullptr;
 
         if (MBB.isLayoutSuccessor(FirstSucc)) {
           LayoutSucc = FirstSucc;
@@ -160,7 +158,7 @@ bool HexagonCFGOptimizer::runOnMachineFunction(MachineFunction &Fn) {
 
         // The target of the unconditional branch must be JumpAroundTarget.
         // TODO: If not, we should not invert the unconditional branch.
-        MachineBasicBlock* CondBranchTarget = nullptr;
+        MachineBasicBlock *CondBranchTarget = nullptr;
         if (MI.getOpcode() == Hexagon::J2_jumpt ||
             MI.getOpcode() == Hexagon::J2_jumpf) {
           CondBranchTarget = MI.getOperand(1).getMBB();
@@ -174,16 +172,18 @@ bool HexagonCFGOptimizer::runOnMachineFunction(MachineFunction &Fn) {
           // Ensure that BB2 has one instruction -- an unconditional jump.
           if ((LayoutSucc->size() == 1) &&
               IsUnconditionalJump(LayoutSucc->front().getOpcode())) {
-            assert(JumpAroundTarget && "jump target is needed to process second basic block");
-            MachineBasicBlock* UncondTarget =
-              LayoutSucc->front().getOperand(0).getMBB();
+            assert(JumpAroundTarget &&
+                   "jump target is needed to process second basic block");
+            MachineBasicBlock *UncondTarget =
+                LayoutSucc->front().getOperand(0).getMBB();
             // Check if the layout successor of BB2 is BB3.
             bool case1 = LayoutSucc->isLayoutSuccessor(JumpAroundTarget);
-            bool case2 = JumpAroundTarget->isSuccessor(UncondTarget) &&
-              !JumpAroundTarget->empty() &&
-              IsUnconditionalJump(JumpAroundTarget->back().getOpcode()) &&
-              JumpAroundTarget->pred_size() == 1 &&
-              JumpAroundTarget->succ_size() == 1;
+            bool case2 =
+                JumpAroundTarget->isSuccessor(UncondTarget) &&
+                !JumpAroundTarget->empty() &&
+                IsUnconditionalJump(JumpAroundTarget->back().getOpcode()) &&
+                JumpAroundTarget->pred_size() == 1 &&
+                JumpAroundTarget->succ_size() == 1;
 
             if (case1 || case2) {
               InvertAndChangeJumpTarget(MI, UncondTarget);

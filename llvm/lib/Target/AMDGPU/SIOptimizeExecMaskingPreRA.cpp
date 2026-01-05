@@ -97,9 +97,9 @@ static bool isDefBetween(const LiveRange &LR, SlotIndex AndIdx,
 }
 
 // FIXME: Why do we bother trying to handle physical registers here?
-static bool isDefBetween(const SIRegisterInfo &TRI,
-                         LiveIntervals *LIS, Register Reg,
-                         const MachineInstr &Sel, const MachineInstr &And) {
+static bool isDefBetween(const SIRegisterInfo &TRI, LiveIntervals *LIS,
+                         Register Reg, const MachineInstr &Sel,
+                         const MachineInstr &And) {
   SlotIndex AndIdx = LIS->getInstructionIndex(And).getRegSlot();
   SlotIndex SelIdx = LIS->getInstructionIndex(Sel).getRegSlot();
 
@@ -132,9 +132,9 @@ static bool isDefBetween(const SIRegisterInfo &TRI,
 // Returns true on success.
 bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   auto I = llvm::find_if(MBB.terminators(), [](const MachineInstr &MI) {
-                           unsigned Opc = MI.getOpcode();
-                           return Opc == AMDGPU::S_CBRANCH_VCCZ ||
-                                  Opc == AMDGPU::S_CBRANCH_VCCNZ; });
+    unsigned Opc = MI.getOpcode();
+    return Opc == AMDGPU::S_CBRANCH_VCCZ || Opc == AMDGPU::S_CBRANCH_VCCNZ;
+  });
   if (I == MBB.terminators().end())
     return false;
 
@@ -156,8 +156,9 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   }
 
   auto *Cmp = TRI->findReachingDef(CmpReg, CmpSubReg, *And, *MRI, LIS);
-  if (!Cmp || !(Cmp->getOpcode() == AMDGPU::V_CMP_NE_U32_e32 ||
-                Cmp->getOpcode() == AMDGPU::V_CMP_NE_U32_e64) ||
+  if (!Cmp ||
+      !(Cmp->getOpcode() == AMDGPU::V_CMP_NE_U32_e32 ||
+        Cmp->getOpcode() == AMDGPU::V_CMP_NE_U32_e64) ||
       Cmp->getParent() != And->getParent())
     return false;
 
@@ -183,8 +184,8 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   Op1 = TII->getNamedOperand(*Sel, AMDGPU::OpName::src0);
   Op2 = TII->getNamedOperand(*Sel, AMDGPU::OpName::src1);
   MachineOperand *CC = TII->getNamedOperand(*Sel, AMDGPU::OpName::src2);
-  if (!Op1->isImm() || !Op2->isImm() || !CC->isReg() ||
-      Op1->getImm() != 0 || Op2->getImm() != 1)
+  if (!Op1->isImm() || !Op2->isImm() || !CC->isReg() || Op1->getImm() != 0 ||
+      Op2->getImm() != 1)
     return false;
 
   Register CCReg = CC->getReg();
@@ -199,9 +200,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   SlotIndex SelIdx = LIS->getInstructionIndex(*Sel);
   LiveInterval *SelLI = &LIS->getInterval(SelReg);
   if (llvm::any_of(SelLI->vnis(),
-                    [](const VNInfo *VNI) {
-                      return VNI->isPHIDef();
-                    }))
+                   [](const VNInfo *VNI) { return VNI->isPHIDef(); }))
     return false;
 
   // TODO: Guard against implicit def operands?
@@ -239,7 +238,8 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
 
   // Try to remove compare. Cmp value should not used in between of cmp
   // and s_and_b64 if VCC or just unused if any other register.
-  LiveInterval *CmpLI = CmpReg.isVirtual() ? &LIS->getInterval(CmpReg) : nullptr;
+  LiveInterval *CmpLI =
+      CmpReg.isVirtual() ? &LIS->getInterval(CmpReg) : nullptr;
   if ((CmpLI && CmpLI->Query(AndIdx.getRegSlot()).isKill()) ||
       (CmpReg == Register(CondReg) &&
        std::none_of(std::next(Cmp->getIterator()), Andn2->getIterator(),
@@ -401,7 +401,7 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
       if (Term.getOpcode() != AMDGPU::S_ENDPGM || Term.getNumOperands() != 1)
         continue;
 
-      SmallVector<MachineBasicBlock*, 4> Blocks({&MBB});
+      SmallVector<MachineBasicBlock *, 4> Blocks({&MBB});
 
       while (!Blocks.empty()) {
         auto *CurBB = Blocks.pop_back_val();
@@ -459,8 +459,8 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
     // =>
     //    %1 = S_AND_B64 $exec, %2:sreg_64
     unsigned ScanThreshold = 10;
-    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E
-         && ScanThreshold--; ++I) {
+    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E && ScanThreshold--;
+         ++I) {
       // Continue scanning if this is not a full exec copy
       if (!(I->isFullCopy() && I->getOperand(1).getReg() == Register(ExecReg)))
         continue;

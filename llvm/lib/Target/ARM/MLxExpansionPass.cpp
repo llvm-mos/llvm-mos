@@ -28,49 +28,48 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mlx-expansion"
 
-static cl::opt<bool>
-ForceExapnd("expand-all-fp-mlx", cl::init(false), cl::Hidden);
-static cl::opt<unsigned>
-ExpandLimit("expand-limit", cl::init(~0U), cl::Hidden);
+static cl::opt<bool> ForceExapnd("expand-all-fp-mlx", cl::init(false),
+                                 cl::Hidden);
+static cl::opt<unsigned> ExpandLimit("expand-limit", cl::init(~0U), cl::Hidden);
 
 STATISTIC(NumExpand, "Number of fp MLA / MLS instructions expanded");
 
 namespace {
-  struct MLxExpansion : public MachineFunctionPass {
-    static char ID;
-    MLxExpansion() : MachineFunctionPass(ID) {}
+struct MLxExpansion : public MachineFunctionPass {
+  static char ID;
+  MLxExpansion() : MachineFunctionPass(ID) {}
 
-    bool runOnMachineFunction(MachineFunction &Fn) override;
+  bool runOnMachineFunction(MachineFunction &Fn) override;
 
-    StringRef getPassName() const override {
-      return "ARM MLA / MLS expansion pass";
-    }
+  StringRef getPassName() const override {
+    return "ARM MLA / MLS expansion pass";
+  }
 
-  private:
-    const ARMBaseInstrInfo *TII;
-    const TargetRegisterInfo *TRI;
-    MachineRegisterInfo *MRI;
+private:
+  const ARMBaseInstrInfo *TII;
+  const TargetRegisterInfo *TRI;
+  MachineRegisterInfo *MRI;
 
-    bool isLikeA9;
-    bool isSwift;
-    unsigned MIIdx;
-    MachineInstr* LastMIs[4];
-    SmallPtrSet<MachineInstr*, 4> IgnoreStall;
+  bool isLikeA9;
+  bool isSwift;
+  unsigned MIIdx;
+  MachineInstr *LastMIs[4];
+  SmallPtrSet<MachineInstr *, 4> IgnoreStall;
 
-    void clearStack();
-    void pushStack(MachineInstr *MI);
-    MachineInstr *getAccDefMI(MachineInstr *MI) const;
-    unsigned getDefReg(MachineInstr *MI) const;
-    bool hasLoopHazard(MachineInstr *MI) const;
-    bool hasRAWHazard(unsigned Reg, MachineInstr *MI) const;
-    bool FindMLxHazard(MachineInstr *MI);
-    void ExpandFPMLxInstruction(MachineBasicBlock &MBB, MachineInstr *MI,
-                                unsigned MulOpc, unsigned AddSubOpc,
-                                bool NegAcc, bool HasLane);
-    bool ExpandFPMLxInstructions(MachineBasicBlock &MBB);
-  };
-  char MLxExpansion::ID = 0;
-}
+  void clearStack();
+  void pushStack(MachineInstr *MI);
+  MachineInstr *getAccDefMI(MachineInstr *MI) const;
+  unsigned getDefReg(MachineInstr *MI) const;
+  bool hasLoopHazard(MachineInstr *MI) const;
+  bool hasRAWHazard(unsigned Reg, MachineInstr *MI) const;
+  bool FindMLxHazard(MachineInstr *MI);
+  void ExpandFPMLxInstruction(MachineBasicBlock &MBB, MachineInstr *MI,
+                              unsigned MulOpc, unsigned AddSubOpc, bool NegAcc,
+                              bool HasLane);
+  bool ExpandFPMLxInstructions(MachineBasicBlock &MBB);
+};
+char MLxExpansion::ID = 0;
+} // namespace
 
 void MLxExpansion::clearStack() {
   std::fill(LastMIs, LastMIs + 4, nullptr);
@@ -145,7 +144,7 @@ bool MLxExpansion::hasLoopHazard(MachineInstr *MI) const {
   MachineBasicBlock *MBB = MI->getParent();
   MachineInstr *DefMI = MRI->getVRegDef(Reg);
   while (true) {
-outer_continue:
+  outer_continue:
     if (DefMI->getParent() != MBB)
       break;
 
@@ -265,10 +264,10 @@ bool MLxExpansion::FindMLxHazard(MachineInstr *MI) {
 
 /// ExpandFPMLxInstructions - Expand a MLA / MLS instruction into a pair
 /// of MUL + ADD / SUB instructions.
-void
-MLxExpansion::ExpandFPMLxInstruction(MachineBasicBlock &MBB, MachineInstr *MI,
-                                     unsigned MulOpc, unsigned AddSubOpc,
-                                     bool NegAcc, bool HasLane) {
+void MLxExpansion::ExpandFPMLxInstruction(MachineBasicBlock &MBB,
+                                          MachineInstr *MI, unsigned MulOpc,
+                                          unsigned AddSubOpc, bool NegAcc,
+                                          bool HasLane) {
   Register DstReg = MI->getOperand(0).getReg();
   bool DstDead = MI->getOperand(0).isDead();
   Register AccReg = MI->getOperand(1).getReg();
@@ -286,19 +285,19 @@ MLxExpansion::ExpandFPMLxInstruction(MachineBasicBlock &MBB, MachineInstr *MI,
   Register TmpReg = MRI->createVirtualRegister(TII->getRegClass(MCID1, 0));
 
   MachineInstrBuilder MIB = BuildMI(MBB, MI, MI->getDebugLoc(), MCID1, TmpReg)
-    .addReg(Src1Reg, getKillRegState(Src1Kill))
-    .addReg(Src2Reg, getKillRegState(Src2Kill));
+                                .addReg(Src1Reg, getKillRegState(Src1Kill))
+                                .addReg(Src2Reg, getKillRegState(Src2Kill));
   if (HasLane)
     MIB.addImm(LaneImm);
   MIB.addImm(Pred).addReg(PredReg);
 
   MIB = BuildMI(MBB, MI, MI->getDebugLoc(), MCID2)
-    .addReg(DstReg, getDefRegState(true) | getDeadRegState(DstDead));
+            .addReg(DstReg, getDefRegState(true) | getDeadRegState(DstDead));
 
   if (NegAcc) {
     bool AccKill = MRI->hasOneNonDBGUse(AccReg);
     MIB.addReg(TmpReg, getKillRegState(true))
-       .addReg(AccReg, getKillRegState(AccKill));
+        .addReg(AccReg, getKillRegState(AccKill));
   } else {
     MIB.addReg(AccReg).addReg(TmpReg, getKillRegState(true));
   }
@@ -351,8 +350,8 @@ bool MLxExpansion::ExpandFPMLxInstructions(MachineBasicBlock &MBB) {
 
       unsigned MulOpc, AddSubOpc;
       bool NegAcc, HasLane;
-      if (!TII->isFpMLxInstruction(MCID.getOpcode(),
-                                   MulOpc, AddSubOpc, NegAcc, HasLane) ||
+      if (!TII->isFpMLxInstruction(MCID.getOpcode(), MulOpc, AddSubOpc, NegAcc,
+                                   HasLane) ||
           !FindMLxHazard(MI))
         pushStack(MI);
       else {
@@ -385,6 +384,4 @@ bool MLxExpansion::runOnMachineFunction(MachineFunction &Fn) {
   return Modified;
 }
 
-FunctionPass *llvm::createMLxExpansionPass() {
-  return new MLxExpansion();
-}
+FunctionPass *llvm::createMLxExpansionPass() { return new MLxExpansion(); }

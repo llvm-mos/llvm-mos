@@ -228,7 +228,8 @@ public:
     // Copy data to update into Bytes from the file FS and the buffer Out.
     char Bytes[3]; // Use one more byte to silence a warning from Visual C++.
     size_t BytesNum = StartBit ? 2 : 1;
-    size_t BytesFromDisk = std::min(static_cast<uint64_t>(BytesNum), NumOfFlushedBytes - ByteNo);
+    size_t BytesFromDisk =
+        std::min(static_cast<uint64_t>(BytesNum), NumOfFlushedBytes - ByteNo);
     size_t BytesFromBuffer = BytesNum - BytesFromDisk;
 
     // When unaligned, copy existing data into Bytes from the file FS and the
@@ -281,7 +282,7 @@ public:
 
   void Emit(uint32_t Val, unsigned NumBits) {
     assert(NumBits && NumBits <= 32 && "Invalid value size!");
-    assert((Val & ~(~0U >> (32-NumBits))) == 0 && "High bits set!");
+    assert((Val & ~(~0U >> (32 - NumBits))) == 0 && "High bits set!");
     CurValue |= Val << CurBit;
     if (CurBit + NumBits < 32) {
       CurBit += NumBits;
@@ -292,10 +293,10 @@ public:
     WriteWord(CurValue);
 
     if (CurBit)
-      CurValue = Val >> (32-CurBit);
+      CurValue = Val >> (32 - CurBit);
     else
       CurValue = 0;
-    CurBit = (CurBit+NumBits) & 31;
+    CurBit = (CurBit + NumBits) & 31;
   }
 
   void FlushToWord() {
@@ -308,13 +309,13 @@ public:
 
   void EmitVBR(uint32_t Val, unsigned NumBits) {
     assert(NumBits <= 32 && "Too many bits to emit!");
-    uint32_t Threshold = 1U << (NumBits-1);
+    uint32_t Threshold = 1U << (NumBits - 1);
 
     // Emit the bits with VBR encoding, NumBits-1 bits at a time.
     while (Val >= Threshold) {
       Emit((Val & ((1U << (NumBits - 1)) - 1)) | (1U << (NumBits - 1)),
            NumBits);
-      Val >>= NumBits-1;
+      Val >>= NumBits - 1;
     }
 
     Emit(Val, NumBits);
@@ -325,23 +326,21 @@ public:
     if ((uint32_t)Val == Val)
       return EmitVBR((uint32_t)Val, NumBits);
 
-    uint32_t Threshold = 1U << (NumBits-1);
+    uint32_t Threshold = 1U << (NumBits - 1);
 
     // Emit the bits with VBR encoding, NumBits-1 bits at a time.
     while (Val >= Threshold) {
       Emit(((uint32_t)Val & ((1U << (NumBits - 1)) - 1)) |
                (1U << (NumBits - 1)),
            NumBits);
-      Val >>= NumBits-1;
+      Val >>= NumBits - 1;
     }
 
     Emit((uint32_t)Val, NumBits);
   }
 
   /// EmitCode - Emit the specified code.
-  void EmitCode(unsigned Val) {
-    Emit(Val, CurCodeSize);
-  }
+  void EmitCode(unsigned Val) { Emit(Val, CurCodeSize); }
 
   //===--------------------------------------------------------------------===//
   // Block Manipulation
@@ -417,24 +416,24 @@ public:
 private:
   /// EmitAbbreviatedLiteral - Emit a literal value according to its abbrev
   /// record.  This is a no-op, since the abbrev specifies the literal to use.
-  template<typename uintty>
+  template <typename uintty>
   void EmitAbbreviatedLiteral(const BitCodeAbbrevOp &Op, uintty V) {
     assert(Op.isLiteral() && "Not a literal");
     // If the abbrev specifies the literal value to use, don't emit
     // anything.
-    assert(V == Op.getLiteralValue() &&
-           "Invalid abbrev for record!");
+    assert(V == Op.getLiteralValue() && "Invalid abbrev for record!");
   }
 
   /// EmitAbbreviatedField - Emit a single scalar field value with the specified
   /// encoding.
-  template<typename uintty>
+  template <typename uintty>
   void EmitAbbreviatedField(const BitCodeAbbrevOp &Op, uintty V) {
     assert(!Op.isLiteral() && "Literals should use EmitAbbreviatedLiteral!");
 
     // Encode the value as we are commanded.
     switch (Op.getEncoding()) {
-    default: llvm_unreachable("Unknown encoding!");
+    default:
+      llvm_unreachable("Unknown encoding!");
     case BitCodeAbbrevOp::Fixed:
       if (Op.getEncodingData())
         Emit((unsigned)V, (unsigned)Op.getEncodingData());
@@ -459,8 +458,8 @@ private:
   void EmitRecordWithAbbrevImpl(unsigned Abbrev, ArrayRef<uintty> Vals,
                                 StringRef Blob, std::optional<unsigned> Code) {
     const char *BlobData = Blob.data();
-    unsigned BlobLen = (unsigned) Blob.size();
-    unsigned AbbrevNo = Abbrev-bitc::FIRST_APPLICATION_ABBREV;
+    unsigned BlobLen = (unsigned)Blob.size();
+    unsigned AbbrevNo = Abbrev - bitc::FIRST_APPLICATION_ABBREV;
     assert(AbbrevNo < CurAbbrevs.size() && "Invalid abbrev #!");
     const BitCodeAbbrev *Abbv = CurAbbrevs[AbbrevNo].get();
 
@@ -509,7 +508,7 @@ private:
           BlobData = nullptr;
         } else {
           // Emit a vbr6 to indicate the number of elements present.
-          EmitVBR(static_cast<uint32_t>(Vals.size()-RecordIdx), 6);
+          EmitVBR(static_cast<uint32_t>(Vals.size() - RecordIdx), 6);
 
           // Emit each field.
           for (unsigned e = Vals.size(); RecordIdx != e; ++RecordIdx)
@@ -530,7 +529,7 @@ private:
         } else {
           emitBlob(Vals.slice(RecordIdx));
         }
-      } else {  // Single scalar field.
+      } else { // Single scalar field.
         assert(RecordIdx < Vals.size() && "Invalid abbrev/record");
         EmitAbbreviatedField(Op, Vals[RecordIdx]);
         ++RecordIdx;
@@ -644,14 +643,14 @@ private:
       }
     }
   }
-public:
 
+public:
   /// Emits the abbreviation \p Abbv to the stream.
   unsigned EmitAbbrev(std::shared_ptr<BitCodeAbbrev> Abbv) {
     EncodeAbbrev(*Abbv);
     CurAbbrevs.push_back(std::move(Abbv));
-    return static_cast<unsigned>(CurAbbrevs.size())-1 +
-      bitc::FIRST_APPLICATION_ABBREV;
+    return static_cast<unsigned>(CurAbbrevs.size()) - 1 +
+           bitc::FIRST_APPLICATION_ABBREV;
   }
 
   //===--------------------------------------------------------------------===//
@@ -664,11 +663,13 @@ public:
     BlockInfoCurBID = ~0U;
     BlockInfoRecords.clear();
   }
+
 private:
   /// SwitchToBlockID - If we aren't already talking about the specified block
   /// ID, emit a BLOCKINFO_CODE_SETBID record.
   void SwitchToBlockID(unsigned BlockID) {
-    if (BlockInfoCurBID == BlockID) return;
+    if (BlockInfoCurBID == BlockID)
+      return;
     SmallVector<unsigned, 2> V;
     V.push_back(BlockID);
     EmitRecord(bitc::BLOCKINFO_CODE_SETBID, V);
@@ -686,10 +687,10 @@ private:
   }
 
 public:
-
   /// EmitBlockInfoAbbrev - Emit a DEFINE_ABBREV record for the specified
   /// BlockID.
-  unsigned EmitBlockInfoAbbrev(unsigned BlockID, std::shared_ptr<BitCodeAbbrev> Abbv) {
+  unsigned EmitBlockInfoAbbrev(unsigned BlockID,
+                               std::shared_ptr<BitCodeAbbrev> Abbv) {
     SwitchToBlockID(BlockID);
     EncodeAbbrev(*Abbv);
 
@@ -697,11 +698,10 @@ public:
     BlockInfo &Info = getOrCreateBlockInfo(BlockID);
     Info.Abbrevs.push_back(std::move(Abbv));
 
-    return Info.Abbrevs.size()-1+bitc::FIRST_APPLICATION_ABBREV;
+    return Info.Abbrevs.size() - 1 + bitc::FIRST_APPLICATION_ABBREV;
   }
 };
 
-
-} // End llvm namespace
+} // namespace llvm
 
 #endif

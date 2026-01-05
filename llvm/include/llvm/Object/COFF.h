@@ -56,7 +56,7 @@ using arm64x_reloc_iterator = content_iterator<Arm64XRelocRef>;
 
 /// The DOS compatible header at the front of all PE/COFF executables.
 struct dos_header {
-  char                 Magic[2];
+  char Magic[2];
   support::ulittle16_t UsedBytesInTheLastPage;
   support::ulittle16_t FileSizeInPages;
   support::ulittle16_t NumberOfRelocationItems;
@@ -95,7 +95,7 @@ struct coff_bigobj_file_header {
   support::ulittle16_t Version;
   support::ulittle16_t Machine;
   support::ulittle32_t TimeDateStamp;
-  uint8_t              UUID[16];
+  uint8_t UUID[16];
   support::ulittle32_t unused1;
   support::ulittle32_t unused2;
   support::ulittle32_t unused3;
@@ -190,8 +190,7 @@ struct debug_directory {
   support::ulittle32_t PointerToRawData;
 };
 
-template <typename IntTy>
-struct import_lookup_table_entry {
+template <typename IntTy> struct import_lookup_table_entry {
   IntTy Data;
 
   bool isOrdinal() const { return Data < 0; }
@@ -251,8 +250,7 @@ struct StringTableOffset {
   support::ulittle32_t Offset;
 };
 
-template <typename SectionNumberType>
-struct coff_symbol {
+template <typename SectionNumberType> struct coff_symbol {
   union {
     char ShortName[COFF::NameSize];
     StringTableOffset Offset;
@@ -375,9 +373,7 @@ public:
     return getAux<coff_aux_weak_external>();
   }
 
-  bool isAbsolute() const {
-    return getSectionNumber() == -1;
-  }
+  bool isAbsolute() const { return getSectionNumber() == -1; }
 
   bool isExternal() const {
     return getStorageClass() == COFF::IMAGE_SYM_CLASS_EXTERNAL;
@@ -411,9 +407,7 @@ public:
     return getStorageClass() == COFF::IMAGE_SYM_CLASS_FUNCTION;
   }
 
-  bool isAnyUndefined() const {
-    return isUndefined() || isWeakExternal();
-  }
+  bool isAnyUndefined() const { return isUndefined() || isWeakExternal(); }
 
   bool isFileRecord() const {
     return getStorageClass() == COFF::IMAGE_SYM_CLASS_FILE;
@@ -523,8 +517,8 @@ struct coff_aux_section_definition {
   support::ulittle16_t NumberOfLinenumbers;
   support::ulittle32_t CheckSum;
   support::ulittle16_t NumberLowPart;
-  uint8_t              Selection;
-  uint8_t              Unused;
+  uint8_t Selection;
+  uint8_t Unused;
   support::ulittle16_t NumberHighPart;
   int32_t getNumber(bool IsBigObj) const {
     uint32_t Number = static_cast<uint32_t>(NumberLowPart);
@@ -538,10 +532,10 @@ static_assert(sizeof(coff_aux_section_definition) == 18,
               "auxiliary entry must be 18 bytes");
 
 struct coff_aux_clr_token {
-  uint8_t              AuxType;
-  uint8_t              Reserved;
+  uint8_t AuxType;
+  uint8_t Reserved;
   support::ulittle32_t SymbolTableIndex;
-  char                 MBZ[12];
+  char MBZ[12];
 };
 
 static_assert(sizeof(coff_aux_clr_token) == 18,
@@ -574,8 +568,7 @@ struct coff_import_directory_table_entry {
   }
 };
 
-template <typename IntTy>
-struct coff_tls_directory {
+template <typename IntTy> struct coff_tls_directory {
   IntTy StartAddressOfRawData;
   IntTy EndAddressOfRawData;
   IntTy AddressOfIndex;
@@ -1120,7 +1113,7 @@ public:
 
   iterator_range<import_directory_iterator> import_directories() const;
   iterator_range<delay_import_directory_iterator>
-      delay_import_directories() const;
+  delay_import_directories() const;
   iterator_range<export_directory_iterator> export_directories() const;
   iterator_range<base_reloc_iterator> base_relocs() const;
   iterator_range<dynamic_reloc_iterator> dynamic_relocs() const;
@@ -1204,8 +1197,7 @@ public:
                              ArrayRef<uint8_t> &Contents,
                              const char *ErrorContext = nullptr) const;
 
-  Error getHintName(uint32_t Rva, uint16_t &Hint,
-                              StringRef &Name) const;
+  Error getHintName(uint32_t Rva, uint16_t &Hint, StringRef &Name) const;
 
   /// Get PDB information out of a codeview debug directory entry.
   Error getDebugPDBInfo(const debug_directory *DebugDir,

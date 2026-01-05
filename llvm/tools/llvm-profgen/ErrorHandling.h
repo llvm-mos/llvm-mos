@@ -40,7 +40,7 @@ namespace llvm {
 }
 
 template <typename T, typename... Ts>
-T unwrapOrError(Expected<T> EO, Ts &&... Args) {
+T unwrapOrError(Expected<T> EO, Ts &&...Args) {
   if (EO)
     return std::move(*EO);
   exitWithError(EO.takeError(), std::forward<Ts>(Args)...);

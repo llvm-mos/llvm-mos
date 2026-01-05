@@ -75,6 +75,6 @@ public:
 
   const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
 };
-}
+} // namespace llvm
 
 #endif

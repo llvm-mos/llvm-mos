@@ -72,6 +72,7 @@ class StatisticInfo {
 
   /// Sort statistics by debugtype,name,description.
   void sort();
+
 public:
   using const_iterator = std::vector<TrackingStatistic *>::const_iterator;
 
@@ -82,16 +83,14 @@ public:
 
   const_iterator begin() const { return Stats.begin(); }
   const_iterator end() const { return Stats.end(); }
-  iterator_range<const_iterator> statistics() const {
-    return {begin(), end()};
-  }
+  iterator_range<const_iterator> statistics() const { return {begin(), end()}; }
 
   void reset();
 };
 } // end anonymous namespace
 
 static ManagedStatic<StatisticInfo> StatInfo;
-static ManagedStatic<sys::SmartMutex<true> > StatLock;
+static ManagedStatic<sys::SmartMutex<true>> StatLock;
 
 /// RegisterStatistic - The first time a statistic is bumped, this method is
 /// called.
@@ -196,7 +195,7 @@ void llvm::PrintStatistics(raw_ostream &OS) {
     OS << format("%*" PRIu64 " %-*s - %s\n", MaxValLen, Stat->getValue(),
                  MaxDebugTypeLen, Stat->getDebugType(), Stat->getDesc());
 
-  OS << '\n';  // Flush the output stream.
+  OS << '\n'; // Flush the output stream.
   OS.flush();
 }
 
@@ -215,8 +214,8 @@ void llvm::PrintStatisticsJSON(raw_ostream &OS) {
            "Statistic group/type name is simple.");
     assert(yaml::needsQuotes(Stat->getName()) == yaml::QuotingType::None &&
            "Statistic name is simple");
-    OS << "\t\"" << Stat->getDebugType() << '.' << Stat->getName() << "\": "
-       << Stat->getValue();
+    OS << "\t\"" << Stat->getDebugType() << '.' << Stat->getName()
+       << "\": " << Stat->getValue();
     delim = ",\n";
   }
   // Print timers.
@@ -232,7 +231,8 @@ void llvm::PrintStatistics() {
   StatisticInfo &Stats = *StatInfo;
 
   // Statistics not enabled?
-  if (Stats.Stats.empty()) return;
+  if (Stats.Stats.empty())
+    return;
 
   // Get the stream to write to.
   std::unique_ptr<raw_ostream> OutStream = CreateInfoOutputFile();
@@ -263,6 +263,4 @@ std::vector<std::pair<StringRef, uint64_t>> llvm::GetStatistics() {
   return ReturnStats;
 }
 
-void llvm::ResetStatistics() {
-  StatInfo->reset();
-}
+void llvm::ResetStatistics() { StatInfo->reset(); }

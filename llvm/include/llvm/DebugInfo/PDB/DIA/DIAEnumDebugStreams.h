@@ -30,7 +30,7 @@ public:
 private:
   CComPtr<IDiaEnumDebugStreams> Enumerator;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

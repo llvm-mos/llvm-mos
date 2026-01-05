@@ -29,11 +29,10 @@ protected:
   MCAsmParserExtension();
 
   // Helper template for implementing static dispatch functions.
-  template<typename T, bool (T::*Handler)(StringRef, SMLoc)>
-  static bool HandleDirective(MCAsmParserExtension *Target,
-                              StringRef Directive,
+  template <typename T, bool (T::*Handler)(StringRef, SMLoc)>
+  static bool HandleDirective(MCAsmParserExtension *Target, StringRef Directive,
                               SMLoc DirectiveLoc) {
-    T *Obj = static_cast<T*>(Target);
+    T *Obj = static_cast<T *>(Target);
     return (Obj->*Handler)(Directive, DirectiveLoc);
   }
 
@@ -61,7 +60,7 @@ public:
 
   MCAsmParser &getParser() { return *Parser; }
   const MCAsmParser &getParser() const {
-    return const_cast<MCAsmParserExtension*>(this)->getParser();
+    return const_cast<MCAsmParserExtension *>(this)->getParser();
   }
 
   SourceMgr &getSourceManager() { return getParser().getSourceManager(); }
@@ -75,13 +74,9 @@ public:
     return getParser().Error(L, Msg, Range);
   }
 
-  void Note(SMLoc L, const Twine &Msg) {
-    getParser().Note(L, Msg);
-  }
+  void Note(SMLoc L, const Twine &Msg) { getParser().Note(L, Msg); }
 
-  bool TokError(const Twine &Msg) {
-    return getParser().TokError(Msg);
-  }
+  bool TokError(const Twine &Msg) { return getParser().TokError(Msg); }
 
   const AsmToken &Lex() { return getParser().Lex(); }
   const AsmToken &getTok() { return getParser().getTok(); }
@@ -103,9 +98,7 @@ public:
 
   bool maybeParseUniqueID(int64_t &UniqueID);
 
-  bool check(bool P, const Twine &Msg) {
-    return getParser().check(P, Msg);
-  }
+  bool check(bool P, const Twine &Msg) { return getParser().check(P, Msg); }
 
   bool check(bool P, SMLoc Loc, const Twine &Msg) {
     return getParser().check(P, Loc, Msg);

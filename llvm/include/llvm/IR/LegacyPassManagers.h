@@ -32,9 +32,9 @@
 //     information before it is consumed by another pass.
 //
 // Pass Manager Infrastructure uses multiple pass managers.  They are
-// PassManager, FunctionPassManager, MPPassManager, FPPassManager, BBPassManager.
-// This class hierarchy uses multiple inheritance but pass managers do not
-// derive from another pass manager.
+// PassManager, FunctionPassManager, MPPassManager, FPPassManager,
+// BBPassManager. This class hierarchy uses multiple inheritance but pass
+// managers do not derive from another pass manager.
 //
 // PassManager and FunctionPassManager are two top-level pass manager that
 // represents the external interface of this entire pass manager infrastucture.
@@ -95,14 +95,14 @@ class PMDataManager;
 
 // enums for debugging strings
 enum PassDebuggingString {
-  EXECUTION_MSG, // "Executing Pass '" + PassName
+  EXECUTION_MSG,    // "Executing Pass '" + PassName
   MODIFICATION_MSG, // "Made Modification '" + PassName
-  FREEING_MSG, // " Freeing Pass '" + PassName
-  ON_FUNCTION_MSG, // "' on Function '" + FunctionName + "'...\n"
-  ON_MODULE_MSG, // "' on Module '" + ModuleName + "'...\n"
-  ON_REGION_MSG, // "' on Region '" + Msg + "'...\n'"
-  ON_LOOP_MSG, // "' on Loop '" + Msg + "'...\n'"
-  ON_CG_MSG // "' on Call Graph Nodes '" + Msg + "'...\n'"
+  FREEING_MSG,      // " Freeing Pass '" + PassName
+  ON_FUNCTION_MSG,  // "' on Function '" + FunctionName + "'...\n"
+  ON_MODULE_MSG,    // "' on Module '" + ModuleName + "'...\n"
+  ON_REGION_MSG,    // "' on Region '" + Msg + "'...\n'"
+  ON_LOOP_MSG,      // "' on Loop '" + Msg + "'...\n'"
+  ON_CG_MSG         // "' on Call Graph Nodes '" + Msg + "'...\n'"
 };
 
 /// PassManagerPrettyStackEntry - This is used to print informative information
@@ -114,11 +114,11 @@ class LLVM_ABI PassManagerPrettyStackEntry : public PrettyStackTraceEntry {
 
 public:
   explicit PassManagerPrettyStackEntry(Pass *p)
-    : P(p), V(nullptr), M(nullptr) {}  // When P is releaseMemory'd.
+      : P(p), V(nullptr), M(nullptr) {} // When P is releaseMemory'd.
   PassManagerPrettyStackEntry(Pass *p, Value &v)
-    : P(p), V(&v), M(nullptr) {} // When P is run on V
+      : P(p), V(&v), M(nullptr) {} // When P is run on V
   PassManagerPrettyStackEntry(Pass *p, Module &m)
-    : P(p), V(nullptr), M(&m) {} // When P is run on M
+      : P(p), V(nullptr), M(&m) {} // When P is run on M
 
   /// print - Emit information about this stack frame to OS.
   void print(raw_ostream &OS) const override;
@@ -177,7 +177,7 @@ public:
   void schedulePass(Pass *P);
 
   /// Set pass P as the last user of the given analysis passes.
-  void setLastUser(ArrayRef<Pass*> AnalysisPasses, Pass *P);
+  void setLastUser(ArrayRef<Pass *> AnalysisPasses, Pass *P);
 
   /// Collect passes whose last user is P
   void collectLastUses(SmallVectorImpl<Pass *> &LastUses, Pass *P);
@@ -198,7 +198,7 @@ public:
   /// Add immutable pass and initialize it.
   void addImmutablePass(ImmutablePass *P);
 
-  inline SmallVectorImpl<ImmutablePass *>& getImmutablePasses() {
+  inline SmallVectorImpl<ImmutablePass *> &getImmutablePasses() {
     return ImmutablePasses;
   }
 
@@ -235,7 +235,7 @@ private:
 
   // Map to keep track of passes that are last used by a pass.
   // This is kept in sync with LastUser.
-  DenseMap<Pass *, SmallPtrSet<Pass *, 8> > InversedLastUser;
+  DenseMap<Pass *, SmallPtrSet<Pass *, 8>> InversedLastUser;
 
   /// Immutable passes are managed by top level manager.
   SmallVector<ImmutablePass *, 16> ImmutablePasses;
@@ -243,22 +243,19 @@ private:
   /// Map from ID to immutable passes.
   SmallDenseMap<AnalysisID, ImmutablePass *, 8> ImmutablePassMap;
 
-
   /// A wrapper around AnalysisUsage for the purpose of uniqueing.  The wrapper
   /// is used to avoid needing to make AnalysisUsage itself a folding set node.
   struct AUFoldingSetNode : public FoldingSetNode {
     AnalysisUsage AU;
     AUFoldingSetNode(const AnalysisUsage &AU) : AU(AU) {}
-    void Profile(FoldingSetNodeID &ID) const {
-      Profile(ID, AU);
-    }
+    void Profile(FoldingSetNodeID &ID) const { Profile(ID, AU); }
     static void Profile(FoldingSetNodeID &ID, const AnalysisUsage &AU) {
       // TODO: We could consider sorting the dependency arrays within the
       // AnalysisUsage (since they are conceptually unordered).
       ID.AddBoolean(AU.getPreservesAll());
-      auto ProfileVec = [&](const SmallVectorImpl<AnalysisID>& Vec) {
+      auto ProfileVec = [&](const SmallVectorImpl<AnalysisID> &Vec) {
         ID.AddInteger(Vec.size());
-        for(AnalysisID AID : Vec)
+        for (AnalysisID AID : Vec)
           ID.AddPointer(AID);
       };
       ProfileVec(AU.getRequiredSet());
@@ -279,7 +276,7 @@ private:
 
   // Maps from a pass to it's associated entry in UniqueAnalysisUsages.  Does
   // not own the storage associated with either key or value..
-  DenseMap<Pass *, AnalysisUsage*> AnUsageMap;
+  DenseMap<Pass *, AnalysisUsage *> AnUsageMap;
 
   /// Collection of PassInfo objects found via analysis IDs and in this top
   /// level manager. This is used to memoize queries to the pass registry.
@@ -311,12 +308,10 @@ public:
   void removeNotPreservedAnalysis(Pass *P);
 
   /// Remove dead passes used by P.
-  void removeDeadPasses(Pass *P, StringRef Msg,
-                        enum PassDebuggingString);
+  void removeDeadPasses(Pass *P, StringRef Msg, enum PassDebuggingString);
 
   /// Remove P.
-  void freePass(Pass *P, StringRef Msg,
-                enum PassDebuggingString);
+  void freePass(Pass *P, StringRef Msg, enum PassDebuggingString);
 
   /// Add pass P into the PassVector. Update
   /// AvailableAnalysis appropriately if ProcessAnalysis is true.
@@ -373,16 +368,14 @@ public:
   void dumpPreservedSet(const Pass *P) const;
   void dumpUsedSet(const Pass *P) const;
 
-  unsigned getNumContainedPasses() const {
-    return (unsigned)PassVector.size();
-  }
+  unsigned getNumContainedPasses() const { return (unsigned)PassVector.size(); }
 
   virtual PassManagerType getPassManagerType() const {
-    assert ( 0 && "Invalid use of getPassManagerType");
+    assert(0 && "Invalid use of getPassManagerType");
     return PMT_Unknown;
   }
 
-  DenseMap<AnalysisID, Pass*> *getAvailableAnalysis() {
+  DenseMap<AnalysisID, Pass *> *getAvailableAnalysis() {
     return &AvailableAnalysis;
   }
 
@@ -438,7 +431,7 @@ private:
   // pass. If a pass requires an analysis which is not available then
   // the required analysis pass is scheduled to run before the pass itself is
   // scheduled to run.
-  DenseMap<AnalysisID, Pass*> AvailableAnalysis;
+  DenseMap<AnalysisID, Pass *> AvailableAnalysis;
 
   // Collection of higher level analysis used by the pass managed by
   // this manager.
@@ -499,7 +492,7 @@ public:
   StringRef getPassName() const override { return "Function Pass Manager"; }
 
   FunctionPass *getContainedPass(unsigned N) {
-    assert ( N < PassVector.size() && "Pass number out of range!");
+    assert(N < PassVector.size() && "Pass number out of range!");
     FunctionPass *FP = static_cast<FunctionPass *>(PassVector[N]);
     return FP;
   }
@@ -508,6 +501,6 @@ public:
     return PMT_FunctionPassManager;
   }
 };
-}
+} // namespace llvm
 
 #endif

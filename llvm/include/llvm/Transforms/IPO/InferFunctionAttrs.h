@@ -26,6 +26,6 @@ struct InferFunctionAttrsPass : PassInfoMixin<InferFunctionAttrsPass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_INFERFUNCTIONATTRS_H

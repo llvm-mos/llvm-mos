@@ -41,11 +41,10 @@ bool RWMutexImpl::try_lock() { return true; }
 #include <pthread.h>
 
 // Construct a RWMutex using pthread calls
-RWMutexImpl::RWMutexImpl()
-{
+RWMutexImpl::RWMutexImpl() {
   // Declare the pthread_rwlock data structures
-  pthread_rwlock_t* rwlock =
-    static_cast<pthread_rwlock_t*>(safe_malloc(sizeof(pthread_rwlock_t)));
+  pthread_rwlock_t *rwlock =
+      static_cast<pthread_rwlock_t *>(safe_malloc(sizeof(pthread_rwlock_t)));
 
 #ifdef __APPLE__
   // Workaround a bug/mis-feature in Darwin's pthread_rwlock_init.
@@ -62,28 +61,23 @@ RWMutexImpl::RWMutexImpl()
 }
 
 // Destruct a RWMutex
-RWMutexImpl::~RWMutexImpl()
-{
-  pthread_rwlock_t* rwlock = static_cast<pthread_rwlock_t*>(data_);
+RWMutexImpl::~RWMutexImpl() {
+  pthread_rwlock_t *rwlock = static_cast<pthread_rwlock_t *>(data_);
   assert(rwlock != nullptr);
   pthread_rwlock_destroy(rwlock);
   free(rwlock);
 }
 
-bool
-RWMutexImpl::lock_shared()
-{
-  pthread_rwlock_t* rwlock = static_cast<pthread_rwlock_t*>(data_);
+bool RWMutexImpl::lock_shared() {
+  pthread_rwlock_t *rwlock = static_cast<pthread_rwlock_t *>(data_);
   assert(rwlock != nullptr);
 
   int errorcode = pthread_rwlock_rdlock(rwlock);
   return errorcode == 0;
 }
 
-bool
-RWMutexImpl::unlock_shared()
-{
-  pthread_rwlock_t* rwlock = static_cast<pthread_rwlock_t*>(data_);
+bool RWMutexImpl::unlock_shared() {
+  pthread_rwlock_t *rwlock = static_cast<pthread_rwlock_t *>(data_);
   assert(rwlock != nullptr);
 
   int errorcode = pthread_rwlock_unlock(rwlock);
@@ -98,20 +92,16 @@ bool RWMutexImpl::try_lock_shared() {
   return errorcode == 0;
 }
 
-bool
-RWMutexImpl::lock()
-{
-  pthread_rwlock_t* rwlock = static_cast<pthread_rwlock_t*>(data_);
+bool RWMutexImpl::lock() {
+  pthread_rwlock_t *rwlock = static_cast<pthread_rwlock_t *>(data_);
   assert(rwlock != nullptr);
 
   int errorcode = pthread_rwlock_wrlock(rwlock);
   return errorcode == 0;
 }
 
-bool
-RWMutexImpl::unlock()
-{
-  pthread_rwlock_t* rwlock = static_cast<pthread_rwlock_t*>(data_);
+bool RWMutexImpl::unlock() {
+  pthread_rwlock_t *rwlock = static_cast<pthread_rwlock_t *>(data_);
   assert(rwlock != nullptr);
 
   int errorcode = pthread_rwlock_unlock(rwlock);
@@ -128,11 +118,9 @@ bool RWMutexImpl::try_lock() {
 
 #else
 
-RWMutexImpl::RWMutexImpl() : data_(new MutexImpl(false)) { }
+RWMutexImpl::RWMutexImpl() : data_(new MutexImpl(false)) {}
 
-RWMutexImpl::~RWMutexImpl() {
-  delete static_cast<MutexImpl *>(data_);
-}
+RWMutexImpl::~RWMutexImpl() { delete static_cast<MutexImpl *>(data_); }
 
 bool RWMutexImpl::lock_shared() {
   return static_cast<MutexImpl *>(data_)->acquire();
@@ -146,9 +134,7 @@ bool RWMutexImpl::try_lock_shared() {
   return static_cast<MutexImpl *>(data_)->tryacquire();
 }
 
-bool RWMutexImpl::lock() {
-  return static_cast<MutexImpl *>(data_)->acquire();
-}
+bool RWMutexImpl::lock() { return static_cast<MutexImpl *>(data_)->acquire(); }
 
 bool RWMutexImpl::unlock() {
   return static_cast<MutexImpl *>(data_)->release();

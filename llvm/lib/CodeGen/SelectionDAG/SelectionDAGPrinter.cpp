@@ -23,122 +23,117 @@ using namespace llvm;
 #define DEBUG_TYPE "dag-printer"
 
 namespace llvm {
-  template<>
-  struct DOTGraphTraits<SelectionDAG*> : public DefaultDOTGraphTraits {
+template <>
+struct DOTGraphTraits<SelectionDAG *> : public DefaultDOTGraphTraits {
 
-    explicit DOTGraphTraits(bool isSimple=false) :
-      DefaultDOTGraphTraits(isSimple) {}
+  explicit DOTGraphTraits(bool isSimple = false)
+      : DefaultDOTGraphTraits(isSimple) {}
 
-    static bool hasEdgeDestLabels() {
-      return true;
-    }
+  static bool hasEdgeDestLabels() { return true; }
 
-    static unsigned numEdgeDestLabels(const void *Node) {
-      return ((const SDNode *) Node)->getNumValues();
-    }
+  static unsigned numEdgeDestLabels(const void *Node) {
+    return ((const SDNode *)Node)->getNumValues();
+  }
 
-    static std::string getEdgeDestLabel(const void *Node, unsigned i) {
-      return ((const SDNode *) Node)->getValueType(i).getEVTString();
-    }
+  static std::string getEdgeDestLabel(const void *Node, unsigned i) {
+    return ((const SDNode *)Node)->getValueType(i).getEVTString();
+  }
 
-    template<typename EdgeIter>
-    static std::string getEdgeSourceLabel(const void *Node, EdgeIter I) {
-      return itostr(I - SDNodeIterator::begin((const SDNode *) Node));
-    }
+  template <typename EdgeIter>
+  static std::string getEdgeSourceLabel(const void *Node, EdgeIter I) {
+    return itostr(I - SDNodeIterator::begin((const SDNode *)Node));
+  }
 
-    /// edgeTargetsEdgeSource - This method returns true if this outgoing edge
-    /// should actually target another edge source, not a node.  If this method
-    /// is implemented, getEdgeTarget should be implemented.
-    template<typename EdgeIter>
-    static bool edgeTargetsEdgeSource(const void *Node, EdgeIter I) {
-      return true;
-    }
+  /// edgeTargetsEdgeSource - This method returns true if this outgoing edge
+  /// should actually target another edge source, not a node.  If this method
+  /// is implemented, getEdgeTarget should be implemented.
+  template <typename EdgeIter>
+  static bool edgeTargetsEdgeSource(const void *Node, EdgeIter I) {
+    return true;
+  }
 
-    /// getEdgeTarget - If edgeTargetsEdgeSource returns true, this method is
-    /// called to determine which outgoing edge of Node is the target of this
-    /// edge.
-    template<typename EdgeIter>
-    static EdgeIter getEdgeTarget(const void *Node, EdgeIter I) {
-      SDNode *TargetNode = *I;
-      SDNodeIterator NI = SDNodeIterator::begin(TargetNode);
-      std::advance(NI, I.getNode()->getOperand(I.getOperand()).getResNo());
-      return NI;
-    }
+  /// getEdgeTarget - If edgeTargetsEdgeSource returns true, this method is
+  /// called to determine which outgoing edge of Node is the target of this
+  /// edge.
+  template <typename EdgeIter>
+  static EdgeIter getEdgeTarget(const void *Node, EdgeIter I) {
+    SDNode *TargetNode = *I;
+    SDNodeIterator NI = SDNodeIterator::begin(TargetNode);
+    std::advance(NI, I.getNode()->getOperand(I.getOperand()).getResNo());
+    return NI;
+  }
 
-    static std::string getGraphName(const SelectionDAG *G) {
-      return std::string(G->getMachineFunction().getName());
-    }
+  static std::string getGraphName(const SelectionDAG *G) {
+    return std::string(G->getMachineFunction().getName());
+  }
 
-    static bool renderGraphFromBottomUp() {
-      return true;
-    }
+  static bool renderGraphFromBottomUp() { return true; }
 
-    static std::string getNodeIdentifierLabel(const SDNode *Node,
-                                              const SelectionDAG *Graph) {
-      std::string R;
-      raw_string_ostream OS(R);
+  static std::string getNodeIdentifierLabel(const SDNode *Node,
+                                            const SelectionDAG *Graph) {
+    std::string R;
+    raw_string_ostream OS(R);
 #ifndef NDEBUG
-      OS << 't' << Node->PersistentId;
+    OS << 't' << Node->PersistentId;
 #else
-      OS << static_cast<const void *>(Node);
+    OS << static_cast<const void *>(Node);
 #endif
-      return R;
-    }
+    return R;
+  }
 
-    /// If you want to override the dot attributes printed for a particular
-    /// edge, override this method.
-    template<typename EdgeIter>
-    static std::string getEdgeAttributes(const void *Node, EdgeIter EI,
-                                         const SelectionDAG *Graph) {
-      SDValue Op = EI.getNode()->getOperand(EI.getOperand());
-      EVT VT = Op.getValueType();
-      if (VT == MVT::Glue)
-        return "color=red,style=bold";
-      else if (VT == MVT::Other)
-        return "color=blue,style=dashed";
-      return "";
-    }
+  /// If you want to override the dot attributes printed for a particular
+  /// edge, override this method.
+  template <typename EdgeIter>
+  static std::string getEdgeAttributes(const void *Node, EdgeIter EI,
+                                       const SelectionDAG *Graph) {
+    SDValue Op = EI.getNode()->getOperand(EI.getOperand());
+    EVT VT = Op.getValueType();
+    if (VT == MVT::Glue)
+      return "color=red,style=bold";
+    else if (VT == MVT::Other)
+      return "color=blue,style=dashed";
+    return "";
+  }
 
-
-    static std::string getSimpleNodeLabel(const SDNode *Node,
-                                          const SelectionDAG *G) {
-      std::string Result = Node->getOperationName(G);
-      {
-        raw_string_ostream OS(Result);
-        Node->print_details(OS, G);
-      }
-      return Result;
+  static std::string getSimpleNodeLabel(const SDNode *Node,
+                                        const SelectionDAG *G) {
+    std::string Result = Node->getOperationName(G);
+    {
+      raw_string_ostream OS(Result);
+      Node->print_details(OS, G);
     }
-    std::string getNodeLabel(const SDNode *Node, const SelectionDAG *Graph);
-    static std::string getNodeAttributes(const SDNode *N,
-                                         const SelectionDAG *Graph) {
+    return Result;
+  }
+  std::string getNodeLabel(const SDNode *Node, const SelectionDAG *Graph);
+  static std::string getNodeAttributes(const SDNode *N,
+                                       const SelectionDAG *Graph) {
 #ifndef NDEBUG
-      const std::string &Attrs = Graph->getGraphAttrs(N);
-      if (!Attrs.empty()) {
-        if (Attrs.find("shape=") == std::string::npos)
-          return std::string("shape=Mrecord,") + Attrs;
-        else
-          return Attrs;
-      }
+    const std::string &Attrs = Graph->getGraphAttrs(N);
+    if (!Attrs.empty()) {
+      if (Attrs.find("shape=") == std::string::npos)
+        return std::string("shape=Mrecord,") + Attrs;
+      else
+        return Attrs;
+    }
 #endif
-      return "shape=Mrecord";
-    }
+    return "shape=Mrecord";
+  }
 
-    static void addCustomGraphFeatures(SelectionDAG *G,
-                                       GraphWriter<SelectionDAG*> &GW) {
-      GW.emitSimpleNode(nullptr, "plaintext=circle", "GraphRoot");
-      if (G->getRoot().getNode())
-        GW.emitEdge(nullptr, -1, G->getRoot().getNode(), G->getRoot().getResNo(),
-                    "color=blue,style=dashed");
-    }
-  };
+  static void addCustomGraphFeatures(SelectionDAG *G,
+                                     GraphWriter<SelectionDAG *> &GW) {
+    GW.emitSimpleNode(nullptr, "plaintext=circle", "GraphRoot");
+    if (G->getRoot().getNode())
+      GW.emitEdge(nullptr, -1, G->getRoot().getNode(), G->getRoot().getResNo(),
+                  "color=blue,style=dashed");
+  }
+};
+} // namespace llvm
+
+std::string
+DOTGraphTraits<SelectionDAG *>::getNodeLabel(const SDNode *Node,
+                                             const SelectionDAG *G) {
+  return DOTGraphTraits<SelectionDAG *>::getSimpleNodeLabel(Node, G);
 }
-
-std::string DOTGraphTraits<SelectionDAG*>::getNodeLabel(const SDNode *Node,
-                                                        const SelectionDAG *G) {
-  return DOTGraphTraits<SelectionDAG*>::getSimpleNodeLabel(Node, G);
-}
-
 
 /// viewGraph - Pop up a ghostview window with the reachable parts of the DAG
 /// rendered using 'dot'.
@@ -146,19 +141,16 @@ std::string DOTGraphTraits<SelectionDAG*>::getNodeLabel(const SDNode *Node,
 void SelectionDAG::viewGraph(const std::string &Title) {
 // This code is only for debugging!
 #ifndef NDEBUG
-  ViewGraph(this, "dag." + getMachineFunction().getName(),
-            false, Title);
+  ViewGraph(this, "dag." + getMachineFunction().getName(), false, Title);
 #else
   errs() << "SelectionDAG::viewGraph is only available in debug builds on "
          << "systems with Graphviz or gv!\n";
-#endif  // NDEBUG
+#endif // NDEBUG
 }
 
 // This overload is defined out-of-line here instead of just using a
 // default parameter because this is easiest for gdb to call.
-void SelectionDAG::viewGraph() {
-  viewGraph("");
-}
+void SelectionDAG::viewGraph() { viewGraph(""); }
 
 /// Just dump dot graph to a user-provided path and title.
 /// This doesn't open the dot viewer program and
@@ -185,7 +177,6 @@ void SelectionDAG::clearGraphAttrs() {
 #endif
 }
 
-
 /// setGraphAttrs - Set graph attributes for a node. (eg. "color=red".)
 ///
 void SelectionDAG::setGraphAttrs(const SDNode *N, const char *Attrs) {
@@ -197,13 +188,12 @@ void SelectionDAG::setGraphAttrs(const SDNode *N, const char *Attrs) {
 #endif
 }
 
-
 /// getGraphAttrs - Get graph attributes for a node. (eg. "color=red".)
 /// Used from getNodeAttributes.
 std::string SelectionDAG::getGraphAttrs(const SDNode *N) const {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   std::map<const SDNode *, std::string>::const_iterator I =
-    NodeGraphAttrs.find(N);
+      NodeGraphAttrs.find(N);
 
   if (I != NodeGraphAttrs.end())
     return I->second;
@@ -230,7 +220,8 @@ void SelectionDAG::setGraphColor(const SDNode *N, const char *Color) {
 /// setSubgraphColorHelper - Implement setSubgraphColor.  Return
 /// whether we truncated the search.
 ///
-bool SelectionDAG::setSubgraphColorHelper(SDNode *N, const char *Color, DenseSet<SDNode *> &visited,
+bool SelectionDAG::setSubgraphColorHelper(SDNode *N, const char *Color,
+                                          DenseSet<SDNode *> &visited,
                                           int level, bool &printed) {
   bool hit_limit = false;
 
@@ -247,10 +238,12 @@ bool SelectionDAG::setSubgraphColorHelper(SDNode *N, const char *Color, DenseSet
   visited.insert(N);
   if (visited.size() != oldSize) {
     setGraphColor(N, Color);
-    for(SDNodeIterator i = SDNodeIterator::begin(N), iend = SDNodeIterator::end(N);
-        i != iend;
-        ++i) {
-      hit_limit = setSubgraphColorHelper(*i, Color, visited, level+1, printed) || hit_limit;
+    for (SDNodeIterator i = SDNodeIterator::begin(N),
+                        iend = SDNodeIterator::end(N);
+         i != iend; ++i) {
+      hit_limit =
+          setSubgraphColorHelper(*i, Color, visited, level + 1, printed) ||
+          hit_limit;
     }
   }
 #else
@@ -290,8 +283,8 @@ std::string ScheduleDAGSDNodes::getGraphNodeLabel(const SUnit *SU) const {
     for (SDNode *N = SU->getNode(); N; N = N->getGluedNode())
       GluedNodes.push_back(N);
     while (!GluedNodes.empty()) {
-      O << DOTGraphTraits<SelectionDAG*>
-        ::getSimpleNodeLabel(GluedNodes.back(), DAG);
+      O << DOTGraphTraits<SelectionDAG *>::getSimpleNodeLabel(GluedNodes.back(),
+                                                              DAG);
       GluedNodes.pop_back();
       if (!GluedNodes.empty())
         O << "\n    ";
@@ -302,7 +295,8 @@ std::string ScheduleDAGSDNodes::getGraphNodeLabel(const SUnit *SU) const {
   return s;
 }
 
-void ScheduleDAGSDNodes::getCustomGraphFeatures(GraphWriter<ScheduleDAG*> &GW) const {
+void ScheduleDAGSDNodes::getCustomGraphFeatures(
+    GraphWriter<ScheduleDAG *> &GW) const {
   if (DAG) {
     // Draw a special "GraphRoot" node to indicate the root of the graph.
     GW.emitSimpleNode(nullptr, "plaintext=circle", "GraphRoot");

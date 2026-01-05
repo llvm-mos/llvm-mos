@@ -175,7 +175,8 @@ static bool ProcessBlock(BasicBlock &BB, DominatorTree &DT, LoopInfo &LI,
   // Don't bother sinking code out of unreachable blocks. In addition to being
   // unprofitable, it can also lead to infinite looping, because in an
   // unreachable loop there may be nowhere to stop.
-  if (!DT.isReachableFromEntry(&BB)) return false;
+  if (!DT.isReachableFromEntry(&BB))
+    return false;
 
   bool MadeChange = false;
 
@@ -238,31 +239,31 @@ PreservedAnalyses SinkingPass::run(Function &F, FunctionAnalysisManager &AM) {
 }
 
 namespace {
-  class SinkingLegacyPass : public FunctionPass {
-  public:
-    static char ID; // Pass identification
-    SinkingLegacyPass() : FunctionPass(ID) {
-      initializeSinkingLegacyPassPass(*PassRegistry::getPassRegistry());
-    }
+class SinkingLegacyPass : public FunctionPass {
+public:
+  static char ID; // Pass identification
+  SinkingLegacyPass() : FunctionPass(ID) {
+    initializeSinkingLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
 
-    bool runOnFunction(Function &F) override {
-      auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-      auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-      auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+  bool runOnFunction(Function &F) override {
+    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
 
-      return iterativelySinkInstructions(F, DT, LI, AA);
-    }
+    return iterativelySinkInstructions(F, DT, LI, AA);
+  }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      FunctionPass::getAnalysisUsage(AU);
-      AU.addRequired<AAResultsWrapperPass>();
-      AU.addRequired<DominatorTreeWrapperPass>();
-      AU.addRequired<LoopInfoWrapperPass>();
-      AU.addPreserved<DominatorTreeWrapperPass>();
-      AU.addPreserved<LoopInfoWrapperPass>();
-    }
-  };
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    FunctionPass::getAnalysisUsage(AU);
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
+  }
+};
 } // end anonymous namespace
 
 char SinkingLegacyPass::ID = 0;

@@ -184,10 +184,10 @@ LexicalScopes::getOrCreateRegularScope(const DILocalScope *Scope) {
   LexicalScope *Parent = nullptr;
   if (auto *Block = dyn_cast<DILexicalBlockBase>(Scope))
     Parent = getOrCreateLexicalScope(Block->getScope());
-  I = LexicalScopeMap.emplace(std::piecewise_construct,
-                              std::forward_as_tuple(Scope),
-                              std::forward_as_tuple(Parent, Scope, nullptr,
-                                                    false)).first;
+  I = LexicalScopeMap
+          .emplace(std::piecewise_construct, std::forward_as_tuple(Scope),
+                   std::forward_as_tuple(Parent, Scope, nullptr, false))
+          .first;
 
   if (!Parent) {
     assert(cast<DISubprogram>(Scope)->describes(&MF->getFunction()));
@@ -236,10 +236,10 @@ LexicalScopes::getOrCreateAbstractScope(const DILocalScope *Scope) {
   if (auto *Block = dyn_cast<DILexicalBlockBase>(Scope))
     Parent = getOrCreateAbstractScope(Block->getScope());
 
-  I = AbstractScopeMap.emplace(std::piecewise_construct,
-                               std::forward_as_tuple(Scope),
-                               std::forward_as_tuple(Parent, Scope,
-                                                     nullptr, true)).first;
+  I = AbstractScopeMap
+          .emplace(std::piecewise_construct, std::forward_as_tuple(Scope),
+                   std::forward_as_tuple(Parent, Scope, nullptr, true))
+          .first;
   if (isa<DISubprogram>(Scope))
     AbstractScopesList.push_back(&I->second);
   return &I->second;

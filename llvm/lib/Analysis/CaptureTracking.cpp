@@ -31,9 +31,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "capture-tracking"
 
-STATISTIC(NumCaptured,          "Number of pointers maybe captured");
-STATISTIC(NumNotCaptured,       "Number of pointers not captured");
-STATISTIC(NumCapturedBefore,    "Number of pointers maybe captured before");
+STATISTIC(NumCaptured, "Number of pointers maybe captured");
+STATISTIC(NumNotCaptured, "Number of pointers not captured");
+STATISTIC(NumCapturedBefore, "Number of pointers maybe captured before");
 STATISTIC(NumNotCapturedBefore, "Number of pointers not captured before");
 
 /// The default value for MaxUsesToExplore argument. It's relatively small to
@@ -414,7 +414,7 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
     for (const Use &U : V->uses()) {
       // If there are lots of uses, conservatively say that the value
       // is captured to avoid taking too much compile time.
-      if (Visited.size()  >= MaxUsesToExplore) {
+      if (Visited.size() >= MaxUsesToExplore) {
         Tracker->tooManyUses();
         return false;
       }

@@ -129,8 +129,8 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       "no-deprecated-warn", cl::desc("Suppress all deprecated warnings"));
   MCBINDOPT(NoDeprecatedWarn);
 
-  static cl::opt<bool> NoTypeCheck(
-      "no-type-check", cl::desc("Suppress type errors (Wasm)"));
+  static cl::opt<bool> NoTypeCheck("no-type-check",
+                                   cl::desc("Suppress type errors (Wasm)"));
   MCBINDOPT(NoTypeCheck);
 
   static cl::opt<bool> SaveTempLabels(

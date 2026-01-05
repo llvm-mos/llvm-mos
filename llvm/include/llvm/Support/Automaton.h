@@ -115,9 +115,7 @@ public:
     reset();
   }
 
-  ArrayRef<NfaStatePair> getTransitionInfo() const {
-    return TransitionInfo;
-  }
+  ArrayRef<NfaStatePair> getTransitionInfo() const { return TransitionInfo; }
 
   void reset() {
     Paths.clear();
@@ -163,16 +161,18 @@ template <typename ActionT> class Automaton {
   /// FIXME: This uses a std::map because ActionT can be a pair type including
   /// an enum. In particular DenseMapInfo<ActionT> must be defined to use
   /// DenseMap here.
-  /// This is a shared_ptr to allow very quick copy-construction of Automata; this
-  /// state is immutable after construction so this is safe.
-  using MapTy = std::map<std::pair<uint64_t, ActionT>, std::pair<uint64_t, unsigned>>;
+  /// This is a shared_ptr to allow very quick copy-construction of Automata;
+  /// this state is immutable after construction so this is safe.
+  using MapTy =
+      std::map<std::pair<uint64_t, ActionT>, std::pair<uint64_t, unsigned>>;
   std::shared_ptr<MapTy> M;
   /// An optional transcription object. This uses much more state than simply
   /// traversing the DFA for acceptance, so is heap allocated.
   std::shared_ptr<internal::NfaTranscriber> Transcriber;
   /// The initial DFA state is 1.
   uint64_t State = 1;
-  /// True if we should transcribe and false if not (even if Transcriber is defined).
+  /// True if we should transcribe and false if not (even if Transcriber is
+  /// defined).
   bool Transcribe;
 
 public:

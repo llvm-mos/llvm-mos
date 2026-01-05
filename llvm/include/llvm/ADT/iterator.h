@@ -315,8 +315,8 @@ public:
 ///   using iterator = pointee_iterator<SmallVectorImpl<T *>::iterator>;
 /// \endcode
 template <typename WrappedIteratorT,
-          typename T = std::remove_reference_t<decltype(
-              **std::declval<WrappedIteratorT>())>>
+          typename T = std::remove_reference_t<
+              decltype(**std::declval<WrappedIteratorT>())>>
 struct pointee_iterator
     : iterator_adaptor_base<
           pointee_iterator<WrappedIteratorT, T>, WrappedIteratorT,
@@ -367,8 +367,8 @@ make_pointer_range(RangeT &&Range) {
 }
 
 template <typename WrappedIteratorT,
-          typename T1 = std::remove_reference_t<decltype(
-              **std::declval<WrappedIteratorT>())>,
+          typename T1 = std::remove_reference_t<
+              decltype(**std::declval<WrappedIteratorT>())>,
           typename T2 = std::add_pointer_t<T1>>
 using raw_pointer_iterator =
     pointer_iterator<pointee_iterator<WrappedIteratorT, T1>, T2>;

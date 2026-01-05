@@ -118,7 +118,7 @@ private:
   }
 };
 
-} // namespace anonymous
+} // namespace
 
 void llvm::updateCompilerUsed(Module &TheModule, const TargetMachine &TM,
                               const StringSet<> &AsmUndefinedRefs) {

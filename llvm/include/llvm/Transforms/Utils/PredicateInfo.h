@@ -14,8 +14,9 @@
 /// Copies of these operations are inserted into the true/false edge (and after
 /// assumes), and information attached to the copies.  All uses of the original
 /// operation in blocks dominated by the true/false edge (and assume), are
-/// replaced with uses of the copies.  This enables passes to easily and sparsely
-/// propagate condition based info into the operations that may be affected.
+/// replaced with uses of the copies.  This enables passes to easily and
+/// sparsely propagate condition based info into the operations that may be
+/// affected.
 ///
 /// Example:
 /// %cmp = icmp eq i32 %x, 50
@@ -40,9 +41,9 @@
 /// comparison, which tells you x.0 is 50.
 ///
 /// In order to reduce the number of copies inserted, predicateinfo is only
-/// inserted where it would actually be live.  This means if there are no uses of
-/// an operation dominated by the branch edges, or by an assume, the associated
-/// predicate info is never inserted.
+/// inserted where it would actually be live.  This means if there are no uses
+/// of an operation dominated by the branch edges, or by an assume, the
+/// associated predicate info is never inserted.
 ///
 ///
 //===----------------------------------------------------------------------===//
@@ -117,9 +118,7 @@ public:
   PredicateAssume(Value *Op, IntrinsicInst *AssumeInst, Value *Condition)
       : PredicateBase(PT_Assume, Op, Condition), AssumeInst(AssumeInst) {}
   PredicateAssume() = delete;
-  static bool classof(const PredicateBase *PB) {
-    return PB->Type == PT_Assume;
-  }
+  static bool classof(const PredicateBase *PB) { return PB->Type == PT_Assume; }
 };
 
 // Mixin class for edge predicates.  The FROM block is the block where the
@@ -150,9 +149,7 @@ public:
       : PredicateWithEdge(PT_Branch, Op, BranchBB, SplitBB, Condition),
         TrueEdge(TakenEdge) {}
   PredicateBranch() = delete;
-  static bool classof(const PredicateBase *PB) {
-    return PB->Type == PT_Branch;
-  }
+  static bool classof(const PredicateBase *PB) { return PB->Type == PT_Branch; }
 };
 
 class PredicateSwitch : public PredicateWithEdge {
@@ -166,9 +163,7 @@ public:
                           SI->getCondition()),
         CaseValue(CaseValue), Switch(SI) {}
   PredicateSwitch() = delete;
-  static bool classof(const PredicateBase *PB) {
-    return PB->Type == PT_Switch;
-  }
+  static bool classof(const PredicateBase *PB) { return PB->Type == PT_Switch; }
 };
 
 /// Encapsulates PredicateInfo, including all data associated with memory

@@ -154,12 +154,12 @@ StackProtector::StackProtector() : FunctionPass(ID) {
   initializeStackProtectorPass(*PassRegistry::getPassRegistry());
 }
 
-INITIALIZE_PASS_BEGIN(StackProtector, DEBUG_TYPE,
-                      "Insert stack protectors", false, true)
+INITIALIZE_PASS_BEGIN(StackProtector, DEBUG_TYPE, "Insert stack protectors",
+                      false, true)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(StackProtector, DEBUG_TYPE,
-                    "Insert stack protectors", false, true)
+INITIALIZE_PASS_END(StackProtector, DEBUG_TYPE, "Insert stack protectors",
+                    false, true)
 
 FunctionPass *llvm::createStackProtectorPass() { return new StackProtector(); }
 
@@ -206,9 +206,9 @@ bool StackProtector::runOnFunction(Function &Fn) {
 /// \param [out] IsLarge is set to true if a protectable array is found and
 /// it is "large" ( >= ssp-buffer-size).  In the case of a structure with
 /// multiple arrays, this gets set if any of them is large.
-static bool ContainsProtectableArray(Type *Ty, Module *M, unsigned SSPBufferSize,
-                                     bool &IsLarge, bool Strong,
-                                     bool InStruct) {
+static bool ContainsProtectableArray(Type *Ty, Module *M,
+                                     unsigned SSPBufferSize, bool &IsLarge,
+                                     bool Strong, bool InStruct) {
   if (!Ty)
     return false;
   if (ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
@@ -264,8 +264,7 @@ using PhiMap = SmallDenseMap<const PHINode *, PhiInfo, 16>;
 
 /// Check whether a stack allocation has its address taken.
 static bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize,
-                            Module *M,
-                            PhiMap &VisitedPHIs) {
+                            Module *M, PhiMap &VisitedPHIs) {
   const DataLayout &DL = M->getDataLayout();
   for (const User *U : AI->users()) {
     const auto *I = cast<Instruction>(U);
@@ -476,9 +475,9 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
                                      IsLarge, Strong, false)) {
           if (!Layout)
             return true;
-          Layout->insert(std::make_pair(
-              AI, IsLarge ? MachineFrameInfo::SSPLK_LargeArray
-                          : MachineFrameInfo::SSPLK_SmallArray));
+          Layout->insert(
+              std::make_pair(AI, IsLarge ? MachineFrameInfo::SSPLK_LargeArray
+                                         : MachineFrameInfo::SSPLK_SmallArray));
           ORE.emit([&]() {
             return OptimizationRemark(DEBUG_TYPE, "StackProtectorBuffer", &I)
                    << "Stack protection applied to function "

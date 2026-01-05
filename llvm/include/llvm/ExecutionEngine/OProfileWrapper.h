@@ -24,37 +24,31 @@
 
 namespace llvm {
 
-
 class OProfileWrapper {
-  typedef  op_agent_t    (*op_open_agent_ptr_t)();
-  typedef  int           (*op_close_agent_ptr_t)(op_agent_t);
-  typedef  int           (*op_write_native_code_ptr_t)(op_agent_t,
-                                                const char*,
-                                                uint64_t,
-                                                void const*,
-                                                const unsigned int);
-  typedef  int           (*op_write_debug_line_info_ptr_t)(op_agent_t,
-                                                void const*,
+  typedef op_agent_t (*op_open_agent_ptr_t)();
+  typedef int (*op_close_agent_ptr_t)(op_agent_t);
+  typedef int (*op_write_native_code_ptr_t)(op_agent_t, const char *, uint64_t,
+                                            void const *, const unsigned int);
+  typedef int (*op_write_debug_line_info_ptr_t)(op_agent_t, void const *,
                                                 size_t,
-                                                struct debug_line_info const*);
-  typedef  int           (*op_unload_native_code_ptr_t)(op_agent_t, uint64_t);
+                                                struct debug_line_info const *);
+  typedef int (*op_unload_native_code_ptr_t)(op_agent_t, uint64_t);
 
   // Also used for op_minor_version function which has the same signature
-  typedef  int           (*op_major_version_ptr_t)();
+  typedef int (*op_major_version_ptr_t)();
 
   // This is not a part of the opagent API, but is useful nonetheless
-  typedef  bool          (*IsOProfileRunningPtrT)();
+  typedef bool (*IsOProfileRunningPtrT)();
 
-
-  op_agent_t                      Agent;
-  op_open_agent_ptr_t             OpenAgentFunc;
-  op_close_agent_ptr_t            CloseAgentFunc;
-  op_write_native_code_ptr_t      WriteNativeCodeFunc;
-  op_write_debug_line_info_ptr_t  WriteDebugLineInfoFunc;
-  op_unload_native_code_ptr_t     UnloadNativeCodeFunc;
-  op_major_version_ptr_t          MajorVersionFunc;
-  op_major_version_ptr_t          MinorVersionFunc;
-  IsOProfileRunningPtrT           IsOProfileRunningFunc;
+  op_agent_t Agent;
+  op_open_agent_ptr_t OpenAgentFunc;
+  op_close_agent_ptr_t CloseAgentFunc;
+  op_write_native_code_ptr_t WriteNativeCodeFunc;
+  op_write_debug_line_info_ptr_t WriteDebugLineInfoFunc;
+  op_unload_native_code_ptr_t UnloadNativeCodeFunc;
+  op_major_version_ptr_t MajorVersionFunc;
+  op_major_version_ptr_t MinorVersionFunc;
+  IsOProfileRunningPtrT IsOProfileRunningFunc;
 
   bool Initialized;
 
@@ -71,17 +65,12 @@ public:
                   op_major_version_ptr_t MajorVersionImpl,
                   op_major_version_ptr_t MinorVersionImpl,
                   IsOProfileRunningPtrT MockIsOProfileRunningImpl = 0)
-  : OpenAgentFunc(OpenAgentImpl),
-    CloseAgentFunc(CloseAgentImpl),
-    WriteNativeCodeFunc(WriteNativeCodeImpl),
-    WriteDebugLineInfoFunc(WriteDebugLineInfoImpl),
-    UnloadNativeCodeFunc(UnloadNativeCodeImpl),
-    MajorVersionFunc(MajorVersionImpl),
-    MinorVersionFunc(MinorVersionImpl),
-    IsOProfileRunningFunc(MockIsOProfileRunningImpl),
-    Initialized(true)
-  {
-  }
+      : OpenAgentFunc(OpenAgentImpl), CloseAgentFunc(CloseAgentImpl),
+        WriteNativeCodeFunc(WriteNativeCodeImpl),
+        WriteDebugLineInfoFunc(WriteDebugLineInfoImpl),
+        UnloadNativeCodeFunc(UnloadNativeCodeImpl),
+        MajorVersionFunc(MajorVersionImpl), MinorVersionFunc(MinorVersionImpl),
+        IsOProfileRunningFunc(MockIsOProfileRunningImpl), Initialized(true) {}
 
   // Calls op_open_agent in the oprofile JIT library and saves the returned
   // op_agent_t handle internally so it can be used when calling all the other
@@ -90,13 +79,10 @@ public:
   bool op_open_agent();
 
   int op_close_agent();
-  int op_write_native_code(const char* name,
-                           uint64_t addr,
-                           void const* code,
+  int op_write_native_code(const char *name, uint64_t addr, void const *code,
                            const unsigned int size);
-  int op_write_debug_line_info(void const* code,
-                               size_t num_entries,
-                               struct debug_line_info const* info);
+  int op_write_debug_line_info(void const *code, size_t num_entries,
+                               struct debug_line_info const *info);
   int op_unload_native_code(uint64_t addr);
   int op_major_version();
   int op_minor_version();

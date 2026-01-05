@@ -14,7 +14,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -124,11 +123,10 @@ BitVector RegScavenger::getRegsAvailable(const TargetRegisterClass *RC) {
 /// clobbered for the longest time.
 /// Returns the register and the earliest position we know it to be free or
 /// the position MBB.end() if no register is available.
-static std::pair<MCPhysReg, MachineBasicBlock::iterator>
-findSurvivorBackwards(const MachineRegisterInfo &MRI,
-    MachineBasicBlock::iterator From, MachineBasicBlock::iterator To,
-    const LiveRegUnits &LiveOut, ArrayRef<MCPhysReg> AllocationOrder,
-    bool RestoreAfter) {
+static std::pair<MCPhysReg, MachineBasicBlock::iterator> findSurvivorBackwards(
+    const MachineRegisterInfo &MRI, MachineBasicBlock::iterator From,
+    MachineBasicBlock::iterator To, const LiveRegUnits &LiveOut,
+    ArrayRef<MCPhysReg> AllocationOrder, bool RestoreAfter) {
   bool FoundTo = false;
   MCPhysReg Survivor = 0;
   MachineBasicBlock::iterator Pos;
@@ -309,7 +307,7 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
   // Found an available register?
   if (Reg != 0 && SpillBefore == MBB.end()) {
     LLVM_DEBUG(dbgs() << "Scavenged free register: " << printReg(Reg, TRI)
-               << '\n');
+                      << '\n');
     return Reg;
   }
 
@@ -326,7 +324,7 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
   Scavenged.Restore = &*std::prev(SpillBefore);
   LiveUnits.removeReg(Reg);
   LLVM_DEBUG(dbgs() << "Scavenged register with spill: " << printReg(Reg, TRI)
-             << " until " << *SpillBefore);
+                    << " until " << *SpillBefore);
   return Reg;
 }
 
@@ -365,8 +363,8 @@ static Register scavengeVReg(MachineRegisterInfo &MRI, RegScavenger &RS,
   // we get a single contiguous lifetime.
   //
   // Definitions in MRI.def_begin() are unordered, search for the first.
-  MachineRegisterInfo::def_iterator FirstDef = llvm::find_if(
-      MRI.def_operands(VReg), [VReg](const MachineOperand &MO) {
+  MachineRegisterInfo::def_iterator FirstDef =
+      llvm::find_if(MRI.def_operands(VReg), [VReg](const MachineOperand &MO) {
         return !MO.getParent()->readsVirtualRegister(VReg);
       });
   assert(FirstDef != MRI.def_end() &&
@@ -395,7 +393,7 @@ static bool scavengeFrameVirtualRegsInBlock(MachineRegisterInfo &MRI,
 
   unsigned InitialNumVirtRegs = MRI.getNumVirtRegs();
   bool NextInstructionReadsVReg = false;
-  for (MachineBasicBlock::iterator I = MBB.end(); I != MBB.begin(); ) {
+  for (MachineBasicBlock::iterator I = MBB.end(); I != MBB.begin();) {
     // Move RegScavenger to the position between *std::prev(I) and *I.
     RS.backward(I);
     --I;

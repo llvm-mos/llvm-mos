@@ -1,4 +1,5 @@
-//===--- ARMEHABIPrinter.h - ARM EHABI Unwind Information Printer ----------===//
+//===--- ARMEHABIPrinter.h - ARM EHABI Unwind Information Printer
+//----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -112,9 +113,8 @@ inline void OpcodeDecoder::Decode_1000iiii_iiiiiiii(const uint8_t *Opcodes,
   uint8_t Opcode1 = Opcodes[OI++ ^ 3];
 
   uint16_t GPRMask = (Opcode1 << 4) | ((Opcode0 & 0x0f) << 12);
-  SW.startLine()
-    << format("0x%02X 0x%02X ; %s",
-              Opcode0, Opcode1, GPRMask ? "pop " : "refuse to unwind");
+  SW.startLine() << format("0x%02X 0x%02X ; %s", Opcode0, Opcode1,
+                           GPRMask ? "pop " : "refuse to unwind");
   if (GPRMask)
     PrintGPR(GPRMask);
   OS << '\n';
@@ -132,7 +132,8 @@ inline void OpcodeDecoder::Decode_10011111(const uint8_t *Opcodes,
 inline void OpcodeDecoder::Decode_1001nnnn(const uint8_t *Opcodes,
                                            unsigned &OI) {
   uint8_t Opcode = Opcodes[OI++ ^ 3];
-  SW.startLine() << format("0x%02X      ; vsp = r%u\n", Opcode, (Opcode & 0x0f));
+  SW.startLine() << format("0x%02X      ; vsp = r%u\n", Opcode,
+                           (Opcode & 0x0f));
 }
 inline void OpcodeDecoder::Decode_10100nnn(const uint8_t *Opcodes,
                                            unsigned &OI) {
@@ -170,7 +171,9 @@ inline void OpcodeDecoder::Decode_10110010_uleb128(const uint8_t *Opcodes,
   SW.startLine() << format("0x%02X ", Opcode);
 
   SmallVector<uint8_t, 4> ULEB;
-  do { ULEB.push_back(Opcodes[OI ^ 3]); } while (Opcodes[OI++ ^ 3] & 0x80);
+  do {
+    ULEB.push_back(Opcodes[OI ^ 3]);
+  } while (Opcodes[OI++ ^ 3] & 0x80);
 
   for (unsigned BI = 0, BE = ULEB.size(); BI != BE; ++BI)
     OS << format("0x%02X ", ULEB[BI]);
@@ -218,11 +221,11 @@ inline void OpcodeDecoder::Decode_11000111_0000iiii(const uint8_t *Opcodes,
                                                     unsigned &OI) {
   uint8_t Opcode0 = Opcodes[OI++ ^ 3];
   uint8_t Opcode1 = Opcodes[OI++ ^ 3];
-  SW.startLine()
-    << format("0x%02X 0x%02X ; %s", Opcode0, Opcode1,
-              ((Opcode1 & 0xf0) || Opcode1 == 0x00) ? "spare" : "pop ");
+  SW.startLine() << format("0x%02X 0x%02X ; %s", Opcode0, Opcode1,
+                           ((Opcode1 & 0xf0) || Opcode1 == 0x00) ? "spare"
+                                                                 : "pop ");
   if ((Opcode1 & 0xf0) == 0x00 && Opcode1)
-      PrintRegisters(Opcode1 & 0x0f, "wCGR");
+    PrintRegisters(Opcode1 & 0x0f, "wCGR");
   OS << '\n';
 }
 inline void OpcodeDecoder::Decode_11001000_sssscccc(const uint8_t *Opcodes,
@@ -272,9 +275,8 @@ inline void OpcodeDecoder::Decode_11xxxyyy(const uint8_t *Opcodes,
 
 inline void OpcodeDecoder::PrintGPR(uint16_t GPRMask) {
   static const char *GPRRegisterNames[16] = {
-    "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10",
-    "fp", "ip", "sp", "lr", "pc"
-  };
+      "r0", "r1", "r2",  "r3", "r4", "r5", "r6", "r7",
+      "r8", "r9", "r10", "fp", "ip", "sp", "lr", "pc"};
 
   OS << '{';
   bool Comma = false;
@@ -305,7 +307,7 @@ inline void OpcodeDecoder::PrintRegisters(uint32_t VFPMask, StringRef Prefix) {
 
 inline void OpcodeDecoder::Decode(const uint8_t *Opcodes, off_t Offset,
                                   size_t Length) {
-  for (unsigned OCI = Offset; OCI < Length + Offset; ) {
+  for (unsigned OCI = Offset; OCI < Length + Offset;) {
     bool Decoded = false;
     for (const auto &RE : ring()) {
       if ((Opcodes[OCI ^ 3] & RE.Mask) == RE.Value) {
@@ -319,8 +321,7 @@ inline void OpcodeDecoder::Decode(const uint8_t *Opcodes, off_t Offset,
   }
 }
 
-template <typename ET>
-class PrinterContext {
+template <typename ET> class PrinterContext {
   typedef typename ET::Sym Elf_Sym;
   typedef typename ET::Shdr Elf_Shdr;
   typedef typename ET::Rel Elf_Rel;
@@ -337,7 +338,7 @@ class PrinterContext {
   static uint64_t PREL31(uint32_t Address, uint32_t Place) {
     uint64_t Location = Address & 0x7fffffff;
     if (Location & 0x40000000)
-      Location |= (uint64_t) ~0x7fffffff;
+      Location |= (uint64_t)~0x7fffffff;
     return Location + Place;
   }
 
@@ -360,8 +361,7 @@ public:
   void PrintUnwindInformation() const;
 };
 
-template <typename ET>
-const size_t PrinterContext<ET>::IndexTableEntrySize = 8;
+template <typename ET> const size_t PrinterContext<ET>::IndexTableEntrySize = 8;
 
 template <typename ET>
 ErrorOr<StringRef> PrinterContext<ET>::FunctionAtAddress(
@@ -475,7 +475,8 @@ void PrinterContext<ET>::PrintExceptionTable(const Elf_Shdr &EHT,
   /// |  more personality routine data   |
 
   const support::ulittle32_t Word =
-    *reinterpret_cast<const support::ulittle32_t *>(Contents->data() + TableEntryOffset);
+      *reinterpret_cast<const support::ulittle32_t *>(Contents->data() +
+                                                      TableEntryOffset);
 
   if (Word & 0x80000000) {
     SW.printString("Model", StringRef("Compact"));
@@ -509,8 +510,8 @@ void PrinterContext<ET>::PrintExceptionTable(const Elf_Shdr &EHT,
 }
 
 template <typename ET>
-void PrinterContext<ET>::PrintOpcodes(const uint8_t *Entry,
-                                      size_t Length, off_t Offset) const {
+void PrinterContext<ET>::PrintOpcodes(const uint8_t *Entry, size_t Length,
+                                      off_t Offset) const {
   ListScope OCC(SW, "Opcodes");
   OpcodeDecoder(SW).Decode(Entry, Offset, Length);
 }
@@ -534,7 +535,7 @@ void PrinterContext<ET>::PrintIndexTable(unsigned SectionIndex,
   ///     frames cannot be unwound
 
   const support::ulittle32_t *Data =
-    reinterpret_cast<const support::ulittle32_t *>(Contents->data());
+      reinterpret_cast<const support::ulittle32_t *>(Contents->data());
   const unsigned Entries = IT->sh_size / IndexTableEntrySize;
   const bool IsRelocatable = ELF.getHeader().e_type == ELF::ET_REL;
 
@@ -543,9 +544,9 @@ void PrinterContext<ET>::PrintIndexTable(unsigned SectionIndex,
     DictScope E(SW, "Entry");
 
     const support::ulittle32_t Word0 =
-      Data[Entry * (IndexTableEntrySize / sizeof(*Data)) + 0];
+        Data[Entry * (IndexTableEntrySize / sizeof(*Data)) + 0];
     const support::ulittle32_t Word1 =
-      Data[Entry * (IndexTableEntrySize / sizeof(*Data)) + 1];
+        Data[Entry * (IndexTableEntrySize / sizeof(*Data)) + 1];
 
     if (Word0 & 0x80000000) {
       errs() << "corrupt unwind data in section " << SectionIndex << "\n";
@@ -620,8 +621,7 @@ void PrinterContext<ET>::PrintIndexTable(unsigned SectionIndex,
   }
 }
 
-template <typename ET>
-void PrinterContext<ET>::PrintUnwindInformation() const {
+template <typename ET> void PrinterContext<ET>::PrintUnwindInformation() const {
   DictScope UI(SW, "UnwindInformation");
 
   int SectionIndex = 0;
@@ -640,8 +640,8 @@ void PrinterContext<ET>::PrintUnwindInformation() const {
     ++SectionIndex;
   }
 }
-}
-}
-}
+} // namespace EHABI
+} // namespace ARM
+} // namespace llvm
 
 #endif

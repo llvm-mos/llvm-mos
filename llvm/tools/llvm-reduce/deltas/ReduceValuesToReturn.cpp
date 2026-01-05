@@ -59,7 +59,8 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
 
   Type *OldRetTy = OldFuncTy->getReturnType();
 
-  // Hack up any return values in other blocks, we can't leave them as returning OldRetTy.
+  // Hack up any return values in other blocks, we can't leave them as returning
+  // OldRetTy.
   if (OldRetTy != NewRetTy) {
     for (BasicBlock &OtherRetBB : OldF) {
       if (&OtherRetBB != NewRetBlock) {

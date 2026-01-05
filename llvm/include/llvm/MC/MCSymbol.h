@@ -165,11 +165,11 @@ protected:
 private:
   void operator delete(void *);
   /// Placement delete - required by std, but never called.
-  void operator delete(void*, unsigned) {
+  void operator delete(void *, unsigned) {
     llvm_unreachable("Constructor throws?");
   }
   /// Placement delete - required by std, but never called.
-  void operator delete(void*, unsigned, bool) {
+  void operator delete(void *, unsigned, bool) {
     llvm_unreachable("Constructor throws?");
   }
 
@@ -180,7 +180,7 @@ private:
     return (*(Name - 1)).NameEntry;
   }
   const MCSymbolTableEntry *&getNameEntryPtr() const {
-    return const_cast<MCSymbol*>(this)->getNameEntryPtr();
+    return const_cast<MCSymbol *>(this)->getNameEntryPtr();
   }
 
 public:
@@ -243,9 +243,7 @@ public:
   bool isUndefined() const { return getFragment() == nullptr; }
 
   /// isAbsolute - Check if this is an absolute symbol.
-  bool isAbsolute() const {
-    return getFragment() == AbsolutePseudoFragment;
-  }
+  bool isAbsolute() const { return getFragment() == AbsolutePseudoFragment; }
 
   /// Get the section associated with a defined, non-absolute symbol.
   MCSection &getSection() const {
@@ -277,14 +275,10 @@ public:
   /// @}
 
   /// Get the (implementation defined) index.
-  uint32_t getIndex() const {
-    return Index;
-  }
+  uint32_t getIndex() const { return Index; }
 
   /// Set the (implementation defined) index.
-  void setIndex(uint32_t Value) const {
-    Index = Value;
-  }
+  void setIndex(uint32_t Value) const { Index = Value; }
 
   uint64_t getOffset() const {
     assert(kind == Kind::Regular &&
@@ -332,7 +326,7 @@ public:
   /// \return True if symbol was already declared as a different type
   bool declareCommon(uint64_t Size, Align Alignment) {
     assert(isCommon() || getOffset() == 0);
-    if(isCommon()) {
+    if (isCommon()) {
       if (CommonSize != Size || getCommonAlignment() != Alignment)
         return true;
     } else

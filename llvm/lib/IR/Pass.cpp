@@ -40,9 +40,7 @@ using namespace llvm;
 //
 
 // Force out-of-line virtual method.
-Pass::~Pass() {
-  delete Resolver;
-}
+Pass::~Pass() { delete Resolver; }
 
 // Force out-of-line virtual method.
 ModulePass::~ModulePass() = default;
@@ -76,14 +74,14 @@ bool Pass::mustPreserveAnalysisID(char &AID) const {
 
 // dumpPassStructure - Implement the -debug-pass=Structure option
 void Pass::dumpPassStructure(unsigned Offset) {
-  dbgs().indent(Offset*2) << getPassName() << "\n";
+  dbgs().indent(Offset * 2) << getPassName() << "\n";
 }
 
 /// getPassName - Return a nice clean name for a pass.  This usually
 /// implemented in terms of the name that is registered by one of the
 /// Registration templates, but can be overloaded directly.
 StringRef Pass::getPassName() const {
-  AnalysisID AID =  getPassID();
+  AnalysisID AID = getPassID();
   const PassInfo *PI = PassRegistry::getPassRegistry()->getPassInfo(AID);
   if (PI)
     return PI->getPassName();
@@ -121,13 +119,9 @@ void Pass::verifyAnalysis() const {
   // By default, don't do anything.
 }
 
-ImmutablePass *Pass::getAsImmutablePass() {
-  return nullptr;
-}
+ImmutablePass *Pass::getAsImmutablePass() { return nullptr; }
 
-PMDataManager *Pass::getAsPMDataManager() {
-  return nullptr;
-}
+PMDataManager *Pass::getAsPMDataManager() { return nullptr; }
 
 void Pass::setResolver(AnalysisResolver *AR) {
   assert(!Resolver && "Resolver is already set");
@@ -143,9 +137,7 @@ void Pass::print(raw_ostream &OS, const Module *) const {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 // dump - call print(cerr);
-LLVM_DUMP_METHOD void Pass::dump() const {
-  print(dbgs(), nullptr);
-}
+LLVM_DUMP_METHOD void Pass::dump() const { print(dbgs(), nullptr); }
 #endif
 
 #ifdef EXPENSIVE_CHECKS

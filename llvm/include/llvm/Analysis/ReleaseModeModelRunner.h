@@ -146,8 +146,12 @@ class NoopSavedModelImpl final {
 
 public:
   NoopSavedModelImpl() = default;
-  int LookupArgIndex(const std::string &) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
-  int LookupResultIndex(const std::string &) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
+  int LookupArgIndex(const std::string &) {
+    llvm_unreachable(NOOP_MODEL_ERRMSG);
+  }
+  int LookupResultIndex(const std::string &) {
+    llvm_unreachable(NOOP_MODEL_ERRMSG);
+  }
   void Run() { llvm_unreachable(NOOP_MODEL_ERRMSG); }
   void *result_data(int) { llvm_unreachable(NOOP_MODEL_ERRMSG); }
   void *arg_data(int) { llvm_unreachable(NOOP_MODEL_ERRMSG); }

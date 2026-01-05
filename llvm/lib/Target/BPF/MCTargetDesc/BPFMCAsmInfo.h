@@ -53,6 +53,6 @@ public:
     return nullptr;
   }
 };
-}
+} // namespace llvm
 
 #endif

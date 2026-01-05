@@ -55,7 +55,6 @@ private:
   bool parseSDelayAluImmMnemonic(
       const unsigned int OpIdx, int64_t &Imm, llvm::StringRef &Src,
       llvm::MIRFormatter::ErrorCallbackType &ErrorCallback) const;
-
 };
 
 } // end namespace llvm

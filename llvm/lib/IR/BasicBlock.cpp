@@ -128,9 +128,7 @@ ValueSymbolTable *BasicBlock::getValueSymbolTable() {
   return nullptr;
 }
 
-LLVMContext &BasicBlock::getContext() const {
-  return getType()->getContext();
-}
+LLVMContext &BasicBlock::getContext() const { return getType()->getContext(); }
 
 template <> void llvm::invalidateParentIListOrdering(BasicBlock *BB) {
   BB->invalidateOrders();
@@ -245,9 +243,7 @@ void BasicBlock::moveAfter(BasicBlock *MovePos) {
                                getIterator());
 }
 
-const Module *BasicBlock::getModule() const {
-  return getParent()->getParent();
-}
+const Module *BasicBlock::getModule() const { return getParent()->getParent(); }
 
 const DataLayout &BasicBlock::getDataLayout() const {
   return getModule()->getDataLayout();
@@ -300,7 +296,7 @@ const CallInst *BasicBlock::getTerminatingDeoptimizeCall() const {
 }
 
 const CallInst *BasicBlock::getPostdominatingDeoptimizeCall() const {
-  const BasicBlock* BB = this;
+  const BasicBlock *BB = this;
   SmallPtrSet<const BasicBlock *, 8> Visited;
   Visited.insert(BB);
   while (auto *Succ = BB->getUniqueSuccessor()) {
@@ -320,7 +316,7 @@ const Instruction *BasicBlock::getFirstMayFaultInst() const {
   return nullptr;
 }
 
-const Instruction* BasicBlock::getFirstNonPHI() const {
+const Instruction *BasicBlock::getFirstNonPHI() const {
   for (const Instruction &I : *this)
     if (!isa<PHINode>(I))
       return &I;
@@ -395,7 +391,8 @@ BasicBlock::const_iterator BasicBlock::getFirstInsertionPt() const {
   if (InsertPt == end())
     return end();
 
-  if (InsertPt->isEHPad()) ++InsertPt;
+  if (InsertPt->isEHPad())
+    ++InsertPt;
   // Set the head-inclusive bit to indicate that this iterator includes
   // any debug-info at the start of the block. This is a no-op unless the
   // appropriate CMake flag is set.
@@ -436,7 +433,8 @@ void BasicBlock::dropAllReferences() {
 
 const BasicBlock *BasicBlock::getSinglePredecessor() const {
   const_pred_iterator PI = pred_begin(this), E = pred_end(this);
-  if (PI == E) return nullptr;         // No preds.
+  if (PI == E)
+    return nullptr; // No preds.
   const BasicBlock *ThePred = *PI;
   ++PI;
   return (PI == E) ? ThePred : nullptr /*multiple preds*/;
@@ -444,10 +442,11 @@ const BasicBlock *BasicBlock::getSinglePredecessor() const {
 
 const BasicBlock *BasicBlock::getUniquePredecessor() const {
   const_pred_iterator PI = pred_begin(this), E = pred_end(this);
-  if (PI == E) return nullptr; // No preds.
+  if (PI == E)
+    return nullptr; // No preds.
   const BasicBlock *PredBB = *PI;
   ++PI;
-  for (;PI != E; ++PI) {
+  for (; PI != E; ++PI) {
     if (*PI != PredBB)
       return nullptr;
     // The same predecessor appears multiple times in the predecessor list.
@@ -466,7 +465,8 @@ bool BasicBlock::hasNPredecessorsOrMore(unsigned N) const {
 
 const BasicBlock *BasicBlock::getSingleSuccessor() const {
   const_succ_iterator SI = succ_begin(this), E = succ_end(this);
-  if (SI == E) return nullptr; // no successors
+  if (SI == E)
+    return nullptr; // no successors
   const BasicBlock *TheSucc = *SI;
   ++SI;
   return (SI == E) ? TheSucc : nullptr /* multiple successors */;
@@ -474,10 +474,11 @@ const BasicBlock *BasicBlock::getSingleSuccessor() const {
 
 const BasicBlock *BasicBlock::getUniqueSuccessor() const {
   const_succ_iterator SI = succ_begin(this), E = succ_end(this);
-  if (SI == E) return nullptr; // No successors
+  if (SI == E)
+    return nullptr; // No successors
   const BasicBlock *SuccBB = *SI;
   ++SI;
-  for (;SI != E; ++SI) {
+  for (; SI != E; ++SI) {
     if (*SI != SuccBB)
       return nullptr;
     // The same successor appears multiple times in the successor list.
@@ -491,8 +492,7 @@ iterator_range<BasicBlock::phi_iterator> BasicBlock::phis() {
   return make_range<phi_iterator>(P, nullptr);
 }
 
-void BasicBlock::removePredecessor(BasicBlock *Pred,
-                                   bool KeepOneInputPHIs) {
+void BasicBlock::removePredecessor(BasicBlock *Pred, bool KeepOneInputPHIs) {
   // Use hasNUsesOrMore to bound the cost of this assertion for complex CFGs.
   assert((hasNUsesOrMore(16) || llvm::is_contained(predecessors(this), Pred)) &&
          "Pred is not a predecessor!");
@@ -668,8 +668,7 @@ const LandingPadInst *BasicBlock::getLandingPadInst() const {
 
 std::optional<uint64_t> BasicBlock::getIrrLoopHeaderWeight() const {
   const Instruction *TI = getTerminator();
-  if (MDNode *MDIrrLoopHeader =
-      TI->getMetadata(LLVMContext::MD_irr_loop)) {
+  if (MDNode *MDIrrLoopHeader = TI->getMetadata(LLVMContext::MD_irr_loop)) {
     MDString *MDName = cast<MDString>(MDIrrLoopHeader->getOperand(0));
     if (MDName->getString() == "loop_header_weight") {
       auto *CI = mdconst::extract<ConstantInt>(MDIrrLoopHeader->getOperand(1));

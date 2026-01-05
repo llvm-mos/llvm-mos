@@ -29,12 +29,9 @@ private:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  bool selectAddr(bool SPAllowed, SDValue Addr, SDValue &Base,
-                  SDValue &Offset);
-  bool selectAddr16(SDValue Addr, SDValue &Base,
-                    SDValue &Offset) override;
-  bool selectAddr16SP(SDValue Addr, SDValue &Base,
-                      SDValue &Offset) override;
+  bool selectAddr(bool SPAllowed, SDValue Addr, SDValue &Base, SDValue &Offset);
+  bool selectAddr16(SDValue Addr, SDValue &Base, SDValue &Offset) override;
+  bool selectAddr16SP(SDValue Addr, SDValue &Base, SDValue &Offset) override;
 
   bool trySelect(SDNode *Node) override;
 
@@ -54,6 +51,6 @@ public:
 
 FunctionPass *createMips16ISelDag(MipsTargetMachine &TM,
                                   CodeGenOptLevel OptLevel);
-}
+} // namespace llvm
 
 #endif

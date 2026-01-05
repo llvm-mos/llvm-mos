@@ -162,11 +162,7 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
   }
 
   // Choose the most-aligned libcall variant that we can
-  enum {
-    ALIGN1 = 0,
-    ALIGN4,
-    ALIGN8
-  } AlignVariant;
+  enum { ALIGN1 = 0, ALIGN4, ALIGN8 } AlignVariant;
   if ((Align & 7) == 0)
     AlignVariant = ALIGN8;
   else if ((Align & 3) == 0)
@@ -217,7 +213,7 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
                                 TLI->getPointerTy(DAG.getDataLayout())),
           std::move(Args))
       .setDiscardResult();
-  std::pair<SDValue,SDValue> CallResult = TLI->LowerCallTo(CLI);
+  std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
 
   return CallResult.second;
 }

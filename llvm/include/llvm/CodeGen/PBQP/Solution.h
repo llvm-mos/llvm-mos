@@ -20,34 +20,35 @@
 namespace llvm {
 namespace PBQP {
 
-  /// Represents a solution to a PBQP problem.
-  ///
-  /// To get the selection for each node in the problem use the getSelection method.
-  class Solution {
-  private:
-    using SelectionsMap = std::map<GraphBase::NodeId, unsigned>;
-    SelectionsMap selections;
+/// Represents a solution to a PBQP problem.
+///
+/// To get the selection for each node in the problem use the getSelection
+/// method.
+class Solution {
+private:
+  using SelectionsMap = std::map<GraphBase::NodeId, unsigned>;
+  SelectionsMap selections;
 
-  public:
-    /// Initialise an empty solution.
-    Solution() = default;
+public:
+  /// Initialise an empty solution.
+  Solution() = default;
 
-    /// Set the selection for a given node.
-    /// @param nodeId Node id.
-    /// @param selection Selection for nodeId.
-    void setSelection(GraphBase::NodeId nodeId, unsigned selection) {
-      selections[nodeId] = selection;
-    }
+  /// Set the selection for a given node.
+  /// @param nodeId Node id.
+  /// @param selection Selection for nodeId.
+  void setSelection(GraphBase::NodeId nodeId, unsigned selection) {
+    selections[nodeId] = selection;
+  }
 
-    /// Get a node's selection.
-    /// @param nodeId Node id.
-    /// @return The selection for nodeId;
-    unsigned getSelection(GraphBase::NodeId nodeId) const {
-      SelectionsMap::const_iterator sItr = selections.find(nodeId);
-      assert(sItr != selections.end() && "No selection for node.");
-      return sItr->second;
-    }
-  };
+  /// Get a node's selection.
+  /// @param nodeId Node id.
+  /// @return The selection for nodeId;
+  unsigned getSelection(GraphBase::NodeId nodeId) const {
+    SelectionsMap::const_iterator sItr = selections.find(nodeId);
+    assert(sItr != selections.end() && "No selection for node.");
+    return sItr->second;
+  }
+};
 
 } // end namespace PBQP
 } // end namespace llvm

@@ -27,9 +27,9 @@ Target &llvm::getTheBPFTarget() {
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeBPFTargetInfo() {
-  TargetRegistry::RegisterTarget(getTheBPFTarget(), "bpf", "BPF (host endian)",
-                                 "BPF", [](Triple::ArchType) { return false; },
-                                 true);
+  TargetRegistry::RegisterTarget(
+      getTheBPFTarget(), "bpf", "BPF (host endian)", "BPF",
+      [](Triple::ArchType) { return false; }, true);
   RegisterTarget<Triple::bpfel, /*HasJIT=*/true> X(
       getTheBPFleTarget(), "bpfel", "BPF (little endian)", "BPF");
   RegisterTarget<Triple::bpfeb, /*HasJIT=*/true> Y(getTheBPFbeTarget(), "bpfeb",

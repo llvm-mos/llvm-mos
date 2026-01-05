@@ -104,9 +104,7 @@ public:
   }
 
   /// Return the address space for the allocation.
-  unsigned getAddressSpace() const {
-    return getType()->getAddressSpace();
-  }
+  unsigned getAddressSpace() const { return getType()->getAddressSpace(); }
 
   /// Get allocation size in bytes. Returns std::nullopt if size can't be
   /// determined, e.g. in case of a VLA.
@@ -232,14 +230,10 @@ public:
   }
 
   /// Returns the synchronization scope ID of this load instruction.
-  SyncScope::ID getSyncScopeID() const {
-    return SSID;
-  }
+  SyncScope::ID getSyncScopeID() const { return SSID; }
 
   /// Sets the synchronization scope ID of this load instruction.
-  void setSyncScopeID(SyncScope::ID SSID) {
-    this->SSID = SSID;
-  }
+  void setSyncScopeID(SyncScope::ID SSID) { this->SSID = SSID; }
 
   /// Sets the ordering constraint and the synchronization scope ID of this load
   /// instruction.
@@ -356,14 +350,10 @@ public:
   }
 
   /// Returns the synchronization scope ID of this store instruction.
-  SyncScope::ID getSyncScopeID() const {
-    return SSID;
-  }
+  SyncScope::ID getSyncScopeID() const { return SSID; }
 
   /// Sets the synchronization scope ID of this store instruction.
-  void setSyncScopeID(SyncScope::ID SSID) {
-    this->SSID = SSID;
-  }
+  void setSyncScopeID(SyncScope::ID SSID) { this->SSID = SSID; }
 
   /// Sets the ordering constraint and the synchronization scope ID of this
   /// store instruction.
@@ -417,8 +407,7 @@ private:
 };
 
 template <>
-struct OperandTraits<StoreInst> : public FixedNumOperandTraits<StoreInst, 2> {
-};
+struct OperandTraits<StoreInst> : public FixedNumOperandTraits<StoreInst, 2> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(StoreInst, Value)
 
@@ -463,14 +452,10 @@ public:
   }
 
   /// Returns the synchronization scope ID of this fence instruction.
-  SyncScope::ID getSyncScopeID() const {
-    return SSID;
-  }
+  SyncScope::ID getSyncScopeID() const { return SSID; }
 
   /// Sets the synchronization scope ID of this fence instruction.
-  void setSyncScopeID(SyncScope::ID SSID) {
-    this->SSID = SSID;
-  }
+  void setSyncScopeID(SyncScope::ID SSID) { this->SSID = SSID; }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -623,14 +608,10 @@ public:
   }
 
   /// Returns the synchronization scope ID of this cmpxchg instruction.
-  SyncScope::ID getSyncScopeID() const {
-    return SSID;
-  }
+  SyncScope::ID getSyncScopeID() const { return SSID; }
 
   /// Sets the synchronization scope ID of this cmpxchg instruction.
-  void setSyncScopeID(SyncScope::ID SSID) {
-    this->SSID = SSID;
-  }
+  void setSyncScopeID(SyncScope::ID SSID) { this->SSID = SSID; }
 
   Value *getPointerOperand() { return getOperand(0); }
   const Value *getPointerOperand() const { return getOperand(0); }
@@ -693,9 +674,8 @@ private:
 };
 
 template <>
-struct OperandTraits<AtomicCmpXchgInst> :
-    public FixedNumOperandTraits<AtomicCmpXchgInst, 3> {
-};
+struct OperandTraits<AtomicCmpXchgInst>
+    : public FixedNumOperandTraits<AtomicCmpXchgInst, 3> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(AtomicCmpXchgInst, Value)
 
@@ -875,14 +855,10 @@ public:
   }
 
   /// Returns the synchronization scope ID of this rmw instruction.
-  SyncScope::ID getSyncScopeID() const {
-    return SSID;
-  }
+  SyncScope::ID getSyncScopeID() const { return SSID; }
 
   /// Sets the synchronization scope ID of this rmw instruction.
-  void setSyncScopeID(SyncScope::ID SSID) {
-    this->SSID = SSID;
-  }
+  void setSyncScopeID(SyncScope::ID SSID) { this->SSID = SSID; }
 
   Value *getPointerOperand() { return getOperand(0); }
   const Value *getPointerOperand() const { return getOperand(0); }
@@ -927,8 +903,7 @@ private:
 
 template <>
 struct OperandTraits<AtomicRMWInst>
-    : public FixedNumOperandTraits<AtomicRMWInst,2> {
-};
+    : public FixedNumOperandTraits<AtomicRMWInst, 2> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(AtomicRMWInst, Value)
 
@@ -1010,9 +985,7 @@ public:
   void setSourceElementType(Type *Ty) { SourceElementType = Ty; }
   void setResultElementType(Type *Ty) { ResultElementType = Ty; }
 
-  Type *getResultElementType() const {
-    return ResultElementType;
-  }
+  Type *getResultElementType() const { return ResultElementType; }
 
   /// Returns the address space of this instruction's pointer type.
   unsigned getAddressSpace() const {
@@ -1038,10 +1011,10 @@ public:
   LLVM_ABI static Type *getTypeAtIndex(Type *Ty, Value *Idx);
   LLVM_ABI static Type *getTypeAtIndex(Type *Ty, uint64_t Idx);
 
-  inline op_iterator       idx_begin()       { return op_begin()+1; }
-  inline const_op_iterator idx_begin() const { return op_begin()+1; }
-  inline op_iterator       idx_end()         { return op_end(); }
-  inline const_op_iterator idx_end()   const { return op_end(); }
+  inline op_iterator idx_begin() { return op_begin() + 1; }
+  inline const_op_iterator idx_begin() const { return op_begin() + 1; }
+  inline op_iterator idx_end() { return op_end(); }
+  inline const_op_iterator idx_end() const { return op_end(); }
 
   inline iterator_range<op_iterator> indices() {
     return make_range(idx_begin(), idx_end());
@@ -1051,21 +1024,15 @@ public:
     return make_range(idx_begin(), idx_end());
   }
 
-  Value *getPointerOperand() {
-    return getOperand(0);
-  }
-  const Value *getPointerOperand() const {
-    return getOperand(0);
-  }
+  Value *getPointerOperand() { return getOperand(0); }
+  const Value *getPointerOperand() const { return getOperand(0); }
   static unsigned getPointerOperandIndex() {
-    return 0U;    // get index for modifying correct operand.
+    return 0U; // get index for modifying correct operand.
   }
 
   /// Method to return the pointer operand as a
   /// PointerType.
-  Type *getPointerOperandType() const {
-    return getPointerOperand()->getType();
-  }
+  Type *getPointerOperandType() const { return getPointerOperand()->getType(); }
 
   /// Returns the address space of the pointer operand.
   unsigned getPointerAddressSpace() const {
@@ -1089,13 +1056,11 @@ public:
     return Ty;
   }
 
-  unsigned getNumIndices() const {  // Note: always non-negative
+  unsigned getNumIndices() const { // Note: always non-negative
     return getNumOperands() - 1;
   }
 
-  bool hasIndices() const {
-    return getNumOperands() > 1;
-  }
+  bool hasIndices() const { return getNumOperands() > 1; }
 
   /// Return true if all of the indices of this GEP are
   /// zeros.  If so, the result pointer and the first operand have the same
@@ -1175,12 +1140,11 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GetElementPtrInst, Value)
 /// to the constructor. It only operates on integers or pointers. The operands
 /// must be identical types.
 /// Represent an integer comparison operator.
-class ICmpInst: public CmpInst {
+class ICmpInst : public CmpInst {
   void AssertOK() {
-    assert(isIntPredicate() &&
-           "Invalid ICmp predicate value");
+    assert(isIntPredicate() && "Invalid ICmp predicate value");
     assert(getOperand(0)->getType() == getOperand(1)->getType() &&
-          "Both operands to ICmp instruction are not of the same type!");
+           "Both operands to ICmp instruction are not of the same type!");
     // Check that the operands are the right type
     assert((getOperand(0)->getType()->isIntOrIntVectorTy() ||
             getOperand(0)->getType()->isPtrOrPtrVectorTy()) &&
@@ -1207,20 +1171,20 @@ public:
       : CmpInst(makeCmpResultType(LHS->getType()), Instruction::ICmp, pred, LHS,
                 RHS, NameStr, InsertBefore) {
 #ifndef NDEBUG
-  AssertOK();
+    AssertOK();
 #endif
   }
 
   /// Constructor with no-insertion semantics
-  ICmpInst(
-    Predicate pred, ///< The predicate to use for the comparison
-    Value *LHS,     ///< The left-hand-side of the expression
-    Value *RHS,     ///< The right-hand-side of the expression
-    const Twine &NameStr = "" ///< Name of the instruction
-  ) : CmpInst(makeCmpResultType(LHS->getType()),
-              Instruction::ICmp, pred, LHS, RHS, NameStr) {
+  ICmpInst(Predicate pred, ///< The predicate to use for the comparison
+           Value *LHS,     ///< The left-hand-side of the expression
+           Value *RHS,     ///< The right-hand-side of the expression
+           const Twine &NameStr = "" ///< Name of the instruction
+           )
+      : CmpInst(makeCmpResultType(LHS->getType()), Instruction::ICmp, pred, LHS,
+                RHS, NameStr) {
 #ifndef NDEBUG
-  AssertOK();
+    AssertOK();
 #endif
   }
 
@@ -1314,15 +1278,11 @@ public:
 
   /// Return true if this predicate is either EQ or NE.  This also
   /// tests for commutativity.
-  static bool isEquality(Predicate P) {
-    return P == ICMP_EQ || P == ICMP_NE;
-  }
+  static bool isEquality(Predicate P) { return P == ICMP_EQ || P == ICMP_NE; }
 
   /// Return true if this predicate is either EQ or NE.  This also
   /// tests for commutativity.
-  bool isEquality() const {
-    return isEquality(getPredicate());
-  }
+  bool isEquality() const { return isEquality(getPredicate()); }
 
   /// @returns true if the predicate is commutative
   /// Determine if this relation is commutative.
@@ -1334,39 +1294,27 @@ public:
 
   /// Return true if the predicate is relational (not EQ or NE).
   ///
-  bool isRelational() const {
-    return !isEquality();
-  }
+  bool isRelational() const { return !isEquality(); }
 
   /// Return true if the predicate is relational (not EQ or NE).
   ///
-  static bool isRelational(Predicate P) {
-    return !isEquality(P);
-  }
+  static bool isRelational(Predicate P) { return !isEquality(P); }
 
   /// Return true if the predicate is SGT or UGT.
   ///
-  static bool isGT(Predicate P) {
-    return P == ICMP_SGT || P == ICMP_UGT;
-  }
+  static bool isGT(Predicate P) { return P == ICMP_SGT || P == ICMP_UGT; }
 
   /// Return true if the predicate is SLT or ULT.
   ///
-  static bool isLT(Predicate P) {
-    return P == ICMP_SLT || P == ICMP_ULT;
-  }
+  static bool isLT(Predicate P) { return P == ICMP_SLT || P == ICMP_ULT; }
 
   /// Return true if the predicate is SGE or UGE.
   ///
-  static bool isGE(Predicate P) {
-    return P == ICMP_SGE || P == ICMP_UGE;
-  }
+  static bool isGE(Predicate P) { return P == ICMP_SGE || P == ICMP_UGE; }
 
   /// Return true if the predicate is SLE or ULE.
   ///
-  static bool isLE(Predicate P) {
-    return P == ICMP_SLE || P == ICMP_ULE;
-  }
+  static bool isLE(Predicate P) { return P == ICMP_SLE || P == ICMP_ULE; }
 
   /// Returns the sequence of all ICmp predicates.
   ///
@@ -1408,7 +1356,7 @@ public:
 /// to the constructor. It only operates on floating point values or packed
 /// vectors of floating point values. The operands must be identical types.
 /// Represents a floating point comparison operator.
-class FCmpInst: public CmpInst {
+class FCmpInst : public CmpInst {
   void AssertOK() {
     assert(isFPPredicate() && "Invalid FCmp predicate value");
     assert(getOperand(0)->getType() == getOperand(1)->getType() &&
@@ -1791,9 +1739,7 @@ public:
   static unsigned getPointerOperandIndex() { return 0U; }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == VAArg;
-  }
+  static bool classof(const Instruction *I) { return I->getOpcode() == VAArg; }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
@@ -1852,9 +1798,8 @@ public:
 };
 
 template <>
-struct OperandTraits<ExtractElementInst> :
-  public FixedNumOperandTraits<ExtractElementInst, 2> {
-};
+struct OperandTraits<ExtractElementInst>
+    : public FixedNumOperandTraits<ExtractElementInst, 2> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ExtractElementInst, Value)
 
@@ -1910,9 +1855,8 @@ public:
 };
 
 template <>
-struct OperandTraits<InsertElementInst> :
-  public FixedNumOperandTraits<InsertElementInst, 3> {
-};
+struct OperandTraits<InsertElementInst>
+    : public FixedNumOperandTraits<InsertElementInst, 3> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InsertElementInst, Value)
 
@@ -2457,8 +2401,7 @@ public:
   static ExtractValueInst *Create(Value *Agg, ArrayRef<unsigned> Idxs,
                                   const Twine &NameStr = "",
                                   InsertPosition InsertBefore = nullptr) {
-    return new
-      ExtractValueInst(Agg, Idxs, NameStr, InsertBefore);
+    return new ExtractValueInst(Agg, Idxs, NameStr, InsertBefore);
   }
 
   /// Returns the type of the element that would be extracted
@@ -2467,35 +2410,25 @@ public:
   /// Null is returned if the indices are invalid for the specified type.
   LLVM_ABI static Type *getIndexedType(Type *Agg, ArrayRef<unsigned> Idxs);
 
-  using idx_iterator = const unsigned*;
+  using idx_iterator = const unsigned *;
 
   inline idx_iterator idx_begin() const { return Indices.begin(); }
-  inline idx_iterator idx_end()   const { return Indices.end(); }
+  inline idx_iterator idx_end() const { return Indices.end(); }
   inline iterator_range<idx_iterator> indices() const {
     return make_range(idx_begin(), idx_end());
   }
 
-  Value *getAggregateOperand() {
-    return getOperand(0);
-  }
-  const Value *getAggregateOperand() const {
-    return getOperand(0);
-  }
+  Value *getAggregateOperand() { return getOperand(0); }
+  const Value *getAggregateOperand() const { return getOperand(0); }
   static unsigned getAggregateOperandIndex() {
-    return 0U;                      // get index for modifying correct operand
+    return 0U; // get index for modifying correct operand
   }
 
-  ArrayRef<unsigned> getIndices() const {
-    return Indices;
-  }
+  ArrayRef<unsigned> getIndices() const { return Indices; }
 
-  unsigned getNumIndices() const {
-    return (unsigned)Indices.size();
-  }
+  unsigned getNumIndices() const { return (unsigned)Indices.size(); }
 
-  bool hasIndices() const {
-    return true;
-  }
+  bool hasIndices() const { return true; }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -2565,45 +2498,31 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  using idx_iterator = const unsigned*;
+  using idx_iterator = const unsigned *;
 
   inline idx_iterator idx_begin() const { return Indices.begin(); }
-  inline idx_iterator idx_end()   const { return Indices.end(); }
+  inline idx_iterator idx_end() const { return Indices.end(); }
   inline iterator_range<idx_iterator> indices() const {
     return make_range(idx_begin(), idx_end());
   }
 
-  Value *getAggregateOperand() {
-    return getOperand(0);
-  }
-  const Value *getAggregateOperand() const {
-    return getOperand(0);
-  }
+  Value *getAggregateOperand() { return getOperand(0); }
+  const Value *getAggregateOperand() const { return getOperand(0); }
   static unsigned getAggregateOperandIndex() {
-    return 0U;                      // get index for modifying correct operand
+    return 0U; // get index for modifying correct operand
   }
 
-  Value *getInsertedValueOperand() {
-    return getOperand(1);
-  }
-  const Value *getInsertedValueOperand() const {
-    return getOperand(1);
-  }
+  Value *getInsertedValueOperand() { return getOperand(1); }
+  const Value *getInsertedValueOperand() const { return getOperand(1); }
   static unsigned getInsertedValueOperandIndex() {
-    return 1U;                      // get index for modifying correct operand
+    return 1U; // get index for modifying correct operand
   }
 
-  ArrayRef<unsigned> getIndices() const {
-    return Indices;
-  }
+  ArrayRef<unsigned> getIndices() const { return Indices; }
 
-  unsigned getNumIndices() const {
-    return (unsigned)Indices.size();
-  }
+  unsigned getNumIndices() const { return (unsigned)Indices.size(); }
 
-  bool hasIndices() const {
-    return true;
-  }
+  bool hasIndices() const { return true; }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -2615,9 +2534,8 @@ public:
 };
 
 template <>
-struct OperandTraits<InsertValueInst> :
-  public FixedNumOperandTraits<InsertValueInst, 2> {
-};
+struct OperandTraits<InsertValueInst>
+    : public FixedNumOperandTraits<InsertValueInst, 2> {};
 
 InsertValueInst::InsertValueInst(Value *Agg, Value *Val,
                                  ArrayRef<unsigned> Idxs, const Twine &NameStr,
@@ -2687,7 +2605,7 @@ public:
   // force all updates go through an interface function.
 
   using block_iterator = BasicBlock **;
-  using const_block_iterator = BasicBlock * const *;
+  using const_block_iterator = BasicBlock *const *;
 
   const_block_iterator block_begin() const {
     return reinterpret_cast<const_block_iterator>(op_begin() + ReservedSpace);
@@ -2711,9 +2629,7 @@ public:
 
   /// Return incoming value number x
   ///
-  Value *getIncomingValue(unsigned i) const {
-    return getOperand(i);
-  }
+  Value *getIncomingValue(unsigned i) const { return getOperand(i); }
   void setIncomingValue(unsigned i, Value *V) {
     assert(V && "PHI node got a null value!");
     assert(getType() == V->getType() &&
@@ -2721,19 +2637,13 @@ public:
     setOperand(i, V);
   }
 
-  static unsigned getOperandNumForIncomingValue(unsigned i) {
-    return i;
-  }
+  static unsigned getOperandNumForIncomingValue(unsigned i) { return i; }
 
-  static unsigned getIncomingValueNumForOperand(unsigned i) {
-    return i;
-  }
+  static unsigned getIncomingValueNumForOperand(unsigned i) { return i; }
 
   /// Return incoming basic block number @p i.
   ///
-  BasicBlock *getIncomingBlock(unsigned i) const {
-    return block_begin()[i];
-  }
+  BasicBlock *getIncomingBlock(unsigned i) const { return block_begin()[i]; }
 
   /// Return incoming basic block corresponding
   /// to an operand of the PHI.
@@ -2773,7 +2683,7 @@ public:
   ///
   void addIncoming(Value *V, BasicBlock *BB) {
     if (getNumOperands() == ReservedSpace)
-      growOperands();  // Get more space!
+      growOperands(); // Get more space!
     // Initialize some new operands.
     setNumHungOffUseOperands(getNumOperands() + 1);
     setIncomingValue(getNumOperands() - 1, V);
@@ -2791,7 +2701,8 @@ public:
   LLVM_ABI Value *removeIncomingValue(unsigned Idx,
                                       bool DeletePHIIfEmpty = true);
 
-  Value *removeIncomingValue(const BasicBlock *BB, bool DeletePHIIfEmpty=true) {
+  Value *removeIncomingValue(const BasicBlock *BB,
+                             bool DeletePHIIfEmpty = true) {
     int Idx = getBasicBlockIndex(BB);
     assert(Idx >= 0 && "Invalid basic block argument to remove!");
     return removeIncomingValue(Idx, DeletePHIIfEmpty);
@@ -3129,7 +3040,7 @@ public:
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   bool isUnconditional() const { return getNumOperands() == 1; }
-  bool isConditional()   const { return getNumOperands() == 3; }
+  bool isConditional() const { return getNumOperands() == 3; }
 
   Value *getCondition() const {
     assert(isConditional() && "Cannot get condition of an uncond branch!");
@@ -3141,7 +3052,7 @@ public:
     Op<-3>() = V;
   }
 
-  unsigned getNumSuccessors() const { return 1+isConditional(); }
+  unsigned getNumSuccessors() const { return 1 + isConditional(); }
 
   BasicBlock *getSuccessor(unsigned i) const {
     assert(i < getNumSuccessors() && "Successor # out of range for Branch!");
@@ -3227,7 +3138,7 @@ public:
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   // -2
-  static const unsigned DefaultPseudoIndex = static_cast<unsigned>(~0L-1);
+  static const unsigned DefaultPseudoIndex = static_cast<unsigned>(~0L - 1);
 
   template <typename CaseHandleT> class CaseIteratorImpl;
 
@@ -3299,7 +3210,7 @@ public:
     void setValue(ConstantInt *V) const {
       assert((unsigned)Index < SI->getNumCases() &&
              "Index out the number of cases.");
-      SI->setOperand(2 + Index*2, reinterpret_cast<Value*>(V));
+      SI->setOperand(2 + Index * 2, reinterpret_cast<Value *>(V));
     }
 
     /// Sets the new successor for current case.
@@ -3390,9 +3301,7 @@ public:
   Value *getCondition() const { return getOperand(0); }
   void setCondition(Value *V) { setOperand(0, V); }
 
-  BasicBlock *getDefaultDest() const {
-    return cast<BasicBlock>(getOperand(1));
-  }
+  BasicBlock *getDefaultDest() const { return cast<BasicBlock>(getOperand(1)); }
 
   /// Returns true if the default branch must result in immediate undefined
   /// behavior, false otherwise.
@@ -3401,38 +3310,28 @@ public:
   }
 
   void setDefaultDest(BasicBlock *DefaultCase) {
-    setOperand(1, reinterpret_cast<Value*>(DefaultCase));
+    setOperand(1, reinterpret_cast<Value *>(DefaultCase));
   }
 
   /// Return the number of 'cases' in this switch instruction, excluding the
   /// default case.
-  unsigned getNumCases() const {
-    return getNumOperands()/2 - 1;
-  }
+  unsigned getNumCases() const { return getNumOperands() / 2 - 1; }
 
   /// Returns a read/write iterator that points to the first case in the
   /// SwitchInst.
-  CaseIt case_begin() {
-    return CaseIt(this, 0);
-  }
+  CaseIt case_begin() { return CaseIt(this, 0); }
 
   /// Returns a read-only iterator that points to the first case in the
   /// SwitchInst.
-  ConstCaseIt case_begin() const {
-    return ConstCaseIt(this, 0);
-  }
+  ConstCaseIt case_begin() const { return ConstCaseIt(this, 0); }
 
   /// Returns a read/write iterator that points one past the last in the
   /// SwitchInst.
-  CaseIt case_end() {
-    return CaseIt(this, getNumCases());
-  }
+  CaseIt case_end() { return CaseIt(this, getNumCases()); }
 
   /// Returns a read-only iterator that points one past the last in the
   /// SwitchInst.
-  ConstCaseIt case_end() const {
-    return ConstCaseIt(this, getNumCases());
-  }
+  ConstCaseIt case_end() const { return ConstCaseIt(this, getNumCases()); }
 
   /// Iteration adapter for range-for loops.
   iterator_range<CaseIt> cases() {
@@ -3449,9 +3348,7 @@ public:
   /// to resolve case value causes an assertion.
   /// Also note, that increment and decrement also causes an assertion and
   /// makes iterator invalid.
-  CaseIt case_default() {
-    return CaseIt(this, DefaultPseudoIndex);
-  }
+  CaseIt case_default() { return CaseIt(this, DefaultPseudoIndex); }
   ConstCaseIt case_default() const {
     return ConstCaseIt(this, DefaultPseudoIndex);
   }
@@ -3510,10 +3407,11 @@ public:
   /// case.
   LLVM_ABI CaseIt removeCase(CaseIt I);
 
-  unsigned getNumSuccessors() const { return getNumOperands()/2; }
+  unsigned getNumSuccessors() const { return getNumOperands() / 2; }
   BasicBlock *getSuccessor(unsigned idx) const {
-    assert(idx < getNumSuccessors() &&"Successor idx out of range for switch!");
-    return cast<BasicBlock>(getOperand(idx*2+1));
+    assert(idx < getNumSuccessors() &&
+           "Successor idx out of range for switch!");
+    return cast<BasicBlock>(getOperand(idx * 2 + 1));
   }
   void setSuccessor(unsigned idx, BasicBlock *NewSucc) {
     assert(idx < getNumSuccessors() && "Successor # out of range for switch!");
@@ -3660,7 +3558,7 @@ public:
 
   /// return the number of possible destinations in this
   /// indirectbr instruction.
-  unsigned getNumDestinations() const { return getNumOperands()-1; }
+  unsigned getNumDestinations() const { return getNumOperands() - 1; }
 
   /// Return the specified destination.
   BasicBlock *getDestination(unsigned i) { return getSuccessor(i); }
@@ -3674,9 +3572,9 @@ public:
   /// indirectbr instruction.
   LLVM_ABI void removeDestination(unsigned i);
 
-  unsigned getNumSuccessors() const { return getNumOperands()-1; }
+  unsigned getNumSuccessors() const { return getNumOperands() - 1; }
   BasicBlock *getSuccessor(unsigned i) const {
-    return cast<BasicBlock>(getOperand(i+1));
+    return cast<BasicBlock>(getOperand(i + 1));
   }
   void setSuccessor(unsigned i, BasicBlock *NewSucc) {
     setOperand(i + 1, NewSucc);
@@ -4094,8 +3992,7 @@ private:
 };
 
 template <>
-struct OperandTraits<ResumeInst> :
-    public FixedNumOperandTraits<ResumeInst, 1> {
+struct OperandTraits<ResumeInst> : public FixedNumOperandTraits<ResumeInst, 1> {
 };
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ResumeInst, Value)
@@ -4392,12 +4289,14 @@ public:
 
 private:
   BasicBlock *getSuccessor(unsigned Idx) const {
-    assert(Idx < getNumSuccessors() && "Successor # out of range for catchret!");
+    assert(Idx < getNumSuccessors() &&
+           "Successor # out of range for catchret!");
     return getSuccessor();
   }
 
   void setSuccessor(unsigned Idx, BasicBlock *B) {
-    assert(Idx < getNumSuccessors() && "Successor # out of range for catchret!");
+    assert(Idx < getNumSuccessors() &&
+           "Successor # out of range for catchret!");
     setSuccessor(B);
   }
 };
@@ -4577,9 +4476,7 @@ public:
   );
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Trunc;
-  }
+  static bool classof(const Instruction *I) { return I->getOpcode() == Trunc; }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
@@ -4642,9 +4539,7 @@ public:
   );
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == ZExt;
-  }
+  static bool classof(const Instruction *I) { return I->getOpcode() == ZExt; }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
@@ -4674,9 +4569,7 @@ public:
   );
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == SExt;
-  }
+  static bool classof(const Instruction *I) { return I->getOpcode() == SExt; }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
@@ -4695,7 +4588,7 @@ protected:
   /// Clone an identical FPTruncInst
   LLVM_ABI FPTruncInst *cloneImpl() const;
 
-public:                 /// Constructor with insert-before-instruction semantics
+public: /// Constructor with insert-before-instruction semantics
   LLVM_ABI
   FPTruncInst(Value *S,                  ///< The value to be truncated
               Type *Ty,                  ///< The type to truncate to
@@ -4737,9 +4630,7 @@ public:
   );
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == FPExt;
-  }
+  static bool classof(const Instruction *I) { return I->getOpcode() == FPExt; }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
@@ -4769,9 +4660,7 @@ public:
   );
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == UIToFP;
-  }
+  static bool classof(const Instruction *I) { return I->getOpcode() == UIToFP; }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
@@ -4801,9 +4690,7 @@ public:
   );
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == SIToFP;
-  }
+  static bool classof(const Instruction *I) { return I->getOpcode() == SIToFP; }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
@@ -4814,7 +4701,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 /// This class represents a cast from floating point to unsigned integer
-class FPToUIInst  : public CastInst {
+class FPToUIInst : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -4833,9 +4720,7 @@ public:
   );
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == FPToUI;
-  }
+  static bool classof(const Instruction *I) { return I->getOpcode() == FPToUI; }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
@@ -4846,7 +4731,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 /// This class represents a cast from floating point to signed integer.
-class FPToSIInst  : public CastInst {
+class FPToSIInst : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -4865,9 +4750,7 @@ public:
   );
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == FPToSI;
-  }
+  static bool classof(const Instruction *I) { return I->getOpcode() == FPToSI; }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
@@ -5058,19 +4941,13 @@ public:
   }
 
   /// Gets the pointer operand.
-  Value *getPointerOperand() {
-    return getOperand(0);
-  }
+  Value *getPointerOperand() { return getOperand(0); }
 
   /// Gets the pointer operand.
-  const Value *getPointerOperand() const {
-    return getOperand(0);
-  }
+  const Value *getPointerOperand() const { return getOperand(0); }
 
   /// Gets the operand index of the pointer operand.
-  static unsigned getPointerOperandIndex() {
-    return 0U;
-  }
+  static unsigned getPointerOperandIndex() { return 0U; }
 
   /// Returns the address space of the pointer operand.
   unsigned getSrcAddressSpace() const {

@@ -40,13 +40,9 @@ public:
   LLVM_ABI const DWARFAbbreviationDeclaration *
   getAbbreviationDeclaration(uint32_t AbbrCode) const;
 
-  const_iterator begin() const {
-    return Decls.begin();
-  }
+  const_iterator begin() const { return Decls.begin(); }
 
-  const_iterator end() const {
-    return Decls.end();
-  }
+  const_iterator end() const { return Decls.end(); }
 
   LLVM_ABI std::string getCodeRange() const;
 

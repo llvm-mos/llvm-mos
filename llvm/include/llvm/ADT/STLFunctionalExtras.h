@@ -34,16 +34,16 @@ namespace llvm {
 ///
 /// This class does not own the callable, so it is not in general safe to store
 /// a function_ref.
-template<typename Fn> class function_ref;
+template <typename Fn> class function_ref;
 
 template <typename Ret, typename... Params>
 class LLVM_GSL_POINTER function_ref<Ret(Params...)> {
-  Ret (*callback)(intptr_t callable, Params ...params) = nullptr;
+  Ret (*callback)(intptr_t callable, Params... params) = nullptr;
   intptr_t callable;
 
-  template<typename Callable>
-  static Ret callback_fn(intptr_t callable, Params ...params) {
-    return (*reinterpret_cast<Callable*>(callable))(
+  template <typename Callable>
+  static Ret callback_fn(intptr_t callable, Params... params) {
+    return (*reinterpret_cast<Callable *>(callable))(
         std::forward<Params>(params)...);
   }
 
@@ -65,7 +65,7 @@ public:
       : callback(callback_fn<std::remove_reference_t<Callable>>),
         callable(reinterpret_cast<intptr_t>(&callable)) {}
 
-  Ret operator()(Params ...params) const {
+  Ret operator()(Params... params) const {
     return callback(callable, std::forward<Params>(params)...);
   }
 

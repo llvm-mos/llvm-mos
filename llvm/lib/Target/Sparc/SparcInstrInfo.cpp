@@ -79,79 +79,125 @@ Register SparcInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-static SPCC::CondCodes GetOppositeBranchCondition(SPCC::CondCodes CC)
-{
-  switch(CC) {
-  case SPCC::ICC_A:    return SPCC::ICC_N;
-  case SPCC::ICC_N:    return SPCC::ICC_A;
-  case SPCC::ICC_NE:   return SPCC::ICC_E;
-  case SPCC::ICC_E:    return SPCC::ICC_NE;
-  case SPCC::ICC_G:    return SPCC::ICC_LE;
-  case SPCC::ICC_LE:   return SPCC::ICC_G;
-  case SPCC::ICC_GE:   return SPCC::ICC_L;
-  case SPCC::ICC_L:    return SPCC::ICC_GE;
-  case SPCC::ICC_GU:   return SPCC::ICC_LEU;
-  case SPCC::ICC_LEU:  return SPCC::ICC_GU;
-  case SPCC::ICC_CC:   return SPCC::ICC_CS;
-  case SPCC::ICC_CS:   return SPCC::ICC_CC;
-  case SPCC::ICC_POS:  return SPCC::ICC_NEG;
-  case SPCC::ICC_NEG:  return SPCC::ICC_POS;
-  case SPCC::ICC_VC:   return SPCC::ICC_VS;
-  case SPCC::ICC_VS:   return SPCC::ICC_VC;
+static SPCC::CondCodes GetOppositeBranchCondition(SPCC::CondCodes CC) {
+  switch (CC) {
+  case SPCC::ICC_A:
+    return SPCC::ICC_N;
+  case SPCC::ICC_N:
+    return SPCC::ICC_A;
+  case SPCC::ICC_NE:
+    return SPCC::ICC_E;
+  case SPCC::ICC_E:
+    return SPCC::ICC_NE;
+  case SPCC::ICC_G:
+    return SPCC::ICC_LE;
+  case SPCC::ICC_LE:
+    return SPCC::ICC_G;
+  case SPCC::ICC_GE:
+    return SPCC::ICC_L;
+  case SPCC::ICC_L:
+    return SPCC::ICC_GE;
+  case SPCC::ICC_GU:
+    return SPCC::ICC_LEU;
+  case SPCC::ICC_LEU:
+    return SPCC::ICC_GU;
+  case SPCC::ICC_CC:
+    return SPCC::ICC_CS;
+  case SPCC::ICC_CS:
+    return SPCC::ICC_CC;
+  case SPCC::ICC_POS:
+    return SPCC::ICC_NEG;
+  case SPCC::ICC_NEG:
+    return SPCC::ICC_POS;
+  case SPCC::ICC_VC:
+    return SPCC::ICC_VS;
+  case SPCC::ICC_VS:
+    return SPCC::ICC_VC;
 
-  case SPCC::FCC_A:    return SPCC::FCC_N;
-  case SPCC::FCC_N:    return SPCC::FCC_A;
-  case SPCC::FCC_U:    return SPCC::FCC_O;
-  case SPCC::FCC_O:    return SPCC::FCC_U;
-  case SPCC::FCC_G:    return SPCC::FCC_ULE;
-  case SPCC::FCC_LE:   return SPCC::FCC_UG;
-  case SPCC::FCC_UG:   return SPCC::FCC_LE;
-  case SPCC::FCC_ULE:  return SPCC::FCC_G;
-  case SPCC::FCC_L:    return SPCC::FCC_UGE;
-  case SPCC::FCC_GE:   return SPCC::FCC_UL;
-  case SPCC::FCC_UL:   return SPCC::FCC_GE;
-  case SPCC::FCC_UGE:  return SPCC::FCC_L;
-  case SPCC::FCC_LG:   return SPCC::FCC_UE;
-  case SPCC::FCC_UE:   return SPCC::FCC_LG;
-  case SPCC::FCC_NE:   return SPCC::FCC_E;
-  case SPCC::FCC_E:    return SPCC::FCC_NE;
+  case SPCC::FCC_A:
+    return SPCC::FCC_N;
+  case SPCC::FCC_N:
+    return SPCC::FCC_A;
+  case SPCC::FCC_U:
+    return SPCC::FCC_O;
+  case SPCC::FCC_O:
+    return SPCC::FCC_U;
+  case SPCC::FCC_G:
+    return SPCC::FCC_ULE;
+  case SPCC::FCC_LE:
+    return SPCC::FCC_UG;
+  case SPCC::FCC_UG:
+    return SPCC::FCC_LE;
+  case SPCC::FCC_ULE:
+    return SPCC::FCC_G;
+  case SPCC::FCC_L:
+    return SPCC::FCC_UGE;
+  case SPCC::FCC_GE:
+    return SPCC::FCC_UL;
+  case SPCC::FCC_UL:
+    return SPCC::FCC_GE;
+  case SPCC::FCC_UGE:
+    return SPCC::FCC_L;
+  case SPCC::FCC_LG:
+    return SPCC::FCC_UE;
+  case SPCC::FCC_UE:
+    return SPCC::FCC_LG;
+  case SPCC::FCC_NE:
+    return SPCC::FCC_E;
+  case SPCC::FCC_E:
+    return SPCC::FCC_NE;
 
-  case SPCC::CPCC_A:   return SPCC::CPCC_N;
-  case SPCC::CPCC_N:   return SPCC::CPCC_A;
-  case SPCC::CPCC_3:   [[fallthrough]];
-  case SPCC::CPCC_2:   [[fallthrough]];
-  case SPCC::CPCC_23:  [[fallthrough]];
-  case SPCC::CPCC_1:   [[fallthrough]];
-  case SPCC::CPCC_13:  [[fallthrough]];
-  case SPCC::CPCC_12:  [[fallthrough]];
-  case SPCC::CPCC_123: [[fallthrough]];
-  case SPCC::CPCC_0:   [[fallthrough]];
-  case SPCC::CPCC_03:  [[fallthrough]];
-  case SPCC::CPCC_02:  [[fallthrough]];
-  case SPCC::CPCC_023: [[fallthrough]];
-  case SPCC::CPCC_01:  [[fallthrough]];
-  case SPCC::CPCC_013: [[fallthrough]];
+  case SPCC::CPCC_A:
+    return SPCC::CPCC_N;
+  case SPCC::CPCC_N:
+    return SPCC::CPCC_A;
+  case SPCC::CPCC_3:
+    [[fallthrough]];
+  case SPCC::CPCC_2:
+    [[fallthrough]];
+  case SPCC::CPCC_23:
+    [[fallthrough]];
+  case SPCC::CPCC_1:
+    [[fallthrough]];
+  case SPCC::CPCC_13:
+    [[fallthrough]];
+  case SPCC::CPCC_12:
+    [[fallthrough]];
+  case SPCC::CPCC_123:
+    [[fallthrough]];
+  case SPCC::CPCC_0:
+    [[fallthrough]];
+  case SPCC::CPCC_03:
+    [[fallthrough]];
+  case SPCC::CPCC_02:
+    [[fallthrough]];
+  case SPCC::CPCC_023:
+    [[fallthrough]];
+  case SPCC::CPCC_01:
+    [[fallthrough]];
+  case SPCC::CPCC_013:
+    [[fallthrough]];
   case SPCC::CPCC_012:
-      // "Opposite" code is not meaningful, as we don't know
-      // what the CoProc condition means here. The cond-code will
-      // only be used in inline assembler, so this code should
-      // not be reached in a normal compilation pass.
-      llvm_unreachable("Meaningless inversion of co-processor cond code");
+    // "Opposite" code is not meaningful, as we don't know
+    // what the CoProc condition means here. The cond-code will
+    // only be used in inline assembler, so this code should
+    // not be reached in a normal compilation pass.
+    llvm_unreachable("Meaningless inversion of co-processor cond code");
 
   case SPCC::REG_BEGIN:
-      llvm_unreachable("Use of reserved cond code");
+    llvm_unreachable("Use of reserved cond code");
   case SPCC::REG_Z:
-      return SPCC::REG_NZ;
+    return SPCC::REG_NZ;
   case SPCC::REG_LEZ:
-      return SPCC::REG_GZ;
+    return SPCC::REG_GZ;
   case SPCC::REG_LZ:
-      return SPCC::REG_GEZ;
+    return SPCC::REG_GEZ;
   case SPCC::REG_NZ:
-      return SPCC::REG_Z;
+    return SPCC::REG_Z;
   case SPCC::REG_GZ:
-      return SPCC::REG_LEZ;
+    return SPCC::REG_LEZ;
   case SPCC::REG_GEZ:
-      return SPCC::REG_LZ;
+    return SPCC::REG_LZ;
   }
   llvm_unreachable("Invalid cond code");
 }
@@ -200,8 +246,8 @@ static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
   // Branch on register contents need another argument to indicate
   // the register it branches on.
   if (isRegCondBranchOpcode(Opc)) {
-      Register Reg = LastInst->getOperand(2).getReg();
-      Cond.push_back(MachineOperand::CreateReg(Reg, false));
+    Register Reg = LastInst->getOperand(2).getReg();
+    Cond.push_back(MachineOperand::CreateReg(Reg, false));
   }
 
   Target = LastInst->getOperand(0).getMBB();
@@ -211,7 +257,7 @@ MachineBasicBlock *
 SparcInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
-      llvm_unreachable("unexpected opcode!");
+    llvm_unreachable("unexpected opcode!");
   case SP::BA:
   case SP::BCOND:
   case SP::BCONDA:
@@ -235,7 +281,7 @@ SparcInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   case SP::BPRA:
   case SP::BPRNT:
   case SP::BPRANT:
-      return MI.getOperand(0).getMBB();
+    return MI.getOperand(0).getMBB();
   }
 }
 
@@ -322,12 +368,9 @@ bool SparcInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
-unsigned SparcInstrInfo::insertBranch(MachineBasicBlock &MBB,
-                                      MachineBasicBlock *TBB,
-                                      MachineBasicBlock *FBB,
-                                      ArrayRef<MachineOperand> Cond,
-                                      const DebugLoc &DL,
-                                      int *BytesAdded) const {
+unsigned SparcInstrInfo::insertBranch(
+    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
+    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() <= 3) &&
          "Sparc branch conditions should have at most three components!");
@@ -439,54 +482,55 @@ void SparcInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
   unsigned numSubRegs = 0;
-  unsigned movOpc     = 0;
+  unsigned movOpc = 0;
   const unsigned *subRegIdx = nullptr;
   bool ExtraG0 = false;
 
-  const unsigned DW_SubRegsIdx[]  = { SP::sub_even, SP::sub_odd };
-  const unsigned DFP_FP_SubRegsIdx[]  = { SP::sub_even, SP::sub_odd };
-  const unsigned QFP_DFP_SubRegsIdx[] = { SP::sub_even64, SP::sub_odd64 };
-  const unsigned QFP_FP_SubRegsIdx[]  = { SP::sub_even, SP::sub_odd,
-                                          SP::sub_odd64_then_sub_even,
-                                          SP::sub_odd64_then_sub_odd };
+  const unsigned DW_SubRegsIdx[] = {SP::sub_even, SP::sub_odd};
+  const unsigned DFP_FP_SubRegsIdx[] = {SP::sub_even, SP::sub_odd};
+  const unsigned QFP_DFP_SubRegsIdx[] = {SP::sub_even64, SP::sub_odd64};
+  const unsigned QFP_FP_SubRegsIdx[] = {SP::sub_even, SP::sub_odd,
+                                        SP::sub_odd64_then_sub_even,
+                                        SP::sub_odd64_then_sub_odd};
 
   if (SP::IntRegsRegClass.contains(DestReg, SrcReg))
-    BuildMI(MBB, I, DL, get(SP::ORrr), DestReg).addReg(SP::G0)
-      .addReg(SrcReg, getKillRegState(KillSrc));
+    BuildMI(MBB, I, DL, get(SP::ORrr), DestReg)
+        .addReg(SP::G0)
+        .addReg(SrcReg, getKillRegState(KillSrc));
   else if (SP::IntPairRegClass.contains(DestReg, SrcReg)) {
-    subRegIdx  = DW_SubRegsIdx;
+    subRegIdx = DW_SubRegsIdx;
     numSubRegs = 2;
-    movOpc     = SP::ORrr;
+    movOpc = SP::ORrr;
     ExtraG0 = true;
   } else if (SP::FPRegsRegClass.contains(DestReg, SrcReg))
     BuildMI(MBB, I, DL, get(SP::FMOVS), DestReg)
-      .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, getKillRegState(KillSrc));
   else if (SP::DFPRegsRegClass.contains(DestReg, SrcReg)) {
     if (Subtarget.isV9()) {
       BuildMI(MBB, I, DL, get(SP::FMOVD), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+          .addReg(SrcReg, getKillRegState(KillSrc));
     } else {
       // Use two FMOVS instructions.
-      subRegIdx  = DFP_FP_SubRegsIdx;
+      subRegIdx = DFP_FP_SubRegsIdx;
       numSubRegs = 2;
-      movOpc     = SP::FMOVS;
+      movOpc = SP::FMOVS;
     }
   } else if (SP::QFPRegsRegClass.contains(DestReg, SrcReg)) {
     if (Subtarget.isV9()) {
       if (Subtarget.hasHardQuad()) {
         BuildMI(MBB, I, DL, get(SP::FMOVQ), DestReg)
-          .addReg(SrcReg, getKillRegState(KillSrc));
+            .addReg(SrcReg, getKillRegState(KillSrc));
       } else {
         // Use two FMOVD instructions.
-        subRegIdx  = QFP_DFP_SubRegsIdx;
+        subRegIdx = QFP_DFP_SubRegsIdx;
         numSubRegs = 2;
-        movOpc     = SP::FMOVD;
+        movOpc = SP::FMOVD;
       }
     } else {
       // Use four FMOVS instructions.
-      subRegIdx  = QFP_FP_SubRegsIdx;
+      subRegIdx = QFP_FP_SubRegsIdx;
       numSubRegs = 4;
-      movOpc     = SP::FMOVS;
+      movOpc = SP::FMOVS;
     }
   } else if (SP::ASRRegsRegClass.contains(DestReg) &&
              SP::IntRegsRegClass.contains(SrcReg)) {
@@ -530,7 +574,8 @@ void SparcInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                          Register VReg,
                                          MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
-  if (I != MBB.end()) DL = I->getDebugLoc();
+  if (I != MBB.end())
+    DL = I->getDebugLoc();
 
   MachineFunction *MF = MBB.getParent();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
@@ -540,25 +585,43 @@ void SparcInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
   // On the order of operands here: think "[FrameIdx + 0] = SrcReg".
   if (RC == &SP::I64RegsRegClass)
-    BuildMI(MBB, I, DL, get(SP::STXri)).addFrameIndex(FI).addImm(0)
-      .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
+    BuildMI(MBB, I, DL, get(SP::STXri))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addMemOperand(MMO);
   else if (RC == &SP::IntRegsRegClass)
-    BuildMI(MBB, I, DL, get(SP::STri)).addFrameIndex(FI).addImm(0)
-      .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
+    BuildMI(MBB, I, DL, get(SP::STri))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addMemOperand(MMO);
   else if (RC == &SP::IntPairRegClass)
-    BuildMI(MBB, I, DL, get(SP::STDri)).addFrameIndex(FI).addImm(0)
-      .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
+    BuildMI(MBB, I, DL, get(SP::STDri))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addMemOperand(MMO);
   else if (RC == &SP::FPRegsRegClass)
-    BuildMI(MBB, I, DL, get(SP::STFri)).addFrameIndex(FI).addImm(0)
-      .addReg(SrcReg,  getKillRegState(isKill)).addMemOperand(MMO);
+    BuildMI(MBB, I, DL, get(SP::STFri))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addMemOperand(MMO);
   else if (SP::DFPRegsRegClass.hasSubClassEq(RC))
-    BuildMI(MBB, I, DL, get(SP::STDFri)).addFrameIndex(FI).addImm(0)
-      .addReg(SrcReg,  getKillRegState(isKill)).addMemOperand(MMO);
+    BuildMI(MBB, I, DL, get(SP::STDFri))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addMemOperand(MMO);
   else if (SP::QFPRegsRegClass.hasSubClassEq(RC))
     // Use STQFri irrespective of its legality. If STQ is not legal, it will be
     // lowered into two STDs in eliminateFrameIndex.
-    BuildMI(MBB, I, DL, get(SP::STQFri)).addFrameIndex(FI).addImm(0)
-      .addReg(SrcReg,  getKillRegState(isKill)).addMemOperand(MMO);
+    BuildMI(MBB, I, DL, get(SP::STQFri))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addMemOperand(MMO);
   else
     llvm_unreachable("Can't store this register to stack slot");
 }
@@ -570,7 +633,8 @@ void SparcInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                           Register VReg,
                                           MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
-  if (I != MBB.end()) DL = I->getDebugLoc();
+  if (I != MBB.end())
+    DL = I->getDebugLoc();
 
   MachineFunction *MF = MBB.getParent();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
@@ -579,25 +643,37 @@ void SparcInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
   if (RC == &SP::I64RegsRegClass)
-    BuildMI(MBB, I, DL, get(SP::LDXri), DestReg).addFrameIndex(FI).addImm(0)
-      .addMemOperand(MMO);
+    BuildMI(MBB, I, DL, get(SP::LDXri), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO);
   else if (RC == &SP::IntRegsRegClass)
-    BuildMI(MBB, I, DL, get(SP::LDri), DestReg).addFrameIndex(FI).addImm(0)
-      .addMemOperand(MMO);
+    BuildMI(MBB, I, DL, get(SP::LDri), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO);
   else if (RC == &SP::IntPairRegClass)
-    BuildMI(MBB, I, DL, get(SP::LDDri), DestReg).addFrameIndex(FI).addImm(0)
-      .addMemOperand(MMO);
+    BuildMI(MBB, I, DL, get(SP::LDDri), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO);
   else if (RC == &SP::FPRegsRegClass)
-    BuildMI(MBB, I, DL, get(SP::LDFri), DestReg).addFrameIndex(FI).addImm(0)
-      .addMemOperand(MMO);
+    BuildMI(MBB, I, DL, get(SP::LDFri), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO);
   else if (SP::DFPRegsRegClass.hasSubClassEq(RC))
-    BuildMI(MBB, I, DL, get(SP::LDDFri), DestReg).addFrameIndex(FI).addImm(0)
-      .addMemOperand(MMO);
+    BuildMI(MBB, I, DL, get(SP::LDDFri), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO);
   else if (SP::QFPRegsRegClass.hasSubClassEq(RC))
     // Use LDQFri irrespective of its legality. If LDQ is not legal, it will be
     // lowered into two LDDs in eliminateFrameIndex.
-    BuildMI(MBB, I, DL, get(SP::LDQFri), DestReg).addFrameIndex(FI).addImm(0)
-      .addMemOperand(MMO);
+    BuildMI(MBB, I, DL, get(SP::LDQFri), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO);
   else
     llvm_unreachable("Can't load this register from stack slot");
 }
@@ -614,7 +690,7 @@ Register SparcInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
   MachineRegisterInfo &RegInfo = MF->getRegInfo();
 
   const TargetRegisterClass *PtrRC =
-    Subtarget.is64Bit() ? &SP::I64RegsRegClass : &SP::IntRegsRegClass;
+      Subtarget.is64Bit() ? &SP::I64RegsRegClass : &SP::IntRegsRegClass;
   GlobalBaseReg = RegInfo.createVirtualRegister(PtrRC);
 
   DebugLoc dl;

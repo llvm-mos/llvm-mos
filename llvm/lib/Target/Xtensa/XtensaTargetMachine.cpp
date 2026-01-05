@@ -35,7 +35,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTarget() {
 static Reloc::Model getEffectiveRelocModel(bool JIT,
                                            std::optional<Reloc::Model> RM) {
   if (!RM || JIT)
-     return Reloc::Static;
+    return Reloc::Static;
   return *RM;
 }
 

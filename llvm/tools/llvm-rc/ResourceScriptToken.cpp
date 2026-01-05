@@ -52,7 +52,7 @@ uint32_t RCToken::intValue() const {
   uint32_t Result;
   bool IsSuccess = rcGetAsInteger(TokenValue, Result);
   assert(IsSuccess);
-  (void)IsSuccess;  // Silence the compiler warning when -DNDEBUG flag is on.
+  (void)IsSuccess; // Silence the compiler warning when -DNDEBUG flag is on.
   return Result;
 }
 
@@ -227,7 +227,7 @@ bool Tokenizer::skipWhitespaces() {
 
 Error Tokenizer::consumeToken(const Kind TokenKind) {
   switch (TokenKind) {
-  // One-character token consumption.
+    // One-character token consumption.
 #define TOKEN(Name)
 #define SHORT_TOKEN(Name, Ch) case Kind::Name:
 #include "ResourceScriptTokenList.def"
@@ -352,7 +352,7 @@ Kind Tokenizer::classifyCurrentToken() const {
   const char CurChar = Data[Pos];
 
   switch (CurChar) {
-  // One-character token classification.
+    // One-character token classification.
 #define TOKEN(Name)
 #define SHORT_TOKEN(Name, Ch)                                                  \
   case Ch:                                                                     \

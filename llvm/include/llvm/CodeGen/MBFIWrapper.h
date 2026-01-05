@@ -24,7 +24,7 @@ class MachineBasicBlock;
 class MachineBlockFrequencyInfo;
 
 class MBFIWrapper {
- public:
+public:
   MBFIWrapper(const MachineBlockFrequencyInfo &I) : MBFI(I) {}
 
   BlockFrequency getBlockFreq(const MachineBasicBlock *MBB) const;

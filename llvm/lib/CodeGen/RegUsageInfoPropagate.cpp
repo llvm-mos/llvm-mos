@@ -52,10 +52,12 @@ private:
 
   static void setRegMask(MachineInstr &MI, ArrayRef<uint32_t> RegMask) {
     assert(RegMask.size() ==
-           MachineOperand::getRegMaskSize(MI.getParent()->getParent()
-                                          ->getRegInfo().getTargetRegisterInfo()
-                                          ->getNumRegs())
-           && "expected register mask size");
+               MachineOperand::getRegMaskSize(MI.getParent()
+                                                  ->getParent()
+                                                  ->getRegInfo()
+                                                  .getTargetRegisterInfo()
+                                                  ->getNumRegs()) &&
+           "expected register mask size");
     for (MachineOperand &MO : MI.operands()) {
       if (MO.isRegMask())
         MO.setRegMask(RegMask.data());

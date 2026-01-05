@@ -35,7 +35,7 @@ enum class MachineFunctionDataHotness;
 ///
 struct MachineJumpTableEntry {
   /// MBBs - The vector of basic blocks from which to create the jump table.
-  std::vector<MachineBasicBlock*> MBBs;
+  std::vector<MachineBasicBlock *> MBBs;
 
   /// The hotness of MJTE is inferred from the hotness of the source basic
   /// block(s) that reference it.
@@ -91,8 +91,9 @@ public:
 private:
   JTEntryKind EntryKind;
   std::vector<MachineJumpTableEntry> JumpTables;
+
 public:
-  explicit MachineJumpTableInfo(JTEntryKind Kind): EntryKind(Kind) {}
+  explicit MachineJumpTableInfo(JTEntryKind Kind) : EntryKind(Kind) {}
 
   JTEntryKind getEntryKind() const { return EntryKind; }
 
@@ -121,9 +122,7 @@ public:
 
   /// RemoveJumpTable - Mark the specific index as being dead.  This will
   /// prevent it from being emitted.
-  void RemoveJumpTable(unsigned Idx) {
-    JumpTables[Idx].MBBs.clear();
-  }
+  void RemoveJumpTable(unsigned Idx) { JumpTables[Idx].MBBs.clear(); }
 
   /// RemoveMBBFromJumpTables - If MBB is present in any jump tables, remove it.
   LLVM_ABI bool RemoveMBBFromJumpTables(MachineBasicBlock *MBB);
@@ -148,7 +147,6 @@ public:
   LLVM_ABI void dump() const;
 };
 
-
 /// Prints a jump table entry reference.
 ///
 /// The format is:
@@ -157,6 +155,6 @@ public:
 /// Usage: OS << printJumpTableEntryReference(Idx) << '\n';
 LLVM_ABI Printable printJumpTableEntryReference(unsigned Idx);
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

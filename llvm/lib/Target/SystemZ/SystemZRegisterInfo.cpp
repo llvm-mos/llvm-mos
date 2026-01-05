@@ -42,12 +42,12 @@ static const TargetRegisterClass *getRC32(MachineOperand &MO,
     Register PhysReg = VRM->getPhys(MO.getReg());
     if (SystemZ::GR32BitRegClass.contains(PhysReg))
       return &SystemZ::GR32BitRegClass;
-    assert (SystemZ::GRH32BitRegClass.contains(PhysReg) &&
-            "Phys reg not in GR32 or GRH32?");
+    assert(SystemZ::GRH32BitRegClass.contains(PhysReg) &&
+           "Phys reg not in GR32 or GRH32?");
     return &SystemZ::GRH32BitRegClass;
   }
 
-  assert (RC == &SystemZ::GRX32BitRegClass);
+  assert(RC == &SystemZ::GRX32BitRegClass);
   return RC;
 }
 
@@ -61,12 +61,10 @@ static void addHints(ArrayRef<MCPhysReg> Order,
   SmallSet<unsigned, 4> CopyHints(llvm::from_range, Hints);
   Hints.clear();
   for (MCPhysReg Reg : Order)
-    if (CopyHints.count(Reg) &&
-        RC->contains(Reg) && !MRI->isReserved(Reg))
+    if (CopyHints.count(Reg) && RC->contains(Reg) && !MRI->isReserved(Reg))
       Hints.push_back(Reg);
   for (MCPhysReg Reg : Order)
-    if (!CopyHints.count(Reg) &&
-        RC->contains(Reg) && !MRI->isReserved(Reg))
+    if (!CopyHints.count(Reg) && RC->contains(Reg) && !MRI->isReserved(Reg))
       Hints.push_back(Reg);
 }
 
@@ -145,9 +143,8 @@ bool SystemZRegisterInfo::getRegAllocationHints(
             Use.getOpcode() == SystemZ::SELRMux) {
           MachineOperand &TrueMO = Use.getOperand(1);
           MachineOperand &FalseMO = Use.getOperand(2);
-          const TargetRegisterClass *RC =
-            TRI->getCommonSubClass(getRC32(FalseMO, VRM, MRI),
-                                   getRC32(TrueMO, VRM, MRI));
+          const TargetRegisterClass *RC = TRI->getCommonSubClass(
+              getRC32(FalseMO, VRM, MRI), getRC32(TrueMO, VRM, MRI));
           if (Use.getOpcode() == SystemZ::SELRMux)
             RC = TRI->getCommonSubClass(RC,
                                         getRC32(Use.getOperand(0), VRM, MRI));
@@ -199,11 +196,10 @@ SystemZELFRegisters::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getFunction().getCallingConv() == CallingConv::GHC)
     return CSR_SystemZ_NoRegs_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::AnyReg)
-    return Subtarget.hasVector()? CSR_SystemZ_AllRegs_Vector_SaveList
-                                : CSR_SystemZ_AllRegs_SaveList;
+    return Subtarget.hasVector() ? CSR_SystemZ_AllRegs_Vector_SaveList
+                                 : CSR_SystemZ_AllRegs_SaveList;
   if (MF->getSubtarget().getTargetLowering()->supportSwiftError() &&
-      MF->getFunction().getAttributes().hasAttrSomewhere(
-          Attribute::SwiftError))
+      MF->getFunction().getAttributes().hasAttrSomewhere(Attribute::SwiftError))
     return CSR_SystemZ_SwiftError_SaveList;
   return CSR_SystemZ_ELF_SaveList;
 }
@@ -223,11 +219,10 @@ SystemZELFRegisters::getCallPreservedMask(const MachineFunction &MF,
   if (CC == CallingConv::GHC)
     return CSR_SystemZ_NoRegs_RegMask;
   if (CC == CallingConv::AnyReg)
-    return Subtarget.hasVector()? CSR_SystemZ_AllRegs_Vector_RegMask
-                                : CSR_SystemZ_AllRegs_RegMask;
+    return Subtarget.hasVector() ? CSR_SystemZ_AllRegs_Vector_RegMask
+                                 : CSR_SystemZ_AllRegs_RegMask;
   if (MF.getSubtarget().getTargetLowering()->supportSwiftError() &&
-      MF.getFunction().getAttributes().hasAttrSomewhere(
-          Attribute::SwiftError))
+      MF.getFunction().getAttributes().hasAttrSomewhere(Attribute::SwiftError))
     return CSR_SystemZ_SwiftError_RegMask;
   return CSR_SystemZ_ELF_RegMask;
 }
@@ -285,10 +280,9 @@ SystemZRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-bool
-SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
-                                         int SPAdj, unsigned FIOperandNum,
-                                         RegScavenger *RS) const {
+bool SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
+                                              int SPAdj, unsigned FIOperandNum,
+                                              RegScavenger *RS) const {
   assert(SPAdj == 0 && "Outgoing arguments should be part of the frame");
 
   MachineBasicBlock &MBB = *MI->getParent();
@@ -331,8 +325,7 @@ SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       OpcodeForOffset = SystemZ::LDE32;
     }
     MI->getOperand(FIOperandNum).ChangeToRegister(BasePtr, false);
-  }
-  else {
+  } else {
     // Create an anchor point that is in range.  Start at 0xffff so that
     // can use LLILH to load the immediate.
     int64_t OldOffset = Offset;
@@ -348,31 +341,35 @@ SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         MF.getRegInfo().createVirtualRegister(&SystemZ::ADDR64BitRegClass);
     int64_t HighOffset = OldOffset - Offset;
 
-    if (MI->getDesc().TSFlags & SystemZII::HasIndex
-        && MI->getOperand(FIOperandNum + 2).getReg() == 0) {
+    if (MI->getDesc().TSFlags & SystemZII::HasIndex &&
+        MI->getOperand(FIOperandNum + 2).getReg() == 0) {
       // Load the offset into the scratch register and use it as an index.
       // The scratch register then dies here.
       TII->loadImmediate(MBB, MI, ScratchReg, HighOffset);
       MI->getOperand(FIOperandNum).ChangeToRegister(BasePtr, false);
-      MI->getOperand(FIOperandNum + 2).ChangeToRegister(ScratchReg,
-                                                        false, false, true);
+      MI->getOperand(FIOperandNum + 2)
+          .ChangeToRegister(ScratchReg, false, false, true);
     } else {
       // Load the anchor address into a scratch register.
       unsigned LAOpcode = TII->getOpcodeForOffset(SystemZ::LA, HighOffset);
       if (LAOpcode)
-        BuildMI(MBB, MI, DL, TII->get(LAOpcode),ScratchReg)
-          .addReg(BasePtr).addImm(HighOffset).addReg(0);
+        BuildMI(MBB, MI, DL, TII->get(LAOpcode), ScratchReg)
+            .addReg(BasePtr)
+            .addImm(HighOffset)
+            .addReg(0);
       else {
         // Load the high offset into the scratch register and use it as
         // an index.
         TII->loadImmediate(MBB, MI, ScratchReg, HighOffset);
         BuildMI(MBB, MI, DL, TII->get(SystemZ::LA), ScratchReg)
-          .addReg(BasePtr, RegState::Kill).addImm(0).addReg(ScratchReg);
+            .addReg(BasePtr, RegState::Kill)
+            .addImm(0)
+            .addReg(ScratchReg);
       }
 
       // Use the scratch register as the base.  It then dies here.
-      MI->getOperand(FIOperandNum).ChangeToRegister(ScratchReg,
-                                                    false, false, true);
+      MI->getOperand(FIOperandNum)
+          .ChangeToRegister(ScratchReg, false, false, true);
     }
   }
   MI->setDesc(TII->get(OpcodeForOffset));
@@ -380,14 +377,11 @@ SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   return false;
 }
 
-bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
-                                         const TargetRegisterClass *SrcRC,
-                                         unsigned SubReg,
-                                         const TargetRegisterClass *DstRC,
-                                         unsigned DstSubReg,
-                                         const TargetRegisterClass *NewRC,
-                                         LiveIntervals &LIS) const {
-  assert (MI->isCopy() && "Only expecting COPY instructions");
+bool SystemZRegisterInfo::shouldCoalesce(
+    MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
+    const TargetRegisterClass *DstRC, unsigned DstSubReg,
+    const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
+  assert(MI->isCopy() && "Only expecting COPY instructions");
 
   // Coalesce anything which is not a COPY involving a subreg to/from GR128.
   if (!(NewRC->hasSuperClassEq(&SystemZ::GR128BitRegClass) &&
@@ -405,8 +399,8 @@ bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
   MachineBasicBlock *MBB = MI->getParent();
   MachineInstr *FirstMI = LIS.getInstructionFromIndex(LI.beginIndex());
   MachineInstr *LastMI = LIS.getInstructionFromIndex(LI.endIndex());
-  if (!FirstMI || FirstMI->getParent() != MBB ||
-      !LastMI || LastMI->getParent() != MBB)
+  if (!FirstMI || FirstMI->getParent() != MBB || !LastMI ||
+      LastMI->getParent() != MBB)
     return false;
 
   // Check if coalescing seems safe by finding the set of clobbered physreg
@@ -448,4 +442,3 @@ SystemZRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
     return &SystemZ::GR32BitRegClass;
   return RC;
 }
-

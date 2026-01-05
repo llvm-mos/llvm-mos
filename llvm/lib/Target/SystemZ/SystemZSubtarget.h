@@ -32,6 +32,7 @@ class StringRef;
 
 class SystemZSubtarget : public SystemZGenSubtargetInfo {
   virtual void anchor();
+
 protected:
 // Bool members corresponding to the SubtargetFeatures defined in tablegen.
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \

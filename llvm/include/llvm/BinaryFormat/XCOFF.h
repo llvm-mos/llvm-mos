@@ -62,13 +62,13 @@ static constexpr uint8_t XR_BIASED_LENGTH_MASK = 0x3f;
 
 // This field only exists in the XCOFF64 definition.
 enum AuxHeaderFlags64 : uint16_t {
-  SHR_SYMTAB = 0x8000,  ///< At exec time, create shared symbol table for program
-                        ///< (main program only).
+  SHR_SYMTAB = 0x8000, ///< At exec time, create shared symbol table for program
+                       ///< (main program only).
   FORK_POLICY = 0x4000, ///< Forktree policy specified (main program only).
-  FORK_COR = 0x2000     ///< If _AOUT_FORK_POLICY is set, specify copy-on-reference
-                        ///< if this bit is set. Specify copy-on- write otherwise.
-                        ///< If _AOUT_FORK_POLICY is 0, this bit is reserved for
-                        ///< future use and should be set to 0.
+  FORK_COR = 0x2000 ///< If _AOUT_FORK_POLICY is set, specify copy-on-reference
+                    ///< if this bit is set. Specify copy-on- write otherwise.
+                    ///< If _AOUT_FORK_POLICY is 0, this bit is reserved for
+                    ///< future use and should be set to 0.
 };
 
 enum XCOFFInterpret : uint16_t {
@@ -370,7 +370,7 @@ enum SymbolAuxType : uint8_t {
   AUX_FILE = 252,   ///< Identifies a file auxiliary entry.
   AUX_CSECT = 251,  ///< Identifies a csect auxiliary entry.
   AUX_SECT = 250    ///< Identifies a SECT auxiliary entry.
-};                  // 64-bit XCOFF file only.
+}; // 64-bit XCOFF file only.
 
 LLVM_ABI StringRef getMappingClassString(XCOFF::StorageMappingClass SMC);
 LLVM_ABI StringRef getRelocationTypeString(XCOFF::RelocationType Type);

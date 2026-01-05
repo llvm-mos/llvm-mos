@@ -324,7 +324,7 @@ public:
 
   bool empty() const { return AdjList.empty(); }
 
-  template <typename... ArgT> std::unique_ptr<GraphT> get(ArgT &&... Args) {
+  template <typename... ArgT> std::unique_ptr<GraphT> get(ArgT &&...Args) {
     size_type VertexSize = AdjList.size(), EdgeSize = 0;
     for (const auto &V : AdjList) {
       EdgeSize += V.second.size();
@@ -353,7 +353,7 @@ public:
   template <typename... ArgT>
   static std::unique_ptr<GraphT> trim(const GraphT &G, const NodeSet &TrimNodes,
                                       const EdgeSet &TrimEdges,
-                                      ArgT &&... Args) {
+                                      ArgT &&...Args) {
     size_type NewVertexSize = G.nodes_size() - TrimNodes.count();
     size_type NewEdgeSize = G.edges_size() - TrimEdges.count();
     auto NewVertexArray =

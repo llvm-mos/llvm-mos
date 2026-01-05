@@ -360,7 +360,7 @@ bool ARCFrameLowering::assignCalleeSavedSpillSlots(
   }
   if (MFI.hasCalls() || (UseSaveRestoreFunclet && Last > ARC::R14)) {
     // Create a fixed slot for BLINK.
-    int StackObj  = MFI.CreateFixedSpillStackObject(4, CurOffset, true);
+    int StackObj = MFI.CreateFixedSpillStackObject(4, CurOffset, true);
     LLVM_DEBUG(dbgs() << "Creating fixed object (" << StackObj
                       << ") for BLINK at " << CurOffset << "\n");
     (void)StackObj;

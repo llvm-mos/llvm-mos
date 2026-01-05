@@ -14,23 +14,30 @@
 \*===----------------------------------------------------------------------===*/
 
 #include "llvm-c-test.h"
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 typedef LLVMValueRef (*binop_func_t)(LLVMBuilderRef, LLVMValueRef LHS,
                                      LLVMValueRef RHS, const char *Name);
 
 static LLVMOpcode op_to_opcode(char op) {
   switch (op) {
-  case '+': return LLVMAdd;
-  case '-': return LLVMSub;
-  case '*': return LLVMMul;
-  case '/': return LLVMSDiv;
-  case '&': return LLVMAnd;
-  case '|': return LLVMOr;
-  case '^': return LLVMXor;
+  case '+':
+    return LLVMAdd;
+  case '-':
+    return LLVMSub;
+  case '*':
+    return LLVMMul;
+  case '/':
+    return LLVMSDiv;
+  case '&':
+    return LLVMAnd;
+  case '|':
+    return LLVMOr;
+  case '^':
+    return LLVMXor;
   }
   assert(0 && "unknown operation");
   return 0;

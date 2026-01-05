@@ -97,7 +97,7 @@ JITLinkReentryTrampolines::Create(ObjectLinkingLayer &ObjLinkingLayer) {
     break;
   default:
     return make_error<StringError>("JITLinkReentryTrampolines: architecture " +
-				   TT.getArchName() + " not supported",
+                                       TT.getArchName() + " not supported",
                                    inconvertibleErrorCode());
   }
 

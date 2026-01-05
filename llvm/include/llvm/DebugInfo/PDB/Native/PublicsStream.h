@@ -69,7 +69,7 @@ private:
 
   const PublicsStreamHeader *Header;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

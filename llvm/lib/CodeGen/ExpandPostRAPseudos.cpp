@@ -80,12 +80,12 @@ bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
   assert((MI->getOperand(0).isReg() && MI->getOperand(0).isDef()) &&
          MI->getOperand(1).isImm() &&
          (MI->getOperand(2).isReg() && MI->getOperand(2).isUse()) &&
-          MI->getOperand(3).isImm() && "Invalid subreg_to_reg");
+         MI->getOperand(3).isImm() && "Invalid subreg_to_reg");
 
   Register DstReg = MI->getOperand(0).getReg();
   Register InsReg = MI->getOperand(2).getReg();
   assert(!MI->getOperand(2).getSubReg() && "SubIdx on physreg?");
-  unsigned SubIdx  = MI->getOperand(3).getImm();
+  unsigned SubIdx = MI->getOperand(3).getImm();
 
   assert(SubIdx != 0 && "Invalid index for insert_subreg");
   Register DstSubReg = TRI->getSubReg(DstReg, SubIdx);
@@ -112,8 +112,8 @@ bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
     // We must leave %rax live.
     if (DstReg != InsReg) {
       MI->setDesc(TII->get(TargetOpcode::KILL));
-      MI->removeOperand(3);     // SubIdx
-      MI->removeOperand(1);     // Imm
+      MI->removeOperand(3); // SubIdx
+      MI->removeOperand(1); // Imm
       LLVM_DEBUG(dbgs() << "subreg: replace by: " << *MI);
       return true;
     }

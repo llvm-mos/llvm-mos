@@ -149,7 +149,7 @@ void VariableDumper::dump(const PDBSymbolTypeFunctionSig &Symbol) {
 
   if (ClassParent) {
     WithColor(Printer, PDB_ColorItem::Identifier).get()
-      << ClassParent->getName();
+        << ClassParent->getName();
     Printer << "::";
   }
 }

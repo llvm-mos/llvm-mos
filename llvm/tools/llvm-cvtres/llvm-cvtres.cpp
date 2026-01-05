@@ -63,7 +63,7 @@ public:
       : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
                              true) {}
 };
-}
+} // namespace
 
 [[noreturn]] static void reportError(Twine Msg) {
   errs() << Msg;
@@ -161,7 +161,7 @@ int main(int Argc, const char **Argv) {
     StringRef Value(Arg->getValue());
     if (Value.getAsInteger(0, DateTimeStamp))
       reportError(Twine("invalid timestamp: ") + Value +
-            ".  Expected 32-bit integer\n");
+                  ".  Expected 32-bit integer\n");
   } else {
     DateTimeStamp = getTime();
   }
@@ -197,7 +197,7 @@ int main(int Argc, const char **Argv) {
 
     std::vector<std::string> Duplicates;
     error(Parser.parse(RF, Duplicates));
-    for (const auto& DupeDiag : Duplicates)
+    for (const auto &DupeDiag : Duplicates)
       reportError(DupeDiag);
   }
 

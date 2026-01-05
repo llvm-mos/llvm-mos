@@ -22,7 +22,7 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "XCoreGenSubtargetInfo.inc"
 
-void XCoreSubtarget::anchor() { }
+void XCoreSubtarget::anchor() {}
 
 XCoreSubtarget::XCoreSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS, const TargetMachine &TM)

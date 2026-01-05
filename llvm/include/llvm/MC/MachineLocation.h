@@ -14,15 +14,15 @@
 #ifndef LLVM_MC_MACHINELOCATION_H
 #define LLVM_MC_MACHINELOCATION_H
 
-#include <cstdint>
 #include <cassert>
+#include <cstdint>
 
 namespace llvm {
 
 class MachineLocation {
 private:
-  bool IsRegister = false;              ///< True if location is a register.
-  unsigned Register = 0;                ///< gcc/gdb register number.
+  bool IsRegister = false; ///< True if location is a register.
+  unsigned Register = 0;   ///< gcc/gdb register number.
 
 public:
   enum : uint32_t {
@@ -42,10 +42,10 @@ public:
 
   // Accessors.
   /// \return true iff this is a register-indirect location.
-  bool isIndirect()      const { return !IsRegister; }
-  bool isReg()           const { return IsRegister; }
-  unsigned getReg()      const { return Register; }
-  void setIsRegister(bool Is)  { IsRegister = Is; }
+  bool isIndirect() const { return !IsRegister; }
+  bool isReg() const { return IsRegister; }
+  unsigned getReg() const { return Register; }
+  void setIsRegister(bool Is) { IsRegister = Is; }
   void setRegister(unsigned R) { Register = R; }
 };
 

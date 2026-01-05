@@ -29,7 +29,7 @@ public:
 
   // Override TargetFrameLowering.
   bool allocateScavengingFrameIndexesNearIncomingSP(
-    const MachineFunction &MF) const override {
+      const MachineFunction &MF) const override {
     // SystemZ wants normal register scavenging slots, as close to the stack or
     // frame pointer as possible.
     // The default implementation assumes an x86-like layout, where the frame

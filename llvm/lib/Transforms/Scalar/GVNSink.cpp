@@ -154,12 +154,12 @@ public:
     }
   }
 
-  /// Create a dummy ModelledPHI that will compare unequal to any other ModelledPHI
-  /// without the same ID.
+  /// Create a dummy ModelledPHI that will compare unequal to any other
+  /// ModelledPHI without the same ID.
   /// \note This is specifically for DenseMapInfo - do not use this!
   static ModelledPHI createDummy(size_t ID) {
     ModelledPHI M;
-    M.Values.push_back(reinterpret_cast<Value*>(ID));
+    M.Values.push_back(reinterpret_cast<Value *>(ID));
     return M;
   }
 
@@ -220,9 +220,7 @@ public:
 
   ArrayRef<Value *> getValues() const { return Values; }
 
-  bool areAllIncomingValuesSame() const {
-    return llvm::all_equal(Values);
-  }
+  bool areAllIncomingValuesSame() const { return llvm::all_equal(Values); }
 
   bool areAllIncomingValuesSameType() const {
     return llvm::all_of(
@@ -521,7 +519,7 @@ public:
                       << "\n");
 
     unsigned NumSunk = 0;
-    ReversePostOrderTraversal<Function*> RPOT(&F);
+    ReversePostOrderTraversal<Function *> RPOT(&F);
     VN.setReachableBBs(BasicBlocksSet(llvm::from_range, RPOT));
     // Populate reverse post-order to order basic blocks in deterministic
     // order. Any arbitrary ordering will work in this case as long as they are
@@ -603,10 +601,8 @@ GVNSink::analyzeInstructionForSinking(LockstepReverseIterator<false> &LRI,
                                       ModelledPHISet &NeededPHIs,
                                       SmallPtrSetImpl<Value *> &PHIContents) {
   auto Insts = *LRI;
-  LLVM_DEBUG(dbgs() << " -- Analyzing instruction set: [\n"; for (auto *I
-                                                                  : Insts) {
-    I->dump();
-  } dbgs() << " ]\n";);
+  LLVM_DEBUG(dbgs() << " -- Analyzing instruction set: [\n";
+             for (auto *I : Insts) { I->dump(); } dbgs() << " ]\n";);
 
   DenseMap<uint32_t, unsigned> VNums;
   for (auto *I : Insts) {
@@ -768,9 +764,8 @@ unsigned GVNSink::sinkBB(BasicBlock *BBEnd) {
   }
 
   llvm::stable_sort(Candidates, std::greater<SinkingInstructionCandidate>());
-  LLVM_DEBUG(dbgs() << " -- Sinking candidates:\n"; for (auto &C
-                                                         : Candidates) dbgs()
-                                                    << "  " << C << "\n";);
+  LLVM_DEBUG(dbgs() << " -- Sinking candidates:\n";
+             for (auto &C : Candidates) dbgs() << "  " << C << "\n";);
 
   // Pick the top candidate, as long it is positive!
   if (Candidates.empty() || Candidates.front().Cost <= 0)

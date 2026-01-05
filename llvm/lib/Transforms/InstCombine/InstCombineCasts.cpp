@@ -90,8 +90,8 @@ Value *InstCombinerImpl::EvaluateInDifferentType(Value *V, Type *Ty,
   }
   case Instruction::FPToUI:
   case Instruction::FPToSI:
-    Res = CastInst::Create(
-      static_cast<Instruction::CastOps>(Opc), I->getOperand(0), Ty);
+    Res = CastInst::Create(static_cast<Instruction::CastOps>(Opc),
+                           I->getOperand(0), Ty);
     break;
   case Instruction::Call:
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
@@ -161,7 +161,7 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
     return replaceInstUsesWith(CI, Res);
 
   // Try to eliminate a cast of a cast.
-  if (auto *CSrc = dyn_cast<CastInst>(Src)) {   // A->B->C cast
+  if (auto *CSrc = dyn_cast<CastInst>(Src)) { // A->B->C cast
     if (Instruction::CastOps NewOpc = isEliminableCastPair(CSrc, &CI)) {
       // The first cast (CSrc) is eliminable so we need to fix up or replace
       // the second cast (CI). CSrc will then have a good chance of being dead.
@@ -385,9 +385,8 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
     // that did not exist in the original code.
     Type *InputTy = I->getOperand(0)->getType()->getScalarType();
     const fltSemantics &Semantics = InputTy->getFltSemantics();
-    uint32_t MinBitWidth =
-      APFloatBase::semanticsIntSizeInBits(Semantics,
-          I->getOpcode() == Instruction::FPToSI);
+    uint32_t MinBitWidth = APFloatBase::semanticsIntSizeInBits(
+        Semantics, I->getOpcode() == Instruction::FPToSI);
     return Ty->getScalarSizeInBits() >= MinBitWidth;
   }
   case Instruction::ShuffleVector:
@@ -690,7 +689,8 @@ Instruction *InstCombinerImpl::narrowBinOp(TruncInst &Trunc) {
     }
     break;
   }
-  default: break;
+  default:
+    break;
   }
 
   if (Instruction *NarrowOr = narrowFunnelShift(Trunc))
@@ -1265,15 +1265,15 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
       return replaceInstUsesWith(Zext, Res);
 
     // We need to emit an AND to clear the high bits.
-    Constant *C = ConstantInt::get(Res->getType(),
-                               APInt::getLowBitsSet(DestBitSize, SrcBitsKept));
+    Constant *C = ConstantInt::get(
+        Res->getType(), APInt::getLowBitsSet(DestBitSize, SrcBitsKept));
     return BinaryOperator::CreateAnd(Res, C);
   }
 
   // If this is a TRUNC followed by a ZEXT then we are dealing with integral
   // types and if the sizes are just right we can convert this into a logical
   // 'and' which will be much cheaper than the pair of casts.
-  if (auto *CSrc = dyn_cast<TruncInst>(Src)) {   // A->B->C cast
+  if (auto *CSrc = dyn_cast<TruncInst>(Src)) { // A->B->C cast
     // TODO: Subsume this into EvaluateInDifferentType.
 
     // Get the sizes of the types involved.  We know that the intermediate type
@@ -1295,15 +1295,14 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
 
     if (SrcSize == DstSize) {
       APInt AndValue(APInt::getLowBitsSet(SrcSize, MidSize));
-      return BinaryOperator::CreateAnd(A, ConstantInt::get(A->getType(),
-                                                           AndValue));
+      return BinaryOperator::CreateAnd(
+          A, ConstantInt::get(A->getType(), AndValue));
     }
     if (SrcSize > DstSize) {
       Value *Trunc = Builder.CreateTrunc(A, DestTy);
       APInt AndValue(APInt::getLowBitsSet(DstSize, MidSize));
-      return BinaryOperator::CreateAnd(Trunc,
-                                       ConstantInt::get(Trunc->getType(),
-                                                        AndValue));
+      return BinaryOperator::CreateAnd(
+          Trunc, ConstantInt::get(Trunc->getType(), AndValue));
     }
   }
 
@@ -1394,8 +1393,8 @@ Instruction *InstCombinerImpl::transformSExtICmp(ICmpInst *Cmp,
     // If we know that only one bit of the LHS of the icmp can be set and we
     // have an equality comparison with zero or a power of 2, we can transform
     // the icmp and sext into bitwise/integer operations.
-    if (Cmp->hasOneUse() &&
-        Cmp->isEquality() && (Op1C->isZero() || Op1C->getValue().isPowerOf2())){
+    if (Cmp->hasOneUse() && Cmp->isEquality() &&
+        (Op1C->isZero() || Op1C->getValue().isPowerOf2())) {
       KnownBits Known = computeKnownBits(Op0, &Sext);
 
       APInt KnownZeroMask(~Known.Zero);
@@ -1404,9 +1403,9 @@ Instruction *InstCombinerImpl::transformSExtICmp(ICmpInst *Cmp,
 
         // If the icmp tests for a known zero bit we can constant fold it.
         if (!Op1C->isZero() && Op1C->getValue() != KnownZeroMask) {
-          Value *V = Pred == ICmpInst::ICMP_NE ?
-                       ConstantInt::getAllOnesValue(Sext.getType()) :
-                       ConstantInt::getNullValue(Sext.getType());
+          Value *V = Pred == ICmpInst::ICMP_NE
+                         ? ConstantInt::getAllOnesValue(Sext.getType())
+                         : ConstantInt::getNullValue(Sext.getType());
           return replaceInstUsesWith(Sext, V);
         }
 
@@ -1421,9 +1420,8 @@ Instruction *InstCombinerImpl::transformSExtICmp(ICmpInst *Cmp,
 
           // At this point "In" is either 1 or 0. Subtract 1 to turn
           // {1, 0} -> {0, -1}.
-          In = Builder.CreateAdd(In,
-                                 ConstantInt::getAllOnesValue(In->getType()),
-                                 "sext");
+          In = Builder.CreateAdd(
+              In, ConstantInt::getAllOnesValue(In->getType()), "sext");
         } else {
           // sext ((x & 2^n) != 0)   -> (x << bitwidth-n) a>> bitwidth-1
           // sext ((x & 2^n) == 2^n) -> (x << bitwidth-n) a>> bitwidth-1
@@ -1434,13 +1432,15 @@ Instruction *InstCombinerImpl::transformSExtICmp(ICmpInst *Cmp,
                                    ConstantInt::get(In->getType(), ShiftAmt));
 
           // Distribute the bit over the whole bit width.
-          In = Builder.CreateAShr(In, ConstantInt::get(In->getType(),
-                                  KnownZeroMask.getBitWidth() - 1), "sext");
+          In = Builder.CreateAShr(
+              In,
+              ConstantInt::get(In->getType(), KnownZeroMask.getBitWidth() - 1),
+              "sext");
         }
 
         if (Sext.getType() == In->getType())
           return replaceInstUsesWith(Sext, In);
-        return CastInst::CreateIntegerCast(In, Sext.getType(), true/*SExt*/);
+        return CastInst::CreateIntegerCast(In, Sext.getType(), true /*SExt*/);
       }
     }
   }
@@ -1479,8 +1479,8 @@ static bool canEvaluateSExtd(Value *V, Type *Ty) {
     return canEvaluateSExtd(I->getOperand(0), Ty) &&
            canEvaluateSExtd(I->getOperand(1), Ty);
 
-  //case Instruction::Shl:   TODO
-  //case Instruction::LShr:  TODO
+    // case Instruction::Shl:   TODO
+    // case Instruction::LShr:  TODO
 
   case Instruction::Select:
     return canEvaluateSExtd(I->getOperand(1), Ty) &&
@@ -1492,7 +1492,8 @@ static bool canEvaluateSExtd(Value *V, Type *Ty) {
     // instructions with a single use.
     PHINode *PN = cast<PHINode>(I);
     for (Value *IncValue : PN->incoming_values())
-      if (!canEvaluateSExtd(IncValue, Ty)) return false;
+      if (!canEvaluateSExtd(IncValue, Ty))
+        return false;
     return true;
   }
   default:
@@ -1548,7 +1549,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
       return replaceInstUsesWith(Sext, Res);
 
     // We need to emit a shl + ashr to do the sign extend.
-    Value *ShAmt = ConstantInt::get(DestTy, DestBitSize-SrcBitSize);
+    Value *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
     return BinaryOperator::CreateAShr(Builder.CreateShl(Res, ShAmt, "sext"),
                                       ShAmt);
   }
@@ -1831,79 +1832,80 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
     unsigned SrcWidth = std::max(LHSWidth, RHSWidth);
     unsigned DstWidth = Ty->getFPMantissaWidth();
     switch (BO->getOpcode()) {
-      default: break;
-      case Instruction::FAdd:
-      case Instruction::FSub:
-        // For addition and subtraction, the infinitely precise result can
-        // essentially be arbitrarily wide; proving that double rounding
-        // will not occur because the result of OpI is exact (as we will for
-        // FMul, for example) is hopeless.  However, we *can* nonetheless
-        // frequently know that double rounding cannot occur (or that it is
-        // innocuous) by taking advantage of the specific structure of
-        // infinitely-precise results that admit double rounding.
-        //
-        // Specifically, if OpWidth >= 2*DstWdith+1 and DstWidth is sufficient
-        // to represent both sources, we can guarantee that the double
-        // rounding is innocuous (See p50 of Figueroa's 2000 PhD thesis,
-        // "A Rigorous Framework for Fully Supporting the IEEE Standard ..."
-        // for proof of this fact).
-        //
-        // Note: Figueroa does not consider the case where DstFormat !=
-        // SrcFormat.  It's possible (likely even!) that this analysis
-        // could be tightened for those cases, but they are rare (the main
-        // case of interest here is (float)((double)float + float)).
-        if (OpWidth >= 2*DstWidth+1 && DstWidth >= SrcWidth) {
-          Value *LHS = Builder.CreateFPTrunc(BO->getOperand(0), Ty);
-          Value *RHS = Builder.CreateFPTrunc(BO->getOperand(1), Ty);
-          Instruction *RI = BinaryOperator::Create(BO->getOpcode(), LHS, RHS);
-          RI->copyFastMathFlags(BO);
-          return RI;
-        }
-        break;
-      case Instruction::FMul:
-        // For multiplication, the infinitely precise result has at most
-        // LHSWidth + RHSWidth significant bits; if OpWidth is sufficient
-        // that such a value can be exactly represented, then no double
-        // rounding can possibly occur; we can safely perform the operation
-        // in the destination format if it can represent both sources.
-        if (OpWidth >= LHSWidth + RHSWidth && DstWidth >= SrcWidth) {
-          Value *LHS = Builder.CreateFPTrunc(BO->getOperand(0), Ty);
-          Value *RHS = Builder.CreateFPTrunc(BO->getOperand(1), Ty);
-          return BinaryOperator::CreateFMulFMF(LHS, RHS, BO);
-        }
-        break;
-      case Instruction::FDiv:
-        // For division, we use again use the bound from Figueroa's
-        // dissertation.  I am entirely certain that this bound can be
-        // tightened in the unbalanced operand case by an analysis based on
-        // the diophantine rational approximation bound, but the well-known
-        // condition used here is a good conservative first pass.
-        // TODO: Tighten bound via rigorous analysis of the unbalanced case.
-        if (OpWidth >= 2*DstWidth && DstWidth >= SrcWidth) {
-          Value *LHS = Builder.CreateFPTrunc(BO->getOperand(0), Ty);
-          Value *RHS = Builder.CreateFPTrunc(BO->getOperand(1), Ty);
-          return BinaryOperator::CreateFDivFMF(LHS, RHS, BO);
-        }
-        break;
-      case Instruction::FRem: {
-        // Remainder is straightforward.  Remainder is always exact, so the
-        // type of OpI doesn't enter into things at all.  We simply evaluate
-        // in whichever source type is larger, then convert to the
-        // destination type.
-        if (SrcWidth == OpWidth)
-          break;
-        Value *LHS, *RHS;
-        if (LHSWidth == SrcWidth) {
-           LHS = Builder.CreateFPTrunc(BO->getOperand(0), LHSMinType);
-           RHS = Builder.CreateFPTrunc(BO->getOperand(1), LHSMinType);
-        } else {
-           LHS = Builder.CreateFPTrunc(BO->getOperand(0), RHSMinType);
-           RHS = Builder.CreateFPTrunc(BO->getOperand(1), RHSMinType);
-        }
-
-        Value *ExactResult = Builder.CreateFRemFMF(LHS, RHS, BO);
-        return CastInst::CreateFPCast(ExactResult, Ty);
+    default:
+      break;
+    case Instruction::FAdd:
+    case Instruction::FSub:
+      // For addition and subtraction, the infinitely precise result can
+      // essentially be arbitrarily wide; proving that double rounding
+      // will not occur because the result of OpI is exact (as we will for
+      // FMul, for example) is hopeless.  However, we *can* nonetheless
+      // frequently know that double rounding cannot occur (or that it is
+      // innocuous) by taking advantage of the specific structure of
+      // infinitely-precise results that admit double rounding.
+      //
+      // Specifically, if OpWidth >= 2*DstWdith+1 and DstWidth is sufficient
+      // to represent both sources, we can guarantee that the double
+      // rounding is innocuous (See p50 of Figueroa's 2000 PhD thesis,
+      // "A Rigorous Framework for Fully Supporting the IEEE Standard ..."
+      // for proof of this fact).
+      //
+      // Note: Figueroa does not consider the case where DstFormat !=
+      // SrcFormat.  It's possible (likely even!) that this analysis
+      // could be tightened for those cases, but they are rare (the main
+      // case of interest here is (float)((double)float + float)).
+      if (OpWidth >= 2 * DstWidth + 1 && DstWidth >= SrcWidth) {
+        Value *LHS = Builder.CreateFPTrunc(BO->getOperand(0), Ty);
+        Value *RHS = Builder.CreateFPTrunc(BO->getOperand(1), Ty);
+        Instruction *RI = BinaryOperator::Create(BO->getOpcode(), LHS, RHS);
+        RI->copyFastMathFlags(BO);
+        return RI;
       }
+      break;
+    case Instruction::FMul:
+      // For multiplication, the infinitely precise result has at most
+      // LHSWidth + RHSWidth significant bits; if OpWidth is sufficient
+      // that such a value can be exactly represented, then no double
+      // rounding can possibly occur; we can safely perform the operation
+      // in the destination format if it can represent both sources.
+      if (OpWidth >= LHSWidth + RHSWidth && DstWidth >= SrcWidth) {
+        Value *LHS = Builder.CreateFPTrunc(BO->getOperand(0), Ty);
+        Value *RHS = Builder.CreateFPTrunc(BO->getOperand(1), Ty);
+        return BinaryOperator::CreateFMulFMF(LHS, RHS, BO);
+      }
+      break;
+    case Instruction::FDiv:
+      // For division, we use again use the bound from Figueroa's
+      // dissertation.  I am entirely certain that this bound can be
+      // tightened in the unbalanced operand case by an analysis based on
+      // the diophantine rational approximation bound, but the well-known
+      // condition used here is a good conservative first pass.
+      // TODO: Tighten bound via rigorous analysis of the unbalanced case.
+      if (OpWidth >= 2 * DstWidth && DstWidth >= SrcWidth) {
+        Value *LHS = Builder.CreateFPTrunc(BO->getOperand(0), Ty);
+        Value *RHS = Builder.CreateFPTrunc(BO->getOperand(1), Ty);
+        return BinaryOperator::CreateFDivFMF(LHS, RHS, BO);
+      }
+      break;
+    case Instruction::FRem: {
+      // Remainder is straightforward.  Remainder is always exact, so the
+      // type of OpI doesn't enter into things at all.  We simply evaluate
+      // in whichever source type is larger, then convert to the
+      // destination type.
+      if (SrcWidth == OpWidth)
+        break;
+      Value *LHS, *RHS;
+      if (LHSWidth == SrcWidth) {
+        LHS = Builder.CreateFPTrunc(BO->getOperand(0), LHSMinType);
+        RHS = Builder.CreateFPTrunc(BO->getOperand(1), LHSMinType);
+      } else {
+        LHS = Builder.CreateFPTrunc(BO->getOperand(0), RHSMinType);
+        RHS = Builder.CreateFPTrunc(BO->getOperand(1), RHSMinType);
+      }
+
+      Value *ExactResult = Builder.CreateFRemFMF(LHS, RHS, BO);
+      return CastInst::CreateFPCast(ExactResult, Ty);
+    }
     }
   }
 
@@ -1944,7 +1946,8 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
 
   if (auto *II = dyn_cast<IntrinsicInst>(FPT.getOperand(0))) {
     switch (II->getIntrinsicID()) {
-    default: break;
+    default:
+      break;
     case Intrinsic::ceil:
     case Intrinsic::fabs:
     case Intrinsic::floor:
@@ -2359,7 +2362,8 @@ static bool collectInsertionElements(Value *V, unsigned Shift,
          "Shift should be a multiple of the element type size");
 
   // Undef values never contribute useful bits to the result.
-  if (isa<UndefValue>(V)) return true;
+  if (isa<UndefValue>(V))
+    return true;
 
   // If we got down to a value of the right type, we win, try inserting into the
   // right element.
@@ -2384,8 +2388,8 @@ static bool collectInsertionElements(Value *V, unsigned Shift,
   if (Constant *C = dyn_cast<Constant>(V)) {
     // Figure out the # elements this provides, and bitcast it or slice it up
     // as required.
-    unsigned NumElts = getTypeSizeIndex(C->getType()->getPrimitiveSizeInBits(),
-                                        VecEltTy);
+    unsigned NumElts =
+        getTypeSizeIndex(C->getType()->getPrimitiveSizeInBits(), VecEltTy);
     // If the constant is the size of a vector element, we just need to bitcast
     // it to the right type so it gets properly inserted.
     if (NumElts == 1)
@@ -2395,8 +2399,9 @@ static bool collectInsertionElements(Value *V, unsigned Shift,
     // Okay, this is a constant that covers multiple elements.  Slice it up into
     // pieces and insert each element-sized piece into the vector.
     if (!isa<IntegerType>(C->getType()))
-      C = ConstantExpr::getBitCast(C, IntegerType::get(V->getContext(),
-                                       C->getType()->getPrimitiveSizeInBits()));
+      C = ConstantExpr::getBitCast(
+          C, IntegerType::get(V->getContext(),
+                              C->getType()->getPrimitiveSizeInBits()));
     unsigned ElementSize = VecEltTy->getPrimitiveSizeInBits();
     Type *ElementIntTy = IntegerType::get(C->getContext(), ElementSize);
 
@@ -2415,12 +2420,15 @@ static bool collectInsertionElements(Value *V, unsigned Shift,
     return true;
   }
 
-  if (!V->hasOneUse()) return false;
+  if (!V->hasOneUse())
+    return false;
 
   Instruction *I = dyn_cast<Instruction>(V);
-  if (!I) return false;
+  if (!I)
+    return false;
   switch (I->getOpcode()) {
-  default: return false; // Unhandled case.
+  default:
+    return false; // Unhandled case.
   case Instruction::BitCast:
     if (I->getOperand(0)->getType()->isVectorTy())
       return false;
@@ -2428,8 +2436,7 @@ static bool collectInsertionElements(Value *V, unsigned Shift,
                                     isBigEndian);
   case Instruction::ZExt:
     if (!isMultipleOfTypeSize(
-                          I->getOperand(0)->getType()->getPrimitiveSizeInBits(),
-                              VecEltTy))
+            I->getOperand(0)->getType()->getPrimitiveSizeInBits(), VecEltTy))
       return false;
     return collectInsertionElements(I->getOperand(0), Shift, Elements, VecEltTy,
                                     isBigEndian);
@@ -2441,16 +2448,16 @@ static bool collectInsertionElements(Value *V, unsigned Shift,
   case Instruction::Shl: {
     // Must be shifting by a constant that is a multiple of the element size.
     ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1));
-    if (!CI) return false;
+    if (!CI)
+      return false;
     Shift += CI->getZExtValue();
-    if (!isMultipleOfTypeSize(Shift, VecEltTy)) return false;
+    if (!isMultipleOfTypeSize(Shift, VecEltTy))
+      return false;
     return collectInsertionElements(I->getOperand(0), Shift, Elements, VecEltTy,
                                     isBigEndian);
   }
-
   }
 }
-
 
 /// If the input is an 'or' instruction, we may be doing shifts and ors to
 /// assemble the elements of the vector manually.
@@ -2476,7 +2483,7 @@ static Value *optimizeIntegerToVectorInsertions(BitCastInst &CI,
   if (isa<UndefValue>(IntInput))
     return nullptr;
 
-  SmallVector<Value*, 8> Elements(DestVecTy->getNumElements());
+  SmallVector<Value *, 8> Elements(DestVecTy->getNumElements());
   if (!collectInsertionElements(IntInput, 0, Elements,
                                 DestVecTy->getElementType(),
                                 IC.getDataLayout().isBigEndian()))
@@ -2487,7 +2494,8 @@ static Value *optimizeIntegerToVectorInsertions(BitCastInst &CI,
   // insertions.
   Value *Result = Constant::getNullValue(CI.getType());
   for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
-    if (!Elements[i]) continue;  // Unset element.
+    if (!Elements[i])
+      continue; // Unset element.
 
     Result = IC.Builder.CreateInsertElement(Result, Elements[i],
                                             IC.Builder.getInt32(i));
@@ -2665,8 +2673,8 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
     return nullptr;
 
   Value *Src = CI.getOperand(0);
-  Type *SrcTy = Src->getType();         // Type B
-  Type *DestTy = CI.getType();          // Type A
+  Type *SrcTy = Src->getType(); // Type B
+  Type *DestTy = CI.getType();  // Type A
 
   SmallVector<PHINode *, 4> PhiWorklist;
   SmallSetVector<PHINode *, 4> OldPhiNodes;
@@ -2789,7 +2797,6 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
   // moves generated after DeSSA.
   // If there is a store with type B, change it to type A.
 
-
   // Replace users of BitCast B->A with NewPHI. These will help
   // later to get rid off a closure formed by OldPHI nodes.
   Instruction *RetVal = nullptr;
@@ -2799,24 +2806,22 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
       if (auto *SI = dyn_cast<StoreInst>(V)) {
         assert(SI->isSimple() && SI->getOperand(0) == OldPN);
         Builder.SetInsertPoint(SI);
-        auto *NewBC =
-          cast<BitCastInst>(Builder.CreateBitCast(NewPN, SrcTy));
+        auto *NewBC = cast<BitCastInst>(Builder.CreateBitCast(NewPN, SrcTy));
         SI->setOperand(0, NewBC);
         Worklist.push(SI);
         assert(hasStoreUsersOnly(*NewBC));
-      }
-      else if (auto *BCI = dyn_cast<BitCastInst>(V)) {
+      } else if (auto *BCI = dyn_cast<BitCastInst>(V)) {
         Type *TyB = BCI->getOperand(0)->getType();
         Type *TyA = BCI->getType();
         assert(TyA == DestTy && TyB == SrcTy);
-        (void) TyA;
-        (void) TyB;
+        (void)TyA;
+        (void)TyB;
         Instruction *I = replaceInstUsesWith(*BCI, NewPN);
         if (BCI == &CI)
           RetVal = I;
       } else if (auto *PHI = dyn_cast<PHINode>(V)) {
         assert(OldPhiNodes.contains(PHI));
-        (void) PHI;
+        (void)PHI;
       } else {
         llvm_unreachable("all uses should be handled");
       }
@@ -2886,9 +2891,8 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       // If our destination is not a vector, then make this a straight
       // scalar-scalar cast.
       if (!DestTy->isVectorTy()) {
-        Value *Elem =
-          Builder.CreateExtractElement(Src,
-                     Constant::getNullValue(Type::getInt32Ty(CI.getContext())));
+        Value *Elem = Builder.CreateExtractElement(
+            Src, Constant::getNullValue(Type::getInt32Ty(CI.getContext())));
         return CastInst::Create(Instruction::BitCast, Elem, DestTy);
       }
 

@@ -31,8 +31,7 @@ static cl::opt<int>
                        cl::desc("Specify the BPF stack size limit"),
                        cl::init(512));
 
-BPFRegisterInfo::BPFRegisterInfo()
-    : BPFGenRegisterInfo(BPF::R0) {}
+BPFRegisterInfo::BPFRegisterInfo() : BPFGenRegisterInfo(BPF::R0) {}
 
 const MCPhysReg *
 BPFRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
@@ -57,8 +56,8 @@ BitVector BPFRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-static void WarnSize(int Offset, MachineFunction &MF, DebugLoc& DL,
-                     MachineBasicBlock& MBB) {
+static void WarnSize(int Offset, MachineFunction &MF, DebugLoc &DL,
+                     MachineBasicBlock &MBB) {
   if (Offset <= -BPFStackSizeOption) {
     if (!DL)
       /* try harder to get some debug loc */
@@ -125,11 +124,8 @@ bool BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     //    ADD_ri <target_reg>, imm
     Register reg = MI.getOperand(i - 1).getReg();
 
-    BuildMI(MBB, ++II, DL, TII.get(BPF::MOV_rr), reg)
-        .addReg(FrameReg);
-    BuildMI(MBB, II, DL, TII.get(BPF::ADD_ri), reg)
-        .addReg(reg)
-        .addImm(Offset);
+    BuildMI(MBB, ++II, DL, TII.get(BPF::MOV_rr), reg).addReg(FrameReg);
+    BuildMI(MBB, II, DL, TII.get(BPF::ADD_ri), reg).addReg(reg).addImm(Offset);
 
     // Remove FI_ri instruction
     MI.eraseFromParent();

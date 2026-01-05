@@ -360,7 +360,8 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
               uint64_t ReadNow = std::min(ReadSize, S.size() - Offset.tell());
               uint64_t ReadBytes = 0;
               switch (ReadNow) {
-              default: llvm_unreachable("min(4, X) > 4?");
+              default:
+                llvm_unreachable("min(4, X) > 4?");
               case 1:
                 ReadBytes = Extractor.getU8(Offset);
                 break;

@@ -34,38 +34,28 @@ class IVUsers;
 /// the User that is the use.
 class IVStrideUse final : public CallbackVH, public ilist_node<IVStrideUse> {
   friend class IVUsers;
+
 public:
-  IVStrideUse(IVUsers *P, Instruction* U, Value *O)
-    : CallbackVH(U), Parent(P), OperandValToReplace(O) {
-  }
+  IVStrideUse(IVUsers *P, Instruction *U, Value *O)
+      : CallbackVH(U), Parent(P), OperandValToReplace(O) {}
 
   /// getUser - Return the user instruction for this use.
-  Instruction *getUser() const {
-    return cast<Instruction>(getValPtr());
-  }
+  Instruction *getUser() const { return cast<Instruction>(getValPtr()); }
 
   /// setUser - Assign a new user instruction for this use.
-  void setUser(Instruction *NewUser) {
-    setValPtr(NewUser);
-  }
+  void setUser(Instruction *NewUser) { setValPtr(NewUser); }
 
   /// getOperandValToReplace - Return the Value of the operand in the user
   /// instruction that this IVStrideUse is representing.
-  Value *getOperandValToReplace() const {
-    return OperandValToReplace;
-  }
+  Value *getOperandValToReplace() const { return OperandValToReplace; }
 
   /// setOperandValToReplace - Assign a new Value as the operand value
   /// to replace.
-  void setOperandValToReplace(Value *Op) {
-    OperandValToReplace = Op;
-  }
+  void setOperandValToReplace(Value *Op) { OperandValToReplace = Op; }
 
   /// getPostIncLoops - Return the set of loops for which the expression has
   /// been adjusted to use post-inc mode.
-  const PostIncLoopSet &getPostIncLoops() const {
-    return PostIncLoops;
-  }
+  const PostIncLoopSet &getPostIncLoops() const { return PostIncLoops; }
 
   /// transformToPostInc - Transform the expression to post-inc form for the
   /// given loop.
@@ -95,7 +85,7 @@ class IVUsers {
   LoopInfo *LI;
   DominatorTree *DT;
   ScalarEvolution *SE;
-  SmallPtrSet<Instruction*, 16> Processed;
+  SmallPtrSet<Instruction *, 16> Processed;
 
   /// IVUses - A list of all tracked IV uses of induction variable expressions
   /// we are interested in.
@@ -141,9 +131,9 @@ public:
   typedef ilist<IVStrideUse>::iterator iterator;
   typedef ilist<IVStrideUse>::const_iterator const_iterator;
   iterator begin() { return IVUses.begin(); }
-  iterator end()   { return IVUses.end(); }
+  iterator end() { return IVUses.end(); }
   const_iterator begin() const { return IVUses.begin(); }
-  const_iterator end() const   { return IVUses.end(); }
+  const_iterator end() const { return IVUses.end(); }
   bool empty() const { return IVUses.empty(); }
 
   bool isIVUserOrOperand(Instruction *Inst) const {
@@ -195,6 +185,6 @@ public:
               LoopStandardAnalysisResults &AR);
 };
 
-}
+} // namespace llvm
 
 #endif

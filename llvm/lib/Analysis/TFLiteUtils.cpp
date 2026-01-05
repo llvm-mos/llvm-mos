@@ -24,10 +24,10 @@
 
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
+#include "tensorflow/lite/logger.h"
 #include "tensorflow/lite/model.h"
 #include "tensorflow/lite/model_builder.h"
 #include "tensorflow/lite/op_resolver.h"
-#include "tensorflow/lite/logger.h"
 
 #include <cassert>
 #include <optional>
@@ -38,7 +38,7 @@ namespace llvm {
 class EvaluationResultImpl {
 public:
   EvaluationResultImpl(const std::vector<const TfLiteTensor *> &Outputs)
-      : Outputs(Outputs){};
+      : Outputs(Outputs) {};
 
   const TfLiteTensor *getOutput(size_t I) { return Outputs[I]; }
 

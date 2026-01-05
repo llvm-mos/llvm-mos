@@ -72,6 +72,6 @@ public:
 
 /// Creates an instance of \c SCEVAAWrapperPass.
 LLVM_ABI FunctionPass *createSCEVAAWrapperPass();
-}
+} // namespace llvm
 
 #endif

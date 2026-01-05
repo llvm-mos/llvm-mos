@@ -38,7 +38,6 @@ public:
   Error operator()(LinkGraph &G);
 
 private:
-
   struct AugmentationInfo {
     bool AugmentationDataPresent = false;
     bool EHDataFieldPresent = false;

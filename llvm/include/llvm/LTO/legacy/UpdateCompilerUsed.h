@@ -26,6 +26,6 @@ class TargetMachine;
 /// global in \p TheModule.
 void updateCompilerUsed(Module &TheModule, const TargetMachine &TM,
                         const StringSet<> &AsmUndefinedRefs);
-}
+} // namespace llvm
 
 #endif // LLVM_LTO_LEGACY_UPDATECOMPILERUSED_H

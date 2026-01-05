@@ -80,7 +80,6 @@ static const std::vector<int64_t> PerLiveRangeShape{1};
 static const TensorSpec DecisionSpec =
     TensorSpec::createSpec<float>(DecisionName, {1});
 
-
 // Named features index.
 enum FeatureIDs {
 #define _FEATURE_IDX(_, name, __, ___) name,
@@ -303,7 +302,7 @@ private:
     ;
   }
 };
-#endif //#ifdef LLVM_HAVE_TFLITE
+#endif // #ifdef LLVM_HAVE_TFLITE
 
 } // namespace llvm
 

@@ -31,9 +31,7 @@ using namespace llvm::object;
 
 namespace {
 
-enum RuntimeDyldErrorCode {
-  GenericRTDyldError = 1
-};
+enum RuntimeDyldErrorCode { GenericRTDyldError = 1 };
 
 // FIXME: This class is only here to support the transition to llvm::Error. It
 // will be removed once this transition is complete. Clients should prefer to
@@ -44,19 +42,18 @@ public:
 
   std::string message(int Condition) const override {
     switch (static_cast<RuntimeDyldErrorCode>(Condition)) {
-      case GenericRTDyldError: return "Generic RuntimeDyld error";
+    case GenericRTDyldError:
+      return "Generic RuntimeDyld error";
     }
     llvm_unreachable("Unrecognized RuntimeDyldErrorCode");
   }
 };
 
-}
+} // namespace
 
 char RuntimeDyldError::ID = 0;
 
-void RuntimeDyldError::log(raw_ostream &OS) const {
-  OS << ErrMsg << "\n";
-}
+void RuntimeDyldError::log(raw_ostream &OS) const { OS << ErrMsg << "\n"; }
 
 std::error_code RuntimeDyldError::convertToErrorCode() const {
   static RuntimeDyldErrorCategory RTDyldErrorCategory;
@@ -73,9 +70,7 @@ namespace llvm {
 
 void RuntimeDyldImpl::registerEHFrames() {}
 
-void RuntimeDyldImpl::deregisterEHFrames() {
-  MemMgr.deregisterEHFrames();
-}
+void RuntimeDyldImpl::deregisterEHFrames() { MemMgr.deregisterEHFrames(); }
 
 #ifndef NDEBUG
 static void dumpSectionMemory(const SectionEntry &S, StringRef State) {
@@ -96,8 +91,9 @@ static void dumpSectionMemory(const SectionEntry &S, StringRef State) {
   unsigned BytesRemaining = S.getSize();
 
   if (StartPadding) {
-    dbgs() << "\n" << format("0x%016" PRIx64,
-                             LoadAddr & ~(uint64_t)(ColsPerRow - 1)) << ":";
+    dbgs() << "\n"
+           << format("0x%016" PRIx64, LoadAddr & ~(uint64_t)(ColsPerRow - 1))
+           << ":";
     while (StartPadding--)
       dbgs() << "   ";
   }
@@ -169,8 +165,7 @@ void RuntimeDyldImpl::mapSectionAddress(const void *LocalAddress,
   llvm_unreachable("Attempting to remap address of unknown section!");
 }
 
-static Error getOffset(const SymbolRef &Sym, SectionRef Sec,
-                       uint64_t &Result) {
+static Error getOffset(const SymbolRef &Sym, SectionRef Sec, uint64_t &Result) {
   Expected<uint64_t> AddressOrErr = Sym.getAddress();
   if (!AddressOrErr)
     return AddressOrErr.takeError();
@@ -381,8 +376,8 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
 
     bool IsCode = RelocatedSection->isText();
     unsigned SectionID = 0;
-    if (auto SectionIDOrErr = findOrEmitSection(Obj, *RelocatedSection, IsCode,
-                                                LocalSections))
+    if (auto SectionIDOrErr =
+            findOrEmitSection(Obj, *RelocatedSection, IsCode, LocalSections))
       SectionID = *SectionIDOrErr;
     else
       return SectionIDOrErr.takeError();
@@ -390,7 +385,8 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
     LLVM_DEBUG(dbgs() << "\tSectionID: " << SectionID << "\n");
 
     for (; I != E;)
-      if (auto IOrErr = processRelocationRef(SectionID, I, Obj, LocalSections, Stubs))
+      if (auto IOrErr =
+              processRelocationRef(SectionID, I, Obj, LocalSections, Stubs))
         I = *IOrErr;
       else
         return IOrErr.takeError();
@@ -412,7 +408,8 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
           continue;
         }
 
-        // Otherwise we will have to try a reverse lookup on the globla symbol table.
+        // Otherwise we will have to try a reverse lookup on the globla symbol
+        // table.
         for (auto &GSTMapEntry : GlobalSymbolTable) {
           StringRef SymbolName = GSTMapEntry.first();
           auto &GSTEntry = GSTMapEntry.second;
@@ -450,8 +447,9 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
   if (auto Err = finalizeLoad(Obj, LocalSections))
     return std::move(Err);
 
-//   for (auto E : LocalSections)
-//     llvm::dbgs() << "Added: " << E.first.getRawDataRefImpl() << " -> " << E.second << "\n";
+  //   for (auto E : LocalSections)
+  //     llvm::dbgs() << "Added: " << E.first.getRawDataRefImpl() << " -> " <<
+  //     E.second << "\n";
 
   return LocalSections;
 }
@@ -498,12 +496,9 @@ static bool isReadOnlyData(const SectionRef Section) {
              (ELF::SHF_WRITE | ELF::SHF_EXECINSTR));
   if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(Obj))
     return ((COFFObj->getCOFFSection(Section)->Characteristics &
-             (COFF::IMAGE_SCN_CNT_INITIALIZED_DATA
-             | COFF::IMAGE_SCN_MEM_READ
-             | COFF::IMAGE_SCN_MEM_WRITE))
-             ==
-             (COFF::IMAGE_SCN_CNT_INITIALIZED_DATA
-             | COFF::IMAGE_SCN_MEM_READ));
+             (COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
+              COFF::IMAGE_SCN_MEM_WRITE)) ==
+            (COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ));
 
   assert(isa<MachOObjectFile>(Obj));
   return false;
@@ -515,7 +510,7 @@ static bool isZeroInit(const SectionRef Section) {
     return ELFSectionRef(Section).getType() == ELF::SHT_NOBITS;
   if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(Obj))
     return COFFObj->getCOFFSection(Section)->Characteristics &
-            COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA;
+           COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA;
 
   auto *MachO = cast<MachOObjectFile>(Obj);
   unsigned SectionType = MachO->getSectionType(Section);
@@ -800,10 +795,9 @@ Error RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
   return Error::success();
 }
 
-Expected<unsigned>
-RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
-                             const SectionRef &Section,
-                             bool IsCode) {
+Expected<unsigned> RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
+                                                const SectionRef &Section,
+                                                bool IsCode) {
   StringRef data;
   Align Alignment = Section.getAlignment();
 
@@ -839,7 +833,8 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
   // grab a reference to them.
   if (!IsVirtual && !IsZeroInit) {
     // In either case, set the location of the unrelocated section in memory,
-    // since we still process relocations for it even if we're not applying them.
+    // since we still process relocations for it even if we're not applying
+    // them.
     if (Expected<StringRef> E = Section.getContents())
       data = *E;
     else
@@ -928,8 +923,7 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
 
 Expected<unsigned>
 RuntimeDyldImpl::findOrEmitSection(const ObjectFile &Obj,
-                                   const SectionRef &Section,
-                                   bool IsCode,
+                                   const SectionRef &Section, bool IsCode,
                                    ObjSectionToIDMap &LocalSections) {
 
   unsigned SectionID = 0;
@@ -978,11 +972,14 @@ uint8_t *RuntimeDyldImpl::createStubFunction(uint8_t *Addr,
     // since symbol lookup won't necessarily find a handy, in-range,
     // PLT stub for functions which could be anywhere.
     // Stub can use ip0 (== x16) to calculate address
-    writeBytesUnaligned(0xd2e00010, Addr,    4); // movz ip0, #:abs_g3:<addr>
-    writeBytesUnaligned(0xf2c00010, Addr+4,  4); // movk ip0, #:abs_g2_nc:<addr>
-    writeBytesUnaligned(0xf2a00010, Addr+8,  4); // movk ip0, #:abs_g1_nc:<addr>
-    writeBytesUnaligned(0xf2800010, Addr+12, 4); // movk ip0, #:abs_g0_nc:<addr>
-    writeBytesUnaligned(0xd61f0200, Addr+16, 4); // br ip0
+    writeBytesUnaligned(0xd2e00010, Addr, 4); // movz ip0, #:abs_g3:<addr>
+    writeBytesUnaligned(0xf2c00010, Addr + 4,
+                        4); // movk ip0, #:abs_g2_nc:<addr>
+    writeBytesUnaligned(0xf2a00010, Addr + 8,
+                        4); // movk ip0, #:abs_g1_nc:<addr>
+    writeBytesUnaligned(0xf2800010, Addr + 12,
+                        4); // movk ip0, #:abs_g0_nc:<addr>
+    writeBytesUnaligned(0xd61f0200, Addr + 16, 4); // br ip0
 
     return Addr;
   } else if (Arch == Triple::arm || Arch == Triple::armeb) {
@@ -1048,42 +1045,42 @@ uint8_t *RuntimeDyldImpl::createStubFunction(uint8_t *Addr,
     // Depending on which version of the ELF ABI is in use, we need to
     // generate one of two variants of the stub.  They both start with
     // the same sequence to load the target address into r12.
-    writeInt32BE(Addr,    0x3D800000); // lis   r12, highest(addr)
-    writeInt32BE(Addr+4,  0x618C0000); // ori   r12, higher(addr)
-    writeInt32BE(Addr+8,  0x798C07C6); // sldi  r12, r12, 32
-    writeInt32BE(Addr+12, 0x658C0000); // oris  r12, r12, h(addr)
-    writeInt32BE(Addr+16, 0x618C0000); // ori   r12, r12, l(addr)
+    writeInt32BE(Addr, 0x3D800000);      // lis   r12, highest(addr)
+    writeInt32BE(Addr + 4, 0x618C0000);  // ori   r12, higher(addr)
+    writeInt32BE(Addr + 8, 0x798C07C6);  // sldi  r12, r12, 32
+    writeInt32BE(Addr + 12, 0x658C0000); // oris  r12, r12, h(addr)
+    writeInt32BE(Addr + 16, 0x618C0000); // ori   r12, r12, l(addr)
     if (AbiVariant == 2) {
       // PowerPC64 stub ELFv2 ABI: The address points to the function itself.
       // The address is already in r12 as required by the ABI.  Branch to it.
-      writeInt32BE(Addr+20, 0xF8410018); // std   r2,  24(r1)
-      writeInt32BE(Addr+24, 0x7D8903A6); // mtctr r12
-      writeInt32BE(Addr+28, 0x4E800420); // bctr
+      writeInt32BE(Addr + 20, 0xF8410018); // std   r2,  24(r1)
+      writeInt32BE(Addr + 24, 0x7D8903A6); // mtctr r12
+      writeInt32BE(Addr + 28, 0x4E800420); // bctr
     } else {
       // PowerPC64 stub ELFv1 ABI: The address points to a function descriptor.
       // Load the function address on r11 and sets it to control register. Also
       // loads the function TOC in r2 and environment pointer to r11.
-      writeInt32BE(Addr+20, 0xF8410028); // std   r2,  40(r1)
-      writeInt32BE(Addr+24, 0xE96C0000); // ld    r11, 0(r12)
-      writeInt32BE(Addr+28, 0xE84C0008); // ld    r2,  0(r12)
-      writeInt32BE(Addr+32, 0x7D6903A6); // mtctr r11
-      writeInt32BE(Addr+36, 0xE96C0010); // ld    r11, 16(r2)
-      writeInt32BE(Addr+40, 0x4E800420); // bctr
+      writeInt32BE(Addr + 20, 0xF8410028); // std   r2,  40(r1)
+      writeInt32BE(Addr + 24, 0xE96C0000); // ld    r11, 0(r12)
+      writeInt32BE(Addr + 28, 0xE84C0008); // ld    r2,  0(r12)
+      writeInt32BE(Addr + 32, 0x7D6903A6); // mtctr r11
+      writeInt32BE(Addr + 36, 0xE96C0010); // ld    r11, 16(r2)
+      writeInt32BE(Addr + 40, 0x4E800420); // bctr
     }
     return Addr;
   } else if (Arch == Triple::systemz) {
-    writeInt16BE(Addr,    0xC418);     // lgrl %r1,.+8
-    writeInt16BE(Addr+2,  0x0000);
-    writeInt16BE(Addr+4,  0x0004);
-    writeInt16BE(Addr+6,  0x07F1);     // brc 15,%r1
+    writeInt16BE(Addr, 0xC418); // lgrl %r1,.+8
+    writeInt16BE(Addr + 2, 0x0000);
+    writeInt16BE(Addr + 4, 0x0004);
+    writeInt16BE(Addr + 6, 0x07F1); // brc 15,%r1
     // 8-byte address stored at Addr + 8
     return Addr;
   } else if (Arch == Triple::x86_64) {
-    *Addr      = 0xFF; // jmp
-    *(Addr+1)  = 0x25; // rip
+    *Addr = 0xFF;       // jmp
+    *(Addr + 1) = 0x25; // rip
     // 32-bit PC-relative address of the GOT entry will be stored at Addr+2
   } else if (Arch == Triple::x86) {
-    *Addr      = 0xE9; // 32-bit pc-relative jump.
+    *Addr = 0xE9; // 32-bit pc-relative jump.
   }
   return Addr;
 }
@@ -1144,8 +1141,8 @@ void RuntimeDyldImpl::applyExternalSymbolRelocations(
         // We found the symbol in our global table.  It was probably in a
         // Module that we loaded previously.
         const auto &SymInfo = Loc->second;
-        Addr = getSectionLoadAddress(SymInfo.getSectionID()) +
-               SymInfo.getOffset();
+        Addr =
+            getSectionLoadAddress(SymInfo.getSectionID()) + SymInfo.getOffset();
         Flags = SymInfo.getFlags();
       }
 
@@ -1159,8 +1156,8 @@ void RuntimeDyldImpl::applyExternalSymbolRelocations(
       if (Addr != UINT64_MAX) {
 
         // Tweak the address based on the symbol flags if necessary.
-        // For example, this is used by RuntimeDyldMachOARM to toggle the low bit
-        // if the target symbol is Thumb.
+        // For example, this is used by RuntimeDyldMachOARM to toggle the low
+        // bit if the target symbol is Thumb.
         Addr = modifyAddressBasedOnFlags(Addr, Flags);
 
         LLVM_DEBUG(dbgs() << "Resolving relocations Name: " << Name << "\t"
@@ -1285,7 +1282,7 @@ void RuntimeDyldImpl::finalizeAsync(
 // RuntimeDyld class implementation
 
 uint64_t RuntimeDyld::LoadedObjectInfo::getSectionLoadAddress(
-                                          const object::SectionRef &Sec) const {
+    const object::SectionRef &Sec) const {
 
   auto I = ObjSecToIDMap.find(Sec);
   if (I != ObjSecToIDMap.end())
@@ -1321,13 +1318,12 @@ RuntimeDyld::RuntimeDyld(RuntimeDyld::MemoryManager &MemMgr,
 
 RuntimeDyld::~RuntimeDyld() = default;
 
-static std::unique_ptr<RuntimeDyldCOFF>
-createRuntimeDyldCOFF(
-                     Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
-                     JITSymbolResolver &Resolver, bool ProcessAllSections,
-                     RuntimeDyld::NotifyStubEmittedFunction NotifyStubEmitted) {
+static std::unique_ptr<RuntimeDyldCOFF> createRuntimeDyldCOFF(
+    Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
+    JITSymbolResolver &Resolver, bool ProcessAllSections,
+    RuntimeDyld::NotifyStubEmittedFunction NotifyStubEmitted) {
   std::unique_ptr<RuntimeDyldCOFF> Dyld =
-    RuntimeDyldCOFF::create(Arch, MM, Resolver);
+      RuntimeDyldCOFF::create(Arch, MM, Resolver);
   Dyld->setProcessAllSections(ProcessAllSections);
   Dyld->setNotifyStubEmitted(std::move(NotifyStubEmitted));
   return Dyld;
@@ -1344,14 +1340,12 @@ createRuntimeDyldELF(Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
   return Dyld;
 }
 
-static std::unique_ptr<RuntimeDyldMachO>
-createRuntimeDyldMachO(
-                     Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
-                     JITSymbolResolver &Resolver,
-                     bool ProcessAllSections,
-                     RuntimeDyld::NotifyStubEmittedFunction NotifyStubEmitted) {
+static std::unique_ptr<RuntimeDyldMachO> createRuntimeDyldMachO(
+    Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
+    JITSymbolResolver &Resolver, bool ProcessAllSections,
+    RuntimeDyld::NotifyStubEmittedFunction NotifyStubEmitted) {
   std::unique_ptr<RuntimeDyldMachO> Dyld =
-    RuntimeDyldMachO::create(Arch, MM, Resolver);
+      RuntimeDyldMachO::create(Arch, MM, Resolver);
   Dyld->setProcessAllSections(ProcessAllSections);
   Dyld->setNotifyStubEmitted(std::move(NotifyStubEmitted));
   return Dyld;

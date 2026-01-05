@@ -34,7 +34,7 @@ struct FrameData;
 namespace msf {
 class MSFBuilder;
 struct MSFLayout;
-}
+} // namespace msf
 namespace pdb {
 class DbiModuleDescriptorBuilder;
 
@@ -136,6 +136,6 @@ private:
   std::array<std::optional<DebugStream>, (int)DbgHeaderType::Max> DbgStreams;
 };
 } // namespace pdb
-}
+} // namespace llvm
 
 #endif

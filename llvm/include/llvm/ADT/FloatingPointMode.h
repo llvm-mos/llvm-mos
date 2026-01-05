@@ -37,31 +37,38 @@ namespace llvm {
 ///
 enum class RoundingMode : int8_t {
   // Rounding mode defined in IEEE-754.
-  TowardZero        = 0,    ///< roundTowardZero.
-  NearestTiesToEven = 1,    ///< roundTiesToEven.
-  TowardPositive    = 2,    ///< roundTowardPositive.
-  TowardNegative    = 3,    ///< roundTowardNegative.
-  NearestTiesToAway = 4,    ///< roundTiesToAway.
+  TowardZero = 0,        ///< roundTowardZero.
+  NearestTiesToEven = 1, ///< roundTiesToEven.
+  TowardPositive = 2,    ///< roundTowardPositive.
+  TowardNegative = 3,    ///< roundTowardNegative.
+  NearestTiesToAway = 4, ///< roundTiesToAway.
 
   // Special values.
-  Dynamic = 7,    ///< Denotes mode unknown at compile time.
-  Invalid = -1    ///< Denotes invalid value.
+  Dynamic = 7, ///< Denotes mode unknown at compile time.
+  Invalid = -1 ///< Denotes invalid value.
 };
 
 /// Returns text representation of the given rounding mode.
 inline StringRef spell(RoundingMode RM) {
   switch (RM) {
-  case RoundingMode::TowardZero: return "towardzero";
-  case RoundingMode::NearestTiesToEven: return "tonearest";
-  case RoundingMode::TowardPositive: return "upward";
-  case RoundingMode::TowardNegative: return "downward";
-  case RoundingMode::NearestTiesToAway: return "tonearestaway";
-  case RoundingMode::Dynamic: return "dynamic";
-  default: return "invalid";
+  case RoundingMode::TowardZero:
+    return "towardzero";
+  case RoundingMode::NearestTiesToEven:
+    return "tonearest";
+  case RoundingMode::TowardPositive:
+    return "upward";
+  case RoundingMode::TowardNegative:
+    return "downward";
+  case RoundingMode::NearestTiesToAway:
+    return "tonearestaway";
+  case RoundingMode::Dynamic:
+    return "dynamic";
+  default:
+    return "invalid";
   }
 }
 
-inline raw_ostream &operator << (raw_ostream &OS, RoundingMode RM) {
+inline raw_ostream &operator<<(raw_ostream &OS, RoundingMode RM) {
   OS << spell(RM);
   return OS;
 }
@@ -98,8 +105,8 @@ struct DenormalMode {
 
   constexpr DenormalMode() = default;
   constexpr DenormalMode(const DenormalMode &) = default;
-  constexpr DenormalMode(DenormalModeKind Out, DenormalModeKind In) :
-    Output(Out), Input(In) {}
+  constexpr DenormalMode(DenormalModeKind Out, DenormalModeKind In)
+      : Output(Out), Input(In) {}
 
   DenormalMode &operator=(const DenormalMode &) = default;
 
@@ -108,9 +115,7 @@ struct DenormalMode {
   }
 
   /// Return the assumed default mode for a function without denormal-fp-math.
-  static constexpr DenormalMode getDefault() {
-    return getIEEE();
-  }
+  static constexpr DenormalMode getDefault() { return getIEEE(); }
 
   static constexpr DenormalMode getIEEE() {
     return DenormalMode(DenormalModeKind::IEEE, DenormalModeKind::IEEE);
@@ -134,13 +139,9 @@ struct DenormalMode {
     return Output == Other.Output && Input == Other.Input;
   }
 
-  bool operator!=(DenormalMode Other) const {
-    return !(*this == Other);
-  }
+  bool operator!=(DenormalMode Other) const { return !(*this == Other); }
 
-  bool isSimple() const {
-    return Input == Output;
-  }
+  bool isSimple() const { return Input == Output; }
 
   bool isValid() const {
     return Output != DenormalModeKind::Invalid &&
@@ -181,7 +182,7 @@ struct DenormalMode {
   }
 };
 
-inline raw_ostream& operator<<(raw_ostream &OS, DenormalMode Mode) {
+inline raw_ostream &operator<<(raw_ostream &OS, DenormalMode Mode) {
   Mode.print(OS);
   return OS;
 }
@@ -225,8 +226,8 @@ inline DenormalMode parseDenormalFPAttribute(StringRef Str) {
 
   // Maintain compatibility with old form of the attribute which only specified
   // one component.
-  Mode.Input = InputStr.empty() ? Mode.Output  :
-               parseDenormalFPAttributeComponent(InputStr);
+  Mode.Input = InputStr.empty() ? Mode.Output
+                                : parseDenormalFPAttributeComponent(InputStr);
 
   return Mode;
 }

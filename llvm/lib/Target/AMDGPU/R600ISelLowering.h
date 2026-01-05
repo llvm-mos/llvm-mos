@@ -24,6 +24,7 @@ class R600Subtarget;
 class R600TargetLowering final : public AMDGPUTargetLowering {
 
   const R600Subtarget *Subtarget;
+
 public:
   R600TargetLowering(const TargetMachine &TM, const R600Subtarget &STI);
 
@@ -34,8 +35,7 @@ public:
                               MachineBasicBlock *BB) const override;
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
-  void ReplaceNodeResults(SDNode * N,
-                          SmallVectorImpl<SDValue> &Results,
+  void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg) const;
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
@@ -73,9 +73,10 @@ private:
                                  unsigned DwordOffset) const;
 
   void lowerImplicitParameter(MachineInstr *MI, MachineBasicBlock &BB,
-      MachineRegisterInfo & MRI, unsigned dword_offset) const;
-  SDValue OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
-                          SelectionDAG &DAG, const SDLoc &DL) const;
+                              MachineRegisterInfo &MRI,
+                              unsigned dword_offset) const;
+  SDValue OptimizeSwizzle(SDValue BuildVector, SDValue Swz[], SelectionDAG &DAG,
+                          const SDLoc &DL) const;
   SDValue vectorToVerticalVector(SelectionDAG &DAG, SDValue Vector) const;
 
   SDValue lowerFrameIndex(SDValue Op, SelectionDAG &DAG) const;
@@ -96,13 +97,13 @@ private:
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTrig(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftParts(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerUADDSUBO(SDValue Op, SelectionDAG &DAG,
-                        unsigned mainop, unsigned ovf) const;
+  SDValue LowerUADDSUBO(SDValue Op, SelectionDAG &DAG, unsigned mainop,
+                        unsigned ovf) const;
 
   SDValue stackPtrToRegIndex(SDValue Ptr, unsigned StackWidth,
-                                          SelectionDAG &DAG) const;
-  void getStackAddress(unsigned StackWidth, unsigned ElemIdx,
-                       unsigned &Channel, unsigned &PtrIncr) const;
+                             SelectionDAG &DAG) const;
+  void getStackAddress(unsigned StackWidth, unsigned ElemIdx, unsigned &Channel,
+                       unsigned &PtrIncr) const;
   bool isZero(SDValue Op) const;
   bool isHWTrueValue(SDValue Op) const;
   bool isHWFalseValue(SDValue Op) const;
@@ -119,6 +120,6 @@ private:
   shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const override;
 };
 
-} // End namespace llvm;
+} // namespace llvm
 
 #endif

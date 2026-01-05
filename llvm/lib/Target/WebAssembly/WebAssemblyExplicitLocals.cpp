@@ -445,7 +445,8 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         // since it can point at the previous statement.
         // See crbug.com/1251909, crbug.com/1249745
         InsertPt = BuildMI(MBB, InsertPt, InsertPt->getDebugLoc(),
-                           TII->get(Opc), NewReg).addImm(LocalId);
+                           TII->get(Opc), NewReg)
+                       .addImm(LocalId);
         MO.setReg(NewReg);
         MFI.stackifyVReg(MRI, NewReg);
         Changed = true;

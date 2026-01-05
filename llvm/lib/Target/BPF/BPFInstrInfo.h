@@ -63,8 +63,7 @@ public:
 
 private:
   void expandMEMCPY(MachineBasicBlock::iterator) const;
-
 };
-}
+} // namespace llvm
 
 #endif

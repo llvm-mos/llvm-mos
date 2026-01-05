@@ -220,7 +220,7 @@ CallInst *IRBuilderBase::CreateMemTransferInst(Intrinsic::ID IntrID, Value *Dst,
 
   CallInst *CI = CreateIntrinsic(IntrID, Tys, Ops);
 
-  auto* MCI = cast<MemTransferInst>(CI);
+  auto *MCI = cast<MemTransferInst>(CI);
   if (DstAlign)
     MCI->setDestAlignment(*DstAlign);
   if (SrcAlign)
@@ -350,7 +350,7 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
 
 CallInst *IRBuilderBase::getReductionIntrinsic(Intrinsic::ID ID, Value *Src) {
   Value *Ops[] = {Src};
-  Type *Tys[] = { Src->getType() };
+  Type *Tys[] = {Src->getType()};
   return CreateIntrinsic(ID, Tys, Ops);
 }
 
@@ -466,7 +466,7 @@ IRBuilderBase::CreateAssumption(Value *Cond,
   assert(Cond->getType() == getInt1Ty() &&
          "an assumption condition must be of type i1");
 
-  Value *Ops[] = { Cond };
+  Value *Ops[] = {Cond};
   Module *M = BB->getParent()->getParent();
   Function *FnAssume = Intrinsic::getOrInsertDeclaration(M, Intrinsic::assume);
   return CreateCall(FnAssume, Ops, OpBundles);
@@ -494,7 +494,7 @@ CallInst *IRBuilderBase::CreateMaskedLoad(Type *Ty, Value *Ptr, Align Alignment,
   assert(Mask && "Mask should not be all-ones (null)");
   if (!PassThru)
     PassThru = PoisonValue::get(Ty);
-  Type *OverloadedTypes[] = { Ty, PtrTy };
+  Type *OverloadedTypes[] = {Ty, PtrTy};
   Value *Ops[] = {Ptr, Mask, PassThru};
   CallInst *CI =
       CreateMaskedIntrinsic(Intrinsic::masked_load, Ops, OverloadedTypes, Name);
@@ -514,7 +514,7 @@ CallInst *IRBuilderBase::CreateMaskedStore(Value *Val, Value *Ptr,
   Type *DataTy = Val->getType();
   assert(DataTy->isVectorTy() && "Val should be a vector");
   assert(Mask && "Mask should not be all-ones (null)");
-  Type *OverloadedTypes[] = { DataTy, PtrTy };
+  Type *OverloadedTypes[] = {DataTy, PtrTy};
   Value *Ops[] = {Val, Ptr, Mask};
   CallInst *CI =
       CreateMaskedIntrinsic(Intrinsic::masked_store, Ops, OverloadedTypes);
@@ -660,7 +660,7 @@ getStatepointArgs(IRBuilderBase &B, uint64_t ID, uint32_t NumPatchBytes,
   return Args;
 }
 
-template<typename T1, typename T2, typename T3>
+template <typename T1, typename T2, typename T3>
 static std::vector<OperandBundleDef>
 getStatepointBundles(std::optional<ArrayRef<T1>> TransitionArgs,
                      std::optional<ArrayRef<T2>> DeoptArgs,
@@ -888,8 +888,8 @@ CallInst *IRBuilderBase::CreateConstrainedFPBinOp(
 
   FastMathFlags UseFMF = FMFSource.get(FMF);
 
-  CallInst *C = CreateIntrinsic(ID, {L->getType()},
-                                {L, R, RoundingV, ExceptV}, nullptr, Name);
+  CallInst *C = CreateIntrinsic(ID, {L->getType()}, {L, R, RoundingV, ExceptV},
+                                nullptr, Name);
   setConstrainedFPCallAttr(C);
   setFPAttrs(C, FPMathTag, UseFMF);
   return C;
@@ -934,13 +934,13 @@ Value *IRBuilderBase::CreateNAryOp(unsigned Opc, ArrayRef<Value *> Ops,
                                    const Twine &Name, MDNode *FPMathTag) {
   if (Instruction::isBinaryOp(Opc)) {
     assert(Ops.size() == 2 && "Invalid number of operands!");
-    return CreateBinOp(static_cast<Instruction::BinaryOps>(Opc),
-                       Ops[0], Ops[1], Name, FPMathTag);
+    return CreateBinOp(static_cast<Instruction::BinaryOps>(Opc), Ops[0], Ops[1],
+                       Name, FPMathTag);
   }
   if (Instruction::isUnaryOp(Opc)) {
     assert(Ops.size() == 1 && "Invalid number of operands!");
-    return CreateUnOp(static_cast<Instruction::UnaryOps>(Opc),
-                      Ops[0], Name, FPMathTag);
+    return CreateUnOp(static_cast<Instruction::UnaryOps>(Opc), Ops[0], Name,
+                      FPMathTag);
   }
   llvm_unreachable("Unexpected opcode!");
 }
@@ -992,8 +992,8 @@ CallInst *IRBuilderBase::CreateConstrainedFPCmp(
   Value *PredicateV = getConstrainedFPPredicate(P);
   Value *ExceptV = getConstrainedFPExcept(Except);
 
-  CallInst *C = CreateIntrinsic(ID, {L->getType()},
-                                {L, R, PredicateV, ExceptV}, nullptr, Name);
+  CallInst *C = CreateIntrinsic(ID, {L->getType()}, {L, R, PredicateV, ExceptV},
+                                nullptr, Name);
   setConstrainedFPCallAttr(C);
   return C;
 }
@@ -1053,8 +1053,7 @@ Value *IRBuilderBase::CreatePtrDiff(Type *ElemTy, Value *LHS, Value *RHS,
   Value *LHS_int = CreatePtrToInt(LHS, Type::getInt64Ty(Context));
   Value *RHS_int = CreatePtrToInt(RHS, Type::getInt64Ty(Context));
   Value *Difference = CreateSub(LHS_int, RHS_int);
-  return CreateExactSDiv(Difference, ConstantExpr::getSizeOf(ElemTy),
-                         Name);
+  return CreateExactSDiv(Difference, ConstantExpr::getSizeOf(ElemTy), Name);
 }
 
 Value *IRBuilderBase::CreateLaunderInvariantGroup(Value *Ptr) {
@@ -1083,8 +1082,7 @@ Value *IRBuilderBase::CreateStripInvariantGroup(Value *Ptr) {
       M, Intrinsic::strip_invariant_group, {PtrType});
 
   assert(FnStripInvariantGroup->getReturnType() == PtrType &&
-         FnStripInvariantGroup->getFunctionType()->getParamType(0) ==
-             PtrType &&
+         FnStripInvariantGroup->getFunctionType()->getParamType(0) == PtrType &&
          "StripInvariantGroup should take and return the same type");
 
   return CreateCall(FnStripInvariantGroup, {Ptr});
@@ -1203,8 +1201,9 @@ Value *IRBuilderBase::CreatePreserveArrayAccessIndex(Type *ElTy, Value *Base,
   return Fn;
 }
 
-Value *IRBuilderBase::CreatePreserveUnionAccessIndex(
-    Value *Base, unsigned FieldIndex, MDNode *DbgInfo) {
+Value *IRBuilderBase::CreatePreserveUnionAccessIndex(Value *Base,
+                                                     unsigned FieldIndex,
+                                                     MDNode *DbgInfo) {
   assert(isa<PointerType>(Base->getType()) &&
          "Invalid Base ptr type for preserve.union.access.index.");
   auto *BaseType = Base->getType();
@@ -1218,9 +1217,10 @@ Value *IRBuilderBase::CreatePreserveUnionAccessIndex(
   return Fn;
 }
 
-Value *IRBuilderBase::CreatePreserveStructAccessIndex(
-    Type *ElTy, Value *Base, unsigned Index, unsigned FieldIndex,
-    MDNode *DbgInfo) {
+Value *IRBuilderBase::CreatePreserveStructAccessIndex(Type *ElTy, Value *Base,
+                                                      unsigned Index,
+                                                      unsigned FieldIndex,
+                                                      MDNode *DbgInfo) {
   auto *BaseType = Base->getType();
   assert(isa<PointerType>(BaseType) &&
          "Invalid Base ptr type for preserve.struct.access.index.");

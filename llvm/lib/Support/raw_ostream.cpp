@@ -30,10 +30,10 @@
 #include <sys/stat.h>
 
 // <fcntl.h> may provide O_BINARY.
-# include <fcntl.h>
+#include <fcntl.h>
 
 #if defined(HAVE_UNISTD_H)
-# include <unistd.h>
+#include <unistd.h>
 #endif
 
 #if defined(__CYGWIN__)
@@ -43,13 +43,13 @@
 #if defined(_MSC_VER)
 #include <io.h>
 #ifndef STDIN_FILENO
-# define STDIN_FILENO 0
+#define STDIN_FILENO 0
 #endif
 #ifndef STDOUT_FILENO
-# define STDOUT_FILENO 1
+#define STDOUT_FILENO 1
 #endif
 #ifndef STDERR_FILENO
-# define STDERR_FILENO 2
+#define STDERR_FILENO 2
 #endif
 #endif
 
@@ -68,7 +68,7 @@ raw_ostream::~raw_ostream() {
          "raw_ostream destructor called with non-empty buffer!");
 
   if (BufferMode == BufferKind::InternalBuffer)
-    delete [] OutBufStart;
+    delete[] OutBufStart;
 }
 
 size_t raw_ostream::preferred_buffer_size() const {
@@ -102,9 +102,9 @@ void raw_ostream::SetBufferAndMode(char *BufferStart, size_t Size,
   assert(GetNumBytesInBuffer() == 0 && "Current buffer is non-empty!");
 
   if (BufferMode == BufferKind::InternalBuffer)
-    delete [] OutBufStart;
+    delete[] OutBufStart;
   OutBufStart = BufferStart;
-  OutBufEnd = OutBufStart+Size;
+  OutBufEnd = OutBufStart + Size;
   OutBufCur = OutBufStart;
   BufferMode = Mode;
 
@@ -153,9 +153,7 @@ raw_ostream &raw_ostream::write_uuid(const uuid_t UUID) {
   return *this;
 }
 
-
-raw_ostream &raw_ostream::write_escaped(StringRef Str,
-                                        bool UseHexEscapes) {
+raw_ostream &raw_ostream::write_escaped(StringRef Str, bool UseHexEscapes) {
   for (unsigned char c : Str) {
     switch (c) {
     case '\\':
@@ -280,11 +278,20 @@ void raw_ostream::copy_to_buffer(const char *Ptr, size_t Size) {
   // Handle short strings specially, memcpy isn't very good at very short
   // strings.
   switch (Size) {
-  case 4: OutBufCur[3] = Ptr[3]; [[fallthrough]];
-  case 3: OutBufCur[2] = Ptr[2]; [[fallthrough]];
-  case 2: OutBufCur[1] = Ptr[1]; [[fallthrough]];
-  case 1: OutBufCur[0] = Ptr[0]; [[fallthrough]];
-  case 0: break;
+  case 4:
+    OutBufCur[3] = Ptr[3];
+    [[fallthrough]];
+  case 3:
+    OutBufCur[2] = Ptr[2];
+    [[fallthrough]];
+  case 2:
+    OutBufCur[1] = Ptr[1];
+    [[fallthrough]];
+  case 1:
+    OutBufCur[0] = Ptr[0];
+    [[fallthrough]];
+  case 0:
+    break;
   default:
     memcpy(OutBufCur, Ptr, Size);
     break;
@@ -544,8 +551,7 @@ void raw_ostream::anchor() {}
 //===----------------------------------------------------------------------===//
 
 // Out of line virtual method.
-void format_object_base::home() {
-}
+void format_object_base::home() {}
 
 //===----------------------------------------------------------------------===//
 //  raw_fd_ostream
@@ -606,7 +612,7 @@ raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC,
 raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered,
                                OStreamKind K)
     : raw_pwrite_stream(unbuffered, K), FD(fd), ShouldClose(shouldClose) {
-  if (FD < 0 ) {
+  if (FD < 0) {
     ShouldClose = false;
     return;
   }
@@ -659,7 +665,8 @@ raw_fd_ostream::~raw_fd_ostream() {
   // report_fatal_error() invokes exit(). We know report_fatal_error()
   // might not write messages to stderr when any errors were detected
   // on FD == 2.
-  if (FD == 2) return;
+  if (FD == 2)
+    return;
 #endif
 
   // If there are any pending errors, report them now. Clients wishing
@@ -764,7 +771,7 @@ void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
 #ifdef EWOULDBLOCK
           || errno == EWOULDBLOCK
 #endif
-          )
+      )
         continue;
 
 #ifdef _WIN32
@@ -867,7 +874,7 @@ Expected<sys::fs::FileLocker> raw_fd_ostream::lock() {
 }
 
 Expected<sys::fs::FileLocker>
-raw_fd_ostream::tryLockFor(Duration const& Timeout) {
+raw_fd_ostream::tryLockFor(Duration const &Timeout) {
   std::error_code EC = sys::fs::tryLockFile(FD, Timeout.getDuration());
   if (!EC)
     return sys::fs::FileLocker(FD);
@@ -984,12 +991,9 @@ raw_null_ostream::~raw_null_ostream() {
 #endif
 }
 
-void raw_null_ostream::write_impl(const char *Ptr, size_t Size) {
-}
+void raw_null_ostream::write_impl(const char *Ptr, size_t Size) {}
 
-uint64_t raw_null_ostream::current_pos() const {
-  return 0;
-}
+uint64_t raw_null_ostream::current_pos() const { return 0; }
 
 void raw_null_ostream::pwrite_impl(const char *Ptr, size_t Size,
                                    uint64_t Offset) {}

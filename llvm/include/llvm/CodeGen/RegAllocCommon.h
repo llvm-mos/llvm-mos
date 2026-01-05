@@ -23,6 +23,6 @@ class MachineRegisterInfo;
 typedef std::function<bool(const TargetRegisterInfo &TRI,
                            const MachineRegisterInfo &MRI, const Register Reg)>
     RegAllocFilterFunc;
-}
+} // namespace llvm
 
 #endif // LLVM_CODEGEN_REGALLOCCOMMON_H

@@ -128,14 +128,14 @@ class ARMFunctionInfo : public MachineFunctionInfo {
 
   /// CoalescedWeights - mapping of basic blocks to the rolling counter of
   /// coalesced weights.
-  DenseMap<const MachineBasicBlock*, unsigned> CoalescedWeights;
+  DenseMap<const MachineBasicBlock *, unsigned> CoalescedWeights;
 
   /// True if this function has a subset of CSRs that is handled explicitly via
   /// copies.
   bool IsSplitCSR = false;
 
   /// Globals that have had their storage promoted into the constant pool.
-  SmallPtrSet<const GlobalVariable*,2> PromotedGlobals;
+  SmallPtrSet<const GlobalVariable *, 2> PromotedGlobals;
 
   /// The amount the literal pool has been increasedby due to promoted globals.
   int PromotedGlobalsIncrease = 0;
@@ -201,21 +201,21 @@ public:
   void setGPRCalleeSavedArea2Offset(unsigned o) { GPRCS2Offset = o; }
   void setDPRCalleeSavedArea1Offset(unsigned o) { DPRCS1Offset = o; }
 
-  unsigned getFPCXTSaveAreaSize() const       { return FPCXTSaveSize; }
+  unsigned getFPCXTSaveAreaSize() const { return FPCXTSaveSize; }
   unsigned getFrameRecordSavedAreaSize() const { return FRSaveSize; }
   unsigned getGPRCalleeSavedArea1Size() const { return GPRCS1Size; }
   unsigned getGPRCalleeSavedArea2Size() const { return GPRCS2Size; }
-  unsigned getFPStatusSavesSize() const       { return FPStatusSize; }
-  unsigned getDPRCalleeSavedGapSize() const   { return DPRCSAlignGapSize; }
+  unsigned getFPStatusSavesSize() const { return FPStatusSize; }
+  unsigned getDPRCalleeSavedGapSize() const { return DPRCSAlignGapSize; }
   unsigned getDPRCalleeSavedArea1Size() const { return DPRCS1Size; }
   unsigned getGPRCalleeSavedArea3Size() const { return GPRCS3Size; }
 
-  void setFPCXTSaveAreaSize(unsigned s)       { FPCXTSaveSize = s; }
+  void setFPCXTSaveAreaSize(unsigned s) { FPCXTSaveSize = s; }
   void setFrameRecordSavedAreaSize(unsigned s) { FRSaveSize = s; }
   void setGPRCalleeSavedArea1Size(unsigned s) { GPRCS1Size = s; }
   void setGPRCalleeSavedArea2Size(unsigned s) { GPRCS2Size = s; }
-  void setFPStatusSavesSize(unsigned s)       { FPStatusSize = s; }
-  void setDPRCalleeSavedGapSize(unsigned s)   { DPRCSAlignGapSize = s; }
+  void setFPStatusSavesSize(unsigned s) { FPStatusSize = s; }
+  void setDPRCalleeSavedGapSize(unsigned s) { DPRCSAlignGapSize = s; }
   void setDPRCalleeSavedArea1Size(unsigned s) { DPRCS1Size = s; }
   void setGPRCalleeSavedArea3Size(unsigned s) { GPRCS3Size = s; }
 
@@ -225,17 +225,11 @@ public:
   unsigned getArgumentStackToRestore() const { return ArgumentStackToRestore; }
   void setArgumentStackToRestore(unsigned v) { ArgumentStackToRestore = v; }
 
-  void initPICLabelUId(unsigned UId) {
-    PICLabelUId = UId;
-  }
+  void initPICLabelUId(unsigned UId) { PICLabelUId = UId; }
 
-  unsigned getNumPICLabels() const {
-    return PICLabelUId;
-  }
+  unsigned getNumPICLabels() const { return PICLabelUId; }
 
-  unsigned createPICLabelUId() {
-    return PICLabelUId++;
-  }
+  unsigned createPICLabelUId() { return PICLabelUId++; }
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }
@@ -270,15 +264,11 @@ public:
   void markGlobalAsPromotedToConstantPool(const GlobalVariable *GV) {
     PromotedGlobals.insert(GV);
   }
-  SmallPtrSet<const GlobalVariable*, 2>& getGlobalsPromotedToConstantPool() {
+  SmallPtrSet<const GlobalVariable *, 2> &getGlobalsPromotedToConstantPool() {
     return PromotedGlobals;
   }
-  int getPromotedConstpoolIncrease() const {
-    return PromotedGlobalsIncrease;
-  }
-  void setPromotedConstpoolIncrease(int Sz) {
-    PromotedGlobalsIncrease = Sz;
-  }
+  int getPromotedConstpoolIncrease() const { return PromotedGlobalsIncrease; }
+  void setPromotedConstpoolIncrease(int Sz) { PromotedGlobalsIncrease = Sz; }
 
   DenseMap<unsigned, unsigned> EHPrologueRemappedRegs;
   DenseMap<unsigned, unsigned> EHPrologueOffsetInRegs;

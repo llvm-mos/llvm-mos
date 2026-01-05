@@ -41,7 +41,6 @@ using ProbeFactorMap = std::unordered_map<std::pair<uint64_t, uint64_t>, float,
                                           pair_hash<uint64_t, uint64_t>>;
 using FuncProbeFactorMap = StringMap<ProbeFactorMap>;
 
-
 // A pseudo probe verifier that can be run after each IR passes to detect the
 // violation of updating probe factors. In principle, the sum of distribution
 // factor for a probe should be identical before and after a pass. For a

@@ -99,8 +99,8 @@ template <> struct ScalarEnumerationTraits<llvm::pdb::PdbRaw_FeatureSig> {
     io.enumCase(Features, "VC140", PdbRaw_FeatureSig::VC140);
   }
 };
-}
-}
+} // namespace yaml
+} // namespace llvm
 
 void MappingTraits<PdbObject>::mapping(IO &IO, PdbObject &Obj) {
   IO.mapOptional("MSF", Obj.Headers);

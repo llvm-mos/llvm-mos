@@ -27,8 +27,7 @@ using namespace llvm;
 
 #include "ARCGenAsmWriter.inc"
 
-template <class T>
-static const char *BadConditionCode(T cc) {
+template <class T> static const char *BadConditionCode(T cc) {
   LLVM_DEBUG(dbgs() << "Unknown condition code passed: " << cc << "\n");
   return "{unknown-cc}";
 }

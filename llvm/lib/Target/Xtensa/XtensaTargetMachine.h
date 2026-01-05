@@ -24,6 +24,7 @@ extern Target TheXtensaTarget;
 
 class XtensaTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
+
 public:
   XtensaTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,

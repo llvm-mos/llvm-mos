@@ -30,7 +30,7 @@ public:
   ModuleInlinerPass(InlineParams Params = getInlineParams(),
                     InliningAdvisorMode Mode = InliningAdvisorMode::Default,
                     ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None)
-      : Params(Params), Mode(Mode), LTOPhase(LTOPhase){};
+      : Params(Params), Mode(Mode), LTOPhase(LTOPhase) {};
   ModuleInlinerPass(ModuleInlinerPass &&Arg) = default;
 
   LLVM_ABI PreservedAnalyses run(Module &, ModuleAnalysisManager &);

@@ -91,7 +91,7 @@ class SystemZHazardRecognizer : public ScheduleHazardRecognizer {
   /// A counter of decoder groups scheduled.
   unsigned GrpCount;
 
-  unsigned getCurrGroupSize() {return CurrGroupSize;};
+  unsigned getCurrGroupSize() { return CurrGroupSize; };
 
   /// Start next decoder group.
   void nextGroup();

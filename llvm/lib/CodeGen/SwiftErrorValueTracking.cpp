@@ -182,8 +182,8 @@ void SwiftErrorValueTracking::propagateVRegs() {
       for (auto *Pred : MBB->predecessors()) {
         if (!Visited.insert(Pred).second)
           continue;
-        VRegs.push_back(std::make_pair(
-            Pred, getOrCreateVReg(Pred, SwiftErrorVal)));
+        VRegs.push_back(
+            std::make_pair(Pred, getOrCreateVReg(Pred, SwiftErrorVal)));
         if (Pred != MBB)
           continue;
         // We have a self-edge.
@@ -239,9 +239,8 @@ void SwiftErrorValueTracking::propagateVRegs() {
       auto const *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
       Register PHIVReg =
           UpwardsUse ? UUseVReg : MF->getRegInfo().createVirtualRegister(RC);
-      MachineInstrBuilder PHI =
-          BuildMI(*MBB, MBB->getFirstNonPHI(), DLoc,
-                  TII->get(TargetOpcode::PHI), PHIVReg);
+      MachineInstrBuilder PHI = BuildMI(*MBB, MBB->getFirstNonPHI(), DLoc,
+                                        TII->get(TargetOpcode::PHI), PHIVReg);
       for (auto BBRegPair : VRegs) {
         PHI.addReg(BBRegPair.second).addMBB(BBRegPair.first);
       }
@@ -273,9 +272,9 @@ void SwiftErrorValueTracking::propagateVRegs() {
   }
 }
 
-void SwiftErrorValueTracking::preassignVRegs(
-    MachineBasicBlock *MBB, BasicBlock::const_iterator Begin,
-    BasicBlock::const_iterator End) {
+void SwiftErrorValueTracking::preassignVRegs(MachineBasicBlock *MBB,
+                                             BasicBlock::const_iterator Begin,
+                                             BasicBlock::const_iterator End) {
   if (!TLI->supportSwiftError() || SwiftErrorVals.empty())
     return;
 

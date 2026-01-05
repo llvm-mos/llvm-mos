@@ -313,8 +313,7 @@ Error RecordInitializer::visit(CallArgRecord &R) {
                                     MetadataRecord::kMetadataBodySize))
     return createStringError(
         std::make_error_code(std::errc::bad_address),
-        "Invalid offset for a call argument record (%" PRId64 ").",
-        OffsetPtr);
+        "Invalid offset for a call argument record (%" PRId64 ").", OffsetPtr);
 
   auto PreReadOffset = OffsetPtr;
   R.Arg = E.getU64(&OffsetPtr);
@@ -368,8 +367,7 @@ Error RecordInitializer::visit(EndBufferRecord &R) {
                                     MetadataRecord::kMetadataBodySize))
     return createStringError(
         std::make_error_code(std::errc::bad_address),
-        "Invalid offset for an end-of-buffer record (%" PRId64 ").",
-        OffsetPtr);
+        "Invalid offset for an end-of-buffer record (%" PRId64 ").", OffsetPtr);
 
   OffsetPtr += MetadataRecord::kMetadataBodySize;
   return Error::success();

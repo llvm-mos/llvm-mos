@@ -137,7 +137,7 @@ NativeTypeFunctionSig::findChildren(PDB_SymType Type) const {
     return std::make_unique<NullEnumerator<PDBSymbol>>();
 
   auto NET = std::make_unique<NativeEnumTypes>(Session,
-                                                /* copy */ ArgList.ArgIndices);
+                                               /* copy */ ArgList.ArgIndices);
   return std::unique_ptr<IPDBEnumSymbols>(
       new NativeEnumFunctionArgs(Session, std::move(NET)));
 }

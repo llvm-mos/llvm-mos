@@ -79,8 +79,7 @@ public:
   Align getStubAlignment() override { return Align(1); }
 
   Expected<object::relocation_iterator>
-  processRelocationRef(unsigned SectionID,
-                       object::relocation_iterator RelI,
+  processRelocationRef(unsigned SectionID, object::relocation_iterator RelI,
                        const object::ObjectFile &Obj,
                        ObjSectionToIDMap &ObjSectionToID,
                        StubMap &Stubs) override {
@@ -135,8 +134,8 @@ public:
       TargetName = StringRef();
       IsExtern = false;
     } else if (!IsExtern) {
-      if (auto TargetSectionIDOrErr =
-          findOrEmitSection(Obj, *Section, Section->isText(), ObjSectionToID))
+      if (auto TargetSectionIDOrErr = findOrEmitSection(
+              Obj, *Section, Section->isText(), ObjSectionToID))
         TargetSectionID = *TargetSectionIDOrErr;
       else
         return TargetSectionIDOrErr.takeError();
@@ -154,7 +153,8 @@ public:
       bool IsTargetThumbFunc = isThumbFunc(Symbol, Obj, Section);
 
       switch (RelType) {
-      default: llvm_unreachable("unsupported relocation type");
+      default:
+        llvm_unreachable("unsupported relocation type");
       case COFF::IMAGE_REL_ARM_ABSOLUTE:
         // This relocation is ignored.
         break;
@@ -211,7 +211,8 @@ public:
     int ISASelectionBit = RE.IsTargetThumbFunc ? 1 : 0;
 
     switch (RE.RelType) {
-    default: llvm_unreachable("unsupported relocation type");
+    default:
+      llvm_unreachable("unsupported relocation type");
     case COFF::IMAGE_REL_ARM_ABSOLUTE:
       // This relocation is ignored.
       break;
@@ -220,7 +221,8 @@ public:
       uint64_t Result =
           RE.Sections.SectionA == static_cast<uint32_t>(-1)
               ? Value
-              : Sections[RE.Sections.SectionA].getLoadAddressWithOffset(RE.Addend);
+              : Sections[RE.Sections.SectionA].getLoadAddressWithOffset(
+                    RE.Addend);
       Result |= ISASelectionBit;
       assert(Result <= UINT32_MAX && "relocation overflow");
       LLVM_DEBUG(dbgs() << "\t\tOffset: " << RE.Offset
@@ -280,11 +282,11 @@ public:
       // MOVT(T1): |11110|i|10|1|1|0|0|imm4|0|imm3|Rd|imm8|
       //            imm16 =      imm4:i:imm3:imm8
 
-      auto EncodeImmediate = [](uint8_t *Bytes, uint16_t Immediate)  {
+      auto EncodeImmediate = [](uint8_t *Bytes, uint16_t Immediate) {
         Bytes[0] |= ((Immediate & 0xf000) >> 12);
         Bytes[1] |= ((Immediate & 0x0800) >> 11);
-        Bytes[2] |= ((Immediate & 0x00ff) >>  0);
-        Bytes[3] |= (((Immediate & 0x0700) >>  8) << 4);
+        Bytes[2] |= ((Immediate & 0x00ff) >> 0);
+        Bytes[3] |= (((Immediate & 0x0700) >> 8) << 4);
       };
 
       EncodeImmediate(&Target[0],
@@ -343,6 +345,6 @@ public:
   void registerEHFrames() override {}
 };
 
-}
+} // namespace llvm
 
 #endif

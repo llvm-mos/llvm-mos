@@ -36,7 +36,7 @@ class XCoreFunctionInfo : public MachineFunctionInfo {
   int VarArgsFrameIndex = 0;
   mutable int CachedEStackSize = -1;
   std::vector<std::pair<MachineBasicBlock::iterator, CalleeSavedInfo>>
-  SpillLabels;
+      SpillLabels;
 
   virtual void anchor();
 
@@ -70,9 +70,9 @@ public:
     return FPSpillSlot;
   }
 
-  const int* createEHSpillSlot(MachineFunction &MF);
+  const int *createEHSpillSlot(MachineFunction &MF);
   bool hasEHSpillSlot() { return EHSpillSlotSet; }
-  const int* getEHSpillSlot() const {
+  const int *getEHSpillSlot() const {
     assert(EHSpillSlotSet && "EH Spill slot not set");
     return EHSpillSlot;
   }

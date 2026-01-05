@@ -139,7 +139,7 @@ addOffset(const MachineInstrBuilder &MIB, int Offset) {
 }
 
 static inline const MachineInstrBuilder &
-addOffset(const MachineInstrBuilder &MIB, const MachineOperand& Offset) {
+addOffset(const MachineInstrBuilder &MIB, const MachineOperand &Offset) {
   return MIB.addImm(1).addReg(0).add(Offset).addReg(0);
 }
 
@@ -166,8 +166,7 @@ addRegReg(const MachineInstrBuilder &MIB, Register Reg1, bool isKill1,
 }
 
 static inline const MachineInstrBuilder &
-addFullAddress(const MachineInstrBuilder &MIB,
-               const X86AddressMode &AM) {
+addFullAddress(const MachineInstrBuilder &MIB, const X86AddressMode &AM) {
   assert(AM.Scale == 1 || AM.Scale == 2 || AM.Scale == 4 || AM.Scale == 8);
 
   if (AM.BaseType == X86AddressMode::RegBase)
@@ -205,8 +204,7 @@ addFrameReference(const MachineInstrBuilder &MIB, int FI, int Offset = 0) {
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FI, Offset), Flags,
       MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
-  return addOffset(MIB.addFrameIndex(FI), Offset)
-            .addMemOperand(MMO);
+  return addOffset(MIB.addFrameIndex(FI), Offset).addMemOperand(MMO);
 }
 
 /// addConstantPoolReference - This function is used to add a reference to the
@@ -219,9 +217,12 @@ addFrameReference(const MachineInstrBuilder &MIB, int FI, int Offset = 0) {
 static inline const MachineInstrBuilder &
 addConstantPoolReference(const MachineInstrBuilder &MIB, unsigned CPI,
                          Register GlobalBaseReg, unsigned char OpFlags) {
-  //FIXME: factor this
-  return MIB.addReg(GlobalBaseReg).addImm(1).addReg(0)
-    .addConstantPoolIndex(CPI, 0, OpFlags).addReg(0);
+  // FIXME: factor this
+  return MIB.addReg(GlobalBaseReg)
+      .addImm(1)
+      .addReg(0)
+      .addConstantPoolIndex(CPI, 0, OpFlags)
+      .addReg(0);
 }
 
 } // end namespace llvm

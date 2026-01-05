@@ -70,7 +70,6 @@ void Mips16DAGToDAGISel::initGlobalBaseReg(MachineFunction &MF) {
   V1 = RegInfo.createVirtualRegister(RC);
   V2 = RegInfo.createVirtualRegister(RC);
 
-
   BuildMI(MBB, I, DL, TII.get(Mips::LiRxImmX16), V0)
       .addExternalSymbol("_gp_disp", MipsII::MO_ABS_HI);
   BuildMI(MBB, I, DL, TII.get(Mips::AddiuRxPcImmX16), V1)

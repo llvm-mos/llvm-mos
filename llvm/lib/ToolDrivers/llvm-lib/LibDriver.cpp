@@ -290,11 +290,11 @@ static void appendFile(std::vector<NewArchiveMember> &Members,
     if (FileMachine != COFF::IMAGE_FILE_MACHINE_UNKNOWN) {
       if (LibMachine == COFF::IMAGE_FILE_MACHINE_UNKNOWN) {
         if (FileMachine == COFF::IMAGE_FILE_MACHINE_ARM64EC) {
-            llvm::errs() << MB.getBufferIdentifier() << ": file machine type "
-                         << machineToStr(FileMachine)
-                         << " conflicts with inferred library machine type,"
-                         << " use /machine:arm64ec or /machine:arm64x\n";
-            exit(1);
+          llvm::errs() << MB.getBufferIdentifier() << ": file machine type "
+                       << machineToStr(FileMachine)
+                       << " conflicts with inferred library machine type,"
+                       << " use /machine:arm64ec or /machine:arm64x\n";
+          exit(1);
         }
         LibMachine = FileMachine;
         LibMachineSource =

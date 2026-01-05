@@ -34,8 +34,8 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_VariantType, UInt16, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_VariantType, UInt32, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_VariantType, UInt64, OS)
-    default:
-      OS << "Unknown";
+  default:
+    OS << "Unknown";
   }
   return OS;
 }
@@ -72,30 +72,30 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
                                    const PDB_CallingConv &Conv) {
   OS << "__";
   switch (Conv) {
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, NearC      , "cdecl", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, FarC       , "cdecl", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, NearPascal , "pascal", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, FarPascal  , "pascal", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, NearFast   , "fastcall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, FarFast    , "fastcall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, NearC, "cdecl", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, FarC, "cdecl", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, NearPascal, "pascal", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, FarPascal, "pascal", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, NearFast, "fastcall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, FarFast, "fastcall", OS)
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, NearStdCall, "stdcall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, FarStdCall , "stdcall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, FarStdCall, "stdcall", OS)
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, NearSysCall, "syscall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, FarSysCall , "syscall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, ThisCall   , "thiscall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, MipsCall   , "mipscall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, Generic    , "genericcall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, AlphaCall  , "alphacall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, PpcCall    , "ppccall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, SHCall     , "superhcall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, ArmCall    , "armcall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, AM33Call   , "am33call", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, TriCall    , "tricall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, SH5Call    , "sh5call", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, M32RCall   , "m32rcall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, ClrCall    , "clrcall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, Inline     , "inlinecall", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, NearVector , "vectorcall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, FarSysCall, "syscall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, ThisCall, "thiscall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, MipsCall, "mipscall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, Generic, "genericcall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, AlphaCall, "alphacall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, PpcCall, "ppccall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, SHCall, "superhcall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, ArmCall, "armcall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, AM33Call, "am33call", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, TriCall, "tricall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, SH5Call, "sh5call", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, M32RCall, "m32rcall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, ClrCall, "clrcall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, Inline, "inlinecall", OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, NearVector, "vectorcall", OS)
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_CallingConv, Swift, "swiftcall", OS)
   }
   return OS;
@@ -358,44 +358,44 @@ raw_ostream &llvm::pdb::dumpPDBSourceCompression(raw_ostream &OS,
 
 raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const Variant &Value) {
   switch (Value.Type) {
-    case PDB_VariantType::Bool:
-      OS << (Value.Value.Bool ? "true" : "false");
-      break;
-    case PDB_VariantType::Double:
-      OS << Value.Value.Double;
-      break;
-    case PDB_VariantType::Int16:
-      OS << Value.Value.Int16;
-      break;
-    case PDB_VariantType::Int32:
-      OS << Value.Value.Int32;
-      break;
-    case PDB_VariantType::Int64:
-      OS << Value.Value.Int64;
-      break;
-    case PDB_VariantType::Int8:
-      OS << static_cast<int>(Value.Value.Int8);
-      break;
-    case PDB_VariantType::Single:
-      OS << Value.Value.Single;
-      break;
-    case PDB_VariantType::UInt16:
-      OS << Value.Value.UInt16;
-      break;
-    case PDB_VariantType::UInt32:
-      OS << Value.Value.UInt32;
-      break;
-    case PDB_VariantType::UInt64:
-      OS << Value.Value.UInt64;
-      break;
-    case PDB_VariantType::UInt8:
-      OS << static_cast<unsigned>(Value.Value.UInt8);
-      break;
-    case PDB_VariantType::String:
-      OS << Value.Value.String;
-      break;
-    default:
-      OS << Value.Type;
+  case PDB_VariantType::Bool:
+    OS << (Value.Value.Bool ? "true" : "false");
+    break;
+  case PDB_VariantType::Double:
+    OS << Value.Value.Double;
+    break;
+  case PDB_VariantType::Int16:
+    OS << Value.Value.Int16;
+    break;
+  case PDB_VariantType::Int32:
+    OS << Value.Value.Int32;
+    break;
+  case PDB_VariantType::Int64:
+    OS << Value.Value.Int64;
+    break;
+  case PDB_VariantType::Int8:
+    OS << static_cast<int>(Value.Value.Int8);
+    break;
+  case PDB_VariantType::Single:
+    OS << Value.Value.Single;
+    break;
+  case PDB_VariantType::UInt16:
+    OS << Value.Value.UInt16;
+    break;
+  case PDB_VariantType::UInt32:
+    OS << Value.Value.UInt32;
+    break;
+  case PDB_VariantType::UInt64:
+    OS << Value.Value.UInt64;
+    break;
+  case PDB_VariantType::UInt8:
+    OS << static_cast<unsigned>(Value.Value.UInt8);
+    break;
+  case PDB_VariantType::String:
+    OS << Value.Value.String;
+    break;
+  default:
+    OS << Value.Type;
   }
   return OS;
 }

@@ -59,16 +59,15 @@ protected:
   RelocationEntry getRelocationEntry(unsigned SectionID,
                                      const ObjectFile &BaseTObj,
                                      const relocation_iterator &RI) const {
-    const MachOObjectFile &Obj =
-      static_cast<const MachOObjectFile &>(BaseTObj);
+    const MachOObjectFile &Obj = static_cast<const MachOObjectFile &>(BaseTObj);
     MachO::any_relocation_info RelInfo =
-      Obj.getRelocation(RI->getRawDataRefImpl());
+        Obj.getRelocation(RI->getRawDataRefImpl());
 
     bool IsPCRel = Obj.getAnyRelocationPCRel(RelInfo);
     unsigned Size = Obj.getAnyRelocationLength(RelInfo);
     uint64_t Offset = RI->getOffset();
-    MachO::RelocationInfoType RelType =
-      static_cast<MachO::RelocationInfoType>(Obj.getAnyRelocationType(RelInfo));
+    MachO::RelocationInfoType RelType = static_cast<MachO::RelocationInfoType>(
+        Obj.getAnyRelocationType(RelInfo));
 
     return RelocationEntry(SectionID, Offset, RelType, 0, IsPCRel, Size);
   }
@@ -89,11 +88,9 @@ protected:
   /// In both cases the Addend field is *NOT* fixed up to be PC-relative. That
   /// should be done by the caller where appropriate by calling makePCRel on
   /// the RelocationValueRef.
-  Expected<RelocationValueRef>
-  getRelocationValueRef(const ObjectFile &BaseTObj,
-                        const relocation_iterator &RI,
-                        const RelocationEntry &RE,
-                        ObjSectionToIDMap &ObjSectionToID);
+  Expected<RelocationValueRef> getRelocationValueRef(
+      const ObjectFile &BaseTObj, const relocation_iterator &RI,
+      const RelocationEntry &RE, ObjSectionToIDMap &ObjSectionToID);
 
   /// Make the RelocationValueRef addend PC-relative.
   void makeValueAddendPCRel(RelocationValueRef &Value,
@@ -107,18 +104,15 @@ protected:
   static section_iterator getSectionByAddress(const MachOObjectFile &Obj,
                                               uint64_t Addr);
 
-
   // Populate __pointers section.
   Error populateIndirectSymbolPointersSection(const MachOObjectFile &Obj,
                                               const SectionRef &PTSection,
                                               unsigned PTSectionID);
 
 public:
-
   /// Create a RuntimeDyldMachO instance for the given target architecture.
   static std::unique_ptr<RuntimeDyldMachO>
-  create(Triple::ArchType Arch,
-         RuntimeDyld::MemoryManager &MemMgr,
+  create(Triple::ArchType Arch, RuntimeDyld::MemoryManager &MemMgr,
          JITSymbolResolver &Resolver);
 
   std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
@@ -148,7 +142,7 @@ private:
 public:
   RuntimeDyldMachOCRTPBase(RuntimeDyld::MemoryManager &MemMgr,
                            JITSymbolResolver &Resolver)
-    : RuntimeDyldMachO(MemMgr, Resolver) {}
+      : RuntimeDyldMachO(MemMgr, Resolver) {}
 
   Error finalizeLoad(const ObjectFile &Obj,
                      ObjSectionToIDMap &SectionMap) override;

@@ -241,8 +241,7 @@ Error TypeNameComputer::visitKnownRecord(CVType &CVR, LabelRecord &R) {
   return Error::success();
 }
 
-Error TypeNameComputer::visitKnownRecord(CVType &CVR,
-                                         PrecompRecord &Precomp) {
+Error TypeNameComputer::visitKnownRecord(CVType &CVR, PrecompRecord &Precomp) {
   return Error::success();
 }
 

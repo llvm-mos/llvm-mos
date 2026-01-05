@@ -952,9 +952,8 @@ bool CallExpression::equals(const Expression &Other) const {
 
 // Determine if the edge From->To is a backedge
 bool NewGVN::isBackedge(BasicBlock *From, BasicBlock *To) const {
-  return From == To ||
-         RPOOrdering.lookup(DT->getNode(From)) >=
-             RPOOrdering.lookup(DT->getNode(To));
+  return From == To || RPOOrdering.lookup(DT->getNode(From)) >=
+                           RPOOrdering.lookup(DT->getNode(To));
 }
 
 #ifndef NDEBUG
@@ -1323,15 +1322,15 @@ NewGVN::createCallExpression(CallInst *CI, const MemoryAccess *MA) const {
 bool NewGVN::someEquivalentDominates(const Instruction *Inst,
                                      const Instruction *U) const {
   auto *CC = ValueToClass.lookup(Inst);
-   // This must be an instruction because we are only called from phi nodes
+  // This must be an instruction because we are only called from phi nodes
   // in the case that the value it needs to check against is an instruction.
 
-  // The most likely candidates for dominance are the leader and the next leader.
-  // The leader or nextleader will dominate in all cases where there is an
-  // equivalent that is higher up in the dom tree.
-  // We can't *only* check them, however, because the
-  // dominator tree could have an infinite number of non-dominating siblings
-  // with instructions that are in the right congruence class.
+  // The most likely candidates for dominance are the leader and the next
+  // leader. The leader or nextleader will dominate in all cases where there is
+  // an equivalent that is higher up in the dom tree. We can't *only* check
+  // them, however, because the dominator tree could have an infinite number of
+  // non-dominating siblings with instructions that are in the right congruence
+  // class.
   //       A
   // B C D E F G
   // |
@@ -1545,7 +1544,7 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
     return createConstantExpression(UndefValue::get(LoadType));
   } else if (auto *InitVal =
                  getInitialValueOfAllocation(DepInst, TLI, LoadType))
-      return createConstantExpression(InitVal);
+    return createConstantExpression(InitVal);
 
   return nullptr;
 }
@@ -1753,8 +1752,7 @@ bool NewGVN::isCycleFree(const Instruction *I) const {
 
 // Evaluate PHI nodes symbolically and create an expression result.
 const Expression *
-NewGVN::performSymbolicPHIEvaluation(ArrayRef<ValPair> PHIOps,
-                                     Instruction *I,
+NewGVN::performSymbolicPHIEvaluation(ArrayRef<ValPair> PHIOps, Instruction *I,
                                      BasicBlock *PHIBlock) const {
   // True if one of the incoming phi edges is a backedge.
   bool HasBackedge = false;
@@ -3789,9 +3787,8 @@ public:
     // These two should always be in sync at this point.
     assert(ValueStack.size() == DFSStack.size() &&
            "Mismatch between ValueStack and DFSStack");
-    while (
-        !DFSStack.empty() &&
-        !(DFSIn >= DFSStack.back().first && DFSOut <= DFSStack.back().second)) {
+    while (!DFSStack.empty() && !(DFSIn >= DFSStack.back().first &&
+                                  DFSOut <= DFSStack.back().second)) {
       DFSStack.pop_back();
       ValueStack.pop_back();
     }
@@ -4271,8 +4268,7 @@ PreservedAnalyses NewGVNPass::run(Function &F, AnalysisManager<Function> &AM) {
   auto &AA = AM.getResult<AAManager>(F);
   auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
   bool Changed =
-      NewGVN(F, &DT, &AC, &TLI, &AA, &MSSA, F.getDataLayout())
-          .runGVN();
+      NewGVN(F, &DT, &AC, &TLI, &AA, &MSSA, F.getDataLayout()).runGVN();
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;

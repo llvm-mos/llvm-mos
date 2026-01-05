@@ -29,25 +29,25 @@ struct Operator;
 // entry is undefined.
 
 // Mask manipulation functions.
-static inline unsigned short MakeMask(unsigned V0, unsigned V1,
-                                      unsigned V2, unsigned V3) {
-  return (V0 << (3*4)) | (V1 << (2*4)) | (V2 << (1*4)) | (V3 << (0*4));
+static inline unsigned short MakeMask(unsigned V0, unsigned V1, unsigned V2,
+                                      unsigned V3) {
+  return (V0 << (3 * 4)) | (V1 << (2 * 4)) | (V2 << (1 * 4)) | (V3 << (0 * 4));
 }
 
 /// getMaskElt - Return element N of the specified mask.
 static unsigned getMaskElt(unsigned Mask, unsigned Elt) {
-  return (Mask >> ((3-Elt)*4)) & 0xF;
+  return (Mask >> ((3 - Elt) * 4)) & 0xF;
 }
 
 static unsigned setMaskElt(unsigned Mask, unsigned Elt, unsigned NewVal) {
-  unsigned FieldShift = ((3-Elt)*4);
+  unsigned FieldShift = ((3 - Elt) * 4);
   return (Mask & ~(0xF << FieldShift)) | (NewVal << FieldShift);
 }
 
 // Reject elements where the values are 9-15.
 static bool isValidMask(unsigned short Mask) {
   unsigned short UndefBits = Mask & 0x8888;
-  return (Mask & ((UndefBits >> 1)|(UndefBits>>2)|(UndefBits>>3))) == 0;
+  return (Mask & ((UndefBits >> 1) | (UndefBits >> 2) | (UndefBits >> 3))) == 0;
 }
 
 /// hasUndefElements - Return true if any of the elements in the mask are undefs
@@ -58,9 +58,7 @@ static bool hasUndefElements(unsigned short Mask) {
 
 /// isOnlyLHSMask - Return true if this mask only refers to its LHS, not
 /// including undef values..
-static bool isOnlyLHSMask(unsigned short Mask) {
-  return (Mask & 0x4444) == 0;
-}
+static bool isOnlyLHSMask(unsigned short Mask) { return (Mask & 0x4444) == 0; }
 
 /// getLHSOnlyMask - Given a mask that refers to its LHS and RHS, modify it to
 /// refer to the LHS only (for when one argument value is passed into the same
@@ -74,34 +72,33 @@ static unsigned short getLHSOnlyMask(unsigned short Mask) {
 /// getCompressedMask - Turn a 16-bit uncompressed mask (where each elt uses 4
 /// bits) into a compressed 13-bit mask, where each elt is multiplied by 9.
 static unsigned getCompressedMask(unsigned short Mask) {
-  return getMaskElt(Mask, 0)*9*9*9 + getMaskElt(Mask, 1)*9*9 +
-         getMaskElt(Mask, 2)*9     + getMaskElt(Mask, 3);
+  return getMaskElt(Mask, 0) * 9 * 9 * 9 + getMaskElt(Mask, 1) * 9 * 9 +
+         getMaskElt(Mask, 2) * 9 + getMaskElt(Mask, 3);
 }
 
 static void PrintMask(unsigned i, std::ostream &OS) {
-  OS << "<" << (char)(getMaskElt(i, 0) == 8 ? 'u' : ('0'+getMaskElt(i, 0)))
-     << "," << (char)(getMaskElt(i, 1) == 8 ? 'u' : ('0'+getMaskElt(i, 1)))
-     << "," << (char)(getMaskElt(i, 2) == 8 ? 'u' : ('0'+getMaskElt(i, 2)))
-     << "," << (char)(getMaskElt(i, 3) == 8 ? 'u' : ('0'+getMaskElt(i, 3)))
+  OS << "<" << (char)(getMaskElt(i, 0) == 8 ? 'u' : ('0' + getMaskElt(i, 0)))
+     << "," << (char)(getMaskElt(i, 1) == 8 ? 'u' : ('0' + getMaskElt(i, 1)))
+     << "," << (char)(getMaskElt(i, 2) == 8 ? 'u' : ('0' + getMaskElt(i, 2)))
+     << "," << (char)(getMaskElt(i, 3) == 8 ? 'u' : ('0' + getMaskElt(i, 3)))
      << ">";
 }
 
 /// ShuffleVal - This represents a shufflevector operation.
 struct ShuffleVal {
-  Operator *Op;   // The Operation used to generate this value.
-  unsigned Cost;  // Number of instrs used to generate this value.
-  unsigned short Arg0, Arg1;  // Input operands for this value.
+  Operator *Op;              // The Operation used to generate this value.
+  unsigned Cost;             // Number of instrs used to generate this value.
+  unsigned short Arg0, Arg1; // Input operands for this value.
 
   ShuffleVal() : Cost(1000000) {}
 };
-
 
 /// ShufTab - This is the actual shuffle table that we are trying to generate.
 ///
 static ShuffleVal ShufTab[65536];
 
 /// TheOperators - All of the operators that this target supports.
-static std::vector<Operator*> TheOperators;
+static std::vector<Operator *> TheOperators;
 
 /// Operator - This is a vector operation that is available for use.
 struct Operator {
@@ -112,7 +109,7 @@ struct Operator {
 
   Operator(unsigned short shufflemask, const char *name, unsigned opnum,
            unsigned cost = 1)
-    :  Name(name), ShuffleMask(shufflemask), OpNum(opnum),Cost(cost) {
+      : Name(name), ShuffleMask(shufflemask), OpNum(opnum), Cost(cost) {
     TheOperators.push_back(this);
   }
   ~Operator() {
@@ -120,9 +117,7 @@ struct Operator {
     TheOperators.pop_back();
   }
 
-  bool isOnlyLHSOperator() const {
-    return isOnlyLHSMask(ShuffleMask);
-  }
+  bool isOnlyLHSOperator() const { return isOnlyLHSMask(ShuffleMask); }
 
   const char *getName() const { return Name; }
   unsigned getCost() const { return Cost; }
@@ -131,17 +126,17 @@ struct Operator {
     // Extract the elements from LHSMask and RHSMask, as appropriate.
     unsigned Result = 0;
     for (unsigned i = 0; i != 4; ++i) {
-      unsigned SrcElt = (ShuffleMask >> (4*i)) & 0xF;
+      unsigned SrcElt = (ShuffleMask >> (4 * i)) & 0xF;
       unsigned ResElt;
       if (SrcElt < 4)
         ResElt = getMaskElt(LHSMask, SrcElt);
       else if (SrcElt < 8)
-        ResElt = getMaskElt(RHSMask, SrcElt-4);
+        ResElt = getMaskElt(RHSMask, SrcElt - 4);
       else {
         assert(SrcElt == 8 && "Bad src elt!");
         ResElt = 8;
       }
-      Result |= ResElt << (4*i);
+      Result |= ResElt << (4 * i);
     }
     return Result;
   }
@@ -174,7 +169,7 @@ static void PrintOperation(unsigned ValNo, unsigned short Vals[]) {
     PrintMask(ShufTab[ThisOp].Arg0, std::cerr);
   } else {
     // Figure out what tmp # it is.
-    for (unsigned i = 0; ; ++i)
+    for (unsigned i = 0;; ++i)
       if (Vals[i] == ShufTab[ThisOp].Arg0) {
         std::cerr << "t" << i;
         break;
@@ -186,14 +181,14 @@ static void PrintOperation(unsigned ValNo, unsigned short Vals[]) {
     std::cerr << ", lane " << ShufTab[ThisOp].Arg1;
   } else
 #endif
-  if (!ShufTab[Vals[ValNo]].Op->isOnlyLHSOperator()) {
+      if (!ShufTab[Vals[ValNo]].Op->isOnlyLHSOperator()) {
     std::cerr << ", ";
     if (ShufTab[ShufTab[ThisOp].Arg1].Cost == 0) {
       std::cerr << getZeroCostOpName(ShufTab[ThisOp].Arg1);
       PrintMask(ShufTab[ThisOp].Arg1, std::cerr);
     } else {
       // Figure out what tmp # it is.
-      for (unsigned i = 0; ; ++i)
+      for (unsigned i = 0;; ++i)
         if (Vals[i] == ShufTab[ThisOp].Arg1) {
           std::cerr << "t" << i;
           break;
@@ -212,7 +207,8 @@ static unsigned getNumEntered() {
 
 static void EvaluateOps(unsigned short Elt, unsigned short Vals[],
                         unsigned &NumVals) {
-  if (ShufTab[Elt].Cost == 0) return;
+  if (ShufTab[Elt].Cost == 0)
+    return;
 #ifdef GENERATE_NEON_INS
   if (ShufTab[Elt].Op == &InsOp) {
     EvaluateOps(ShufTab[Elt].Arg0, Vals, NumVals);
@@ -223,7 +219,8 @@ static void EvaluateOps(unsigned short Elt, unsigned short Vals[],
 
   // If this value has already been evaluated, it is free.  FIXME: match undefs.
   for (unsigned i = 0, e = NumVals; i != e; ++i)
-    if (Vals[i] == Elt) return;
+    if (Vals[i] == Elt)
+      return;
 
   // Otherwise, get the operands of the value, then add it.
   unsigned Arg0 = ShufTab[Elt].Arg0, Arg1 = ShufTab[Elt].Arg1;
@@ -234,7 +231,6 @@ static void EvaluateOps(unsigned short Elt, unsigned short Vals[],
 
   Vals[NumVals++] = Elt;
 }
-
 
 int main() {
   // Seed the table with accesses to the LHS and RHS.
@@ -260,7 +256,8 @@ int main() {
     // have the cheapest alternative that they match.
     unsigned MaxCost = ShufTab[0].Cost;
     for (unsigned i = 1; i != 0x8889; ++i) {
-      if (!isValidMask(i)) continue;
+      if (!isValidMask(i))
+        continue;
       if (ShufTab[i].Cost > MaxCost)
         MaxCost = ShufTab[i].Cost;
 
@@ -291,7 +288,7 @@ int main() {
         else
           abort();
 
-        unsigned MinVal  = i;
+        unsigned MinVal = i;
         unsigned MinCost = ShufTab[i].Cost;
 
         // Scan the 8 entries.
@@ -349,8 +346,10 @@ int main() {
     }
 
     for (unsigned LHS = 0; LHS != 0x8889; ++LHS) {
-      if (!isValidMask(LHS)) continue;
-      if (ShufTab[LHS].Cost > 1000) continue;
+      if (!isValidMask(LHS))
+        continue;
+      if (ShufTab[LHS].Cost > 1000)
+        continue;
 
       // If nothing involving this operand could possibly be cheaper than what
       // we already have, don't consider it.
@@ -378,17 +377,19 @@ int main() {
 
         // If this is a two input instruction, include the op(x,y) cases.  If
         // this is a one input instruction, skip this.
-        if (Op->isOnlyLHSOperator()) continue;
+        if (Op->isOnlyLHSOperator())
+          continue;
 
         for (unsigned RHS = 0; RHS != 0x8889; ++RHS) {
-          if (!isValidMask(RHS)) continue;
-          if (ShufTab[RHS].Cost > 1000) continue;
+          if (!isValidMask(RHS))
+            continue;
+          if (ShufTab[RHS].Cost > 1000)
+            continue;
 
           // If nothing involving this operand could possibly be cheaper than
           // what we already have, don't consider it.
           if (ShufTab[RHS].Cost + 1 >= MaxCost)
             continue;
-
 
           // Evaluate op(LHS,RHS)
           unsigned ResultMask = Op->getTransformedMask(LHS, RHS);
@@ -421,11 +422,12 @@ int main() {
   std::cerr << "Finished Table has " << getNumEntered()
             << " entries established.\n";
 
-  unsigned CostArray[10] = { 0 };
+  unsigned CostArray[10] = {0};
 
   // Compute a cost histogram.
   for (unsigned i = 0; i != 65536; ++i) {
-    if (!isValidMask(i)) continue;
+    if (!isValidMask(i))
+      continue;
     if (ShufTab[i].Cost > 9)
       ++CostArray[9];
     else
@@ -438,19 +440,21 @@ int main() {
   if (CostArray[9])
     std::cout << "// " << CostArray[9] << " entries have higher cost!\n";
 
-
   // Build up the table to emit.
   std::cout << "\n// This table is 6561*4 = 26244 bytes in size.\n";
   std::cout << "static const unsigned PerfectShuffleTable[6561+1] = {\n";
 
   for (unsigned i = 0; i != 0x8889; ++i) {
-    if (!isValidMask(i)) continue;
+    if (!isValidMask(i))
+      continue;
 
     // CostSat - The cost of this operation saturated to two bits.
     unsigned CostSat = ShufTab[i].Cost;
-    if (CostSat > 4) CostSat = 4;
-    if (CostSat == 0) CostSat = 1;
-    --CostSat;  // Cost is now between 0-3.
+    if (CostSat > 4)
+      CostSat = 4;
+    if (CostSat == 0)
+      CostSat = 1;
+    --CostSat; // Cost is now between 0-3.
 
     unsigned OpNum = ShufTab[i].Op ? ShufTab[i].Op->OpNum : 0;
     assert(OpNum < 16 && "Too few bits to encode operation!");
@@ -494,7 +498,8 @@ int main() {
   if (false) {
     // Print out the table.
     for (unsigned i = 0; i != 0x8889; ++i) {
-      if (!isValidMask(i)) continue;
+      if (!isValidMask(i))
+        continue;
       if (ShufTab[i].Cost < 1000) {
         PrintMask(i, std::cerr);
         std::cerr << " - Cost " << ShufTab[i].Cost << " - ";
@@ -511,7 +516,6 @@ int main() {
   }
 }
 
-
 #ifdef GENERATE_ALTIVEC
 
 ///===---------------------------------------------------------------------===//
@@ -521,7 +525,7 @@ int main() {
 
 // Note that the opcode numbers here must match those in the PPC backend.
 enum {
-  OP_COPY = 0,   // Copy, used for things like <u,u,u,3> to say it is <0,1,2,3>
+  OP_COPY = 0, // Copy, used for things like <u,u,u,3> to say it is <0,1,2,3>
   OP_VMRGHW,
   OP_VMRGLW,
   OP_VSPLTISW0,
@@ -541,10 +545,9 @@ struct vmrglw : public Operator {
   vmrglw() : Operator(0x2637, "vmrglw", OP_VMRGLW) {}
 } the_vmrglw;
 
-template<unsigned Elt>
-struct vspltisw : public Operator {
+template <unsigned Elt> struct vspltisw : public Operator {
   vspltisw(const char *N, unsigned Opc)
-    : Operator(MakeMask(Elt, Elt, Elt, Elt), N, Opc) {}
+      : Operator(MakeMask(Elt, Elt, Elt, Elt), N, Opc) {}
 };
 
 vspltisw<0> the_vspltisw0("vspltisw0", OP_VSPLTISW0);
@@ -552,22 +555,21 @@ vspltisw<1> the_vspltisw1("vspltisw1", OP_VSPLTISW1);
 vspltisw<2> the_vspltisw2("vspltisw2", OP_VSPLTISW2);
 vspltisw<3> the_vspltisw3("vspltisw3", OP_VSPLTISW3);
 
-template<unsigned N>
-struct vsldoi : public Operator {
+template <unsigned N> struct vsldoi : public Operator {
   vsldoi(const char *Name, unsigned Opc)
-    : Operator(MakeMask(N&7, (N+1)&7, (N+2)&7, (N+3)&7), Name, Opc) {
-  }
+      : Operator(MakeMask(N & 7, (N + 1) & 7, (N + 2) & 7, (N + 3) & 7), Name,
+                 Opc) {}
 };
 
-vsldoi<1> the_vsldoi1("vsldoi4" , OP_VSLDOI4);
-vsldoi<2> the_vsldoi2("vsldoi8" , OP_VSLDOI8);
+vsldoi<1> the_vsldoi1("vsldoi4", OP_VSLDOI4);
+vsldoi<2> the_vsldoi2("vsldoi8", OP_VSLDOI8);
 vsldoi<3> the_vsldoi3("vsldoi12", OP_VSLDOI12);
 
 #endif
 
 #ifdef GENERATE_NEON
 enum {
-  OP_COPY = 0,   // Copy, used for things like <u,u,u,3> to say it is <0,1,2,3>
+  OP_COPY = 0, // Copy, used for things like <u,u,u,3> to say it is <0,1,2,3>
   OP_VREV,
   OP_VDUP0,
   OP_VDUP1,
@@ -588,10 +590,9 @@ struct vrev : public Operator {
   vrev() : Operator(0x1032, "vrev", OP_VREV) {}
 } the_vrev;
 
-template<unsigned Elt>
-struct vdup : public Operator {
+template <unsigned Elt> struct vdup : public Operator {
   vdup(const char *N, unsigned Opc)
-    : Operator(MakeMask(Elt, Elt, Elt, Elt), N, Opc) {}
+      : Operator(MakeMask(Elt, Elt, Elt, Elt), N, Opc) {}
 };
 
 vdup<0> the_vdup0("vdup0", OP_VDUP0);
@@ -599,11 +600,10 @@ vdup<1> the_vdup1("vdup1", OP_VDUP1);
 vdup<2> the_vdup2("vdup2", OP_VDUP2);
 vdup<3> the_vdup3("vdup3", OP_VDUP3);
 
-template<unsigned N>
-struct vext : public Operator {
+template <unsigned N> struct vext : public Operator {
   vext(const char *Name, unsigned Opc)
-    : Operator(MakeMask(N&7, (N+1)&7, (N+2)&7, (N+3)&7), Name, Opc) {
-  }
+      : Operator(MakeMask(N & 7, (N + 1) & 7, (N + 2) & 7, (N + 3) & 7), Name,
+                 Opc) {}
 };
 
 vext<1> the_vext1("vext1", OP_VEXT1);

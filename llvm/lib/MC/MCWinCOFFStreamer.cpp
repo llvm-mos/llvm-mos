@@ -172,14 +172,17 @@ bool MCWinCOFFStreamer::emitSymbolAttribute(MCSymbol *S,
   getAssembler().registerSymbol(*Symbol);
 
   switch (Attribute) {
-  default: return false;
+  default:
+    return false;
   case MCSA_WeakReference:
   case MCSA_Weak:
-    Symbol->setWeakExternalCharacteristics(COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS);
+    Symbol->setWeakExternalCharacteristics(
+        COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS);
     Symbol->setExternal(true);
     break;
   case MCSA_WeakAntiDep:
-    Symbol->setWeakExternalCharacteristics(COFF::IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY);
+    Symbol->setWeakExternalCharacteristics(
+        COFF::IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY);
     Symbol->setExternal(true);
     Symbol->setIsWeakExternal(true);
     break;
@@ -211,8 +214,7 @@ void MCWinCOFFStreamer::emitCOFFSymbolStorageClass(int StorageClass) {
   }
 
   if (StorageClass & ~COFF::SSC_Invalid) {
-    Error("storage class value '" + Twine(StorageClass) +
-               "' out of range");
+    Error("storage class value '" + Twine(StorageClass) + "' out of range");
     return;
   }
 

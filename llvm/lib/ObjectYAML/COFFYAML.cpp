@@ -42,9 +42,8 @@ void ScalarEnumerationTraits<COFFYAML::COMDATType>::enumeration(
   ECase(IMAGE_COMDAT_SELECT_NEWEST);
 }
 
-void
-ScalarEnumerationTraits<COFFYAML::WeakExternalCharacteristics>::enumeration(
-    IO &IO, COFFYAML::WeakExternalCharacteristics &Value) {
+void ScalarEnumerationTraits<COFFYAML::WeakExternalCharacteristics>::
+    enumeration(IO &IO, COFFYAML::WeakExternalCharacteristics &Value) {
   IO.enumCase(Value, "0", 0);
   ECase(IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY);
   ECase(IMAGE_WEAK_EXTERN_SEARCH_LIBRARY);
@@ -329,8 +328,7 @@ void ScalarBitSetTraits<COFF::DLLCharacteristics>::bitset(
 namespace {
 
 struct NSectionSelectionType {
-  NSectionSelectionType(IO &)
-      : SelectionType(COFFYAML::COMDATType(0)) {}
+  NSectionSelectionType(IO &) : SelectionType(COFFYAML::COMDATType(0)) {}
   NSectionSelectionType(IO &, uint8_t C)
       : SelectionType(COFFYAML::COMDATType(C)) {}
 
@@ -362,10 +360,8 @@ struct NSectionCharacteristics {
 };
 
 struct NAuxTokenType {
-  NAuxTokenType(IO &)
-      : AuxType(COFFYAML::AuxSymbolType(0)) {}
-  NAuxTokenType(IO &, uint8_t C)
-      : AuxType(COFFYAML::AuxSymbolType(C)) {}
+  NAuxTokenType(IO &) : AuxType(COFFYAML::AuxSymbolType(0)) {}
+  NAuxTokenType(IO &, uint8_t C) : AuxType(COFFYAML::AuxSymbolType(C)) {}
 
   uint32_t denormalize(IO &) { return AuxType; }
 
@@ -400,8 +396,7 @@ struct NHeaderCharacteristics {
   COFF::Characteristics Characteristics;
 };
 
-template <typename RelocType>
-struct NType {
+template <typename RelocType> struct NType {
   NType(IO &) : Type(RelocType(0)) {}
   NType(IO &, uint16_t T) : Type(RelocType(T)) {}
 
@@ -501,7 +496,8 @@ void MappingTraits<COFFYAML::PEHeader>::mapping(IO &IO,
   IO.mapOptional("ImportTable", PH.DataDirectories[COFF::IMPORT_TABLE]);
   IO.mapOptional("ResourceTable", PH.DataDirectories[COFF::RESOURCE_TABLE]);
   IO.mapOptional("ExceptionTable", PH.DataDirectories[COFF::EXCEPTION_TABLE]);
-  IO.mapOptional("CertificateTable", PH.DataDirectories[COFF::CERTIFICATE_TABLE]);
+  IO.mapOptional("CertificateTable",
+                 PH.DataDirectories[COFF::CERTIFICATE_TABLE]);
   IO.mapOptional("BaseRelocationTable",
                  PH.DataDirectories[COFF::BASE_RELOCATION_TABLE]);
   IO.mapOptional("Debug", PH.DataDirectories[COFF::DEBUG_DIRECTORY]);
@@ -552,8 +548,7 @@ void MappingTraits<COFF::AuxiliaryWeakExternal>::mapping(
 
 void MappingTraits<COFF::AuxiliarySectionDefinition>::mapping(
     IO &IO, COFF::AuxiliarySectionDefinition &ASD) {
-  MappingNormalization<NSectionSelectionType, uint8_t> NSST(
-      IO, ASD.Selection);
+  MappingNormalization<NSectionSelectionType, uint8_t> NSST(IO, ASD.Selection);
 
   IO.mapRequired("Length", ASD.Length);
   IO.mapRequired("NumberOfRelocations", ASD.NumberOfRelocations);

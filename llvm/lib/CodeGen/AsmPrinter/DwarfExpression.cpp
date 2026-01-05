@@ -785,7 +785,7 @@ void DwarfExpression::emitLegacySExt(unsigned FromBits) {
 void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
   // Heuristic to decide the most efficient encoding.
   // A ULEB can encode 7 1-bits per byte.
-  if (FromBits / 7 < 1+1+1+1+1) {
+  if (FromBits / 7 < 1 + 1 + 1 + 1 + 1) {
     // (X & (1 << FromBits - 1))
     emitOp(dwarf::DW_OP_constu);
     emitUnsigned((1ULL << FromBits) - 1);
@@ -807,7 +807,7 @@ void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
 
 void DwarfExpression::addWasmLocation(unsigned Index, uint64_t Offset) {
   emitOp(dwarf::DW_OP_WASM_location);
-  emitUnsigned(Index == 4/*TI_LOCAL_INDIRECT*/ ? 0/*TI_LOCAL*/ : Index);
+  emitUnsigned(Index == 4 /*TI_LOCAL_INDIRECT*/ ? 0 /*TI_LOCAL*/ : Index);
   emitUnsigned(Offset);
   if (Index == 4 /*TI_LOCAL_INDIRECT*/) {
     assert(LocationKind == Unknown);

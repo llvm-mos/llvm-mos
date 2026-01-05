@@ -20,7 +20,7 @@
 
 namespace llvm {
 namespace sys {
-  // True if Valgrind is controlling this process.
+// True if Valgrind is controlling this process.
 LLVM_ABI bool RunningOnValgrind();
 
 // Discard valgrind's translation of code in the range [Addr .. Addr + Len).

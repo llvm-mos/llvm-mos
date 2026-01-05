@@ -78,9 +78,9 @@ public:
   /// otherwise easily derivable from the IR text.
   ///
   enum CommentFlag {
-    ReloadReuse = 0x1,    // higher bits are reserved for target dep comments.
+    ReloadReuse = 0x1, // higher bits are reserved for target dep comments.
     NoSchedComment = 0x2,
-    TAsmComments = 0x4    // Target Asm comments should start from this value.
+    TAsmComments = 0x4 // Target Asm comments should start from this value.
   };
 
   enum MIFlag {
@@ -128,11 +128,11 @@ public:
   };
 
 private:
-  const MCInstrDesc *MCID;              // Instruction descriptor.
-  MachineBasicBlock *Parent = nullptr;  // Pointer to the owning basic block.
+  const MCInstrDesc *MCID;             // Instruction descriptor.
+  MachineBasicBlock *Parent = nullptr; // Pointer to the owning basic block.
 
   // Operands are allocated by an ArrayRecycler.
-  MachineOperand *Operands = nullptr;   // Pointer to the first operand.
+  MachineOperand *Operands = nullptr; // Pointer to the first operand.
 
 #define LLVM_MI_NUMOPERANDS_BITS 24
 #define LLVM_MI_FLAGS_BITS 24
@@ -144,7 +144,7 @@ private:
   // OperandCapacity has uint8_t size, so it should be next to NumOperands
   // to properly pack.
   using OperandCapacity = ArrayRecycler<MachineOperand>::Capacity;
-  OperandCapacity CapOperands;          // Capacity of the Operands array.
+  OperandCapacity CapOperands; // Capacity of the Operands array.
 
   /// Various bits of additional information about the machine instruction.
   uint32_t Flags : LLVM_MI_FLAGS_BITS;
@@ -225,9 +225,8 @@ private:
     }
 
     MDNode *getPCSections() const {
-      return HasPCSections
-                 ? getTrailingObjects<MDNode *>()[HasHeapAllocMarker]
-                 : nullptr;
+      return HasPCSections ? getTrailingObjects<MDNode *>()[HasHeapAllocMarker]
+                           : nullptr;
     }
 
     uint32_t getCFIType() const {
@@ -355,8 +354,8 @@ public:
   // Use MachineFunction::DeleteMachineInstr() instead.
   ~MachineInstr() = delete;
 
-  const MachineBasicBlock* getParent() const { return Parent; }
-  MachineBasicBlock* getParent() { return Parent; }
+  const MachineBasicBlock *getParent() const { return Parent; }
+  MachineBasicBlock *getParent() { return Parent; }
 
   /// Move the instruction before \p MovePos.
   LLVM_ABI void moveBefore(MachineInstr *MovePos);
@@ -400,9 +399,7 @@ public:
   }
 
   /// Return the MI flags bitvector.
-  uint32_t getFlags() const {
-    return Flags;
-  }
+  uint32_t getFlags() const { return Flags; }
 
   /// Return whether an MI flag is set.
   bool getFlag(MIFlag Flag) const {
@@ -474,15 +471,11 @@ public:
   ///   ----------------
   /// The first instruction has the special opcode "BUNDLE". It's not "inside"
   /// a bundle, but the next three MIs are.
-  bool isInsideBundle() const {
-    return getFlag(BundledPred);
-  }
+  bool isInsideBundle() const { return getFlag(BundledPred); }
 
   /// Return true if this instruction part of a bundle. This is true
   /// if either itself or its following instruction is marked "InsideBundle".
-  bool isBundled() const {
-    return isBundledWithPred() || isBundledWithSucc();
-  }
+  bool isBundled() const { return isBundledWithPred() || isBundledWithSucc(); }
 
   /// Return true if this instruction is part of a bundle, and it is not the
   /// first instruction in the bundle.
@@ -881,9 +874,9 @@ public:
   /// queries but they are bundle aware.
 
   enum QueryType {
-    IgnoreBundle,    // Ignore bundles
-    AnyInBundle,     // Return true if any instruction in bundle has property
-    AllInBundle      // Return true if all instructions in bundle have property
+    IgnoreBundle, // Ignore bundles
+    AnyInBundle,  // Return true if any instruction in bundle has property
+    AllInBundle   // Return true if all instructions in bundle have property
   };
 
   /// Return true if the instruction (or in the case of a bundle,
@@ -1009,8 +1002,8 @@ public:
   /// values.   There are various methods in TargetInstrInfo that can be used to
   /// control and modify the predicate in this instruction.
   bool isPredicable(QueryType Type = AllInBundle) const {
-    // If it's a bundle than all bundled instructions must be predicable for this
-    // to return true.
+    // If it's a bundle than all bundled instructions must be predicable for
+    // this to return true.
     return hasProperty(MCID::Predicable, Type);
   }
 
@@ -1268,10 +1261,10 @@ public:
   }
 
   enum MICheckType {
-    CheckDefs,      // Check all operands for equality
-    CheckKillDead,  // Check all operands including kill / dead markers
-    IgnoreDefs,     // Ignore all definitions
-    IgnoreVRegDefs  // Ignore virtual register definitions
+    CheckDefs,     // Check all operands for equality
+    CheckKillDead, // Check all operands including kill / dead markers
+    IgnoreDefs,    // Ignore all definitions
+    IgnoreVRegDefs // Ignore virtual register definitions
   };
 
   /// Return true if this instruction is identical to \p Other.
@@ -1398,7 +1391,9 @@ public:
            getOpcode() == TargetOpcode::G_PHI;
   }
   bool isKill() const { return getOpcode() == TargetOpcode::KILL; }
-  bool isImplicitDef() const { return getOpcode()==TargetOpcode::IMPLICIT_DEF; }
+  bool isImplicitDef() const {
+    return getOpcode() == TargetOpcode::IMPLICIT_DEF;
+  }
   bool isInlineAsm() const {
     return getOpcode() == TargetOpcode::INLINEASM ||
            getOpcode() == TargetOpcode::INLINEASM_BR;
@@ -1423,13 +1418,9 @@ public:
     return getOpcode() == TargetOpcode::REG_SEQUENCE;
   }
 
-  bool isBundle() const {
-    return getOpcode() == TargetOpcode::BUNDLE;
-  }
+  bool isBundle() const { return getOpcode() == TargetOpcode::BUNDLE; }
 
-  bool isCopy() const {
-    return getOpcode() == TargetOpcode::COPY;
-  }
+  bool isCopy() const { return getOpcode() == TargetOpcode::COPY; }
 
   bool isFullCopy() const {
     return isCopy() && !getOperand(0).getSubReg() && !getOperand(1).getSubReg();
@@ -1443,14 +1434,12 @@ public:
 
   /// Return true if the instruction behaves like a copy.
   /// This does not include native copy instructions.
-  bool isCopyLike() const {
-    return isCopy() || isSubregToReg();
-  }
+  bool isCopyLike() const { return isCopy() || isSubregToReg(); }
 
   /// Return true is the instruction is an identity copy.
   bool isIdentityCopy() const {
     return isCopy() && getOperand(0).getReg() == getOperand(1).getReg() &&
-      getOperand(0).getSubReg() == getOperand(1).getSubReg();
+           getOperand(0).getSubReg() == getOperand(1).getSubReg();
   }
 
   /// Return true if this is a transient instruction that is either very likely
@@ -2066,12 +2055,12 @@ private:
   /// Unlink all of the register operands in this instruction from their
   /// respective use lists.  This requires that the operands already be on their
   /// use lists.
-  void removeRegOperandsFromUseLists(MachineRegisterInfo&);
+  void removeRegOperandsFromUseLists(MachineRegisterInfo &);
 
   /// Add all of the register operands in this instruction from their
   /// respective use lists.  This requires that the operands not be on their
   /// use lists yet.
-  void addRegOperandsToUseLists(MachineRegisterInfo&);
+  void addRegOperandsToUseLists(MachineRegisterInfo &);
 
   /// Slow path for hasProperty when we're dealing with a bundle.
   LLVM_ABI bool hasPropertyInBundle(uint64_t Mask, QueryType Type) const;
@@ -2095,19 +2084,17 @@ private:
 /// instruction rather than by pointer value.
 /// The hashing and equality testing functions ignore definitions so this is
 /// useful for CSE, etc.
-struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr*> {
-  static inline MachineInstr *getEmptyKey() {
-    return nullptr;
-  }
+struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr *> {
+  static inline MachineInstr *getEmptyKey() { return nullptr; }
 
   static inline MachineInstr *getTombstoneKey() {
-    return reinterpret_cast<MachineInstr*>(-1);
+    return reinterpret_cast<MachineInstr *>(-1);
   }
 
   LLVM_ABI static unsigned getHashValue(const MachineInstr *const &MI);
 
-  static bool isEqual(const MachineInstr* const &LHS,
-                      const MachineInstr* const &RHS) {
+  static bool isEqual(const MachineInstr *const &LHS,
+                      const MachineInstr *const &RHS) {
     if (RHS == getEmptyKey() || RHS == getTombstoneKey() ||
         LHS == getEmptyKey() || LHS == getTombstoneKey())
       return LHS == RHS;
@@ -2118,7 +2105,7 @@ struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr*> {
 //===----------------------------------------------------------------------===//
 // Debugging Support
 
-inline raw_ostream& operator<<(raw_ostream &OS, const MachineInstr &MI) {
+inline raw_ostream &operator<<(raw_ostream &OS, const MachineInstr &MI) {
   MI.print(OS);
   return OS;
 }

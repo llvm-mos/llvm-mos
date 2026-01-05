@@ -629,9 +629,10 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
 }
 
 void SIWholeQuadMode::propagateInstruction(MachineInstr &MI,
-                                           std::vector<WorkItem>& Worklist) {
+                                           std::vector<WorkItem> &Worklist) {
   MachineBasicBlock *MBB = MI.getParent();
-  InstrInfo II = Instructions[&MI]; // take a copy to prevent dangling references
+  InstrInfo II =
+      Instructions[&MI]; // take a copy to prevent dangling references
   BlockInfo &BI = Blocks[MBB];
 
   // Control flow-type instructions and stores to temporary memory that are
@@ -678,7 +679,7 @@ void SIWholeQuadMode::propagateInstruction(MachineInstr &MI,
 }
 
 void SIWholeQuadMode::propagateBlock(MachineBasicBlock &MBB,
-                                     std::vector<WorkItem>& Worklist) {
+                                     std::vector<WorkItem> &Worklist) {
   BlockInfo BI = Blocks[&MBB]; // Make a copy to prevent dangling references.
 
   // Propagate through instructions

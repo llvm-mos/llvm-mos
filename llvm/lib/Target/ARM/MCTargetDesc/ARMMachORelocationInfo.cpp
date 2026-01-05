@@ -22,7 +22,7 @@ public:
 
   const MCExpr *createExprForCAPIVariantKind(const MCExpr *SubExpr,
                                              unsigned VariantKind) override {
-    switch(VariantKind) {
+    switch (VariantKind) {
     case LLVMDisassembler_VariantKind_ARM_HI16:
       return ARM::createUpper16(SubExpr, Ctx);
     case LLVMDisassembler_VariantKind_ARM_LO16:

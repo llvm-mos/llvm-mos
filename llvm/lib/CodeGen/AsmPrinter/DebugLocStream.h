@@ -55,16 +55,12 @@ private:
   bool GenerateComments;
 
 public:
-  DebugLocStream(bool GenerateComments) : GenerateComments(GenerateComments) { }
+  DebugLocStream(bool GenerateComments) : GenerateComments(GenerateComments) {}
   size_t getNumLists() const { return Lists.size(); }
   const List &getList(size_t LI) const { return Lists[LI]; }
   ArrayRef<List> getLists() const { return Lists; }
-  MCSymbol *getSym() const {
-    return Sym;
-  }
-  void setSym(MCSymbol *Sym) {
-    this->Sym = Sym;
-  }
+  MCSymbol *getSym() const { return Sym; }
+  void setSym(MCSymbol *Sym) { this->Sym = Sym; }
 
   class ListBuilder;
   class EntryBuilder;
@@ -164,9 +160,7 @@ public:
       : Locs(Locs), Asm(Asm), V(V), ListIndex(Locs.startList(&CU)),
         TagOffset(std::nullopt) {}
 
-  void setTagOffset(uint8_t TO) {
-    TagOffset = TO;
-  }
+  void setTagOffset(uint8_t TO) { TagOffset = TO; }
 
   /// Finalize the list.
   ///

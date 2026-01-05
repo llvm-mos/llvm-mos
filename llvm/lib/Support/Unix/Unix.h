@@ -1,4 +1,5 @@
-//===- llvm/Support/Unix/Unix.h - Common Unix Include File -------*- C++ -*-===//
+//===- llvm/Support/Unix/Unix.h - Common Unix Include File -------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,7 +41,7 @@
 
 #include <dlfcn.h>
 
-# include <fcntl.h>
+#include <fcntl.h>
 
 /// This function builds an error message into \p ErrMsg using the \p prefix
 /// string and the Unix error number given by \p errnum. If errnum is -1, the
@@ -49,8 +50,8 @@
 ///
 /// If the error number can be converted to a string, it will be
 /// separated from prefix by ": ".
-static inline bool MakeErrMsg(
-  std::string* ErrMsg, const std::string& prefix, int errnum = -1) {
+static inline bool MakeErrMsg(std::string *ErrMsg, const std::string &prefix,
+                              int errnum = -1) {
   if (!ErrMsg)
     return true;
   if (errnum == -1)

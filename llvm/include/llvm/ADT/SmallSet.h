@@ -78,7 +78,7 @@ public:
       new (&SetIter) SetIterTy(std::move(Other.SetIter));
   }
 
-  SmallSetIterator& operator=(const SmallSetIterator& Other) {
+  SmallSetIterator &operator=(const SmallSetIterator &Other) {
     // Call destructor for SetIter, so it gets properly destroyed if it is
     // not trivially destructible in case we are setting VecIter.
     if (!IsSmall)
@@ -92,7 +92,7 @@ public:
     return *this;
   }
 
-  SmallSetIterator& operator=(SmallSetIterator&& Other) {
+  SmallSetIterator &operator=(SmallSetIterator &&Other) {
     // Call destructor for SetIter, so it gets properly destroyed if it is
     // not trivially destructible in case we are setting VecIter.
     if (!IsSmall)
@@ -129,8 +129,7 @@ public:
 /// when the set is small (less than N).  In this case, the set can be
 /// maintained with no mallocs.  If the set gets large, we expand to using an
 /// std::set to maintain reasonable lookup times.
-template <typename T, unsigned N, typename C = std::less<T>>
-class SmallSet {
+template <typename T, unsigned N, typename C = std::less<T>> class SmallSet {
   /// Use a SmallVector to hold the elements here (even though it will never
   /// reach its 'large' stage) to avoid calling the default ctors of elements
   /// we will never use.
@@ -186,8 +185,7 @@ public:
     return insertImpl(std::move(V));
   }
 
-  template <typename IterT>
-  void insert(IterT I, IterT E) {
+  template <typename IterT> void insert(IterT I, IterT E) {
     for (; I != E; ++I)
       insert(*I);
   }

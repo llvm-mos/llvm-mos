@@ -19,11 +19,7 @@
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
-enum AsmWriterVariantTy {
-  Default = -1,
-  Generic = 0,
-  Apple = 1
-};
+enum AsmWriterVariantTy { Default = -1, Generic = 0, Apple = 1 };
 
 static cl::opt<AsmWriterVariantTy> AsmWriterVariant(
     "aarch64-neon-syntax", cl::init(Default),

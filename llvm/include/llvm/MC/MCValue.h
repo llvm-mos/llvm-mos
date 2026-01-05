@@ -71,7 +71,6 @@ public:
     R.Specifier = 0;
     return R;
   }
-
 };
 
 } // end namespace llvm

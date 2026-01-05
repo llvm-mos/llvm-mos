@@ -67,8 +67,8 @@ MCELFStreamer &MSP430TargetELFStreamer::getStreamer() {
   return static_cast<MCELFStreamer &>(Streamer);
 }
 
-MCTargetStreamer *
-createMSP430ObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+MCTargetStreamer *createMSP430ObjectTargetStreamer(MCStreamer &S,
+                                                   const MCSubtargetInfo &STI) {
   const Triple &TT = STI.getTargetTriple();
   if (TT.isOSBinFormatELF())
     return new MSP430TargetELFStreamer(S, STI);

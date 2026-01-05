@@ -51,33 +51,31 @@ static cl::opt<bool> RDFTrackReserved("hexagon-rdf-track-reserved", cl::Hidden);
 
 namespace {
 
-  class HexagonRDFOpt : public MachineFunctionPass {
-  public:
-    HexagonRDFOpt() : MachineFunctionPass(ID) {}
+class HexagonRDFOpt : public MachineFunctionPass {
+public:
+  HexagonRDFOpt() : MachineFunctionPass(ID) {}
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addRequired<MachineDominanceFrontier>();
-      AU.setPreservesAll();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineDominanceFrontier>();
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
-    StringRef getPassName() const override {
-      return "Hexagon RDF optimizations";
-    }
+  StringRef getPassName() const override { return "Hexagon RDF optimizations"; }
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
-    }
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
 
-    static char ID;
+  static char ID;
 
-  private:
-    MachineDominatorTree *MDT;
-    MachineRegisterInfo *MRI;
-  };
+private:
+  MachineDominatorTree *MDT;
+  MachineRegisterInfo *MRI;
+};
 
 struct HexagonCP : public CopyPropagation {
   HexagonCP(DataFlowGraph &G) : CopyPropagation(G) {}
@@ -87,10 +85,10 @@ struct HexagonCP : public CopyPropagation {
 
 struct HexagonDCE : public DeadCodeElimination {
   HexagonDCE(DataFlowGraph &G, MachineRegisterInfo &MRI)
-    : DeadCodeElimination(G, MRI) {}
+      : DeadCodeElimination(G, MRI) {}
 
-  bool rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove);
-  void removeOperand(NodeAddr<InstrNode*> IA, unsigned OpNum);
+  bool rewrite(NodeAddr<InstrNode *> IA, SetVector<NodeId> &Remove);
+  void removeOperand(NodeAddr<InstrNode *> IA, unsigned OpNum);
 
   bool run();
 };
@@ -100,44 +98,44 @@ struct HexagonDCE : public DeadCodeElimination {
 char HexagonRDFOpt::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonRDFOpt, "hexagon-rdf-opt",
-      "Hexagon RDF optimizations", false, false)
+                      "Hexagon RDF optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
 INITIALIZE_PASS_END(HexagonRDFOpt, "hexagon-rdf-opt",
-      "Hexagon RDF optimizations", false, false)
+                    "Hexagon RDF optimizations", false, false)
 
 bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
-  auto mapRegs = [&EM] (RegisterRef DstR, RegisterRef SrcR) -> void {
+  auto mapRegs = [&EM](RegisterRef DstR, RegisterRef SrcR) -> void {
     EM.insert(std::make_pair(DstR, SrcR));
   };
 
   DataFlowGraph &DFG = getDFG();
   unsigned Opc = MI->getOpcode();
   switch (Opc) {
-    case Hexagon::A2_combinew: {
-      const MachineOperand &DstOp = MI->getOperand(0);
-      const MachineOperand &HiOp = MI->getOperand(1);
-      const MachineOperand &LoOp = MI->getOperand(2);
-      assert(DstOp.getSubReg() == 0 && "Unexpected subregister");
-      mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::isub_hi),
-              DFG.makeRegRef(HiOp.getReg(),  HiOp.getSubReg()));
-      mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::isub_lo),
-              DFG.makeRegRef(LoOp.getReg(), LoOp.getSubReg()));
-      return true;
-    }
-    case Hexagon::A2_addi: {
-      const MachineOperand &A = MI->getOperand(2);
-      if (!A.isImm() || A.getImm() != 0)
-        return false;
-      [[fallthrough]];
-    }
-    case Hexagon::A2_tfr: {
-      const MachineOperand &DstOp = MI->getOperand(0);
-      const MachineOperand &SrcOp = MI->getOperand(1);
-      mapRegs(DFG.makeRegRef(DstOp.getReg(), DstOp.getSubReg()),
-              DFG.makeRegRef(SrcOp.getReg(), SrcOp.getSubReg()));
-      return true;
-    }
+  case Hexagon::A2_combinew: {
+    const MachineOperand &DstOp = MI->getOperand(0);
+    const MachineOperand &HiOp = MI->getOperand(1);
+    const MachineOperand &LoOp = MI->getOperand(2);
+    assert(DstOp.getSubReg() == 0 && "Unexpected subregister");
+    mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::isub_hi),
+            DFG.makeRegRef(HiOp.getReg(), HiOp.getSubReg()));
+    mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::isub_lo),
+            DFG.makeRegRef(LoOp.getReg(), LoOp.getSubReg()));
+    return true;
+  }
+  case Hexagon::A2_addi: {
+    const MachineOperand &A = MI->getOperand(2);
+    if (!A.isImm() || A.getImm() != 0)
+      return false;
+    [[fallthrough]];
+  }
+  case Hexagon::A2_tfr: {
+    const MachineOperand &DstOp = MI->getOperand(0);
+    const MachineOperand &SrcOp = MI->getOperand(1);
+    mapRegs(DFG.makeRegRef(DstOp.getReg(), DstOp.getSubReg()),
+            DFG.makeRegRef(SrcOp.getReg(), SrcOp.getSubReg()));
+    return true;
+  }
   }
 
   return CopyPropagation::interpretAsCopy(MI, EM);
@@ -157,10 +155,10 @@ bool HexagonDCE::run() {
   SetVector<NodeId> PartlyDead;
   DataFlowGraph &DFG = getDFG();
 
-  for (NodeAddr<BlockNode*> BA : DFG.getFunc().Addr->members(DFG)) {
+  for (NodeAddr<BlockNode *> BA : DFG.getFunc().Addr->members(DFG)) {
     for (auto TA : BA.Addr->members_if(DFG.IsCode<NodeAttrs::Stmt>, DFG)) {
-      NodeAddr<StmtNode*> SA = TA;
-      for (NodeAddr<RefNode*> RA : SA.Addr->members(DFG)) {
+      NodeAddr<StmtNode *> SA = TA;
+      for (NodeAddr<RefNode *> RA : SA.Addr->members(DFG)) {
         R2I.insert(std::make_pair(RA.Id, SA.Id));
         if (DFG.IsDef(RA) && DeadNodes.count(RA.Id))
           if (!DeadInstrs.count(SA.Id))
@@ -174,7 +172,7 @@ bool HexagonDCE::run() {
 
   bool Changed = false;
   for (NodeId N : PartlyDead) {
-    auto SA = DFG.addr<StmtNode*>(N);
+    auto SA = DFG.addr<StmtNode *>(N);
     if (trace())
       dbgs() << "Partly dead: " << *SA.Addr->getCode();
     Changed |= rewrite(SA, Remove);
@@ -183,76 +181,76 @@ bool HexagonDCE::run() {
   return erase(Remove) || Changed;
 }
 
-void HexagonDCE::removeOperand(NodeAddr<InstrNode*> IA, unsigned OpNum) {
-  MachineInstr *MI = NodeAddr<StmtNode*>(IA).Addr->getCode();
+void HexagonDCE::removeOperand(NodeAddr<InstrNode *> IA, unsigned OpNum) {
+  MachineInstr *MI = NodeAddr<StmtNode *>(IA).Addr->getCode();
 
-  auto getOpNum = [MI] (MachineOperand &Op) -> unsigned {
+  auto getOpNum = [MI](MachineOperand &Op) -> unsigned {
     for (unsigned i = 0, n = MI->getNumOperands(); i != n; ++i)
       if (&MI->getOperand(i) == &Op)
         return i;
     llvm_unreachable("Invalid operand");
   };
-  DenseMap<NodeId,unsigned> OpMap;
+  DenseMap<NodeId, unsigned> OpMap;
   DataFlowGraph &DFG = getDFG();
   NodeList Refs = IA.Addr->members(DFG);
-  for (NodeAddr<RefNode*> RA : Refs)
+  for (NodeAddr<RefNode *> RA : Refs)
     OpMap.insert(std::make_pair(RA.Id, getOpNum(RA.Addr->getOp())));
 
   MI->removeOperand(OpNum);
 
-  for (NodeAddr<RefNode*> RA : Refs) {
+  for (NodeAddr<RefNode *> RA : Refs) {
     unsigned N = OpMap[RA.Id];
     if (N < OpNum)
       RA.Addr->setRegRef(&MI->getOperand(N), DFG);
     else if (N > OpNum)
-      RA.Addr->setRegRef(&MI->getOperand(N-1), DFG);
+      RA.Addr->setRegRef(&MI->getOperand(N - 1), DFG);
   }
 }
 
-bool HexagonDCE::rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove) {
+bool HexagonDCE::rewrite(NodeAddr<InstrNode *> IA, SetVector<NodeId> &Remove) {
   if (!getDFG().IsCode<NodeAttrs::Stmt>(IA))
     return false;
   DataFlowGraph &DFG = getDFG();
-  MachineInstr &MI = *NodeAddr<StmtNode*>(IA).Addr->getCode();
-  auto &HII = static_cast<const HexagonInstrInfo&>(DFG.getTII());
+  MachineInstr &MI = *NodeAddr<StmtNode *>(IA).Addr->getCode();
+  auto &HII = static_cast<const HexagonInstrInfo &>(DFG.getTII());
   if (HII.getAddrMode(MI) != HexagonII::PostInc)
     return false;
   unsigned Opc = MI.getOpcode();
   unsigned OpNum, NewOpc;
   switch (Opc) {
-    case Hexagon::L2_loadri_pi:
-      NewOpc = Hexagon::L2_loadri_io;
-      OpNum = 1;
-      break;
-    case Hexagon::L2_loadrd_pi:
-      NewOpc = Hexagon::L2_loadrd_io;
-      OpNum = 1;
-      break;
-    case Hexagon::V6_vL32b_pi:
-      NewOpc = Hexagon::V6_vL32b_ai;
-      OpNum = 1;
-      break;
-    case Hexagon::S2_storeri_pi:
-      NewOpc = Hexagon::S2_storeri_io;
-      OpNum = 0;
-      break;
-    case Hexagon::S2_storerd_pi:
-      NewOpc = Hexagon::S2_storerd_io;
-      OpNum = 0;
-      break;
-    case Hexagon::V6_vS32b_pi:
-      NewOpc = Hexagon::V6_vS32b_ai;
-      OpNum = 0;
-      break;
-    default:
-      return false;
+  case Hexagon::L2_loadri_pi:
+    NewOpc = Hexagon::L2_loadri_io;
+    OpNum = 1;
+    break;
+  case Hexagon::L2_loadrd_pi:
+    NewOpc = Hexagon::L2_loadrd_io;
+    OpNum = 1;
+    break;
+  case Hexagon::V6_vL32b_pi:
+    NewOpc = Hexagon::V6_vL32b_ai;
+    OpNum = 1;
+    break;
+  case Hexagon::S2_storeri_pi:
+    NewOpc = Hexagon::S2_storeri_io;
+    OpNum = 0;
+    break;
+  case Hexagon::S2_storerd_pi:
+    NewOpc = Hexagon::S2_storerd_io;
+    OpNum = 0;
+    break;
+  case Hexagon::V6_vS32b_pi:
+    NewOpc = Hexagon::V6_vS32b_ai;
+    OpNum = 0;
+    break;
+  default:
+    return false;
   }
-  auto IsDead = [this] (NodeAddr<DefNode*> DA) -> bool {
+  auto IsDead = [this](NodeAddr<DefNode *> DA) -> bool {
     return getDeadNodes().count(DA.Id);
   };
   NodeList Defs;
   MachineOperand &Op = MI.getOperand(OpNum);
-  for (NodeAddr<DefNode*> DA : IA.Addr->members_if(DFG.IsDef, DFG)) {
+  for (NodeAddr<DefNode *> DA : IA.Addr->members_if(DFG.IsDef, DFG)) {
     if (&DA.Addr->getOp() != &Op)
       continue;
     Defs = DFG.getRelatedRefs(IA, DA);
@@ -268,7 +266,7 @@ bool HexagonDCE::rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove) {
   if (trace())
     dbgs() << "Rewriting: " << MI;
   MI.setDesc(HII.get(NewOpc));
-  MI.getOperand(OpNum+2).setImm(0);
+  MI.getOperand(OpNum + 2).setImm(0);
   removeOperand(IA, OpNum);
   if (trace())
     dbgs() << "       to: " << MI;
@@ -316,14 +314,14 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
 
   if (RDFDump)
     dbgs() << "Starting copy propagation on: " << MF.getName() << '\n'
-           << PrintNode<FuncNode*>(G.getFunc(), G) << '\n';
+           << PrintNode<FuncNode *>(G.getFunc(), G) << '\n';
   HexagonCP CP(G);
   CP.trace(RDFDump);
   Changed = CP.run();
 
   if (RDFDump)
     dbgs() << "Starting dead code elimination on: " << MF.getName() << '\n'
-           << PrintNode<FuncNode*>(G.getFunc(), G) << '\n';
+           << PrintNode<FuncNode *>(G.getFunc(), G) << '\n';
   HexagonDCE DCE(G, *MRI);
   DCE.trace(RDFDump);
   Changed |= DCE.run();
@@ -331,7 +329,7 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
   if (Changed) {
     if (RDFDump) {
       dbgs() << "Starting liveness recomputation on: " << MF.getName() << '\n'
-             << PrintNode<FuncNode*>(G.getFunc(), G) << '\n';
+             << PrintNode<FuncNode *>(G.getFunc(), G) << '\n';
     }
     Liveness LV(*MRI, G);
     LV.trace(RDFDump);
@@ -346,6 +344,4 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
 
-FunctionPass *llvm::createHexagonRDFOpt() {
-  return new HexagonRDFOpt();
-}
+FunctionPass *llvm::createHexagonRDFOpt() { return new HexagonRDFOpt(); }

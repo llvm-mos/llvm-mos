@@ -1431,8 +1431,7 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   const TargetRegisterClass *NewRC = CP.getNewRC();
   if (DstReg.isVirtual()) {
     const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
-    const TargetRegisterClass *CommonRC =
-      TRI->getCommonSubClass(DefRC, DstRC);
+    const TargetRegisterClass *CommonRC = TRI->getCommonSubClass(DefRC, DstRC);
     if (CommonRC != nullptr) {
       NewRC = CommonRC;
 
@@ -1444,15 +1443,16 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
       if (DstIdx != 0) {
         MachineOperand &DefMO = NewMI.getOperand(0);
         if (DefMO.getSubReg() == DstIdx) {
-          assert(SrcIdx == 0 && CP.isFlipped()
-                && "Shouldn't have SrcIdx+DstIdx at this point");
+          assert(SrcIdx == 0 && CP.isFlipped() &&
+                 "Shouldn't have SrcIdx+DstIdx at this point");
           if (CommonRC != nullptr) {
             // Instruction might contain "undef %0:subreg" as use operand:
             //   %0:subreg = instr op_1, ..., op_N, undef %0:subreg, op_N+2, ...
             //
             // Need to check all operands.
             for (MachineOperand &MO : NewMI.operands()) {
-              if (MO.isReg() && MO.getReg() == DstReg && MO.getSubReg() == DstIdx) {
+              if (MO.isReg() && MO.getReg() == DstReg &&
+                  MO.getSubReg() == DstIdx) {
                 MO.setSubReg(0);
               }
             }

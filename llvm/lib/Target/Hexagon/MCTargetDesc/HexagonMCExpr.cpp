@@ -50,9 +50,7 @@ void HexagonMCExpr::setMustNotExtend(bool Val) {
 bool HexagonMCExpr::mustNotExtend() const { return MustNotExtend; }
 
 bool HexagonMCExpr::s27_2_reloc() const { return S27_2_reloc; }
-void HexagonMCExpr::setS27_2_reloc(bool Val) {
-  S27_2_reloc = Val;
-}
+void HexagonMCExpr::setS27_2_reloc(bool Val) { S27_2_reloc = Val; }
 
 HexagonMCExpr::HexagonMCExpr(MCExpr const *Expr)
     : Expr(Expr), MustNotExtend(false), MustExtend(false), S27_2_reloc(false),
@@ -62,10 +60,6 @@ void HexagonMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   MAI->printExpr(OS, *Expr);
 }
 
-void HexagonMCExpr::setSignMismatch(bool Val) {
-  SignMismatch = Val;
-}
+void HexagonMCExpr::setSignMismatch(bool Val) { SignMismatch = Val; }
 
-bool HexagonMCExpr::signMismatch() const {
-  return SignMismatch;
-}
+bool HexagonMCExpr::signMismatch() const { return SignMismatch; }

@@ -13,7 +13,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_LIB_TARGET_MOS_MOSCALLGRAPHUTILS_H
 #define LLVM_LIB_TARGET_MOS_MOSCALLGRAPHUTILS_H
 

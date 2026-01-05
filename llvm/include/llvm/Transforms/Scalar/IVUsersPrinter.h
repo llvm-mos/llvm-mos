@@ -27,6 +27,6 @@ public:
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
   static bool isRequired() { return true; }
 };
-}
+} // namespace llvm
 
 #endif

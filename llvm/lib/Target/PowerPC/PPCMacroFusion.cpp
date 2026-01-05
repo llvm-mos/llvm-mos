@@ -26,11 +26,11 @@ public:
   typedef SmallDenseSet<unsigned> FusionOpSet;
 
   enum FusionKind {
-  #define FUSION_KIND(KIND) FK_##KIND
-  #define FUSION_FEATURE(KIND, HAS_FEATURE, DEP_OP_IDX, OPSET1, OPSET2) \
-    FUSION_KIND(KIND),
-  #include "PPCMacroFusion.def"
-  FUSION_KIND(END)
+#define FUSION_KIND(KIND) FK_##KIND
+#define FUSION_FEATURE(KIND, HAS_FEATURE, DEP_OP_IDX, OPSET1, OPSET2)          \
+  FUSION_KIND(KIND),
+#include "PPCMacroFusion.def"
+    FUSION_KIND(END)
   };
 private:
   // Each fusion feature is assigned with one fusion kind. All the
@@ -41,17 +41,18 @@ private:
   // li rx, si
   // load rt, ra, rx
   // The dependent operand index in the second op(load). And the negative means
-  // it could be any one. 
+  // it could be any one.
   int DepOpIdx;
   // The first fusion op set.
   FusionOpSet OpSet1;
   // The second fusion op set.
   FusionOpSet OpSet2;
+
 public:
   FusionFeature(FusionKind Kind, bool HasFeature, int Index,
-                const FusionOpSet &First, const FusionOpSet &Second) :
-    Kd(Kind), Supported(HasFeature), DepOpIdx(Index), OpSet1(First), 
-    OpSet2(Second) {}
+                const FusionOpSet &First, const FusionOpSet &Second)
+      : Kd(Kind), Supported(HasFeature), DepOpIdx(Index), OpSet1(First),
+        OpSet2(Second) {}
 
   bool hasOp1(unsigned Opc) const { return OpSet1.contains(Opc); }
   bool hasOp2(unsigned Opc) const { return OpSet2.contains(Opc); }
@@ -65,10 +66,8 @@ public:
   FusionKind getKind() const { return Kd; }
 };
 
-static bool matchingRegOps(const MachineInstr &FirstMI,
-                           int FirstMIOpIndex,
-                           const MachineInstr &SecondMI,
-                           int SecondMIOpIndex) {
+static bool matchingRegOps(const MachineInstr &FirstMI, int FirstMIOpIndex,
+                           const MachineInstr &SecondMI, int SecondMIOpIndex) {
   const MachineOperand &Op1 = FirstMI.getOperand(FirstMIOpIndex);
   const MachineOperand &Op2 = SecondMI.getOperand(SecondMIOpIndex);
   if (!Op1.isReg() || !Op2.isReg())
@@ -77,10 +76,8 @@ static bool matchingRegOps(const MachineInstr &FirstMI,
   return Op1.getReg() == Op2.getReg();
 }
 
-static bool matchingImmOps(const MachineInstr &MI,
-                           int MIOpIndex,
-                           int64_t Expect,
-                           unsigned ExtendFrom = 64) {
+static bool matchingImmOps(const MachineInstr &MI, int MIOpIndex,
+                           int64_t Expect, unsigned ExtendFrom = 64) {
   const MachineOperand &Op = MI.getOperand(MIOpIndex);
   if (!Op.isImm())
     return false;
@@ -98,7 +95,8 @@ static bool checkOpConstraints(FusionFeature::FusionKind Kd,
   switch (Kd) {
   // The hardware didn't require any specific check for the fused instructions'
   // operands. Therefore, return true to indicate that, it is fusable.
-  default: return true;
+  default:
+    return true;
   // [addi rt,ra,si - lxvd2x xt,ra,rb] etc.
   case FusionFeature::FK_AddiLoad: {
     // lxvd2x(ra) cannot be zero
@@ -121,7 +119,7 @@ static bool checkOpConstraints(FusionFeature::FusionKind Kd,
       // ld(rt) cannot be zero
       if (!matchingRegOps(SecondMI, 0, SecondMI, 2) ||
           (RT.getReg() == PPC::ZERO || RT.getReg() == PPC::ZERO8))
-          return false;
+        return false;
 
     // addis(si) first 12 bits must be all 1s or all 0s
     const MachineOperand &SI = FirstMI.getOperand(2);
@@ -239,14 +237,17 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   // the def file.
   using namespace PPC;
 
-  const PPCSubtarget &ST = static_cast<const PPCSubtarget&>(TSI);
+  const PPCSubtarget &ST = static_cast<const PPCSubtarget &>(TSI);
   static const FusionFeature FusionFeatures[] = {
-  #define FUSION_FEATURE(KIND, HAS_FEATURE, DEP_OP_IDX, OPSET1, OPSET2) { \
-    FusionFeature::FUSION_KIND(KIND), ST.HAS_FEATURE(), DEP_OP_IDX, { OPSET1 },\
-    { OPSET2 } },
-   #include "PPCMacroFusion.def"
+#define FUSION_FEATURE(KIND, HAS_FEATURE, DEP_OP_IDX, OPSET1, OPSET2)          \
+  {FusionFeature::FUSION_KIND(KIND),                                           \
+   ST.HAS_FEATURE(),                                                           \
+   DEP_OP_IDX,                                                                 \
+   {OPSET1},                                                                   \
+   {OPSET2}},
+#include "PPCMacroFusion.def"
   };
-  #undef FUSION_KIND
+#undef FUSION_KIND
 
   for (auto &Feature : FusionFeatures) {
     // Skip if the feature is not supported.

@@ -19,16 +19,15 @@ namespace llvm {
 template class DominanceFrontierBase<MachineBasicBlock, false>;
 template class DominanceFrontierBase<MachineBasicBlock, true>;
 template class ForwardDominanceFrontierBase<MachineBasicBlock>;
-}
-
+} // namespace llvm
 
 char MachineDominanceFrontier::ID = 0;
 
 INITIALIZE_PASS_BEGIN(MachineDominanceFrontier, "machine-domfrontier",
-                "Machine Dominance Frontier Construction", true, true)
+                      "Machine Dominance Frontier Construction", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MachineDominanceFrontier, "machine-domfrontier",
-                "Machine Dominance Frontier Construction", true, true)
+                    "Machine Dominance Frontier Construction", true, true)
 
 MachineDominanceFrontier::MachineDominanceFrontier() : MachineFunctionPass(ID) {
   initializeMachineDominanceFrontierPass(*PassRegistry::getPassRegistry());
@@ -42,9 +41,7 @@ bool MachineDominanceFrontier::runOnMachineFunction(MachineFunction &) {
   return false;
 }
 
-void MachineDominanceFrontier::releaseMemory() {
-  Base.releaseMemory();
-}
+void MachineDominanceFrontier::releaseMemory() { Base.releaseMemory(); }
 
 void MachineDominanceFrontier::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();

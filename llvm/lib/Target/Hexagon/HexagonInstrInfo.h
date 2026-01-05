@@ -41,9 +41,7 @@ class HexagonInstrInfo : public HexagonGenInstrInfo {
   const HexagonRegisterInfo RegInfo;
   const HexagonSubtarget &Subtarget;
 
-  enum BundleAttribute {
-    memShufDisabledMask = 0x4
-  };
+  enum BundleAttribute { memShufDisabledMask = 0x4 };
 
   virtual void anchor();
 
@@ -154,9 +152,8 @@ public:
   /// predicates, where the probability of the true path being taken is given
   /// by Probability, and Confidence is a measure of our confidence that it
   /// will be properly predicted.
-  bool isProfitableToIfCvt(MachineBasicBlock &TMBB,
-                           unsigned NumTCycles, unsigned ExtraTCycles,
-                           MachineBasicBlock &FMBB,
+  bool isProfitableToIfCvt(MachineBasicBlock &TMBB, unsigned NumTCycles,
+                           unsigned ExtraTCycles, MachineBasicBlock &FMBB,
                            unsigned NumFCycles, unsigned ExtraFCycles,
                            BranchProbability Probability) const override;
 
@@ -217,8 +214,8 @@ public:
 
   /// Reverses the branch condition of the specified condition list,
   /// returning false on success and true if it cannot be reversed.
-  bool reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond)
-        const override;
+  bool
+  reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 
   /// Insert a noop into the instruction stream at the specified point.
   void insertNoop(MachineBasicBlock &MBB,
@@ -259,14 +256,13 @@ public:
 
   /// Measure the specified inline asm to determine an approximation of its
   /// length.
-  unsigned getInlineAsmLength(
-    const char *Str,
-    const MCAsmInfo &MAI,
-    const TargetSubtargetInfo *STI = nullptr) const override;
+  unsigned
+  getInlineAsmLength(const char *Str, const MCAsmInfo &MAI,
+                     const TargetSubtargetInfo *STI = nullptr) const override;
 
   /// Allocate and return a hazard recognizer to use for this target when
   /// scheduling the machine instructions after register allocation.
-  ScheduleHazardRecognizer*
+  ScheduleHazardRecognizer *
   CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
                                      const ScheduleDAG *DAG) const override;
 
@@ -293,9 +289,8 @@ public:
   // to tell, even without aliasing information, that two MIs access different
   // memory addresses. This function returns true if two MIs access different
   // memory addresses and false otherwise.
-  bool
-  areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
-                                  const MachineInstr &MIb) const override;
+  bool areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
+                                       const MachineInstr &MIb) const override;
 
   /// For instructions with a base and offset, return the position of the
   /// base register and offset operands.
@@ -353,9 +348,10 @@ public:
   /// HexagonInstrInfo specifics.
 
   Register createVR(MachineFunction *MF, MVT VT) const;
-  MachineInstr *findLoopInstr(MachineBasicBlock *BB, unsigned EndLoopOp,
-                              MachineBasicBlock *TargetBB,
-                              SmallPtrSet<MachineBasicBlock *, 8> &Visited) const;
+  MachineInstr *
+  findLoopInstr(MachineBasicBlock *BB, unsigned EndLoopOp,
+                MachineBasicBlock *TargetBB,
+                SmallPtrSet<MachineBasicBlock *, 8> &Visited) const;
 
   bool isAbsoluteSet(const MachineInstr &MI) const;
   bool isAccumulator(const MachineInstr &MI) const;
@@ -413,8 +409,8 @@ public:
                            const MachineInstr &MI2) const;
   bool isHVXVec(const MachineInstr &MI) const;
   bool isValidAutoIncImm(const EVT VT, const int Offset) const;
-  bool isValidOffset(unsigned Opcode, int Offset,
-                     const TargetRegisterInfo *TRI, bool Extend = true) const;
+  bool isValidOffset(unsigned Opcode, int Offset, const TargetRegisterInfo *TRI,
+                     bool Extend = true) const;
   bool isVecAcc(const MachineInstr &MI) const;
   bool isVecALU(const MachineInstr &MI) const;
   bool isVecUsableNextPacket(const MachineInstr &ProdMI,
@@ -443,7 +439,8 @@ public:
   unsigned getAddrMode(const MachineInstr &MI) const;
   MachineOperand *getBaseAndOffset(const MachineInstr &MI, int64_t &Offset,
                                    LocationSize &AccessSize) const;
-  SmallVector<MachineInstr*,2> getBranchingInstrs(MachineBasicBlock& MBB) const;
+  SmallVector<MachineInstr *, 2>
+  getBranchingInstrs(MachineBasicBlock &MBB) const;
   unsigned getCExtOpNum(const MachineInstr &MI) const;
   HexagonII::CompoundGroup
   getCompoundCandidateGroup(const MachineInstr &MI) const;
@@ -459,8 +456,8 @@ public:
   int getDotNewPredOp(const MachineInstr &MI,
                       const MachineBranchProbabilityInfo *MBPI) const;
   int getDotOldOp(const MachineInstr &MI) const;
-  HexagonII::SubInstructionGroup getDuplexCandidateGroup(const MachineInstr &MI)
-                                                         const;
+  HexagonII::SubInstructionGroup
+  getDuplexCandidateGroup(const MachineInstr &MI) const;
   short getEquivalentHWInstr(const MachineInstr &MI) const;
   unsigned getInstrTimingClassLatency(const InstrItineraryData *ItinData,
                                       const MachineInstr &MI) const;

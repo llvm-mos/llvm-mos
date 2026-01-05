@@ -73,9 +73,9 @@ void computeProcResourceMasks(const MCSchedModel &SM,
                     << "\n");
   for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     const MCProcResourceDesc &Desc = *SM.getProcResource(I);
-    LLVM_DEBUG(dbgs() << '[' << format_decimal(I,2) << "] " << " - "
-                      << format_hex(Masks[I],16) << " - "
-                      << Desc.Name << '\n');
+    LLVM_DEBUG(dbgs() << '[' << format_decimal(I, 2) << "] " << " - "
+                      << format_hex(Masks[I], 16) << " - " << Desc.Name
+                      << '\n');
   }
 #endif
 }

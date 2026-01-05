@@ -15,6 +15,6 @@
 namespace llvm {
 LLVM_ABI std::error_code mapLastWindowsError();
 LLVM_ABI std::error_code mapWindowsError(unsigned EV);
-}
+} // namespace llvm
 
 #endif

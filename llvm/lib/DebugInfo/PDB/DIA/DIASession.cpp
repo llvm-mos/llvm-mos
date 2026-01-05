@@ -31,7 +31,7 @@ using namespace llvm;
 using namespace llvm::pdb;
 
 template <typename... Ts>
-static Error ErrorFromHResult(HRESULT Result, const char *Str, Ts &&... Args) {
+static Error ErrorFromHResult(HRESULT Result, const char *Str, Ts &&...Args) {
   SmallString<64> MessageStorage;
   StringRef Context;
   if (sizeof...(Args) > 0) {
@@ -412,8 +412,7 @@ DIASession::getSectionContribs() const {
   return std::make_unique<DIAEnumSectionContribs>(*this, Sections);
 }
 
-std::unique_ptr<IPDBEnumFrameData>
-DIASession::getFrameData() const {
+std::unique_ptr<IPDBEnumFrameData> DIASession::getFrameData() const {
   CComPtr<IDiaEnumFrameData> FD =
       getTableEnumerator<IDiaEnumFrameData>(*Session);
   if (!FD)

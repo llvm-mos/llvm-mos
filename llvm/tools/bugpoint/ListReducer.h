@@ -46,7 +46,7 @@ template <typename ElTy> struct ListReducer {
   /// that bugpoint does.
   Expected<bool> reduceList(std::vector<ElTy> &TheList) {
     std::vector<ElTy> empty;
-    std::mt19937 randomness(0x6e5ea738);  // Seed the random number generator
+    std::mt19937 randomness(0x6e5ea738); // Seed the random number generator
     Expected<TestResult> Result = doTest(TheList, empty);
     if (Error E = Result.takeError())
       return std::move(E);
@@ -203,6 +203,6 @@ template <typename ElTy> struct ListReducer {
   }
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

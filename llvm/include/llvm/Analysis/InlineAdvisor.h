@@ -195,7 +195,8 @@ public:
     OS << "Unimplemented InlineAdvisor print\n";
   }
 
-  /// NOTE pass name is annotated only when inline advisor constructor provides InlineContext.
+  /// NOTE pass name is annotated only when inline advisor constructor provides
+  /// InlineContext.
   const char *getAnnotatedInlinePassName() const {
     return AnnotatedInlinePassName.c_str();
   }

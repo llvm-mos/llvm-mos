@@ -227,9 +227,7 @@ public:
     const TargetRegisterClass *RC = getRegClassOrNull(VReg);
     return LLVM_LIKELY(RC) ? shouldTrackSubRegLiveness(*RC) : false;
   }
-  bool subRegLivenessEnabled() const {
-    return TracksSubRegLiveness;
-  }
+  bool subRegLivenessEnabled() const { return TracksSubRegLiveness; }
 
   //===--------------------------------------------------------------------===//
   // Register Info
@@ -308,8 +306,8 @@ public:
     return make_range(reg_instr_begin(Reg), reg_instr_end());
   }
 
-  /// reg_bundle_iterator/reg_bundle_begin/reg_bundle_end - Walk all defs and uses
-  /// of the specified register, stepping by bundle.
+  /// reg_bundle_iterator/reg_bundle_begin/reg_bundle_end - Walk all defs and
+  /// uses of the specified register, stepping by bundle.
   using reg_bundle_iterator =
       defusechain_instr_iterator<true, true, false, /*ByInstr=*/false>;
   reg_bundle_iterator reg_bundle_begin(Register RegNo) const {
@@ -360,8 +358,8 @@ public:
     return make_range(reg_instr_nodbg_begin(Reg), reg_instr_nodbg_end());
   }
 
-  /// reg_bundle_nodbg_iterator/reg_bundle_nodbg_begin/reg_bundle_nodbg_end - Walk
-  /// all defs and uses of the specified register, stepping by bundle,
+  /// reg_bundle_nodbg_iterator/reg_bundle_nodbg_begin/reg_bundle_nodbg_end -
+  /// Walk all defs and uses of the specified register, stepping by bundle,
   /// skipping those marked as Debug.
   using reg_bundle_nodbg_iterator =
       defusechain_instr_iterator<true, true, true, /*ByInstr=*/false>;
@@ -547,8 +545,8 @@ public:
     return make_range(use_instr_nodbg_begin(Reg), use_instr_nodbg_end());
   }
 
-  /// use_bundle_nodbg_iterator/use_bundle_nodbg_begin/use_bundle_nodbg_end - Walk
-  /// all uses of the specified register, stepping by bundle, skipping
+  /// use_bundle_nodbg_iterator/use_bundle_nodbg_begin/use_bundle_nodbg_end -
+  /// Walk all uses of the specified register, stepping by bundle, skipping
   /// those marked as Debug.
   using use_bundle_nodbg_iterator =
       defusechain_instr_iterator<true, false, true, /*ByInstr=*/false>;
@@ -695,8 +693,7 @@ public:
   /// Set the register bank to \p RegBank for \p Reg.
   LLVM_ABI void setRegBank(Register Reg, const RegisterBank &RegBank);
 
-  void setRegClassOrRegBank(Register Reg,
-                            const RegClassOrRegBank &RCOrRB){
+  void setRegClassOrRegBank(Register Reg, const RegClassOrRegBank &RCOrRB) {
     VRegInfo[Reg].first = RCOrRB;
   }
 
@@ -825,8 +822,8 @@ public:
   }
 
   void clearSimpleHint(Register VReg) {
-    assert (!RegAllocHints[VReg].first &&
-            "Expected to clear a non-target hint!");
+    assert(!RegAllocHints[VReg].first &&
+           "Expected to clear a non-target hint!");
     if (RegAllocHints.inBounds(VReg))
       RegAllocHints[VReg].second.clear();
   }
@@ -946,9 +943,7 @@ public:
 
   /// reservedRegsFrozen - Returns true after freezeReservedRegs() was called
   /// to ensure the set of reserved registers stays constant.
-  bool reservedRegsFrozen() const {
-    return !ReservedRegs.empty();
-  }
+  bool reservedRegsFrozen() const { return !ReservedRegs.empty(); }
 
   /// canReserveReg - Returns true if PhysReg can be used as a reserved
   /// register.  Any register can be reserved before freezeReservedRegs() is
@@ -991,7 +986,7 @@ public:
   /// availability.
   bool isAllocatable(MCRegister PhysReg) const {
     return getTargetRegisterInfo()->isInAllocatableClass(PhysReg) &&
-      !isReserved(PhysReg);
+           !isReserved(PhysReg);
   }
 
   //===--------------------------------------------------------------------===//
@@ -1007,14 +1002,12 @@ public:
   // Iteration support for the live-ins set.  It's kept in sorted order
   // by register number.
   using livein_iterator =
-      std::vector<std::pair<MCRegister,Register>>::const_iterator;
+      std::vector<std::pair<MCRegister, Register>>::const_iterator;
   livein_iterator livein_begin() const { return LiveIns.begin(); }
-  livein_iterator livein_end()   const { return LiveIns.end(); }
-  bool            livein_empty() const { return LiveIns.empty(); }
+  livein_iterator livein_end() const { return LiveIns.end(); }
+  bool livein_empty() const { return LiveIns.empty(); }
 
-  ArrayRef<std::pair<MCRegister, Register>> liveins() const {
-    return LiveIns;
-  }
+  ArrayRef<std::pair<MCRegister, Register>> liveins() const { return LiveIns; }
 
   LLVM_ABI bool isLiveIn(Register Reg) const;
 
@@ -1063,8 +1056,7 @@ public:
       // If the first node isn't one we're interested in, advance to one that
       // we are interested in.
       if (op) {
-        if ((!ReturnUses && op->isUse()) ||
-            (!ReturnDefs && op->isDef()) ||
+        if ((!ReturnUses && op->isUse()) || (!ReturnDefs && op->isDef()) ||
             (SkipDebug && op->isDebug()))
           advance();
       }
@@ -1084,8 +1076,8 @@ public:
         }
       } else {
         // If this is an operand we don't care about, skip it.
-        while (Op && ((!ReturnDefs && Op->isDef()) ||
-                      (SkipDebug && Op->isDebug())))
+        while (Op &&
+               ((!ReturnDefs && Op->isDef()) || (SkipDebug && Op->isDebug())))
           Op = getNextOperandForReg(Op);
       }
     }
@@ -1093,15 +1085,13 @@ public:
   public:
     defusechain_iterator() = default;
 
-    bool operator==(const defusechain_iterator &x) const {
-      return Op == x.Op;
-    }
+    bool operator==(const defusechain_iterator &x) const { return Op == x.Op; }
     bool operator!=(const defusechain_iterator &x) const {
       return !operator==(x);
     }
 
     // Iterator traversal: forward iteration only
-    defusechain_iterator &operator++() {          // Preincrement
+    defusechain_iterator &operator++() { // Preincrement
       assert(Op && "Cannot increment end iterator!");
       if (ByOperand)
         advance();
@@ -1120,8 +1110,10 @@ public:
 
       return *this;
     }
-    defusechain_iterator operator++(int) {        // Postincrement
-      defusechain_iterator tmp = *this; ++*this; return tmp;
+    defusechain_iterator operator++(int) { // Postincrement
+      defusechain_iterator tmp = *this;
+      ++*this;
+      return tmp;
     }
 
     /// getOperandNo - Return the operand # of this MachineOperand in its
@@ -1167,8 +1159,7 @@ public:
       // If the first node isn't one we're interested in, advance to one that
       // we are interested in.
       if (op) {
-        if ((!ReturnUses && op->isUse()) ||
-            (!ReturnDefs && op->isDef()) ||
+        if ((!ReturnUses && op->isUse()) || (!ReturnDefs && op->isDef()) ||
             (SkipDebug && op->isDebug()))
           advance();
       }
@@ -1188,8 +1179,8 @@ public:
         }
       } else {
         // If this is an operand we don't care about, skip it.
-        while (Op && ((!ReturnDefs && Op->isDef()) ||
-                      (SkipDebug && Op->isDebug())))
+        while (Op &&
+               ((!ReturnDefs && Op->isDef()) || (SkipDebug && Op->isDebug())))
           Op = getNextOperandForReg(Op);
       }
     }
@@ -1205,7 +1196,7 @@ public:
     }
 
     // Iterator traversal: forward iteration only
-    defusechain_instr_iterator &operator++() {          // Preincrement
+    defusechain_instr_iterator &operator++() { // Preincrement
       assert(Op && "Cannot increment end iterator!");
       if (ByInstr) {
         MachineInstr *P = Op->getParent();
@@ -1222,8 +1213,10 @@ public:
 
       return *this;
     }
-    defusechain_instr_iterator operator++(int) {        // Postincrement
-      defusechain_instr_iterator tmp = *this; ++*this; return tmp;
+    defusechain_instr_iterator operator++(int) { // Postincrement
+      defusechain_instr_iterator tmp = *this;
+      ++*this;
+      return tmp;
     }
 
     // Retrieve a reference to the current operand.

@@ -19,10 +19,11 @@
 namespace llvm {
 class Duration {
   std::chrono::milliseconds Value;
-  public:
+
+public:
   Duration(std::chrono::milliseconds Value) : Value(Value) {}
   std::chrono::milliseconds getDuration() const { return Value; }
 };
-}
+} // namespace llvm
 
 #endif

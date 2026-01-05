@@ -152,7 +152,7 @@ public:
   using MCAsmInfoCtorFnTy = MCAsmInfo *(*)(const MCRegisterInfo &MRI,
                                            const Triple &TT,
                                            const MCTargetOptions &Options);
-  using MCObjectFileInfoCtorFnTy = MCObjectFileInfo *(*)(MCContext &Ctx,
+  using MCObjectFileInfoCtorFnTy = MCObjectFileInfo *(*)(MCContext & Ctx,
                                                          bool PIC,
                                                          bool LargeCodeModel);
   using MCInstrInfoCtorFnTy = MCInstrInfo *(*)();
@@ -168,15 +168,17 @@ public:
   // If it weren't for layering issues (this header is in llvm/Support, but
   // depends on MC?) this should take the Streamer by value rather than rvalue
   // reference.
-  using AsmPrinterCtorTy = AsmPrinter *(*)(
-      TargetMachine &TM, std::unique_ptr<MCStreamer> &&Streamer);
+  using AsmPrinterCtorTy =
+      AsmPrinter *(*)(TargetMachine & TM,
+                      std::unique_ptr<MCStreamer> &&Streamer);
   using MCAsmBackendCtorTy = MCAsmBackend *(*)(const Target &T,
                                                const MCSubtargetInfo &STI,
                                                const MCRegisterInfo &MRI,
                                                const MCTargetOptions &Options);
-  using MCAsmParserCtorTy = MCTargetAsmParser *(*)(
-      const MCSubtargetInfo &STI, MCAsmParser &P, const MCInstrInfo &MII,
-      const MCTargetOptions &Options);
+  using MCAsmParserCtorTy =
+      MCTargetAsmParser *(*)(const MCSubtargetInfo &STI, MCAsmParser &P,
+                             const MCInstrInfo &MII,
+                             const MCTargetOptions &Options);
   using MCDisassemblerCtorTy = MCDisassembler *(*)(const Target &T,
                                                    const MCSubtargetInfo &STI,
                                                    MCContext &Ctx);
@@ -193,11 +195,11 @@ public:
                       std::unique_ptr<MCObjectWriter> &&OW,
                       std::unique_ptr<MCCodeEmitter> &&Emitter);
   using MachOStreamerCtorTy =
-      MCStreamer *(*)(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
+      MCStreamer *(*)(MCContext & Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
                       std::unique_ptr<MCCodeEmitter> &&Emitter);
   using COFFStreamerCtorTy =
-      MCStreamer *(*)(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
+      MCStreamer *(*)(MCContext & Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
                       std::unique_ptr<MCCodeEmitter> &&Emitter);
   using XCOFFStreamerCtorTy =
@@ -206,16 +208,16 @@ public:
                       std::unique_ptr<MCObjectWriter> &&OW,
                       std::unique_ptr<MCCodeEmitter> &&Emitter);
 
-  using NullTargetStreamerCtorTy = MCTargetStreamer *(*)(MCStreamer &S);
+  using NullTargetStreamerCtorTy = MCTargetStreamer *(*)(MCStreamer & S);
   using AsmTargetStreamerCtorTy =
-      MCTargetStreamer *(*)(MCStreamer &S, formatted_raw_ostream &OS,
+      MCTargetStreamer *(*)(MCStreamer & S, formatted_raw_ostream &OS,
                             MCInstPrinter *InstPrint);
   using AsmStreamerCtorTy = MCStreamer
       *(*)(MCContext & Ctx, std::unique_ptr<formatted_raw_ostream> OS,
            std::unique_ptr<MCInstPrinter> IP, std::unique_ptr<MCCodeEmitter> CE,
            std::unique_ptr<MCAsmBackend> TAB);
   using ObjectTargetStreamerCtorTy =
-      MCTargetStreamer *(*)(MCStreamer &S, const MCSubtargetInfo &STI);
+      MCTargetStreamer *(*)(MCStreamer & S, const MCSubtargetInfo &STI);
   using MCRelocationInfoCtorTy = MCRelocationInfo *(*)(const Triple &TT,
                                                        MCContext &Ctx);
   using MCSymbolizerCtorTy =

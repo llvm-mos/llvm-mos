@@ -46,8 +46,7 @@ public:
 
 private:
   bool lowerReturnVal(MachineIRBuilder &MIRBuilder, const Value *Val,
-                      ArrayRef<Register> VRegs,
-                      MachineInstrBuilder &Ret) const;
+                      ArrayRef<Register> VRegs, MachineInstrBuilder &Ret) const;
 };
 
 } // end namespace llvm

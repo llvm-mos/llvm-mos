@@ -122,29 +122,19 @@ public:
   }
 
   /// Return true if there was an error retrieving this symbol.
-  bool hasError() const {
-    return (Flags & HasError) == HasError;
-  }
+  bool hasError() const { return (Flags & HasError) == HasError; }
 
   /// Returns true if the Weak flag is set.
-  bool isWeak() const {
-    return (Flags & Weak) == Weak;
-  }
+  bool isWeak() const { return (Flags & Weak) == Weak; }
 
   /// Returns true if the Common flag is set.
-  bool isCommon() const {
-    return (Flags & Common) == Common;
-  }
+  bool isCommon() const { return (Flags & Common) == Common; }
 
   /// Returns true if the symbol isn't weak or common.
-  bool isStrong() const {
-    return !isWeak() && !isCommon();
-  }
+  bool isStrong() const { return !isWeak() && !isCommon(); }
 
   /// Returns true if the Exported flag is set.
-  bool isExported() const {
-    return (Flags & Exported) == Exported;
-  }
+  bool isExported() const { return (Flags & Exported) == Exported; }
 
   /// Returns true if the given symbol is known to be callable.
   bool isCallable() const { return (Flags & Callable) == Callable; }
@@ -170,10 +160,10 @@ public:
   }
 
   /// Return a reference to the target-specific flags.
-  TargetFlagsType& getTargetFlags() { return TargetFlags; }
+  TargetFlagsType &getTargetFlags() { return TargetFlags; }
 
   /// Return a reference to the target-specific flags.
-  const TargetFlagsType& getTargetFlags() const { return TargetFlags; }
+  const TargetFlagsType &getTargetFlags() const { return TargetFlags; }
 
   /// Construct a JITSymbolFlags value based on the flags of the given global
   /// value.
@@ -213,12 +203,9 @@ class ARMJITSymbolFlags {
 public:
   ARMJITSymbolFlags() = default;
 
-  enum FlagNames {
-    None = 0,
-    Thumb = 1 << 0
-  };
+  enum FlagNames { None = 0, Thumb = 1 << 0 };
 
-  operator JITSymbolFlags::TargetFlagsType&() { return Flags; }
+  operator JITSymbolFlags::TargetFlagsType &() { return Flags; }
 
   LLVM_ABI static ARMJITSymbolFlags
   fromObjectSymbol(const object::SymbolRef &Symbol);
@@ -270,13 +257,11 @@ public:
 
   /// Create a 'null' symbol, used to represent a "symbol not found"
   ///        result from a successful (non-erroneous) lookup.
-  JITSymbol(std::nullptr_t)
-      : CachedAddr(0) {}
+  JITSymbol(std::nullptr_t) : CachedAddr(0) {}
 
   /// Create a JITSymbol representing an error in the symbol lookup
   ///        process (e.g. a network failure during a remote lookup).
-  JITSymbol(Error Err)
-    : Err(std::move(Err)), Flags(JITSymbolFlags::HasError) {}
+  JITSymbol(Error Err) : Err(std::move(Err)), Flags(JITSymbolFlags::HasError) {}
 
   /// Create a symbol for a definition with a known address.
   JITSymbol(JITTargetAddress Addr, JITSymbolFlags Flags)
@@ -298,18 +283,18 @@ public:
   JITSymbol(GetAddressFtor GetAddress, JITSymbolFlags Flags)
       : GetAddress(std::move(GetAddress)), CachedAddr(0), Flags(Flags) {}
 
-  JITSymbol(const JITSymbol&) = delete;
-  JITSymbol& operator=(const JITSymbol&) = delete;
+  JITSymbol(const JITSymbol &) = delete;
+  JITSymbol &operator=(const JITSymbol &) = delete;
 
   JITSymbol(JITSymbol &&Other)
-    : GetAddress(std::move(Other.GetAddress)), Flags(std::move(Other.Flags)) {
+      : GetAddress(std::move(Other.GetAddress)), Flags(std::move(Other.Flags)) {
     if (Flags.hasError())
       Err = std::move(Other.Err);
     else
       CachedAddr = std::move(Other.CachedAddr);
   }
 
-  JITSymbol& operator=(JITSymbol &&Other) {
+  JITSymbol &operator=(JITSymbol &&Other) {
     GetAddress = std::move(Other.GetAddress);
     Flags = std::move(Other.Flags);
     if (Flags.hasError())

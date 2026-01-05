@@ -12,7 +12,6 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
@@ -24,6 +23,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 
 using namespace llvm;
@@ -160,8 +160,7 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
       // of \param BB (BB4) and should not have address-taken.
       // There should exist only one such unconditional
       // branch among the predecessors.
-      if (UnCondBlock || !PP || !Preds.contains(PP) ||
-          Pred->hasAddressTaken())
+      if (UnCondBlock || !PP || !Preds.contains(PP) || Pred->hasAddressTaken())
         return false;
 
       UnCondBlock = Pred;

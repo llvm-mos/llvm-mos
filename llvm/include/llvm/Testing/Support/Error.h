@@ -65,8 +65,7 @@ private:
   testing::Matcher<T> Matcher;
 };
 
-template<typename M>
-class ValueMatchesPoly {
+template <typename M> class ValueMatchesPoly {
 public:
   explicit ValueMatchesPoly(const M &Matcher) : Matcher(Matcher) {}
 
@@ -213,12 +212,12 @@ testing::Matcher<const detail::ErrorHolder &> FailedWithMessage(M... Matcher) {
 }
 
 template <typename M>
-testing::Matcher<const detail::ErrorHolder &> FailedWithMessageArray(M Matcher) {
+testing::Matcher<const detail::ErrorHolder &>
+FailedWithMessageArray(M Matcher) {
   return MakeMatcher(new detail::ErrorMessageMatches(Matcher));
 }
 
-template <typename M>
-detail::ValueMatchesPoly<M> HasValue(M Matcher) {
+template <typename M> detail::ValueMatchesPoly<M> HasValue(M Matcher) {
   return detail::ValueMatchesPoly<M>(Matcher);
 }
 

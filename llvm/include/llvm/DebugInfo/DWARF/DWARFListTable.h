@@ -87,9 +87,7 @@ public:
   DWARFListTableHeader(StringRef SectionName, StringRef ListTypeString)
       : SectionName(SectionName), ListTypeString(ListTypeString) {}
 
-  void clear() {
-    HeaderData = {};
-  }
+  void clear() { HeaderData = {}; }
   uint64_t getHeaderOffset() const { return HeaderOffset; }
   uint8_t getAddrSize() const { return HeaderData.AddrSize; }
   uint64_t getLength() const { return HeaderData.Length; }
@@ -118,7 +116,8 @@ public:
     if (Index >= HeaderData.OffsetEntryCount)
       return std::nullopt;
 
-    return getOffsetEntry(Data, getHeaderOffset() + getHeaderSize(Format), Format, Index);
+    return getOffsetEntry(Data, getHeaderOffset() + getHeaderSize(Format),
+                          Format, Index);
   }
 
   static std::optional<uint64_t> getOffsetEntry(DataExtractor Data,
@@ -234,8 +233,8 @@ Error DWARFListType<ListEntryType>::extract(DWARFDataExtractor Data,
                                             StringRef ListTypeString) {
   if (*OffsetPtr < HeaderOffset || *OffsetPtr >= Data.size())
     return createStringError(errc::invalid_argument,
-                       "invalid %s list offset 0x%" PRIx64,
-                       ListTypeString.data(), *OffsetPtr);
+                             "invalid %s list offset 0x%" PRIx64,
+                             ListTypeString.data(), *OffsetPtr);
   Entries.clear();
   while (Data.isValidOffset(*OffsetPtr)) {
     ListEntryType Entry;
@@ -246,9 +245,9 @@ Error DWARFListType<ListEntryType>::extract(DWARFDataExtractor Data,
       return Error::success();
   }
   return createStringError(errc::illegal_byte_sequence,
-                     "no end of list marker detected at end of %s table "
-                     "starting at offset 0x%" PRIx64,
-                     SectionName.data(), HeaderOffset);
+                           "no end of list marker detected at end of %s table "
+                           "starting at offset 0x%" PRIx64,
+                           SectionName.data(), HeaderOffset);
 }
 
 template <typename DWARFListType>

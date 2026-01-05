@@ -39,6 +39,6 @@ public:
 
   SpecialCallingConvType getSpecialCallingConv() { return SpecialCallingConv; }
 };
-}
+} // namespace llvm
 
 #endif

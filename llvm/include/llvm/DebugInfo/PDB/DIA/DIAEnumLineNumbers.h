@@ -29,7 +29,7 @@ public:
 private:
   CComPtr<IDiaEnumLineNumbers> Enumerator;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

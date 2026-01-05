@@ -215,6 +215,6 @@ struct LinearExpression {
 /// multiple GEPs.
 LLVM_ABI LinearExpression decomposeLinearExpression(const DataLayout &DL,
                                                     Value *Ptr);
-}
+} // namespace llvm
 
 #endif

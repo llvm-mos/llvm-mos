@@ -860,11 +860,10 @@ const Value *GCProjectionInst::getStatepoint() const {
 
   // This relocate is on exceptional path of an invoke statepoint
   const BasicBlock *InvokeBB =
-    cast<Instruction>(Token)->getParent()->getUniquePredecessor();
+      cast<Instruction>(Token)->getParent()->getUniquePredecessor();
 
   assert(InvokeBB && "safepoints should have unique landingpads");
-  assert(InvokeBB->getTerminator() &&
-         "safepoint block should be well formed");
+  assert(InvokeBB->getTerminator() && "safepoint block should be well formed");
 
   return cast<GCStatepointInst>(InvokeBB->getTerminator());
 }

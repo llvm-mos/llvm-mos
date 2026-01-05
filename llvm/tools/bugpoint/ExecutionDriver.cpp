@@ -402,13 +402,13 @@ Error BugDriver::createReferenceFile(Module &M, const std::string &Filename) {
   if (Error E = Result.takeError()) {
     if (Interpreter != SafeInterpreter) {
       E = joinErrors(
-              std::move(E),
-              make_error<StringError>(
-                  "*** There is a bug running the \"safe\" backend.  Either"
-                  " debug it (for example with the -run-jit bugpoint option,"
-                  " if JIT is being used as the \"safe\" backend), or fix the"
-                  " error some other way.\n",
-                  inconvertibleErrorCode()));
+          std::move(E),
+          make_error<StringError>(
+              "*** There is a bug running the \"safe\" backend.  Either"
+              " debug it (for example with the -run-jit bugpoint option,"
+              " if JIT is being used as the \"safe\" backend), or fix the"
+              " error some other way.\n",
+              inconvertibleErrorCode()));
     }
     return E;
   }

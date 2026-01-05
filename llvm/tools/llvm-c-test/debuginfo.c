@@ -20,14 +20,20 @@
 #include <stdio.h>
 #include <string.h>
 
-static LLVMMetadataRef
-declare_objc_class(LLVMDIBuilderRef DIB, LLVMMetadataRef File) {
-  LLVMMetadataRef Decl = LLVMDIBuilderCreateStructType(DIB, File, "TestClass", 9, File, 42, 64, 0, LLVMDIFlagObjcClassComplete, NULL, NULL, 0, 0, NULL, NULL, 0);
-  LLVMMetadataRef SuperDecl = LLVMDIBuilderCreateStructType(DIB, File, "TestSuperClass", 14, File, 42, 64, 0, LLVMDIFlagObjcClassComplete, NULL, NULL, 0, 0, NULL, NULL, 0);
+static LLVMMetadataRef declare_objc_class(LLVMDIBuilderRef DIB,
+                                          LLVMMetadataRef File) {
+  LLVMMetadataRef Decl = LLVMDIBuilderCreateStructType(
+      DIB, File, "TestClass", 9, File, 42, 64, 0, LLVMDIFlagObjcClassComplete,
+      NULL, NULL, 0, 0, NULL, NULL, 0);
+  LLVMMetadataRef SuperDecl = LLVMDIBuilderCreateStructType(
+      DIB, File, "TestSuperClass", 14, File, 42, 64, 0,
+      LLVMDIFlagObjcClassComplete, NULL, NULL, 0, 0, NULL, NULL, 0);
   LLVMDIBuilderCreateInheritance(DIB, Decl, SuperDecl, 0, 0, 0);
-  LLVMMetadataRef TestProperty =
-      LLVMDIBuilderCreateObjCProperty(DIB, "test", 4, File, 42, "getTest", 7, "setTest", 7, 0x20 /*copy*/ | 0x40 /*nonatomic*/, SuperDecl);
-  LLVMDIBuilderCreateObjCIVar(DIB, "_test", 5, File, 42, 64, 0, 64, LLVMDIFlagPublic, SuperDecl, TestProperty);
+  LLVMMetadataRef TestProperty = LLVMDIBuilderCreateObjCProperty(
+      DIB, "test", 4, File, 42, "getTest", 7, "setTest", 7,
+      0x20 /*copy*/ | 0x40 /*nonatomic*/, SuperDecl);
+  LLVMDIBuilderCreateObjCIVar(DIB, "_test", 5, File, 42, 64, 0, 64,
+                              LLVMDIFlagPublic, SuperDecl, TestProperty);
   return Decl;
 }
 
@@ -40,8 +46,8 @@ int llvm_test_dibuilder(void) {
 
   LLVMDIBuilderRef DIB = LLVMCreateDIBuilder(M);
 
-  LLVMMetadataRef File = LLVMDIBuilderCreateFile(DIB, Filename,
-    strlen(Filename), ".", 1);
+  LLVMMetadataRef File =
+      LLVMDIBuilderCreateFile(DIB, Filename, strlen(Filename), ".", 1);
 
   LLVMMetadataRef FileCS = LLVMDIBuilderCreateFileWithChecksum(
       DIB, Filename, strlen(Filename), ".", 1, CSK_MD5, "1234", 4, "source", 6);
@@ -51,18 +57,12 @@ int llvm_test_dibuilder(void) {
       NULL, 0, LLVMDWARFEmissionFull, 0, 0, 0, "/", 1, "", 0);
 
   LLVMMetadataRef Module =
-    LLVMDIBuilderCreateModule(DIB, CompileUnit,
-                              "llvm-c-test", 11,
-                              "", 0,
-                              "/test/include/llvm-c-test.h", 27,
-                              "", 0);
+      LLVMDIBuilderCreateModule(DIB, CompileUnit, "llvm-c-test", 11, "", 0,
+                                "/test/include/llvm-c-test.h", 27, "", 0);
 
-  LLVMMetadataRef OtherModule =
-    LLVMDIBuilderCreateModule(DIB, CompileUnit,
-                              "llvm-c-test-import", 18,
-                              "", 0,
-                              "/test/include/llvm-c-test-import.h", 34,
-                              "", 0);
+  LLVMMetadataRef OtherModule = LLVMDIBuilderCreateModule(
+      DIB, CompileUnit, "llvm-c-test-import", 18, "", 0,
+      "/test/include/llvm-c-test-import.h", 34, "", 0);
   LLVMMetadataRef ImportedModule = LLVMDIBuilderCreateImportedModuleFromModule(
       DIB, Module, OtherModule, FileCS, 42, NULL, 0);
   LLVMDIBuilderCreateImportedModuleFromAlias(DIB, Module, ImportedModule, File,
@@ -71,9 +71,9 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef ClassTy = declare_objc_class(DIB, File);
   LLVMMetadataRef GlobalClassValueExpr =
       LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
-  LLVMDIBuilderCreateGlobalVariableExpression(
-      DIB, Module, "globalClass", 11, "", 0, File, 1, ClassTy, true,
-      GlobalClassValueExpr, NULL, 0);
+  LLVMDIBuilderCreateGlobalVariableExpression(DIB, Module, "globalClass", 11,
+                                              "", 0, File, 1, ClassTy, true,
+                                              GlobalClassValueExpr, NULL, 0);
 
   LLVMMetadataRef Int64Ty =
       LLVMDIBuilderCreateBasicType(DIB, "Int64", 5, 64, 0, LLVMDIFlagZero);
@@ -82,57 +82,51 @@ int llvm_test_dibuilder(void) {
 
   LLVMMetadataRef GlobalVarValueExpr =
       LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
-  LLVMDIBuilderCreateGlobalVariableExpression(
-      DIB, Module, "global", 6, "", 0, File, 1, Int64TypeDef, true,
-      GlobalVarValueExpr, NULL, 0);
+  LLVMDIBuilderCreateGlobalVariableExpression(DIB, Module, "global", 6, "", 0,
+                                              File, 1, Int64TypeDef, true,
+                                              GlobalVarValueExpr, NULL, 0);
 
   LLVMMetadataRef NameSpace =
       LLVMDIBuilderCreateNameSpace(DIB, Module, "NameSpace", 9, false);
 
   LLVMMetadataRef StructDbgElts[] = {Int64Ty, Int64Ty, Int64Ty};
-  LLVMMetadataRef StructDbgTy =
-    LLVMDIBuilderCreateStructType(DIB, NameSpace, "MyStruct",
-    8, File, 0, 192, 0, 0, NULL, StructDbgElts, 3,
-    LLVMDWARFSourceLanguageC, NULL, "MyStruct", 8);
+  LLVMMetadataRef StructDbgTy = LLVMDIBuilderCreateStructType(
+      DIB, NameSpace, "MyStruct", 8, File, 0, 192, 0, 0, NULL, StructDbgElts, 3,
+      LLVMDWARFSourceLanguageC, NULL, "MyStruct", 8);
 
   LLVMMetadataRef StructDbgPtrTy =
-    LLVMDIBuilderCreatePointerType(DIB, StructDbgTy, 192, 0, 0, "", 0);
+      LLVMDIBuilderCreatePointerType(DIB, StructDbgTy, 192, 0, 0, "", 0);
 
-  LLVMAddNamedMetadataOperand(M, "FooType",
-    LLVMMetadataAsValue(LLVMGetModuleContext(M), StructDbgPtrTy));
-
+  LLVMAddNamedMetadataOperand(
+      M, "FooType",
+      LLVMMetadataAsValue(LLVMGetModuleContext(M), StructDbgPtrTy));
 
   LLVMTypeRef FooParamTys[] = {
-    LLVMInt64Type(),
-    LLVMInt64Type(),
-    LLVMVectorType(LLVMInt64Type(), 10),
+      LLVMInt64Type(),
+      LLVMInt64Type(),
+      LLVMVectorType(LLVMInt64Type(), 10),
   };
   LLVMTypeRef FooFuncTy = LLVMFunctionType(LLVMInt64Type(), FooParamTys, 3, 0);
   LLVMValueRef FooFunction = LLVMAddFunction(M, "foo", FooFuncTy);
   LLVMBasicBlockRef FooEntryBlock = LLVMAppendBasicBlock(FooFunction, "entry");
 
   LLVMMetadataRef Subscripts[] = {
-    LLVMDIBuilderGetOrCreateSubrange(DIB, 0, 10),
+      LLVMDIBuilderGetOrCreateSubrange(DIB, 0, 10),
   };
   LLVMMetadataRef VectorTy =
-    LLVMDIBuilderCreateVectorType(DIB, 64 * 10, 0,
-                                  Int64Ty, Subscripts, 1);
-
+      LLVMDIBuilderCreateVectorType(DIB, 64 * 10, 0, Int64Ty, Subscripts, 1);
 
   LLVMMetadataRef ParamTypes[] = {Int64Ty, Int64Ty, VectorTy};
   LLVMMetadataRef FunctionTy =
-    LLVMDIBuilderCreateSubroutineType(DIB, File, ParamTypes, 3, 0);
+      LLVMDIBuilderCreateSubroutineType(DIB, File, ParamTypes, 3, 0);
 
   LLVMMetadataRef ReplaceableFunctionMetadata =
-    LLVMDIBuilderCreateReplaceableCompositeType(DIB, 0x15, "foo", 3,
-                                                File, File, 42,
-                                                0, 0, 0,
-                                                LLVMDIFlagFwdDecl,
-                                                "", 0);
+      LLVMDIBuilderCreateReplaceableCompositeType(DIB, 0x15, "foo", 3, File,
+                                                  File, 42, 0, 0, 0,
+                                                  LLVMDIFlagFwdDecl, "", 0);
 
-  LLVMMetadataRef FooParamLocation =
-    LLVMDIBuilderCreateDebugLocation(LLVMGetGlobalContext(), 42, 0,
-                                     ReplaceableFunctionMetadata, NULL);
+  LLVMMetadataRef FooParamLocation = LLVMDIBuilderCreateDebugLocation(
+      LLVMGetGlobalContext(), 42, 0, ReplaceableFunctionMetadata, NULL);
   LLVMMetadataRef FunctionMetadata = LLVMDIBuilderCreateFunction(
       DIB, File, "foo", 3, "foo", 3, File, 42, NULL, true, true, 42, 0, false);
   LLVMMetadataReplaceAllUsesWith(ReplaceableFunctionMetadata, FunctionMetadata);
@@ -140,18 +134,16 @@ int llvm_test_dibuilder(void) {
   LLVMDISubprogramReplaceType(FunctionMetadata, FunctionTy);
 
   LLVMMetadataRef FooParamExpression =
-    LLVMDIBuilderCreateExpression(DIB, NULL, 0);
-  LLVMMetadataRef FooParamVar1 =
-    LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "a", 1, 1, File,
-                                         42, Int64Ty, true, 0);
+      LLVMDIBuilderCreateExpression(DIB, NULL, 0);
+  LLVMMetadataRef FooParamVar1 = LLVMDIBuilderCreateParameterVariable(
+      DIB, FunctionMetadata, "a", 1, 1, File, 42, Int64Ty, true, 0);
 
   LLVMDIBuilderInsertDeclareRecordAtEnd(
       DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar1,
       FooParamExpression, FooParamLocation, FooEntryBlock);
 
-  LLVMMetadataRef FooParamVar2 =
-    LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "b", 1, 2, File,
-                                         42, Int64Ty, true, 0);
+  LLVMMetadataRef FooParamVar2 = LLVMDIBuilderCreateParameterVariable(
+      DIB, FunctionMetadata, "b", 1, 2, File, 42, Int64Ty, true, 0);
 
   LLVMDIBuilderInsertDeclareRecordAtEnd(
       DIB, LLVMConstInt(LLVMInt64Type(), 0, false), FooParamVar2,
@@ -166,21 +158,19 @@ int llvm_test_dibuilder(void) {
 
   LLVMSetSubprogram(FooFunction, FunctionMetadata);
 
-  LLVMMetadataRef FooLabel1 = LLVMDIBuilderCreateLabel(DIB, FunctionMetadata,
-    "label1", 6, File, 42, false);
+  LLVMMetadataRef FooLabel1 = LLVMDIBuilderCreateLabel(
+      DIB, FunctionMetadata, "label1", 6, File, 42, false);
   LLVMDIBuilderInsertLabelAtEnd(DIB, FooLabel1, FooParamLocation,
-    FooEntryBlock);
+                                FooEntryBlock);
 
   LLVMMetadataRef FooLexicalBlock =
-    LLVMDIBuilderCreateLexicalBlock(DIB, FunctionMetadata, File, 42, 0);
+      LLVMDIBuilderCreateLexicalBlock(DIB, FunctionMetadata, File, 42, 0);
 
   LLVMBasicBlockRef FooVarBlock = LLVMAppendBasicBlock(FooFunction, "vars");
-  LLVMMetadataRef FooVarsLocation =
-    LLVMDIBuilderCreateDebugLocation(LLVMGetGlobalContext(), 43, 0,
-                                     FunctionMetadata, NULL);
-  LLVMMetadataRef FooVar1 =
-    LLVMDIBuilderCreateAutoVariable(DIB, FooLexicalBlock, "d", 1, File,
-                                    43, Int64Ty, true, 0, 0);
+  LLVMMetadataRef FooVarsLocation = LLVMDIBuilderCreateDebugLocation(
+      LLVMGetGlobalContext(), 43, 0, FunctionMetadata, NULL);
+  LLVMMetadataRef FooVar1 = LLVMDIBuilderCreateAutoVariable(
+      DIB, FooLexicalBlock, "d", 1, File, 43, Int64Ty, true, 0, 0);
   LLVMValueRef FooVal1 = LLVMConstInt(LLVMInt64Type(), 0, false);
   LLVMMetadataRef FooVarValueExpr1 =
       LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
@@ -296,16 +286,14 @@ int llvm_test_dibuilder(void) {
   LLVMBuildBr(Builder, FooVarBlock);
 
   // Build another br for the sake of testing labels.
-  LLVMMetadataRef FooLabel2 = LLVMDIBuilderCreateLabel(DIB, FunctionMetadata,
-    "label2", 6, File, 42, false);
+  LLVMMetadataRef FooLabel2 = LLVMDIBuilderCreateLabel(
+      DIB, FunctionMetadata, "label2", 6, File, 42, false);
   LLVMDIBuilderInsertLabelBefore(DIB, FooLabel2, FooParamLocation,
-    LLVMBuildBr(Builder, FooVarBlock));
+                                 LLVMBuildBr(Builder, FooVarBlock));
   // label3 will be emitted, but label4 won't be emitted
   // because label3 is AlwaysPreserve and label4 is not.
-  LLVMDIBuilderCreateLabel(DIB, FunctionMetadata,
-    "label3", 6, File, 42, true);
-  LLVMDIBuilderCreateLabel(DIB, FunctionMetadata,
-    "label4", 6, File, 42, false);
+  LLVMDIBuilderCreateLabel(DIB, FunctionMetadata, "label3", 6, File, 42, true);
+  LLVMDIBuilderCreateLabel(DIB, FunctionMetadata, "label4", 6, File, 42, false);
   LLVMDIBuilderFinalize(DIB);
 
   // Build `ret i64 0` in vars.

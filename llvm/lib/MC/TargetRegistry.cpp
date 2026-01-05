@@ -196,7 +196,7 @@ static int TargetArraySortFn(const std::pair<StringRef, const Target *> *LHS,
 }
 
 void TargetRegistry::printRegisteredTargetsForVersion(raw_ostream &OS) {
-  std::vector<std::pair<StringRef, const Target*> > Targets;
+  std::vector<std::pair<StringRef, const Target *>> Targets;
   size_t Width = 0;
   for (const auto &T : TargetRegistry::targets()) {
     Targets.push_back(std::make_pair(T.getName(), &T));

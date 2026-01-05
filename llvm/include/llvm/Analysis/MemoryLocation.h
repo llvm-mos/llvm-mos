@@ -129,9 +129,7 @@ public:
   constexpr static LocationSize mapTombstone() {
     return LocationSize(MapTombstone);
   }
-  constexpr static LocationSize mapEmpty() {
-    return LocationSize(MapEmpty);
-  }
+  constexpr static LocationSize mapEmpty() { return LocationSize(MapEmpty); }
 
   // Returns a LocationSize that can correctly represent either `*this` or
   // `Other`.

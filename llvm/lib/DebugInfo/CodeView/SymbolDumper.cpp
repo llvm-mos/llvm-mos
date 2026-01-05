@@ -61,7 +61,7 @@ private:
   bool PrintRecordBytes;
   bool InFunctionScope;
 };
-}
+} // namespace
 
 static StringRef getSymbolKindName(SymbolKind Kind) {
   switch (Kind) {
@@ -258,7 +258,8 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
 
 Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
                                            Compile3Sym &Compile3) {
-  W.printEnum("Language", uint8_t(Compile3.getLanguage()), getSourceLanguageNames());
+  W.printEnum("Language", uint8_t(Compile3.getLanguage()),
+              getSourceLanguageNames());
   W.printFlags("Flags", uint32_t(Compile3.getFlags()),
                getCompileSym3FlagNames());
   W.printEnum("Machine", unsigned(Compile3.Machine), getCPUTypeNames());

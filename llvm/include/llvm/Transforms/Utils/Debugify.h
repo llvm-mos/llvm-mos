@@ -110,11 +110,11 @@ class NewPMDebugifyPass : public llvm::PassInfoMixin<NewPMDebugifyPass> {
   llvm::StringRef NameOfWrappedPass;
   DebugInfoPerPass *DebugInfoBeforePass = nullptr;
   enum DebugifyMode Mode = DebugifyMode::NoDebugify;
+
 public:
-  NewPMDebugifyPass(
-      enum DebugifyMode Mode = DebugifyMode::SyntheticDebugInfo,
-      llvm::StringRef NameOfWrappedPass = "",
-      DebugInfoPerPass *DebugInfoBeforePass = nullptr)
+  NewPMDebugifyPass(enum DebugifyMode Mode = DebugifyMode::SyntheticDebugInfo,
+                    llvm::StringRef NameOfWrappedPass = "",
+                    DebugInfoPerPass *DebugInfoBeforePass = nullptr)
       : NameOfWrappedPass(NameOfWrappedPass),
         DebugInfoBeforePass(DebugInfoBeforePass), Mode(Mode) {}
 
@@ -173,6 +173,7 @@ class NewPMCheckDebugifyPass
   DebugInfoPerPass *DebugInfoBeforePass;
   enum DebugifyMode Mode;
   bool Strip;
+
 public:
   NewPMCheckDebugifyPass(
       bool Strip = false, llvm::StringRef NameOfWrappedPass = "",
@@ -182,8 +183,8 @@ public:
       llvm::StringRef OrigDIVerifyBugsReportFilePath = "")
       : NameOfWrappedPass(NameOfWrappedPass),
         OrigDIVerifyBugsReportFilePath(OrigDIVerifyBugsReportFilePath),
-        StatsMap(StatsMap), DebugInfoBeforePass(DebugInfoBeforePass), Mode(Mode),
-        Strip(Strip) {}
+        StatsMap(StatsMap), DebugInfoBeforePass(DebugInfoBeforePass),
+        Mode(Mode), Strip(Strip) {}
 
   LLVM_ABI llvm::PreservedAnalyses run(llvm::Module &M,
                                        llvm::ModuleAnalysisManager &AM);

@@ -65,8 +65,8 @@ public:
   virtual ~MemoryBuffer();
 
   const char *getBufferStart() const { return BufferStart; }
-  const char *getBufferEnd() const   { return BufferEnd; }
-  size_t getBufferSize() const { return BufferEnd-BufferStart; }
+  const char *getBufferEnd() const { return BufferEnd; }
+  size_t getBufferSize() const { return BufferEnd - BufferStart; }
 
   StringRef getBuffer() const {
     return StringRef(BufferStart, getBufferSize());
@@ -163,10 +163,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// The kind of memory backing used to support the MemoryBuffer.
-  enum BufferKind {
-    MemoryBuffer_Malloc,
-    MemoryBuffer_MMap
-  };
+  enum BufferKind { MemoryBuffer_Malloc, MemoryBuffer_MMap };
 
   /// Return information on the memory mechanism used to support the
   /// MemoryBuffer.

@@ -89,7 +89,7 @@ raw_ostream &operator<<(raw_ostream &OS, const ARM::WinEH::ReturnType &RT) {
   }
   return OS;
 }
-}
+} // namespace llvm
 
 static std::string formatSymbol(StringRef Name, uint64_t Address,
                                 uint64_t Offset = 0) {
@@ -116,31 +116,32 @@ const size_t Decoder::PDataEntrySize = sizeof(RuntimeFunction);
 
 // TODO name the uops more appropriately
 const Decoder::RingEntry Decoder::Ring[] = {
-  { 0x80, 0x00, 1, &Decoder::opcode_0xxxxxxx },  // UOP_STACK_FREE (16-bit)
-  { 0xc0, 0x80, 2, &Decoder::opcode_10Lxxxxx },  // UOP_POP (32-bit)
-  { 0xf0, 0xc0, 1, &Decoder::opcode_1100xxxx },  // UOP_STACK_SAVE (16-bit)
-  { 0xf8, 0xd0, 1, &Decoder::opcode_11010Lxx },  // UOP_POP (16-bit)
-  { 0xf8, 0xd8, 1, &Decoder::opcode_11011Lxx },  // UOP_POP (32-bit)
-  { 0xf8, 0xe0, 1, &Decoder::opcode_11100xxx },  // UOP_VPOP (32-bit)
-  { 0xfc, 0xe8, 2, &Decoder::opcode_111010xx },  // UOP_STACK_FREE (32-bit)
-  { 0xfe, 0xec, 2, &Decoder::opcode_1110110L },  // UOP_POP (16-bit)
-  { 0xff, 0xee, 2, &Decoder::opcode_11101110 },  // UOP_MICROSOFT_SPECIFIC (16-bit)
-                                              // UOP_PUSH_MACHINE_FRAME
-                                              // UOP_PUSH_CONTEXT
-                                              // UOP_PUSH_TRAP_FRAME
-                                              // UOP_REDZONE_RESTORE_LR
-  { 0xff, 0xef, 2, &Decoder::opcode_11101111 },  // UOP_LDRPC_POSTINC (32-bit)
-  { 0xff, 0xf5, 2, &Decoder::opcode_11110101 },  // UOP_VPOP (32-bit)
-  { 0xff, 0xf6, 2, &Decoder::opcode_11110110 },  // UOP_VPOP (32-bit)
-  { 0xff, 0xf7, 3, &Decoder::opcode_11110111 },  // UOP_STACK_RESTORE (16-bit)
-  { 0xff, 0xf8, 4, &Decoder::opcode_11111000 },  // UOP_STACK_RESTORE (16-bit)
-  { 0xff, 0xf9, 3, &Decoder::opcode_11111001 },  // UOP_STACK_RESTORE (32-bit)
-  { 0xff, 0xfa, 4, &Decoder::opcode_11111010 },  // UOP_STACK_RESTORE (32-bit)
-  { 0xff, 0xfb, 1, &Decoder::opcode_11111011 },  // UOP_NOP (16-bit)
-  { 0xff, 0xfc, 1, &Decoder::opcode_11111100 },  // UOP_NOP (32-bit)
-  { 0xff, 0xfd, 1, &Decoder::opcode_11111101 },  // UOP_NOP (16-bit) / END
-  { 0xff, 0xfe, 1, &Decoder::opcode_11111110 },  // UOP_NOP (32-bit) / END
-  { 0xff, 0xff, 1, &Decoder::opcode_11111111 },  // UOP_END
+    {0x80, 0x00, 1, &Decoder::opcode_0xxxxxxx}, // UOP_STACK_FREE (16-bit)
+    {0xc0, 0x80, 2, &Decoder::opcode_10Lxxxxx}, // UOP_POP (32-bit)
+    {0xf0, 0xc0, 1, &Decoder::opcode_1100xxxx}, // UOP_STACK_SAVE (16-bit)
+    {0xf8, 0xd0, 1, &Decoder::opcode_11010Lxx}, // UOP_POP (16-bit)
+    {0xf8, 0xd8, 1, &Decoder::opcode_11011Lxx}, // UOP_POP (32-bit)
+    {0xf8, 0xe0, 1, &Decoder::opcode_11100xxx}, // UOP_VPOP (32-bit)
+    {0xfc, 0xe8, 2, &Decoder::opcode_111010xx}, // UOP_STACK_FREE (32-bit)
+    {0xfe, 0xec, 2, &Decoder::opcode_1110110L}, // UOP_POP (16-bit)
+    {0xff, 0xee, 2,
+     &Decoder::opcode_11101110}, // UOP_MICROSOFT_SPECIFIC (16-bit)
+                                 // UOP_PUSH_MACHINE_FRAME
+                                 // UOP_PUSH_CONTEXT
+                                 // UOP_PUSH_TRAP_FRAME
+                                 // UOP_REDZONE_RESTORE_LR
+    {0xff, 0xef, 2, &Decoder::opcode_11101111}, // UOP_LDRPC_POSTINC (32-bit)
+    {0xff, 0xf5, 2, &Decoder::opcode_11110101}, // UOP_VPOP (32-bit)
+    {0xff, 0xf6, 2, &Decoder::opcode_11110110}, // UOP_VPOP (32-bit)
+    {0xff, 0xf7, 3, &Decoder::opcode_11110111}, // UOP_STACK_RESTORE (16-bit)
+    {0xff, 0xf8, 4, &Decoder::opcode_11111000}, // UOP_STACK_RESTORE (16-bit)
+    {0xff, 0xf9, 3, &Decoder::opcode_11111001}, // UOP_STACK_RESTORE (32-bit)
+    {0xff, 0xfa, 4, &Decoder::opcode_11111010}, // UOP_STACK_RESTORE (32-bit)
+    {0xff, 0xfb, 1, &Decoder::opcode_11111011}, // UOP_NOP (16-bit)
+    {0xff, 0xfc, 1, &Decoder::opcode_11111100}, // UOP_NOP (32-bit)
+    {0xff, 0xfd, 1, &Decoder::opcode_11111101}, // UOP_NOP (16-bit) / END
+    {0xff, 0xfe, 1, &Decoder::opcode_11111110}, // UOP_NOP (32-bit) / END
+    {0xff, 0xff, 1, &Decoder::opcode_11111111}, // UOP_END
 };
 
 // Unwind opcodes for ARM64.
@@ -329,10 +330,9 @@ ErrorOr<SymbolRef> Decoder::getSymbolForLocation(
 bool Decoder::opcode_0xxxxxxx(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
   uint8_t Imm = OC[Offset] & 0x7f;
-  SW.startLine() << format("0x%02x                ; %s sp, #(%u * 4)\n",
-                           OC[Offset],
-                           static_cast<const char *>(Prologue ? "sub" : "add"),
-                           Imm);
+  SW.startLine() << format(
+      "0x%02x                ; %s sp, #(%u * 4)\n", OC[Offset],
+      static_cast<const char *>(Prologue ? "sub" : "add"), Imm);
   ++Offset;
   return false;
 }
@@ -340,15 +340,14 @@ bool Decoder::opcode_0xxxxxxx(const uint8_t *OC, unsigned &Offset,
 bool Decoder::opcode_10Lxxxxx(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
   unsigned Link = (OC[Offset] & 0x20) >> 5;
-  uint16_t RegisterMask = (Link << (Prologue ? 14 : 15))
-                        | ((OC[Offset + 0] & 0x1f) << 8)
-                        | ((OC[Offset + 1] & 0xff) << 0);
+  uint16_t RegisterMask = (Link << (Prologue ? 14 : 15)) |
+                          ((OC[Offset + 0] & 0x1f) << 8) |
+                          ((OC[Offset + 1] & 0xff) << 0);
   assert((~RegisterMask & (1 << 13)) && "sp must not be set");
   assert((~RegisterMask & (1 << (Prologue ? 15 : 14))) && "pc must not be set");
 
-  SW.startLine() << format("0x%02x 0x%02x           ; %s.w ",
-                           OC[Offset + 0], OC[Offset + 1],
-                           Prologue ? "push" : "pop");
+  SW.startLine() << format("0x%02x 0x%02x           ; %s.w ", OC[Offset + 0],
+                           OC[Offset + 1], Prologue ? "push" : "pop");
   printGPRMask(RegisterMask);
   OS << '\n';
 
@@ -373,8 +372,8 @@ bool Decoder::opcode_11010Lxx(const uint8_t *OC, unsigned &Offset,
   unsigned Link = (OC[Offset] & 0x4) >> 2;
   unsigned Count = (OC[Offset] & 0x3);
 
-  uint16_t GPRMask = (Link << (Prologue ? 14 : 15))
-                   | (((1 << (Count + 1)) - 1) << 4);
+  uint16_t GPRMask =
+      (Link << (Prologue ? 14 : 15)) | (((1 << (Count + 1)) - 1) << 4);
 
   SW.startLine() << format("0x%02x                ; %s ", OC[Offset],
                            Prologue ? "push" : "pop");
@@ -390,8 +389,8 @@ bool Decoder::opcode_11011Lxx(const uint8_t *OC, unsigned &Offset,
   unsigned Link = (OC[Offset] & 0x4) >> 2;
   unsigned Count = (OC[Offset] & 0x3) + 4;
 
-  uint16_t GPRMask = (Link << (Prologue ? 14 : 15))
-                   | (((1 << (Count + 1)) - 1) << 4);
+  uint16_t GPRMask =
+      (Link << (Prologue ? 14 : 15)) | (((1 << (Count + 1)) - 1) << 4);
 
   SW.startLine() << format("0x%02x                ; %s.w ", OC[Offset],
                            Prologue ? "push" : "pop");
@@ -418,12 +417,12 @@ bool Decoder::opcode_11100xxx(const uint8_t *OC, unsigned &Offset,
 
 bool Decoder::opcode_111010xx(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
-  uint16_t Imm = ((OC[Offset + 0] & 0x03) << 8) | ((OC[Offset + 1] & 0xff) << 0);
+  uint16_t Imm =
+      ((OC[Offset + 0] & 0x03) << 8) | ((OC[Offset + 1] & 0xff) << 0);
 
-  SW.startLine() << format("0x%02x 0x%02x           ; %s.w sp, #(%u * 4)\n",
-                           OC[Offset + 0], OC[Offset + 1],
-                           static_cast<const char *>(Prologue ? "sub" : "add"),
-                           Imm);
+  SW.startLine() << format(
+      "0x%02x 0x%02x           ; %s.w sp, #(%u * 4)\n", OC[Offset + 0],
+      OC[Offset + 1], static_cast<const char *>(Prologue ? "sub" : "add"), Imm);
 
   Offset += 2;
   return false;
@@ -431,8 +430,8 @@ bool Decoder::opcode_111010xx(const uint8_t *OC, unsigned &Offset,
 
 bool Decoder::opcode_1110110L(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
-  uint16_t GPRMask = ((OC[Offset + 0] & 0x01) << (Prologue ? 14 : 15))
-                   | ((OC[Offset + 1] & 0xff) << 0);
+  uint16_t GPRMask = ((OC[Offset + 0] & 0x01) << (Prologue ? 14 : 15)) |
+                     ((OC[Offset + 1] & 0xff) << 0);
 
   SW.startLine() << format("0x%02x 0x%02x           ; %s ", OC[Offset + 0],
                            OC[Offset + 1], Prologue ? "push" : "pop");
@@ -449,11 +448,11 @@ bool Decoder::opcode_11101110(const uint8_t *OC, unsigned &Offset,
 
   if (OC[Offset + 1] & 0xf0)
     SW.startLine() << format("0x%02x 0x%02x           ; reserved\n",
-                             OC[Offset + 0], OC[Offset +  1]);
+                             OC[Offset + 0], OC[Offset + 1]);
   else
-    SW.startLine()
-      << format("0x%02x 0x%02x           ; microsoft-specific (type: %u)\n",
-                OC[Offset + 0], OC[Offset + 1], OC[Offset + 1] & 0x0f);
+    SW.startLine() << format(
+        "0x%02x 0x%02x           ; microsoft-specific (type: %u)\n",
+        OC[Offset + 0], OC[Offset + 1], OC[Offset + 1] & 0x0f);
 
   Offset += 2;
   return false;
@@ -463,15 +462,15 @@ bool Decoder::opcode_11101111(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
   if (OC[Offset + 1] & 0xf0)
     SW.startLine() << format("0x%02x 0x%02x           ; reserved\n",
-                             OC[Offset + 0], OC[Offset +  1]);
+                             OC[Offset + 0], OC[Offset + 1]);
   else if (Prologue)
-    SW.startLine()
-      << format("0x%02x 0x%02x           ; str.w lr, [sp, #-%u]!\n",
-                OC[Offset + 0], OC[Offset + 1], OC[Offset + 1] << 2);
+    SW.startLine() << format(
+        "0x%02x 0x%02x           ; str.w lr, [sp, #-%u]!\n", OC[Offset + 0],
+        OC[Offset + 1], OC[Offset + 1] << 2);
   else
-    SW.startLine()
-      << format("0x%02x 0x%02x           ; ldr.w lr, [sp], #%u\n",
-                OC[Offset + 0], OC[Offset + 1], OC[Offset + 1] << 2);
+    SW.startLine() << format("0x%02x 0x%02x           ; ldr.w lr, [sp], #%u\n",
+                             OC[Offset + 0], OC[Offset + 1],
+                             OC[Offset + 1] << 2);
 
   Offset += 2;
   return false;
@@ -522,14 +521,13 @@ bool Decoder::opcode_11110111(const uint8_t *OC, unsigned &Offset,
 
 bool Decoder::opcode_11111000(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
-  uint32_t Imm = (OC[Offset + 1] << 16)
-               | (OC[Offset + 2] << 8)
-               | (OC[Offset + 3] << 0);
+  uint32_t Imm =
+      (OC[Offset + 1] << 16) | (OC[Offset + 2] << 8) | (OC[Offset + 3] << 0);
 
-  SW.startLine()
-    << format("0x%02x 0x%02x 0x%02x 0x%02x ; %s sp, sp, #(%u * 4)\n",
-              OC[Offset + 0], OC[Offset + 1], OC[Offset + 2], OC[Offset + 3],
-              static_cast<const char *>(Prologue ? "sub" : "add"), Imm);
+  SW.startLine() << format(
+      "0x%02x 0x%02x 0x%02x 0x%02x ; %s sp, sp, #(%u * 4)\n", OC[Offset + 0],
+      OC[Offset + 1], OC[Offset + 2], OC[Offset + 3],
+      static_cast<const char *>(Prologue ? "sub" : "add"), Imm);
 
   Offset += 4;
   return false;
@@ -539,10 +537,10 @@ bool Decoder::opcode_11111001(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
   uint32_t Imm = (OC[Offset + 1] << 8) | (OC[Offset + 2] << 0);
 
-  SW.startLine()
-    << format("0x%02x 0x%02x 0x%02x      ; %s.w sp, sp, #(%u * 4)\n",
-              OC[Offset + 0], OC[Offset + 1], OC[Offset + 2],
-              static_cast<const char *>(Prologue ? "sub" : "add"), Imm);
+  SW.startLine() << format(
+      "0x%02x 0x%02x 0x%02x      ; %s.w sp, sp, #(%u * 4)\n", OC[Offset + 0],
+      OC[Offset + 1], OC[Offset + 2],
+      static_cast<const char *>(Prologue ? "sub" : "add"), Imm);
 
   Offset += 3;
   return false;
@@ -550,14 +548,13 @@ bool Decoder::opcode_11111001(const uint8_t *OC, unsigned &Offset,
 
 bool Decoder::opcode_11111010(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
-  uint32_t Imm = (OC[Offset + 1] << 16)
-               | (OC[Offset + 2] << 8)
-               | (OC[Offset + 3] << 0);
+  uint32_t Imm =
+      (OC[Offset + 1] << 16) | (OC[Offset + 2] << 8) | (OC[Offset + 3] << 0);
 
-  SW.startLine()
-    << format("0x%02x 0x%02x 0x%02x 0x%02x ; %s.w sp, sp, #(%u * 4)\n",
-              OC[Offset + 0], OC[Offset + 1], OC[Offset + 2], OC[Offset + 3],
-              static_cast<const char *>(Prologue ? "sub" : "add"), Imm);
+  SW.startLine() << format(
+      "0x%02x 0x%02x 0x%02x 0x%02x ; %s.w sp, sp, #(%u * 4)\n", OC[Offset + 0],
+      OC[Offset + 1], OC[Offset + 2], OC[Offset + 3],
+      static_cast<const char *>(Prologue ? "sub" : "add"), Imm);
 
   Offset += 4;
   return false;
@@ -586,7 +583,8 @@ bool Decoder::opcode_11111101(const uint8_t *OC, unsigned &Offset,
 
 bool Decoder::opcode_11111110(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
-  SW.startLine() << format("0x%02x                ; b.w <target>\n", OC[Offset]);
+  SW.startLine() << format("0x%02x                ; b.w <target>\n",
+                           OC[Offset]);
   ++Offset;
   return true;
 }
@@ -649,10 +647,9 @@ bool Decoder::opcode_alloc_m(const uint8_t *OC, unsigned &Offset,
   uint32_t NumBytes = ((OC[Offset] & 0x07) << 8);
   NumBytes |= (OC[Offset + 1] & 0xFF);
   NumBytes <<= 4;
-  SW.startLine() << format("0x%02x%02x              ; %s sp, #%u\n",
-                           OC[Offset], OC[Offset + 1],
-                           static_cast<const char *>(Prologue ? "sub" : "add"),
-                           NumBytes);
+  SW.startLine() << format(
+      "0x%02x%02x              ; %s sp, #%u\n", OC[Offset], OC[Offset + 1],
+      static_cast<const char *>(Prologue ? "sub" : "add"), NumBytes);
   Offset += 2;
   return false;
 }
@@ -664,10 +661,10 @@ bool Decoder::opcode_save_regp(const uint8_t *OC, unsigned &Offset,
   Reg >>= 6;
   Reg += 19;
   uint32_t Off = (OC[Offset + 1] & 0x3F) << 3;
-  SW.startLine() << format(
-      "0x%02x%02x              ; %s x%u, x%u, [sp, #%u]\n",
-      OC[Offset], OC[Offset + 1],
-      static_cast<const char *>(Prologue ? "stp" : "ldp"), Reg, Reg + 1, Off);
+  SW.startLine() << format("0x%02x%02x              ; %s x%u, x%u, [sp, #%u]\n",
+                           OC[Offset], OC[Offset + 1],
+                           static_cast<const char *>(Prologue ? "stp" : "ldp"),
+                           Reg, Reg + 1, Off);
   Offset += 2;
   return false;
 }
@@ -681,14 +678,12 @@ bool Decoder::opcode_save_regp_x(const uint8_t *OC, unsigned &Offset,
   uint32_t Off = ((OC[Offset + 1] & 0x3F) + 1) << 3;
   if (Prologue)
     SW.startLine() << format(
-        "0x%02x%02x              ; stp x%u, x%u, [sp, #-%u]!\n",
-        OC[Offset], OC[Offset + 1], Reg,
-        Reg + 1, Off);
+        "0x%02x%02x              ; stp x%u, x%u, [sp, #-%u]!\n", OC[Offset],
+        OC[Offset + 1], Reg, Reg + 1, Off);
   else
     SW.startLine() << format(
-        "0x%02x%02x              ; ldp x%u, x%u, [sp], #%u\n",
-        OC[Offset], OC[Offset + 1], Reg,
-        Reg + 1, Off);
+        "0x%02x%02x              ; ldp x%u, x%u, [sp], #%u\n", OC[Offset],
+        OC[Offset + 1], Reg, Reg + 1, Off);
   Offset += 2;
   return false;
 }
@@ -795,13 +790,11 @@ bool Decoder::opcode_save_freg_x(const uint8_t *OC, unsigned &Offset,
   uint32_t Reg = ((OC[Offset + 1] & 0xE0) >> 5) + 8;
   uint32_t Off = ((OC[Offset + 1] & 0x1F) + 1) << 3;
   if (Prologue)
-    SW.startLine() << format(
-        "0x%02x%02x              ; str d%u, [sp, #-%u]!\n", OC[Offset],
-        OC[Offset + 1], Reg, Off);
+    SW.startLine() << format("0x%02x%02x              ; str d%u, [sp, #-%u]!\n",
+                             OC[Offset], OC[Offset + 1], Reg, Off);
   else
-    SW.startLine() << format(
-        "0x%02x%02x              ; ldr d%u, [sp], #%u\n", OC[Offset],
-        OC[Offset + 1], Reg, Off);
+    SW.startLine() << format("0x%02x%02x              ; ldr d%u, [sp], #%u\n",
+                             OC[Offset], OC[Offset + 1], Reg, Off);
   Offset += 2;
   return false;
 }
@@ -1051,9 +1044,9 @@ bool Decoder::opcode_pac_sign_lr(const uint8_t *OC, unsigned &Offset,
 void Decoder::decodeOpcodes(ArrayRef<uint8_t> Opcodes, unsigned Offset,
                             bool Prologue) {
   assert((!Prologue || Offset == 0) && "prologue should always use offset 0");
-  const RingEntry* DecodeRing = isAArch64 ? Ring64 : Ring;
+  const RingEntry *DecodeRing = isAArch64 ? Ring64 : Ring;
   bool Terminated = false;
-  for (unsigned OI = Offset, OE = Opcodes.size(); !Terminated && OI < OE; ) {
+  for (unsigned OI = Offset, OE = Opcodes.size(); !Terminated && OI < OE;) {
     for (unsigned DI = 0;; ++DI) {
       if ((isAArch64 && (DI >= std::size(Ring64))) ||
           (!isAArch64 && (DI >= std::size(Ring)))) {
@@ -1066,7 +1059,7 @@ void Decoder::decodeOpcodes(ArrayRef<uint8_t> Opcodes, unsigned Offset,
       if ((Opcodes[OI] & DecodeRing[DI].Mask) == DecodeRing[DI].Value) {
         if (OI + DecodeRing[DI].Length > OE) {
           SW.startLine() << format("Opcode 0x%02x goes past the unwind data\n",
-                                    Opcodes[OI]);
+                                   Opcodes[OI]);
           OI += DecodeRing[DI].Length;
           break;
         }
@@ -1088,7 +1081,7 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
   uint64_t SectionVA = Section.getAddress();
   uint64_t Offset = VA - SectionVA;
   const ulittle32_t *Data =
-    reinterpret_cast<const ulittle32_t *>(Contents.data() + Offset);
+      reinterpret_cast<const ulittle32_t *>(Contents.data() + Offset);
 
   // Sanity check to ensure that the .xdata header is present.
   // A header is one or two words, followed by at least one word to describe
@@ -1098,9 +1091,9 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
 
   const ExceptionDataRecord XData(Data, isAArch64);
   DictScope XRS(SW, "ExceptionData");
-  SW.printNumber("FunctionLength",
-                 isAArch64 ? XData.FunctionLengthInBytesAArch64() :
-                 XData.FunctionLengthInBytesARM());
+  SW.printNumber("FunctionLength", isAArch64
+                                       ? XData.FunctionLengthInBytesAArch64()
+                                       : XData.FunctionLengthInBytesARM());
   SW.printNumber("Version", XData.Vers());
   SW.printBoolean("ExceptionData", XData.X());
   SW.printBoolean("EpiloguePacked", XData.E());
@@ -1140,9 +1133,9 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
       SW.printNumber("StartOffset", ES.EpilogueStartOffset());
       if (!isAArch64)
         SW.printNumber("Condition", ES.Condition());
-      SW.printNumber("EpilogueStartIndex",
-                     isAArch64 ? ES.EpilogueStartIndexAArch64()
-                               : ES.EpilogueStartIndexARM());
+      SW.printNumber("EpilogueStartIndex", isAArch64
+                                               ? ES.EpilogueStartIndexAArch64()
+                                               : ES.EpilogueStartIndexARM());
       unsigned ReservedMask = isAArch64 ? 0xF : 0x3;
       if ((ES.ES >> 18) & ReservedMask)
         SW.printNumber("ReservedBits", (ES.ES >> 18) & ReservedMask);
@@ -1493,7 +1486,7 @@ bool Decoder::dumpProcedureDataEntry(const COFFObjectFile &COFF,
                                      ArrayRef<uint8_t> Contents) {
   uint64_t Offset = PDataEntrySize * Index;
   const ulittle32_t *Data =
-    reinterpret_cast<const ulittle32_t *>(Contents.data() + Offset);
+      reinterpret_cast<const ulittle32_t *>(Contents.data() + Offset);
 
   const RuntimeFunction Entry(Data);
   DictScope RFS(SW, "RuntimeFunction");
@@ -1534,6 +1527,6 @@ Error Decoder::dumpProcedureData(const COFFObjectFile &COFF) {
   }
   return Error::success();
 }
-}
-}
-}
+} // namespace WinEH
+} // namespace ARM
+} // namespace llvm

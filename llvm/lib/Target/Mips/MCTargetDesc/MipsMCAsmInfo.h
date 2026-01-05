@@ -78,7 +78,7 @@ enum {
 bool isGpOff(const MCSpecifierExpr &E);
 const MCSpecifierExpr *createGpOff(const MCExpr *Expr, Specifier S,
                                    MCContext &Ctx);
-}
+} // namespace Mips
 
 } // namespace llvm
 

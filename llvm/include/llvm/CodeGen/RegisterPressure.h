@@ -106,7 +106,7 @@ class PressureChange {
 
 public:
   PressureChange() = default;
-  PressureChange(unsigned id): PSetID(id + 1) {
+  PressureChange(unsigned id) : PSetID(id + 1) {
     assert(id < std::numeric_limits<uint16_t>::max() && "PSetID overflow.");
   }
 
@@ -217,7 +217,7 @@ public:
     return PDiffArray[Idx];
   }
   const PressureDiff &operator[](unsigned Idx) const {
-    return const_cast<PressureDiffs*>(this)->operator[](Idx);
+    return const_cast<PressureDiffs *>(this)->operator[](Idx);
   }
 
   /// Record pressure difference induced by the given operand list to
@@ -248,8 +248,8 @@ struct RegPressureDelta {
   RegPressureDelta() = default;
 
   bool operator==(const RegPressureDelta &RHS) const {
-    return Excess == RHS.Excess && CriticalMax == RHS.CriticalMax
-      && CurrentMax == RHS.CurrentMax;
+    return Excess == RHS.Excess && CriticalMax == RHS.CriticalMax &&
+           CurrentMax == RHS.CurrentMax;
   }
   bool operator!=(const RegPressureDelta &RHS) const {
     return !operator==(RHS);
@@ -270,9 +270,7 @@ private:
     IndexMaskPair(unsigned Index, LaneBitmask LaneMask)
         : Index(Index), LaneMask(LaneMask) {}
 
-    unsigned getSparseSetIndex() const {
-      return Index;
-    }
+    unsigned getSparseSetIndex() const { return Index; }
   };
 
   using RegSet = SparseSet<IndexMaskPair>;
@@ -329,9 +327,7 @@ public:
     return PrevMask;
   }
 
-  size_t size() const {
-    return Regs.size();
-  }
+  size_t size() const { return Regs.size(); }
 
   void appendTo(SmallVectorImpl<VRegMaskOrUnit> &To) const {
     for (const IndexMaskPair &P : Regs) {
@@ -502,8 +498,7 @@ public:
   /// Find the pressure set with the most change beyond its pressure limit after
   /// traversing this instruction either upward or downward depending on the
   /// closed end of the current region.
-  void getMaxPressureDelta(const MachineInstr *MI,
-                           RegPressureDelta &Delta,
+  void getMaxPressureDelta(const MachineInstr *MI, RegPressureDelta &Delta,
                            ArrayRef<PressureChange> CriticalPSets,
                            ArrayRef<unsigned> MaxPressureLimit) {
     if (isTopClosed())

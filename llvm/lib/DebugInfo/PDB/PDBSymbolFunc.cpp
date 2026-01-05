@@ -73,7 +73,7 @@ private:
   ArgListType Args;
   ArgListType::const_iterator CurIter;
 };
-}
+} // namespace
 
 std::unique_ptr<IPDBEnumChildren<PDBSymbolData>>
 PDBSymbolFunc::getArguments() const {

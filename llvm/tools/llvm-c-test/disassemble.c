@@ -36,8 +36,8 @@ static void pprint(int pos, unsigned char *buf, int len, const char *disasm) {
 
 static void do_disassemble(const char *triple, const char *features,
                            unsigned char *buf, int siz) {
-  LLVMDisasmContextRef D = LLVMCreateDisasmCPUFeatures(triple, "", features,
-                                                       NULL, 0, NULL, NULL);
+  LLVMDisasmContextRef D =
+      LLVMCreateDisasmCPUFeatures(triple, "", features, NULL, 0, NULL, NULL);
   char outline[1024];
   int pos;
 

@@ -39,8 +39,8 @@ namespace exegesis {
 
 // Finds the points at distance less than sqrt(EpsilonSquared) of Q (not
 // including Q).
-void BenchmarkClustering::rangeQuery(
-    const size_t Q, std::vector<size_t> &Neighbors) const {
+void BenchmarkClustering::rangeQuery(const size_t Q,
+                                     std::vector<size_t> &Neighbors) const {
   Neighbors.clear();
   Neighbors.reserve(Points_.size() - 1); // The Q itself isn't a neighbor.
   const auto &QMeasurements = Points_[Q].Measurements;
@@ -59,8 +59,7 @@ void BenchmarkClustering::rangeQuery(
 
 // Given a set of points, checks that all the points are neighbours
 // up to AnalysisClusteringEpsilon. This is O(2*N).
-bool BenchmarkClustering::areAllNeighbours(
-    ArrayRef<size_t> Pts) const {
+bool BenchmarkClustering::areAllNeighbours(ArrayRef<size_t> Pts) const {
   // First, get the centroid of this group of points. This is O(N).
   SchedClassClusterCentroid G;
   for (size_t P : Pts) {
@@ -185,8 +184,8 @@ void BenchmarkClustering::clusterizeDbScan(const size_t MinPts) {
   }
 }
 
-void BenchmarkClustering::clusterizeNaive(
-    const MCSubtargetInfo &SubtargetInfo, const MCInstrInfo &InstrInfo) {
+void BenchmarkClustering::clusterizeNaive(const MCSubtargetInfo &SubtargetInfo,
+                                          const MCInstrInfo &InstrInfo) {
   // Given an instruction Opcode, which sched class id's are represented,
   // and which are the benchmarks for each sched class?
   std::vector<SmallMapVector<unsigned, SmallVector<size_t, 1>, 1>>
@@ -329,8 +328,8 @@ Expected<BenchmarkClustering> BenchmarkClustering::create(
     const std::vector<Benchmark> &Points, const ModeE Mode,
     const size_t DbscanMinPts, const double AnalysisClusteringEpsilon,
     const MCSubtargetInfo *SubtargetInfo, const MCInstrInfo *InstrInfo) {
-  BenchmarkClustering Clustering(
-      Points, AnalysisClusteringEpsilon * AnalysisClusteringEpsilon);
+  BenchmarkClustering Clustering(Points, AnalysisClusteringEpsilon *
+                                             AnalysisClusteringEpsilon);
   if (auto Error = Clustering.validateAndSetup()) {
     return std::move(Error);
   }
@@ -370,8 +369,7 @@ std::vector<BenchmarkMeasure> SchedClassClusterCentroid::getAsPoint() const {
   return ClusterCenterPoint;
 }
 
-bool SchedClassClusterCentroid::validate(
-    Benchmark::ModeE Mode) const {
+bool SchedClassClusterCentroid::validate(Benchmark::ModeE Mode) const {
   size_t NumMeasurements = Representative.size();
   switch (Mode) {
   case Benchmark::Latency:

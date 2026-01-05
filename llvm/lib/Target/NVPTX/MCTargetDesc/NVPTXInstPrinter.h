@@ -56,6 +56,6 @@ public:
   void printFTZFlag(const MCInst *MI, int OpNum, raw_ostream &O);
 };
 
-}
+} // namespace llvm
 
 #endif

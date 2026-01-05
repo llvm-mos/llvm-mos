@@ -18,7 +18,7 @@ using namespace llvm;
 // SrcReg, but before any subsequent point where control flow might jump out of
 // the basic block.
 MachineBasicBlock::iterator
-llvm::findPHICopyInsertPoint(MachineBasicBlock* MBB, MachineBasicBlock* SuccMBB,
+llvm::findPHICopyInsertPoint(MachineBasicBlock *MBB, MachineBasicBlock *SuccMBB,
                              Register SrcReg) {
   // Handle the trivial case trivially.
   if (MBB->empty())
@@ -37,7 +37,7 @@ llvm::findPHICopyInsertPoint(MachineBasicBlock* MBB, MachineBasicBlock* SuccMBB,
 
   // Discover any defs in this basic block.
   SmallPtrSet<MachineInstr *, 8> DefsInMBB;
-  MachineRegisterInfo& MRI = MBB->getParent()->getRegInfo();
+  MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
   for (MachineInstr &RI : MRI.def_instructions(SrcReg))
     if (RI.getParent() == MBB)
       DefsInMBB.insert(&RI);

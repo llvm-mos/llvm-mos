@@ -15,6 +15,6 @@ class Target;
 
 Target &getTheXCoreTarget();
 
-}
+} // namespace llvm
 
 #endif // LLVM_LIB_TARGET_XCORE_TARGETINFO_XCORETARGETINFO_H

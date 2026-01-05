@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
@@ -296,7 +295,8 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   }
 
   if (T.isOSWindows() && !T.isOSCygMing()) {
-    // XXX: The earliest documentation available at the moment is for VS2015/VC19:
+    // XXX: The earliest documentation available at the moment is for
+    // VS2015/VC19:
     // https://docs.microsoft.com/en-us/cpp/c-runtime-library/floating-point-support?view=vs-2015
     // XXX: In order to use an MSVCRT older than VC19,
     // the specific library version must be explicit in the target triple,
@@ -308,10 +308,8 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     }
 
     // Latest targets support C89 math functions, in part.
-    bool isARM = (T.getArch() == Triple::aarch64 ||
-                  T.getArch() == Triple::arm);
-    bool hasPartialFloat = (isARM ||
-                            T.getArch() == Triple::x86_64);
+    bool isARM = (T.getArch() == Triple::aarch64 || T.getArch() == Triple::arm);
+    bool hasPartialFloat = (isARM || T.getArch() == Triple::x86_64);
 
     // Win32 does not support float C89 math functions, in general.
     if (!hasPartialFloat) {
@@ -1008,7 +1006,8 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
   ScalarDescs = TLI.ScalarDescs;
 }
 
-TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoImpl &TLI) {
+TargetLibraryInfoImpl &
+TargetLibraryInfoImpl::operator=(const TargetLibraryInfoImpl &TLI) {
   CustomNames = TLI.CustomNames;
   ShouldExtI32Param = TLI.ShouldExtI32Param;
   ShouldExtI32Return = TLI.ShouldExtI32Return;
@@ -1019,7 +1018,8 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoI
   return *this;
 }
 
-TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&TLI) {
+TargetLibraryInfoImpl &
+TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&TLI) {
   CustomNames = std::move(TLI.CustomNames);
   ShouldExtI32Param = TLI.ShouldExtI32Param;
   ShouldExtI32Return = TLI.ShouldExtI32Return;
@@ -1274,7 +1274,8 @@ bool TargetLibraryInfoImpl::getLibFunc(const Function &FDecl,
   // Intrinsics don't overlap w/libcalls; if our module has a large number of
   // intrinsics, this ends up being an interesting compile time win since we
   // avoid string normalization and comparison.
-  if (FDecl.isIntrinsic()) return false;
+  if (FDecl.isIntrinsic())
+    return false;
 
   const Module *M = FDecl.getParent();
   assert(M && "Expecting FDecl to be connected to a Module.");
@@ -1521,8 +1522,8 @@ TargetLibraryInfo TargetLibraryAnalysis::run(const Function &F,
 }
 
 unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
-  if (auto *ShortWChar = cast_or_null<ConstantAsMetadata>(
-      M.getModuleFlag("wchar_size")))
+  if (auto *ShortWChar =
+          cast_or_null<ConstantAsMetadata>(M.getModuleFlag("wchar_size")))
     return cast<ConstantInt>(ShortWChar->getValue())->getZExtValue();
   return 0;
 }

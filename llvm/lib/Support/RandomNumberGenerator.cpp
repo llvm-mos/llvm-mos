@@ -71,7 +71,7 @@ std::error_code llvm::getRandomBytes(void *Buffer, size_t Size) {
 #ifdef _WIN32
   HCRYPTPROV hProvider;
   if (CryptAcquireContext(&hProvider, 0, 0, PROV_RSA_FULL,
-                           CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
+                          CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
     ScopedCryptContext ScopedHandle(hProvider);
     if (CryptGenRandom(hProvider, Size, static_cast<BYTE *>(Buffer)))
       return std::error_code();

@@ -41,7 +41,7 @@ private:
   CodeViewRecordIO IO;
   CodeViewContainer Container;
 };
-}
-}
+} // namespace codeview
+} // namespace llvm
 
 #endif

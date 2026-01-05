@@ -314,14 +314,29 @@ bool SystemZElimCompare::convertToLogical(
 
   unsigned ConvOpc = 0;
   switch (MI.getOpcode()) {
-  case SystemZ::AR:   ConvOpc = SystemZ::ALR;   break;
-  case SystemZ::ARK:  ConvOpc = SystemZ::ALRK;  break;
-  case SystemZ::AGR:  ConvOpc = SystemZ::ALGR;  break;
-  case SystemZ::AGRK: ConvOpc = SystemZ::ALGRK; break;
-  case SystemZ::A:    ConvOpc = SystemZ::AL;    break;
-  case SystemZ::AY:   ConvOpc = SystemZ::ALY;   break;
-  case SystemZ::AG:   ConvOpc = SystemZ::ALG;   break;
-  default: break;
+  case SystemZ::AR:
+    ConvOpc = SystemZ::ALR;
+    break;
+  case SystemZ::ARK:
+    ConvOpc = SystemZ::ALRK;
+    break;
+  case SystemZ::AGR:
+    ConvOpc = SystemZ::ALGR;
+    break;
+  case SystemZ::AGRK:
+    ConvOpc = SystemZ::ALGRK;
+    break;
+  case SystemZ::A:
+    ConvOpc = SystemZ::AL;
+    break;
+  case SystemZ::AY:
+    ConvOpc = SystemZ::ALY;
+    break;
+  case SystemZ::AG:
+    ConvOpc = SystemZ::ALG;
+    break;
+  default:
+    break;
   }
   if (!ConvOpc || !adjustCCMasksForInstr(MI, Compare, CCUsers, ConvOpc))
     return false;
@@ -335,7 +350,7 @@ bool SystemZElimCompare::convertToLogical(
 
 #ifndef NDEBUG
 static bool isAddWithImmediate(unsigned Opcode) {
-  switch(Opcode) {
+  switch (Opcode) {
   case SystemZ::AHI:
   case SystemZ::AHIK:
   case SystemZ::AGHI:
@@ -344,7 +359,8 @@ static bool isAddWithImmediate(unsigned Opcode) {
   case SystemZ::AIH:
   case SystemZ::AGFI:
     return true;
-  default: break;
+  default:
+    break;
   }
   return false;
 }
@@ -358,8 +374,7 @@ static bool isAddWithImmediate(unsigned Opcode) {
 // everything unchanged on failure.
 bool SystemZElimCompare::adjustCCMasksForInstr(
     MachineInstr &MI, MachineInstr &Compare,
-    SmallVectorImpl<MachineInstr *> &CCUsers,
-    unsigned ConvOpc) {
+    SmallVectorImpl<MachineInstr *> &CCUsers, unsigned ConvOpc) {
   unsigned CompareFlags = Compare.getDesc().TSFlags;
   unsigned CompareCCValues = SystemZII::getCCValues(CompareFlags);
   int Opcode = (ConvOpc ? ConvOpc : MI.getOpcode());
@@ -391,9 +406,8 @@ bool SystemZElimCompare::adjustCCMasksForInstr(
       (MIFlags & SystemZII::CCIfNoSignedWrap)) {
     // If MI has the NSW flag set in combination with the
     // SystemZII::CCIfNoSignedWrap flag, all CCValues are valid.
-  }
-  else if ((MIFlags & SystemZII::CCIfNoSignedWrap) &&
-           MI.getOperand(2).isImm()) {
+  } else if ((MIFlags & SystemZII::CCIfNoSignedWrap) &&
+             MI.getOperand(2).isImm()) {
     // Signed addition of immediate. If adding a positive immediate
     // overflows, the result must be less than zero. If adding a negative
     // immediate overflows, the result must be larger than zero (except in
@@ -407,18 +421,16 @@ bool SystemZElimCompare::adjustCCMasksForInstr(
         RHS == INT32_MIN)
       return false;
     OFImplies = (RHS > 0 ? SystemZ::CCMASK_CMP_LT : SystemZ::CCMASK_CMP_GT);
-  }
-  else if ((MIFlags & SystemZII::IsLogical) && CCValues) {
+  } else if ((MIFlags & SystemZII::IsLogical) && CCValues) {
     // Use CCMASK_CMP_EQ to match with CCUsers. On success CCMask:s will be
     // converted to CCMASK_LOGICAL_ZERO or CCMASK_LOGICAL_NONZERO.
     LogicalMI = true;
     ReusableCCMask = SystemZ::CCMASK_CMP_EQ;
-  }
-  else {
+  } else {
     ReusableCCMask &= SystemZII::getCompareZeroCCMask(MIFlags);
     assert((ReusableCCMask & ~CCValues) == 0 && "Invalid CCValues");
     MIEquivalentToCmp =
-      ReusableCCMask == CCValues && CCValues == CompareCCValues;
+        ReusableCCMask == CCValues && CCValues == CompareCCValues;
   }
   if (ReusableCCMask == 0)
     return false;
@@ -459,8 +471,9 @@ bool SystemZElimCompare::adjustCCMasksForInstr(
       unsigned CCMask = AlterMasks[I + 1]->getImm();
       if (LogicalMI) {
         // Translate the CCMask into its "logical" value.
-        CCMask = (CCMask == SystemZ::CCMASK_CMP_EQ ?
-                  SystemZ::CCMASK_LOGICAL_ZERO : SystemZ::CCMASK_LOGICAL_NONZERO);
+        CCMask = (CCMask == SystemZ::CCMASK_CMP_EQ
+                      ? SystemZ::CCMASK_LOGICAL_ZERO
+                      : SystemZ::CCMASK_LOGICAL_NONZERO);
         CCMask &= CCValues; // Logical subtracts never set CC=0.
       } else {
         if (CCMask & ~ReusableCCMask)
@@ -499,7 +512,7 @@ static bool isCompareZero(MachineInstr &Compare) {
   if (isLoadAndTestAsCmp(Compare))
     return true;
   return Compare.getNumExplicitOperands() == 2 &&
-    Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
+         Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
 }
 
 // Try to optimize cases where comparison instruction Compare is testing
@@ -516,9 +529,10 @@ bool SystemZElimCompare::optimizeCompareZero(
   MachineBasicBlock &MBB = *Compare.getParent();
   Reference CCRefs;
   Reference SrcRefs;
-  for (MachineBasicBlock::reverse_iterator MBBI =
-         std::next(MachineBasicBlock::reverse_iterator(&Compare)),
-         MBBE = MBB.rend(); MBBI != MBBE;) {
+  for (MachineBasicBlock::reverse_iterator
+           MBBI = std::next(MachineBasicBlock::reverse_iterator(&Compare)),
+           MBBE = MBB.rend();
+       MBBI != MBBE;) {
     MachineInstr &MI = *MBBI++;
     if (resultTests(MI, SrcReg)) {
       // Try to remove both MI and Compare by converting a branch to BRCT(G).
@@ -536,9 +550,8 @@ bool SystemZElimCompare::optimizeCompareZero(
       }
       // Try to eliminate Compare by reusing a CC result from MI.
       if ((!CCRefs && convertToLoadAndTest(MI, Compare, CCUsers)) ||
-          (!CCRefs.Def &&
-           (adjustCCMasksForInstr(MI, Compare, CCUsers) ||
-            convertToLogical(MI, Compare, CCUsers)))) {
+          (!CCRefs.Def && (adjustCCMasksForInstr(MI, Compare, CCUsers) ||
+                           convertToLogical(MI, Compare, CCUsers)))) {
         EliminatedComparisons += 1;
         return true;
       }
@@ -616,8 +629,9 @@ bool SystemZElimCompare::fuseCompareOperations(
   // 0 if the source operand is immediate, and the base register
   // if the source operand is memory (index is not supported).
   Register SrcReg = Compare.getOperand(0).getReg();
-  Register SrcReg2 =
-    Compare.getOperand(1).isReg() ? Compare.getOperand(1).getReg() : Register();
+  Register SrcReg2 = Compare.getOperand(1).isReg()
+                         ? Compare.getOperand(1).getReg()
+                         : Register();
   MachineBasicBlock::iterator MBBI = Compare, MBBE = Branch;
   for (++MBBI; MBBI != MBBE; ++MBBI)
     if (MBBI->modifiesRegister(SrcReg, TRI) ||
@@ -629,9 +643,10 @@ bool SystemZElimCompare::fuseCompareOperations(
   assert((CCMask.getImm() & ~SystemZ::CCMASK_ICMP) == 0 &&
          "Invalid condition-code mask for integer comparison");
   // This is only valid for CompareAndBranch and CompareAndSibcall.
-  MachineOperand Target(MBBI->getOperand(
-    (Type == SystemZII::CompareAndBranch ||
-     Type == SystemZII::CompareAndSibcall) ? 2 : 0));
+  MachineOperand Target(MBBI->getOperand((Type == SystemZII::CompareAndBranch ||
+                                          Type == SystemZII::CompareAndSibcall)
+                                             ? 2
+                                             : 0));
   const uint32_t *RegMask;
   if (Type == SystemZII::CompareAndSibcall)
     RegMask = MBBI->getOperand(3).getRegMask();

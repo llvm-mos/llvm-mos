@@ -19,8 +19,8 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
@@ -29,41 +29,40 @@ static cl::opt<unsigned> MaxLoopRange(
     cl::desc("Restrict range of loopN instructions (testing only)"));
 
 namespace {
-  struct HexagonFixupHwLoops : public MachineFunctionPass {
-  public:
-    static char ID;
+struct HexagonFixupHwLoops : public MachineFunctionPass {
+public:
+  static char ID;
 
-    HexagonFixupHwLoops() : MachineFunctionPass(ID) {}
+  HexagonFixupHwLoops() : MachineFunctionPass(ID) {}
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
-    }
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
 
-    StringRef getPassName() const override {
-      return "Hexagon Hardware Loop Fixup";
-    }
+  StringRef getPassName() const override {
+    return "Hexagon Hardware Loop Fixup";
+  }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
-  private:
-    /// Check the offset between each loop instruction and
-    /// the loop basic block to determine if we can use the LOOP instruction
-    /// or if we need to set the LC/SA registers explicitly.
-    bool fixupLoopInstrs(MachineFunction &MF);
+private:
+  /// Check the offset between each loop instruction and
+  /// the loop basic block to determine if we can use the LOOP instruction
+  /// or if we need to set the LC/SA registers explicitly.
+  bool fixupLoopInstrs(MachineFunction &MF);
 
-    /// Replace loop instruction with the constant extended
-    /// version if the loop label is too far from the loop instruction.
-    void useExtLoopInstr(MachineFunction &MF,
-                         MachineBasicBlock::iterator &MII);
-  };
+  /// Replace loop instruction with the constant extended
+  /// version if the loop label is too far from the loop instruction.
+  void useExtLoopInstr(MachineFunction &MF, MachineBasicBlock::iterator &MII);
+};
 
-  char HexagonFixupHwLoops::ID = 0;
-}
+char HexagonFixupHwLoops::ID = 0;
+} // namespace
 
 INITIALIZE_PASS(HexagonFixupHwLoops, "hwloopsfixup",
                 "Hexagon Hardware Loops Fixup", false, false)
@@ -137,8 +136,8 @@ bool HexagonFixupHwLoops::fixupLoopInstrs(MachineFunction &MF) {
         assert(MII->getOperand(0).isMBB() &&
                "Expect a basic block as loop operand");
         MachineBasicBlock *TargetBB = MII->getOperand(0).getMBB();
-        unsigned Diff = AbsoluteDifference(InstOffset,
-                                           BlockToInstOffset[TargetBB]);
+        unsigned Diff =
+            AbsoluteDifference(InstOffset, BlockToInstOffset[TargetBB]);
         if (Diff > MaxLoopRange) {
           useExtLoopInstr(MF, MII);
           MII = MBB.erase(MII);

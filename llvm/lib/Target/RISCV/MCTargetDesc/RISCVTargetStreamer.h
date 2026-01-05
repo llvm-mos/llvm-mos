@@ -95,5 +95,5 @@ public:
   void emitDirectiveVariantCC(MCSymbol &Symbol) override;
 };
 
-}
+} // namespace llvm
 #endif

@@ -26,7 +26,7 @@ class HexagonInstPrinter : public MCInstPrinter {
 public:
   explicit HexagonInstPrinter(MCAsmInfo const &MAI, MCInstrInfo const &MII,
                               MCRegisterInfo const &MRI)
-    : MCInstPrinter(MAI, MII, MRI), MII(MII) {}
+      : MCInstPrinter(MAI, MII, MRI), MII(MII) {}
 
   void printInst(MCInst const *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;

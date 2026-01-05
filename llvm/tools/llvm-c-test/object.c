@@ -12,8 +12,8 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#include "llvm-c-test.h"
 #include "llvm-c/Object.h"
+#include "llvm-c-test.h"
 #include <stdio.h>
 #include <stdlib.h>
 

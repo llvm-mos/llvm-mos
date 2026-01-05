@@ -21,7 +21,7 @@ public:
   virtual uint32_t getItemCount() const = 0;
   virtual PDB_TableType getTableType() const = 0;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif // LLVM_DEBUGINFO_PDB_IPDBTABLE_H

@@ -30,6 +30,6 @@ class RedundantDbgInstEliminationPass
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_DCE_H

@@ -31,11 +31,12 @@ public:
                PDB_NameSearchFlags Flags) const override;
   std::unique_ptr<IPDBEnumSymbols>
   findChildrenByAddr(PDB_SymType Type, StringRef Name,
-                     PDB_NameSearchFlags Flags,
-                     uint32_t Section, uint32_t Offset) const override;
-  std::unique_ptr<IPDBEnumSymbols>
-  findChildrenByVA(PDB_SymType Type, StringRef Name, PDB_NameSearchFlags Flags,
-                   uint64_t VA) const override;
+                     PDB_NameSearchFlags Flags, uint32_t Section,
+                     uint32_t Offset) const override;
+  std::unique_ptr<IPDBEnumSymbols> findChildrenByVA(PDB_SymType Type,
+                                                    StringRef Name,
+                                                    PDB_NameSearchFlags Flags,
+                                                    uint64_t VA) const override;
   std::unique_ptr<IPDBEnumSymbols>
   findChildrenByRVA(PDB_SymType Type, StringRef Name, PDB_NameSearchFlags Flags,
                     uint32_t RVA) const override;
@@ -227,7 +228,7 @@ private:
   const DIASession &Session;
   CComPtr<IDiaSymbol> Symbol;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

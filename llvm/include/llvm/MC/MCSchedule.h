@@ -58,8 +58,8 @@ struct MCProcResourceDesc {
   const unsigned *SubUnitsIdxBegin;
 
   bool operator==(const MCProcResourceDesc &Other) const {
-    return NumUnits == Other.NumUnits && SuperIdx == Other.SuperIdx
-      && BufferSize == Other.BufferSize;
+    return NumUnits == Other.NumUnits && SuperIdx == Other.SuperIdx &&
+           BufferSize == Other.BufferSize;
   }
 };
 
@@ -111,8 +111,8 @@ struct MCReadAdvanceEntry {
   int Cycles;
 
   bool operator==(const MCReadAdvanceEntry &Other) const {
-    return UseIdx == Other.UseIdx && WriteResourceID == Other.WriteResourceID
-      && Cycles == Other.Cycles;
+    return UseIdx == Other.UseIdx && WriteResourceID == Other.WriteResourceID &&
+           Cycles == Other.Cycles;
   }
 };
 
@@ -138,12 +138,8 @@ struct MCSchedClassDesc {
   uint16_t ReadAdvanceIdx; // First index into ReadAdvanceTable.
   uint16_t NumReadAdvanceEntries;
 
-  bool isValid() const {
-    return NumMicroOps != InvalidNumMicroOps;
-  }
-  bool isVariant() const {
-    return NumMicroOps == VariantNumMicroOps;
-  }
+  bool isValid() const { return NumMicroOps != InvalidNumMicroOps; }
+  bool isVariant() const { return NumMicroOps == VariantNumMicroOps; }
 };
 
 /// Specify the cost of a register definition in terms of number of physical
@@ -352,9 +348,7 @@ struct MCSchedModel {
   /// Return true if machine supports out of order execution.
   bool isOutOfOrder() const { return MicroOpBufferSize > 1; }
 
-  unsigned getNumProcResourceKinds() const {
-    return NumProcResourceKinds;
-  }
+  unsigned getNumProcResourceKinds() const { return NumProcResourceKinds; }
 
   const MCProcResourceDesc *getProcResource(unsigned ProcResourceIdx) const {
     assert(hasInstrSchedModel() && "No scheduling machine model");

@@ -115,7 +115,7 @@ private:
 
   /// GlobalBasicBlockIDs - This map memoizes the basic block ID's referenced by
   /// the "getGlobalBasicBlockID" method.
-  mutable DenseMap<const BasicBlock*, unsigned> GlobalBasicBlockIDs;
+  mutable DenseMap<const BasicBlock *, unsigned> GlobalBasicBlockIDs;
 
   using InstructionMapType = DenseMap<const Instruction *, unsigned>;
   InstructionMapType InstructionMap;
@@ -123,7 +123,7 @@ private:
 
   /// BasicBlocks - This contains all the basic blocks for the currently
   /// incorporated function.  Their reverse mapping is stored in ValueMap.
-  std::vector<const BasicBlock*> BasicBlocks;
+  std::vector<const BasicBlock *> BasicBlocks;
 
   /// When a function is incorporated, this is the size of the Values list
   /// before incorporation.
@@ -166,14 +166,15 @@ public:
   unsigned getTypeID(Type *T) const {
     TypeMapType::const_iterator I = TypeMap.find(T);
     assert(I != TypeMap.end() && "Type not in ValueEnumerator!");
-    return I->second-1;
+    return I->second - 1;
   }
 
   unsigned getInstructionID(const Instruction *I) const;
   void setInstructionID(const Instruction *I);
 
   unsigned getAttributeListID(AttributeList PAL) const {
-    if (PAL.isEmpty()) return 0;  // Null maps to zero.
+    if (PAL.isEmpty())
+      return 0; // Null maps to zero.
     AttributeListMapType::const_iterator I = AttributeListMap.find(PAL);
     assert(I != AttributeListMap.end() && "Attribute not in ValueEnumerator!");
     return I->second;
@@ -211,11 +212,13 @@ public:
 
   const TypeList &getTypes() const { return Types; }
 
-  const std::vector<const BasicBlock*> &getBasicBlocks() const {
+  const std::vector<const BasicBlock *> &getBasicBlocks() const {
     return BasicBlocks;
   }
 
-  const std::vector<AttributeList> &getAttributeLists() const { return AttributeLists; }
+  const std::vector<AttributeList> &getAttributeLists() const {
+    return AttributeLists;
+  }
 
   const std::vector<IndexAndAttrSet> &getAttributeGroups() const {
     return AttributeGroups;

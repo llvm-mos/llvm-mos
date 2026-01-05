@@ -35,7 +35,7 @@ llvm::createR600AsmPrinterPass(TargetMachine &TM,
 
 R600AsmPrinter::R600AsmPrinter(TargetMachine &TM,
                                std::unique_ptr<MCStreamer> Streamer)
-  : AsmPrinter(TM, std::move(Streamer)) { }
+    : AsmPrinter(TM, std::move(Streamer)) {}
 
 StringRef R600AsmPrinter::getPassName() const {
   return "R600 Assembly Printer";
@@ -71,26 +71,42 @@ void R600AsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
   if (STM.getGeneration() >= AMDGPUSubtarget::EVERGREEN) {
     // Evergreen / Northern Islands
     switch (MF.getFunction().getCallingConv()) {
-    default: [[fallthrough]];
-    case CallingConv::AMDGPU_CS: RsrcReg = R_0288D4_SQ_PGM_RESOURCES_LS; break;
-    case CallingConv::AMDGPU_GS: RsrcReg = R_028878_SQ_PGM_RESOURCES_GS; break;
-    case CallingConv::AMDGPU_PS: RsrcReg = R_028844_SQ_PGM_RESOURCES_PS; break;
-    case CallingConv::AMDGPU_VS: RsrcReg = R_028860_SQ_PGM_RESOURCES_VS; break;
+    default:
+      [[fallthrough]];
+    case CallingConv::AMDGPU_CS:
+      RsrcReg = R_0288D4_SQ_PGM_RESOURCES_LS;
+      break;
+    case CallingConv::AMDGPU_GS:
+      RsrcReg = R_028878_SQ_PGM_RESOURCES_GS;
+      break;
+    case CallingConv::AMDGPU_PS:
+      RsrcReg = R_028844_SQ_PGM_RESOURCES_PS;
+      break;
+    case CallingConv::AMDGPU_VS:
+      RsrcReg = R_028860_SQ_PGM_RESOURCES_VS;
+      break;
     }
   } else {
     // R600 / R700
     switch (MF.getFunction().getCallingConv()) {
-    default: [[fallthrough]];
-    case CallingConv::AMDGPU_GS: [[fallthrough]];
-    case CallingConv::AMDGPU_CS: [[fallthrough]];
-    case CallingConv::AMDGPU_VS: RsrcReg = R_028868_SQ_PGM_RESOURCES_VS; break;
-    case CallingConv::AMDGPU_PS: RsrcReg = R_028850_SQ_PGM_RESOURCES_PS; break;
+    default:
+      [[fallthrough]];
+    case CallingConv::AMDGPU_GS:
+      [[fallthrough]];
+    case CallingConv::AMDGPU_CS:
+      [[fallthrough]];
+    case CallingConv::AMDGPU_VS:
+      RsrcReg = R_028868_SQ_PGM_RESOURCES_VS;
+      break;
+    case CallingConv::AMDGPU_PS:
+      RsrcReg = R_028850_SQ_PGM_RESOURCES_PS;
+      break;
     }
   }
 
   OutStreamer->emitInt32(RsrcReg);
-  OutStreamer->emitIntValue(S_NUM_GPRS(MaxGPR + 1) |
-                           S_STACK_SIZE(MFI->CFStackSize), 4);
+  OutStreamer->emitIntValue(
+      S_NUM_GPRS(MaxGPR + 1) | S_STACK_SIZE(MFI->CFStackSize), 4);
   OutStreamer->emitInt32(R_02880C_DB_SHADER_CONTROL);
   OutStreamer->emitInt32(S_02880C_KILL_ENABLE(killPixel));
 
@@ -101,7 +117,6 @@ void R600AsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
 }
 
 bool R600AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
-
 
   // Functions needs to be cacheline (256B) aligned.
   MF.ensureAlignment(Align(256));
@@ -124,7 +139,7 @@ bool R600AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
     R600MachineFunctionInfo *MFI = MF.getInfo<R600MachineFunctionInfo>();
     OutStreamer->emitRawComment(
-      Twine("SQ_PGM_RESOURCES:STACK_SIZE = " + Twine(MFI->CFStackSize)));
+        Twine("SQ_PGM_RESOURCES:STACK_SIZE = " + Twine(MFI->CFStackSize)));
   }
 
   return false;

@@ -98,7 +98,7 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
 
 /// getFixupKindNumBytes - The number of bytes the fixup may change.
 static unsigned getFixupKindNumBytes(unsigned Kind) {
-    switch (Kind) {
+  switch (Kind) {
   default:
     return 4;
   case FK_Data_1:

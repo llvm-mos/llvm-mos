@@ -64,10 +64,7 @@ class Module;
 /// DbgVariable and DbgLabel.
 class DbgEntity {
 public:
-  enum DbgEntityKind {
-    DbgVariableKind,
-    DbgLabelKind
-  };
+  enum DbgEntityKind { DbgVariableKind, DbgLabelKind };
 
 private:
   const DINode *Entity;
@@ -287,11 +284,12 @@ public:
 ///
 /// Labels are collected from \c DBG_LABEL instructions.
 class DbgLabel : public DbgEntity {
-  const MCSymbol *Sym;                  /// Symbol before DBG_LABEL instruction.
+  const MCSymbol *Sym; /// Symbol before DBG_LABEL instruction.
 
 public:
   /// We need MCSymbol information to generate DW_AT_low_pc.
-  DbgLabel(const DILabel *L, const DILocation *IA, const MCSymbol *Sym = nullptr)
+  DbgLabel(const DILabel *L, const DILocation *IA,
+           const MCSymbol *Sym = nullptr)
       : DbgEntity(L, IA, DbgLabelKind), Sym(Sym) {}
 
   /// Accessors.
@@ -303,9 +301,7 @@ public:
   /// @}
 
   /// Translate tag to proper Dwarf tag.
-  dwarf::Tag getTag() const {
-    return dwarf::DW_TAG_label;
-  }
+  dwarf::Tag getTag() const { return dwarf::DW_TAG_label; }
 
   static bool classof(const DbgEntity *N) {
     return N->getDbgEntityID() == DbgLabelKind;
@@ -319,8 +315,7 @@ private:
   DbgValueLoc Value; ///< Corresponding location for the parameter value at
                      ///< the call site.
 public:
-  DbgCallSiteParam(unsigned Reg, DbgValueLoc Val)
-      : Register(Reg), Value(Val) {
+  DbgCallSiteParam(unsigned Reg, DbgValueLoc Val) : Register(Reg), Value(Val) {
     assert(Reg && "Parameter register cannot be undef");
   }
 
@@ -542,14 +537,14 @@ private:
                                              const DINode *Node,
                                              const MDNode *Scope);
 
-  DbgEntity *createConcreteEntity(DwarfCompileUnit &TheCU,
-                                  LexicalScope &Scope,
+  DbgEntity *createConcreteEntity(DwarfCompileUnit &TheCU, LexicalScope &Scope,
                                   const DINode *Node,
                                   const DILocation *Location,
                                   const MCSymbol *Sym = nullptr);
 
   /// Construct a DIE for this abstract scope.
-  void constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU, LexicalScope *Scope);
+  void constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
+                                           LexicalScope *Scope);
 
   /// Construct DIEs for call site entries describing the calls in \p MF.
   void constructCallSiteEntryDIEs(const DISubprogram &SP, DwarfCompileUnit &CU,
@@ -800,9 +795,7 @@ public:
   }
 
   /// Returns whether to use sections as labels rather than temp symbols.
-  bool useSectionsAsReferences() const {
-    return UseSectionsAsReferences;
-  }
+  bool useSectionsAsReferences() const { return UseSectionsAsReferences; }
 
   /// Returns whether to generate DWARF v4 type units.
   bool generateTypeUnits() const { return GenerateTypeUnits; }
@@ -833,13 +826,9 @@ public:
     return UseSegmentedStringOffsetsTable;
   }
 
-  bool emitDebugEntryValues() const {
-    return EmitDebugEntryValues;
-  }
+  bool emitDebugEntryValues() const { return EmitDebugEntryValues; }
 
-  bool useOpConvert() const {
-    return EnableOpConvert;
-  }
+  bool useOpConvert() const { return EnableOpConvert; }
 
   bool shareAcrossDWOCUs() const;
 

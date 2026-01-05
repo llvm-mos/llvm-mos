@@ -37,63 +37,59 @@
 
 namespace llvm {
 
-  struct LaneBitmask {
-    // When changing the underlying type, change the format string as well.
-    using Type = uint64_t;
-    enum : unsigned { BitWidth = 8*sizeof(Type) };
-    constexpr static const char *const FormatStr = "%016llX";
+struct LaneBitmask {
+  // When changing the underlying type, change the format string as well.
+  using Type = uint64_t;
+  enum : unsigned { BitWidth = 8 * sizeof(Type) };
+  constexpr static const char *const FormatStr = "%016llX";
 
-    constexpr LaneBitmask() = default;
-    explicit constexpr LaneBitmask(Type V) : Mask(V) {}
+  constexpr LaneBitmask() = default;
+  explicit constexpr LaneBitmask(Type V) : Mask(V) {}
 
-    constexpr bool operator== (LaneBitmask M) const { return Mask == M.Mask; }
-    constexpr bool operator!= (LaneBitmask M) const { return Mask != M.Mask; }
-    constexpr bool operator< (LaneBitmask M)  const { return Mask < M.Mask; }
-    constexpr bool none() const { return Mask == 0; }
-    constexpr bool any()  const { return Mask != 0; }
-    constexpr bool all()  const { return ~Mask == 0; }
+  constexpr bool operator==(LaneBitmask M) const { return Mask == M.Mask; }
+  constexpr bool operator!=(LaneBitmask M) const { return Mask != M.Mask; }
+  constexpr bool operator<(LaneBitmask M) const { return Mask < M.Mask; }
+  constexpr bool none() const { return Mask == 0; }
+  constexpr bool any() const { return Mask != 0; }
+  constexpr bool all() const { return ~Mask == 0; }
 
-    constexpr LaneBitmask operator~() const {
-      return LaneBitmask(~Mask);
-    }
-    constexpr LaneBitmask operator|(LaneBitmask M) const {
-      return LaneBitmask(Mask | M.Mask);
-    }
-    constexpr LaneBitmask operator&(LaneBitmask M) const {
-      return LaneBitmask(Mask & M.Mask);
-    }
-    LaneBitmask &operator|=(LaneBitmask M) {
-      Mask |= M.Mask;
-      return *this;
-    }
-    LaneBitmask &operator&=(LaneBitmask M) {
-      Mask &= M.Mask;
-      return *this;
-    }
-
-    constexpr Type getAsInteger() const { return Mask; }
-
-    unsigned getNumLanes() const { return llvm::popcount(Mask); }
-    unsigned getHighestLane() const {
-      return Log2_64(Mask);
-    }
-
-    static constexpr LaneBitmask getNone() { return LaneBitmask(0); }
-    static constexpr LaneBitmask getAll() { return ~LaneBitmask(0); }
-    static constexpr LaneBitmask getLane(unsigned Lane) {
-      return LaneBitmask(Type(1) << Lane);
-    }
-
-  private:
-    Type Mask = 0;
-  };
-
-  /// Create Printable object to print LaneBitmasks on a \ref raw_ostream.
-  inline Printable PrintLaneMask(LaneBitmask LaneMask) {
-    return Printable([LaneMask](raw_ostream &OS) {
-      OS << format(LaneBitmask::FormatStr, LaneMask.getAsInteger());
-    });
+  constexpr LaneBitmask operator~() const { return LaneBitmask(~Mask); }
+  constexpr LaneBitmask operator|(LaneBitmask M) const {
+    return LaneBitmask(Mask | M.Mask);
   }
+  constexpr LaneBitmask operator&(LaneBitmask M) const {
+    return LaneBitmask(Mask & M.Mask);
+  }
+  LaneBitmask &operator|=(LaneBitmask M) {
+    Mask |= M.Mask;
+    return *this;
+  }
+  LaneBitmask &operator&=(LaneBitmask M) {
+    Mask &= M.Mask;
+    return *this;
+  }
+
+  constexpr Type getAsInteger() const { return Mask; }
+
+  unsigned getNumLanes() const { return llvm::popcount(Mask); }
+  unsigned getHighestLane() const { return Log2_64(Mask); }
+
+  static constexpr LaneBitmask getNone() { return LaneBitmask(0); }
+  static constexpr LaneBitmask getAll() { return ~LaneBitmask(0); }
+  static constexpr LaneBitmask getLane(unsigned Lane) {
+    return LaneBitmask(Type(1) << Lane);
+  }
+
+private:
+  Type Mask = 0;
+};
+
+/// Create Printable object to print LaneBitmasks on a \ref raw_ostream.
+inline Printable PrintLaneMask(LaneBitmask LaneMask) {
+  return Printable([LaneMask](raw_ostream &OS) {
+    OS << format(LaneBitmask::FormatStr, LaneMask.getAsInteger());
+  });
+}
 
 } // end namespace llvm
 

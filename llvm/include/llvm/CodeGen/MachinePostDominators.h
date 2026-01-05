@@ -109,6 +109,6 @@ public:
   void verifyAnalysis() const override;
   void print(llvm::raw_ostream &OS, const Module *M = nullptr) const override;
 };
-} //end of namespace llvm
+} // end of namespace llvm
 
 #endif

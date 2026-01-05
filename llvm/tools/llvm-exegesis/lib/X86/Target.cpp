@@ -771,7 +771,8 @@ private:
 
   uintptr_t getAuxiliaryMemoryStartAddress() const override;
 
-  std::vector<MCInst> configurePerfCounter(long Request, bool SaveRegisters) const override;
+  std::vector<MCInst> configurePerfCounter(long Request,
+                                           bool SaveRegisters) const override;
 
   std::vector<MCRegister> getArgumentRegisters() const override;
 
@@ -819,11 +820,11 @@ private:
 
 #if defined(__linux__) && defined(HAVE_LIBPFM) &&                              \
     defined(LIBPFM_HAS_FIELD_CYCLES)
-      // FIXME: Fix this.
-      // https://bugs.llvm.org/show_bug.cgi?id=48918
-      // For now, only do the check if we see an Intel machine because
-      // the counter uses some intel-specific magic and it could
-      // be confuse and think an AMD machine actually has LBR support.
+    // FIXME: Fix this.
+    // https://bugs.llvm.org/show_bug.cgi?id=48918
+    // For now, only do the check if we see an Intel machine because
+    // the counter uses some intel-specific magic and it could
+    // be confuse and think an AMD machine actually has LBR support.
 #if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||           \
      defined(_M_X64)) &&                                                       \
     !defined(_M_ARM64EC)
@@ -1274,7 +1275,8 @@ uintptr_t ExegesisX86Target::getAuxiliaryMemoryStartAddress() const {
 }
 
 std::vector<MCInst>
-ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const {
+ExegesisX86Target::configurePerfCounter(long Request,
+                                        bool SaveRegisters) const {
   std::vector<MCInst> ConfigurePerfCounterCode;
   if (SaveRegisters)
     saveSyscallRegisters(ConfigurePerfCounterCode, 3);

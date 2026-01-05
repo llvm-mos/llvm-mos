@@ -35,9 +35,7 @@ MCInst Thumb1InstrInfo::getNop() const {
       .addReg(0);
 }
 
-unsigned Thumb1InstrInfo::getUnindexedOpcode(unsigned Opc) const {
-  return 0;
-}
+unsigned Thumb1InstrInfo::getUnindexedOpcode(unsigned Opc) const { return 0; }
 
 void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
@@ -125,7 +123,8 @@ void Thumb1InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   if (RC == &ARM::tGPRRegClass ||
       (SrcReg.isPhysical() && isARMLowRegister(SrcReg))) {
     DebugLoc DL;
-    if (I != MBB.end()) DL = I->getDebugLoc();
+    if (I != MBB.end())
+      DL = I->getDebugLoc();
 
     MachineFunction &MF = *MBB.getParent();
     MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -154,7 +153,8 @@ void Thumb1InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   if (RC->hasSuperClassEq(&ARM::tGPRRegClass) ||
       (DestReg.isPhysical() && isARMLowRegister(DestReg))) {
     DebugLoc DL;
-    if (I != MBB.end()) DL = I->getDebugLoc();
+    if (I != MBB.end())
+      DL = I->getDebugLoc();
 
     MachineFunction &MF = *MBB.getParent();
     MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -191,9 +191,9 @@ void Thumb1InstrInfo::expandLoadStackGuard(
 }
 
 bool Thumb1InstrInfo::canCopyGluedNodeDuringSchedule(SDNode *N) const {
-  // In Thumb1 the scheduler may need to schedule a cross-copy between GPRS and CPSR
-  // but this is not always possible there, so allow the Scheduler to clone tADCS and tSBCS
-  // even if they have glue.
+  // In Thumb1 the scheduler may need to schedule a cross-copy between GPRS and
+  // CPSR but this is not always possible there, so allow the Scheduler to clone
+  // tADCS and tSBCS even if they have glue.
   // FIXME. Actually implement the cross-copy where it is possible (post v6)
   // because these copies entail more spilling.
   unsigned Opcode = N->getMachineOpcode();

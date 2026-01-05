@@ -49,7 +49,7 @@ inline bool operator>(const FunctionId &A, const FunctionId &B) {
 inline bool operator>=(const FunctionId &A, const FunctionId &B) {
   return A.getIndex() >= B.getIndex();
 }
-}
-}
+} // namespace codeview
+} // namespace llvm
 
 #endif

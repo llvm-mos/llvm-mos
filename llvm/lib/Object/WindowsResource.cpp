@@ -141,28 +141,72 @@ WindowsResourceParser::WindowsResourceParser(bool MinGW)
 
 void printResourceTypeName(uint16_t TypeID, raw_ostream &OS) {
   switch (TypeID) {
-  case  1: OS << "CURSOR (ID 1)"; break;
-  case  2: OS << "BITMAP (ID 2)"; break;
-  case  3: OS << "ICON (ID 3)"; break;
-  case  4: OS << "MENU (ID 4)"; break;
-  case  5: OS << "DIALOG (ID 5)"; break;
-  case  6: OS << "STRINGTABLE (ID 6)"; break;
-  case  7: OS << "FONTDIR (ID 7)"; break;
-  case  8: OS << "FONT (ID 8)"; break;
-  case  9: OS << "ACCELERATOR (ID 9)"; break;
-  case 10: OS << "RCDATA (ID 10)"; break;
-  case 11: OS << "MESSAGETABLE (ID 11)"; break;
-  case 12: OS << "GROUP_CURSOR (ID 12)"; break;
-  case 14: OS << "GROUP_ICON (ID 14)"; break;
-  case 16: OS << "VERSIONINFO (ID 16)"; break;
-  case 17: OS << "DLGINCLUDE (ID 17)"; break;
-  case 19: OS << "PLUGPLAY (ID 19)"; break;
-  case 20: OS << "VXD (ID 20)"; break;
-  case 21: OS << "ANICURSOR (ID 21)"; break;
-  case 22: OS << "ANIICON (ID 22)"; break;
-  case 23: OS << "HTML (ID 23)"; break;
-  case 24: OS << "MANIFEST (ID 24)"; break;
-  default: OS << "ID " << TypeID; break;
+  case 1:
+    OS << "CURSOR (ID 1)";
+    break;
+  case 2:
+    OS << "BITMAP (ID 2)";
+    break;
+  case 3:
+    OS << "ICON (ID 3)";
+    break;
+  case 4:
+    OS << "MENU (ID 4)";
+    break;
+  case 5:
+    OS << "DIALOG (ID 5)";
+    break;
+  case 6:
+    OS << "STRINGTABLE (ID 6)";
+    break;
+  case 7:
+    OS << "FONTDIR (ID 7)";
+    break;
+  case 8:
+    OS << "FONT (ID 8)";
+    break;
+  case 9:
+    OS << "ACCELERATOR (ID 9)";
+    break;
+  case 10:
+    OS << "RCDATA (ID 10)";
+    break;
+  case 11:
+    OS << "MESSAGETABLE (ID 11)";
+    break;
+  case 12:
+    OS << "GROUP_CURSOR (ID 12)";
+    break;
+  case 14:
+    OS << "GROUP_ICON (ID 14)";
+    break;
+  case 16:
+    OS << "VERSIONINFO (ID 16)";
+    break;
+  case 17:
+    OS << "DLGINCLUDE (ID 17)";
+    break;
+  case 19:
+    OS << "PLUGPLAY (ID 19)";
+    break;
+  case 20:
+    OS << "VXD (ID 20)";
+    break;
+  case 21:
+    OS << "ANICURSOR (ID 21)";
+    break;
+  case 22:
+    OS << "ANIICON (ID 22)";
+    break;
+  case 23:
+    OS << "HTML (ID 23)";
+    break;
+  case 24:
+    OS << "MANIFEST (ID 24)";
+    break;
+  default:
+    OS << "ID " << TypeID;
+    break;
   }
 }
 
@@ -177,8 +221,9 @@ static bool convertUTF16LEToUTF8String(ArrayRef<UTF16> Src, std::string &Out) {
   return convertUTF16ToUTF8String(ArrayRef(EndianCorrectedSrc), Out);
 }
 
-static std::string makeDuplicateResourceError(
-    const ResourceEntryRef &Entry, StringRef File1, StringRef File2) {
+static std::string makeDuplicateResourceError(const ResourceEntryRef &Entry,
+                                              StringRef File1,
+                                              StringRef File2) {
   std::string Ret;
   raw_string_ostream OS(Ret);
 
@@ -442,7 +487,6 @@ Error WindowsResourceParser::addChildren(TreeNode &Node,
               Context, InputFilenames[Child->Origin], InputFilenames.back()));
       }
       Context.pop_back();
-
     }
   }
   return Error::success();
@@ -519,8 +563,8 @@ bool WindowsResourceParser::TreeNode::addDataChild(
   return ElementInserted.second;
 }
 
-WindowsResourceParser::TreeNode &WindowsResourceParser::TreeNode::addIDChild(
-    uint32_t ID) {
+WindowsResourceParser::TreeNode &
+WindowsResourceParser::TreeNode::addIDChild(uint32_t ID) {
   auto Child = IDChildren.find(ID);
   if (Child == IDChildren.end()) {
     auto NewChild = createIDNode();
@@ -719,8 +763,7 @@ WindowsResourceCOFFWriter::write(uint32_t TimeDateStamp) {
 // According to COFF specification, if the Src has a size equal to Dest,
 // it's okay to *not* copy the trailing zero.
 static void coffnamecpy(char (&Dest)[COFF::NameSize], StringRef Src) {
-  assert(Src.size() <= COFF::NameSize &&
-         "Src is larger than COFF::NameSize");
+  assert(Src.size() <= COFF::NameSize && "Src is larger than COFF::NameSize");
   assert((Src.size() == COFF::NameSize || Dest[Src.size()] == '\0') &&
          "Dest not zeroed upon initialization");
   memcpy(Dest, Src.data(), Src.size());
@@ -849,7 +892,8 @@ void WindowsResourceCOFFWriter::writeSymbolTable() {
 
   // Now write a symbol for each relocation.
   for (unsigned i = 0; i < Data.size(); i++) {
-    auto RelocationName = formatv("$R{0:X-6}", i & 0xffffff).sstr<COFF::NameSize>();
+    auto RelocationName =
+        formatv("$R{0:X-6}", i & 0xffffff).sstr<COFF::NameSize>();
     Symbol = reinterpret_cast<coff_symbol16 *>(BufferStart + CurrentOffset);
     coffnamecpy(Symbol->Name.ShortName, RelocationName);
     Symbol->Value = DataOffsets[i];

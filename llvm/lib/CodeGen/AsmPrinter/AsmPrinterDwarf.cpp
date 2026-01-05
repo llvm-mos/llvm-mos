@@ -59,17 +59,17 @@ static const char *DecodeDWARFEncoding(unsigned Encoding) {
     return "pcrel udata8";
   case dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata8:
     return "pcrel sdata8";
-  case dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_udata4
-      :
+  case dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+      dwarf::DW_EH_PE_udata4:
     return "indirect pcrel udata4";
-  case dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4
-      :
+  case dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+      dwarf::DW_EH_PE_sdata4:
     return "indirect pcrel sdata4";
-  case dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_udata8
-      :
+  case dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+      dwarf::DW_EH_PE_udata8:
     return "indirect pcrel udata8";
-  case dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata8
-      :
+  case dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+      dwarf::DW_EH_PE_sdata8:
     return "indirect pcrel sdata8";
   case dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_datarel |
       dwarf::DW_EH_PE_sdata4:
@@ -89,8 +89,8 @@ static const char *DecodeDWARFEncoding(unsigned Encoding) {
 void AsmPrinter::emitEncodingByte(unsigned Val, const char *Desc) const {
   if (isVerbose()) {
     if (Desc)
-      OutStreamer->AddComment(Twine(Desc) + " Encoding = " +
-                              Twine(DecodeDWARFEncoding(Val)));
+      OutStreamer->AddComment(Twine(Desc) +
+                              " Encoding = " + Twine(DecodeDWARFEncoding(Val)));
     else
       OutStreamer->AddComment(Twine("Encoding = ") + DecodeDWARFEncoding(Val));
   }

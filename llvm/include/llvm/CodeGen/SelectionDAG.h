@@ -113,8 +113,8 @@ class SDVTListNode : public FoldingSetNode {
   unsigned HashValue;
 
 public:
-  SDVTListNode(const FoldingSetNodeIDRef ID, const EVT *VT, unsigned int Num) :
-      FastID(ID), VTs(VT), NumVTs(Num) {
+  SDVTListNode(const FoldingSetNodeIDRef ID, const EVT *VT, unsigned int Num)
+      : FastID(ID), VTs(VT), NumVTs(Num) {
     HashValue = ID.ComputeHash();
   }
 
@@ -126,8 +126,9 @@ public:
 
 /// Specialize FoldingSetTrait for SDVTListNode
 /// to avoid computing temp FoldingSetNodeID and hash value.
-template<> struct FoldingSetTrait<SDVTListNode> : DefaultFoldingSetTrait<SDVTListNode> {
-  static void Profile(const SDVTListNode &X, FoldingSetNodeID& ID) {
+template <>
+struct FoldingSetTrait<SDVTListNode> : DefaultFoldingSetTrait<SDVTListNode> {
+  static void Profile(const SDVTListNode &X, FoldingSetNodeID &ID) {
     ID = X.FastID;
   }
 
@@ -162,9 +163,9 @@ template <> struct ilist_alloc_traits<SDNode> {
 /// is unused.  Right now only byval parameters are handled separately.
 class SDDbgInfo {
   BumpPtrAllocator Alloc;
-  SmallVector<SDDbgValue*, 32> DbgValues;
-  SmallVector<SDDbgValue*, 32> ByvalParmDbgValues;
-  SmallVector<SDDbgLabel*, 4> DbgLabels;
+  SmallVector<SDDbgValue *, 32> DbgValues;
+  SmallVector<SDDbgValue *, 32> ByvalParmDbgValues;
+  SmallVector<SDDbgLabel *, 4> DbgLabels;
   using DbgValMapType = DenseMap<const SDNode *, SmallVector<SDDbgValue *, 2>>;
   DbgValMapType DbgValMap;
 
@@ -195,22 +196,22 @@ public:
     return DbgValues.empty() && ByvalParmDbgValues.empty() && DbgLabels.empty();
   }
 
-  ArrayRef<SDDbgValue*> getSDDbgValues(const SDNode *Node) const {
+  ArrayRef<SDDbgValue *> getSDDbgValues(const SDNode *Node) const {
     auto I = DbgValMap.find(Node);
     if (I != DbgValMap.end())
       return I->second;
-    return ArrayRef<SDDbgValue*>();
+    return ArrayRef<SDDbgValue *>();
   }
 
-  using DbgIterator = SmallVectorImpl<SDDbgValue*>::iterator;
-  using DbgLabelIterator = SmallVectorImpl<SDDbgLabel*>::iterator;
+  using DbgIterator = SmallVectorImpl<SDDbgValue *>::iterator;
+  using DbgLabelIterator = SmallVectorImpl<SDDbgLabel *>::iterator;
 
   DbgIterator DbgBegin() { return DbgValues.begin(); }
-  DbgIterator DbgEnd()   { return DbgValues.end(); }
+  DbgIterator DbgEnd() { return DbgValues.end(); }
   DbgIterator ByvalParmDbgBegin() { return ByvalParmDbgValues.begin(); }
-  DbgIterator ByvalParmDbgEnd()   { return ByvalParmDbgValues.end(); }
+  DbgIterator ByvalParmDbgEnd() { return ByvalParmDbgValues.end(); }
   DbgLabelIterator DbgLabelBegin() { return DbgLabels.begin(); }
-  DbgLabelIterator DbgLabelEnd()   { return DbgLabels.end(); }
+  DbgLabelIterator DbgLabelEnd() { return DbgLabels.end(); }
 };
 
 LLVM_ABI void checkForCycles(const SelectionDAG *DAG, bool force = false);
@@ -239,7 +240,7 @@ class SelectionDAG {
   CodeGenOptLevel OptLevel;
 
   UniformityInfo *UA = nullptr;
-  FunctionLoweringInfo * FLI = nullptr;
+  FunctionLoweringInfo *FLI = nullptr;
 
   /// The function-level optimization remark emitter.  Used to emit remarks
   /// whenever manipulating the DAG.
@@ -269,9 +270,9 @@ class SelectionDAG {
 
   /// The AllocatorType for allocating SDNodes. We use
   /// pool allocation with recycling.
-  using NodeAllocatorType = RecyclingAllocator<BumpPtrAllocator, SDNode,
-                                               sizeof(LargestSDNode),
-                                               alignof(MostAlignedSDNode)>;
+  using NodeAllocatorType =
+      RecyclingAllocator<BumpPtrAllocator, SDNode, sizeof(LargestSDNode),
+                         alignof(MostAlignedSDNode)>;
 
   /// Pool allocation for nodes.
   NodeAllocatorType NodeAllocator;
@@ -320,7 +321,7 @@ public:
     SelectionDAG &DAG;
 
     explicit DAGUpdateListener(SelectionDAG &D)
-      : Next(D.UpdateListeners), DAG(D) {
+        : Next(D.UpdateListeners), DAG(D) {
       DAG.UpdateListeners = this;
     }
 
@@ -350,7 +351,7 @@ public:
 
     void NodeDeleted(SDNode *N, SDNode *E) override { Callback(N, E); }
 
-   private:
+  private:
     virtual void anchor();
   };
 
@@ -376,8 +377,7 @@ public:
 
   public:
     FlagInserter(SelectionDAG &SDAG, SDNodeFlags Flags)
-        : DAG(SDAG), Flags(Flags),
-          LastInserter(SDAG.getFlagInserter()) {
+        : DAG(SDAG), Flags(Flags), LastInserter(SDAG.getFlagInserter()) {
       SDAG.setFlagInserter(this);
     }
     FlagInserter(SelectionDAG &SDAG, SDNode *N)
@@ -408,11 +408,11 @@ private:
   /// Implementation of setSubgraphColor.
   /// Return whether we had to truncate the search.
   bool setSubgraphColorHelper(SDNode *N, const char *Color,
-                              DenseSet<SDNode *> &visited,
-                              int level, bool &printed);
+                              DenseSet<SDNode *> &visited, int level,
+                              bool &printed);
 
   template <typename SDNodeT, typename... ArgTypes>
-  SDNodeT *newSDNode(ArgTypes &&... Args) {
+  SDNodeT *newSDNode(ArgTypes &&...Args) {
     return new (NodeAllocator.template Allocate<SDNodeT>())
         SDNodeT(std::forward<ArgTypes>(Args)...);
   }
@@ -425,7 +425,7 @@ private:
   /// omitted.
   template <typename SDNodeT, typename... ArgTypes>
   static uint16_t getSyntheticNodeSubclassData(unsigned IROrder,
-                                               ArgTypes &&... Args) {
+                                               ArgTypes &&...Args) {
     // The compiler can reduce this expression to a constant iff we pass an
     // empty DebugLoc.  Thankfully, the debug location doesn't have any bearing
     // on the subclass data.
@@ -435,10 +435,10 @@ private:
 
   template <typename SDNodeTy>
   static uint16_t getSyntheticNodeSubclassData(unsigned Opc, unsigned Order,
-                                                SDVTList VTs, EVT MemoryVT,
-                                                MachineMemOperand *MMO) {
+                                               SDVTList VTs, EVT MemoryVT,
+                                               MachineMemOperand *MMO) {
     return SDNodeTy(Opc, Order, DebugLoc(), VTs, MemoryVT, MMO)
-         .getRawSubclassData();
+        .getRawSubclassData();
   }
 
   void createOperands(SDNode *Node, ArrayRef<SDValue> Vals);
@@ -452,7 +452,7 @@ private:
     Node->NumOperands = 0;
     Node->OperandList = nullptr;
   }
-  void CreateTopologicalOrder(std::vector<SDNode*>& Order);
+  void CreateTopologicalOrder(std::vector<SDNode *> &Order);
 
 public:
   // Maximum depth for recursive analysis such as computeKnownBits, etc.
@@ -482,7 +482,7 @@ public:
     MFAM = &AM;
   }
 
-  void setFunctionLoweringInfo(FunctionLoweringInfo * FuncInfo) {
+  void setFunctionLoweringInfo(FunctionLoweringInfo *FuncInfo) {
     FLI = FuncInfo;
   }
 
@@ -563,9 +563,7 @@ public:
   allnodes_iterator allnodes_begin() { return AllNodes.begin(); }
   allnodes_iterator allnodes_end() { return AllNodes.end(); }
 
-  ilist<SDNode>::size_type allnodes_size() const {
-    return AllNodes.size();
-  }
+  ilist<SDNode>::size_type allnodes_size() const { return AllNodes.size(); }
 
   iterator_range<allnodes_iterator> allnodes() {
     return make_range(allnodes_begin(), allnodes_end());
@@ -822,7 +820,7 @@ public:
   SDValue getCopyToReg(SDValue Chain, const SDLoc &dl, Register Reg, SDValue N,
                        SDValue Glue) {
     SDVTList VTs = getVTList(MVT::Other, MVT::Glue);
-    SDValue Ops[] = { Chain, getRegister(Reg, N.getValueType()), N, Glue };
+    SDValue Ops[] = {Chain, getRegister(Reg, N.getValueType()), N, Glue};
     return getNode(ISD::CopyToReg, dl, VTs,
                    ArrayRef(Ops, Glue.getNode() ? 4 : 3));
   }
@@ -831,14 +829,14 @@ public:
   SDValue getCopyToReg(SDValue Chain, const SDLoc &dl, SDValue Reg, SDValue N,
                        SDValue Glue) {
     SDVTList VTs = getVTList(MVT::Other, MVT::Glue);
-    SDValue Ops[] = { Chain, Reg, N, Glue };
+    SDValue Ops[] = {Chain, Reg, N, Glue};
     return getNode(ISD::CopyToReg, dl, VTs,
                    ArrayRef(Ops, Glue.getNode() ? 4 : 3));
   }
 
   SDValue getCopyFromReg(SDValue Chain, const SDLoc &dl, Register Reg, EVT VT) {
     SDVTList VTs = getVTList(VT, MVT::Other);
-    SDValue Ops[] = { Chain, getRegister(Reg, VT) };
+    SDValue Ops[] = {Chain, getRegister(Reg, VT)};
     return getNode(ISD::CopyFromReg, dl, VTs, Ops);
   }
 
@@ -848,7 +846,7 @@ public:
   SDValue getCopyFromReg(SDValue Chain, const SDLoc &dl, Register Reg, EVT VT,
                          SDValue Glue) {
     SDVTList VTs = getVTList(VT, MVT::Other, MVT::Glue);
-    SDValue Ops[] = { Chain, getRegister(Reg, VT), Glue };
+    SDValue Ops[] = {Chain, getRegister(Reg, VT), Glue};
     return getNode(ISD::CopyFromReg, dl, VTs,
                    ArrayRef(Ops, Glue.getNode() ? 3 : 2));
   }
@@ -917,8 +915,8 @@ public:
   /// scalability of the desired vector type.
   SDValue getSplat(EVT VT, const SDLoc &DL, SDValue Op) {
     assert(VT.isVector() && "Can't splat to non-vector type");
-    return VT.isScalableVector() ?
-      getSplatVector(VT, DL, Op) : getSplatBuildVector(VT, DL, Op);
+    return VT.isScalableVector() ? getSplatVector(VT, DL, Op)
+                                 : getSplatBuildVector(VT, DL, Op);
   }
 
   /// Returns a vector of type ResVT whose elements contain the linear sequence
@@ -1022,15 +1020,14 @@ public:
   /// Convert Op, which must be of integer type, to the
   /// integer type VT, by either any/sign/zero-extending (depending on IsAny /
   /// IsSigned) or truncating it.
-  SDValue getExtOrTrunc(SDValue Op, const SDLoc &DL,
-                        EVT VT, unsigned Opcode) {
-    switch(Opcode) {
-      case ISD::ANY_EXTEND:
-        return getAnyExtOrTrunc(Op, DL, VT);
-      case ISD::ZERO_EXTEND:
-        return getZExtOrTrunc(Op, DL, VT);
-      case ISD::SIGN_EXTEND:
-        return getSExtOrTrunc(Op, DL, VT);
+  SDValue getExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT, unsigned Opcode) {
+    switch (Opcode) {
+    case ISD::ANY_EXTEND:
+      return getAnyExtOrTrunc(Op, DL, VT);
+    case ISD::ZERO_EXTEND:
+      return getZExtOrTrunc(Op, DL, VT);
+    case ISD::SIGN_EXTEND:
+      return getSExtOrTrunc(Op, DL, VT);
     }
     llvm_unreachable("Unsupported opcode");
   }
@@ -1144,9 +1141,8 @@ public:
   SDValue getCALLSEQ_START(SDValue Chain, uint64_t InSize, uint64_t OutSize,
                            const SDLoc &DL) {
     SDVTList VTs = getVTList(MVT::Other, MVT::Glue);
-    SDValue Ops[] = { Chain,
-                      getIntPtrConstant(InSize, DL, true),
-                      getIntPtrConstant(OutSize, DL, true) };
+    SDValue Ops[] = {Chain, getIntPtrConstant(InSize, DL, true),
+                     getIntPtrConstant(OutSize, DL, true)};
     return getNode(ISD::CALLSEQ_START, DL, VTs, Ops);
   }
 
@@ -1176,9 +1172,7 @@ public:
   LLVM_ABI bool isUndef(unsigned Opcode, ArrayRef<SDValue> Ops);
 
   /// Return an UNDEF node. UNDEF does not have a useful SDLoc.
-  SDValue getUNDEF(EVT VT) {
-    return getNode(ISD::UNDEF, SDLoc(), VT);
-  }
+  SDValue getUNDEF(EVT VT) { return getNode(ISD::UNDEF, SDLoc(), VT); }
 
   /// Return a POISON node. POISON does not have a useful SDLoc.
   SDValue getPOISON(EVT VT) { return getNode(ISD::POISON, SDLoc(), VT); }
@@ -1985,7 +1979,7 @@ public:
   LLVM_ABI void AddDbgLabel(SDDbgLabel *DB);
 
   /// Get the debug values which reference the given SDNode.
-  ArrayRef<SDDbgValue*> GetDbgValues(const SDNode* SD) const {
+  ArrayRef<SDDbgValue *> GetDbgValues(const SDNode *SD) const {
     return DbgInfo->getSDDbgValues(SD);
   }
 
@@ -1995,7 +1989,7 @@ public:
   bool hasDebugValues() const { return !DbgInfo->empty(); }
 
   SDDbgInfo::DbgIterator DbgBegin() const { return DbgInfo->DbgBegin(); }
-  SDDbgInfo::DbgIterator DbgEnd() const  { return DbgInfo->DbgEnd(); }
+  SDDbgInfo::DbgIterator DbgEnd() const { return DbgInfo->DbgEnd(); }
 
   SDDbgInfo::DbgIterator ByvalParmDbgBegin() const {
     return DbgInfo->ByvalParmDbgBegin();
@@ -2470,8 +2464,8 @@ public:
 
   /// Split the node's operand with EXTRACT_SUBVECTOR and
   /// return the low/high part.
-  std::pair<SDValue, SDValue> SplitVectorOperand(const SDNode *N, unsigned OpNo)
-  {
+  std::pair<SDValue, SDValue> SplitVectorOperand(const SDNode *N,
+                                                 unsigned OpNo) {
     return SplitVector(N->getOperand(OpNo), SDLoc(N));
   }
 
@@ -2649,11 +2643,11 @@ private:
                               void *&InsertPos);
 
   /// Maps to auto-CSE operations.
-  std::vector<CondCodeSDNode*> CondCodeNodes;
+  std::vector<CondCodeSDNode *> CondCodeNodes;
 
-  std::vector<SDNode*> ValueTypeNodes;
-  std::map<EVT, SDNode*, EVT::compareRawBits> ExtendedValueTypeNodes;
-  StringMap<SDNode*> ExternalSymbols;
+  std::vector<SDNode *> ValueTypeNodes;
+  std::map<EVT, SDNode *, EVT::compareRawBits> ExtendedValueTypeNodes;
+  StringMap<SDNode *> ExternalSymbols;
 
   std::map<std::pair<std::string, unsigned>, SDNode *> TargetExternalSymbols;
   DenseMap<MCSymbol *, SDNode *> MCSymbols;
@@ -2661,7 +2655,7 @@ private:
   FlagInserter *Inserter = nullptr;
 };
 
-template <> struct GraphTraits<SelectionDAG*> : public GraphTraits<SDNode*> {
+template <> struct GraphTraits<SelectionDAG *> : public GraphTraits<SDNode *> {
   using nodes_iterator = pointer_iterator<SelectionDAG::allnodes_iterator>;
 
   static nodes_iterator nodes_begin(SelectionDAG *G) {

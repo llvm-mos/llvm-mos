@@ -67,7 +67,6 @@ int llvm_test_diagnostic_handler(void) {
     return 1;
   }
 
-
   LLVMModuleRef M;
   int Ret = LLVMGetBitcodeModule2(MB, &M);
   if (Ret)

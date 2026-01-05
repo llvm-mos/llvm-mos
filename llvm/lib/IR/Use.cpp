@@ -32,9 +32,7 @@ void Use::swap(Use &RHS) {
     RHS.Next->Prev = &RHS.Next;
 }
 
-unsigned Use::getOperandNo() const {
-  return this - getUser()->op_begin();
-}
+unsigned Use::getOperandNo() const { return this - getUser()->op_begin(); }
 
 void Use::zap(Use *Start, const Use *Stop, bool del) {
   while (Start != Stop)

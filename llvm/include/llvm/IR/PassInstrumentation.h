@@ -197,7 +197,7 @@ private:
   SmallVector<llvm::unique_function<AnalysesClearedFunc>, 4>
       AnalysesClearedCallbacks;
 
-  SmallVector<llvm::unique_function<void ()>, 4> ClassToPassNameCallbacks;
+  SmallVector<llvm::unique_function<void()>, 4> ClassToPassNameCallbacks;
   DenseMap<StringRef, std::string> ClassToPassName;
 };
 
@@ -368,7 +368,6 @@ public:
     return PassInstrumentation(Callbacks);
   }
 };
-
 
 } // namespace llvm
 

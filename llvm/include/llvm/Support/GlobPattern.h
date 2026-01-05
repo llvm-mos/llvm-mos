@@ -105,6 +105,6 @@ private:
   };
   SmallVector<SubGlobPattern, 1> SubGlobs;
 };
-}
+} // namespace llvm
 
 #endif // LLVM_SUPPORT_GLOBPATTERN_H

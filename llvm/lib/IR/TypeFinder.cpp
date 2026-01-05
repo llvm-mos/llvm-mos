@@ -158,7 +158,8 @@ void TypeFinder::incorporateValue(const Value *V) {
     return;
   }
 
-  if (!isa<Constant>(V) || isa<GlobalValue>(V)) return;
+  if (!isa<Constant>(V) || isa<GlobalValue>(V))
+    return;
 
   // Already visited?
   if (!VisitedConstants.insert(V).second)

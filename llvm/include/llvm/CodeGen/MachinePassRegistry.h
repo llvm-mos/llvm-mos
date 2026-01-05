@@ -48,21 +48,21 @@ public:
 template <typename PassCtorTy> class MachinePassRegistryNode {
 private:
   MachinePassRegistryNode *Next = nullptr; // Next function pass in list.
-  StringRef Name;                       // Name of function pass.
-  StringRef Description;                // Description string.
-  PassCtorTy Ctor;                      // Pass creator.
+  StringRef Name;                          // Name of function pass.
+  StringRef Description;                   // Description string.
+  PassCtorTy Ctor;                         // Pass creator.
 
 public:
   MachinePassRegistryNode(const char *N, const char *D, PassCtorTy C)
       : Name(N), Description(D), Ctor(C) {}
 
   // Accessors
-  MachinePassRegistryNode *getNext()      const { return Next; }
-  MachinePassRegistryNode **getNextAddress()    { return &Next; }
-  StringRef getName()                   const { return Name; }
-  StringRef getDescription()            const { return Description; }
+  MachinePassRegistryNode *getNext() const { return Next; }
+  MachinePassRegistryNode **getNextAddress() { return &Next; }
+  StringRef getName() const { return Name; }
+  StringRef getDescription() const { return Description; }
   PassCtorTy getCtor() const { return Ctor; }
-  void setNext(MachinePassRegistryNode *N)      { Next = N; }
+  void setNext(MachinePassRegistryNode *N) { Next = N; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -145,11 +145,12 @@ public:
     cl::parser<typename RegistryClass::FunctionPassCtor>::initialize();
 
     // Add existing passes to option.
-    for (RegistryClass *Node = RegistryClass::getList();
-         Node; Node = Node->getNext()) {
-      this->addLiteralOption(Node->getName(),
-                      (typename RegistryClass::FunctionPassCtor)Node->getCtor(),
-                             Node->getDescription());
+    for (RegistryClass *Node = RegistryClass::getList(); Node;
+         Node = Node->getNext()) {
+      this->addLiteralOption(
+          Node->getName(),
+          (typename RegistryClass::FunctionPassCtor)Node->getCtor(),
+          Node->getDescription());
     }
 
     // Make sure we listen for list changes.
@@ -161,9 +162,7 @@ public:
                  StringRef D) override {
     this->addLiteralOption(N, C, D);
   }
-  void NotifyRemove(StringRef N) override {
-    this->removeLiteralOption(N);
-  }
+  void NotifyRemove(StringRef N) override { this->removeLiteralOption(N); }
 };
 
 } // end namespace llvm

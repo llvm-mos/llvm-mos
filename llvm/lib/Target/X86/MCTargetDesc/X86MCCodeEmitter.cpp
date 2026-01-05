@@ -1505,7 +1505,7 @@ PrefixKind X86MCCodeEmitter::emitOpcodePrefix(int MemOperand, const MCInst &MI,
 
   // 0x0F escape code must be emitted just before the opcode.
   switch (TSFlags & X86II::OpMapMask) {
-  case X86II::TB:        // Two-byte opcode map
+  case X86II::TB: // Two-byte opcode map
     // Encoded by M bit in REX2
     if (Kind == REX2)
       break;

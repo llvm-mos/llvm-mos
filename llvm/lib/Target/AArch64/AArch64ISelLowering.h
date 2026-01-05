@@ -163,7 +163,7 @@ public:
                                   MachineBasicBlock *BB) const;
 
   MachineBasicBlock *EmitLoweredCatchRet(MachineInstr &MI,
-                                           MachineBasicBlock *BB) const;
+                                         MachineBasicBlock *BB) const;
 
   MachineBasicBlock *EmitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const;
@@ -391,13 +391,9 @@ public:
   bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                         const MachineFunction &MF) const override;
 
-  bool isCheapToSpeculateCttz(Type *) const override {
-    return true;
-  }
+  bool isCheapToSpeculateCttz(Type *) const override { return true; }
 
-  bool isCheapToSpeculateCtlz(Type *) const override {
-    return true;
-  }
+  bool isCheapToSpeculateCtlz(Type *) const override { return true; }
 
   bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
@@ -468,9 +464,7 @@ public:
       MachineBasicBlock *Entry,
       const SmallVectorImpl<MachineBasicBlock *> &Exits) const override;
 
-  bool supportSwiftError() const override {
-    return true;
-  }
+  bool supportSwiftError() const override { return true; }
 
   bool supportPtrAuthBundles() const override { return true; }
 
@@ -501,8 +495,8 @@ public:
   unsigned getNumInterleavedAccesses(VectorType *VecTy, const DataLayout &DL,
                                      bool UseScalable) const;
 
-  MachineMemOperand::Flags getTargetMMOFlags(
-    const Instruction &I) const override;
+  MachineMemOperand::Flags
+  getTargetMMOFlags(const Instruction &I) const override;
 
   bool functionArgumentNeedsConsecutiveRegisters(
       Type *Ty, CallingConv::ID CallConv, bool isVarArg,
@@ -626,8 +620,7 @@ private:
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
 
-  bool
-  isEligibleForTailCallOptimization(const CallLoweringInfo &CLI) const;
+  bool isEligibleForTailCallOptimization(const CallLoweringInfo &CLI) const;
 
   /// Finds the incoming stack arguments which overlap the given fixed stack
   /// object and incorporates their load into the current chain. This prevents
@@ -773,7 +766,8 @@ private:
   SDValue LowerPredReductionToSVE(SDValue ScalarOp, SelectionDAG &DAG) const;
   SDValue LowerReductionToSVE(unsigned Opcode, SDValue ScalarOp,
                               SelectionDAG &DAG) const;
-  SDValue LowerFixedLengthVectorSelectToSVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthVectorSelectToSVE(SDValue Op,
+                                            SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorSetccToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorStoreToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorMStoreToSVE(SDValue Op,
@@ -809,7 +803,7 @@ private:
   unsigned combineRepeatedFPDivisors() const override;
 
   ConstraintType getConstraintType(StringRef Constraint) const override;
-  Register getRegisterByName(const char* RegName, LLT VT,
+  Register getRegisterByName(const char *RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
   /// Examine constraint string and operand type and determine a weight value.

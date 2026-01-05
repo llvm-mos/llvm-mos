@@ -241,11 +241,11 @@ static void copyMustTailReturn(BasicBlock *SplitBB, Instruction *CI,
   bool IsVoid = SplitBB->getParent()->getReturnType()->isVoidTy();
   auto II = std::next(CI->getIterator());
 
-  BitCastInst* BCI = dyn_cast<BitCastInst>(&*II);
+  BitCastInst *BCI = dyn_cast<BitCastInst>(&*II);
   if (BCI)
     ++II;
 
-  ReturnInst* RI = dyn_cast<ReturnInst>(&*II);
+  ReturnInst *RI = dyn_cast<ReturnInst>(&*II);
   assert(RI && "`musttail` call must be followed by `ret` instruction");
 
   Instruction *TI = SplitBB->getTerminator();

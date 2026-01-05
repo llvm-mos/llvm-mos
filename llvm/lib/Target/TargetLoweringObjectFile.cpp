@@ -52,9 +52,7 @@ void TargetLoweringObjectFile::Initialize(MCContext &ctx,
   this->TM = &TM;
 }
 
-TargetLoweringObjectFile::~TargetLoweringObjectFile() {
-  delete Mang;
-}
+TargetLoweringObjectFile::~TargetLoweringObjectFile() { delete Mang; }
 
 unsigned TargetLoweringObjectFile::getCallSiteEncoding() const {
   // If target does not have LEB128 directives, we would need the
@@ -134,7 +132,7 @@ static bool IsNullTerminatedString(const Constant *C) {
     uint64_t NumElts = CDS->getNumElements();
     assert(NumElts != 0 && "Can't have an empty CDS");
 
-    if (CDS->getElementAsInteger(NumElts-1) != 0)
+    if (CDS->getElementAsInteger(NumElts - 1) != 0)
       return false; // Not null terminated.
 
     // Verify that the null doesn't occur anywhere else in the string.
@@ -257,8 +255,9 @@ void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
 /// a global object.  Given a global variable and information from the TM, this
 /// function classifies the global in a target independent manner. This function
 /// may be overridden by the target implementation.
-SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
-                                                       const TargetMachine &TM){
+SectionKind
+TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
+                                           const TargetMachine &TM) {
   assert(!GO->isDeclarationForLinker() &&
          "Can only be used for global definitions");
 
@@ -327,8 +326,7 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       // If initializer is a null-terminated string, put it in a "cstring"
       // section of the right width.
       if (ArrayType *ATy = dyn_cast<ArrayType>(C->getType())) {
-        if (IntegerType *ITy =
-              dyn_cast<IntegerType>(ATy->getElementType())) {
+        if (IntegerType *ITy = dyn_cast<IntegerType>(ATy->getElementType())) {
           if ((ITy->getBitWidth() == 8 || ITy->getBitWidth() == 16 ||
                ITy->getBitWidth() == 32) &&
               IsNullTerminatedString(C)) {
@@ -346,12 +344,15 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       // Otherwise, just drop it into a mergable constant section.  If we have
       // a section for this size, use it, otherwise use the arbitrary sized
       // mergable section.
-      switch (
-          GVar->getDataLayout().getTypeAllocSize(C->getType())) {
-      case 4:  return SectionKind::getMergeableConst4();
-      case 8:  return SectionKind::getMergeableConst8();
-      case 16: return SectionKind::getMergeableConst16();
-      case 32: return SectionKind::getMergeableConst32();
+      switch (GVar->getDataLayout().getTypeAllocSize(C->getType())) {
+      case 4:
+        return SectionKind::getMergeableConst4();
+      case 8:
+        return SectionKind::getMergeableConst8();
+      case 16:
+        return SectionKind::getMergeableConst16();
+      case 32:
+        return SectionKind::getMergeableConst32();
       default:
         return SectionKind::getReadOnly();
       }
@@ -392,8 +393,8 @@ MCSection *TargetLoweringObjectFile::SectionForGlobal(
     if ((Attrs.hasAttribute("bss-section") && Kind.isBSS()) ||
         (Attrs.hasAttribute("data-section") && Kind.isData()) ||
         (Attrs.hasAttribute("relro-section") && Kind.isReadOnlyWithRel()) ||
-        (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly()))  {
-       return getExplicitSectionGlobal(GO, Kind, TM);
+        (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly())) {
+      return getExplicitSectionGlobal(GO, Kind, TM);
     }
   }
 
@@ -419,9 +420,8 @@ MCSection *TargetLoweringObjectFile::getSectionForJumpTable(
     const Function &F, const TargetMachine &TM,
     const MachineJumpTableEntry *JTE) const {
   Align Alignment(1);
-  return getSectionForConstant(F.getDataLayout(),
-                               SectionKind::getReadOnly(), /*C=*/nullptr,
-                               Alignment);
+  return getSectionForConstant(F.getDataLayout(), SectionKind::getReadOnly(),
+                               /*C=*/nullptr, Alignment);
 }
 
 bool TargetLoweringObjectFile::shouldPutJumpTableInFunctionSection(
@@ -485,9 +485,8 @@ const MCExpr *TargetLoweringObjectFile::getTTypeGlobalReference(
   return getTTypeReference(Ref, Encoding, Streamer);
 }
 
-const MCExpr *TargetLoweringObjectFile::
-getTTypeReference(const MCSymbolRefExpr *Sym, unsigned Encoding,
-                  MCStreamer &Streamer) const {
+const MCExpr *TargetLoweringObjectFile::getTTypeReference(
+    const MCSymbolRefExpr *Sym, unsigned Encoding, MCStreamer &Streamer) const {
   switch (Encoding & 0x70) {
   default:
     report_fatal_error("We do not support this DWARF encoding yet!");
@@ -505,7 +504,8 @@ getTTypeReference(const MCSymbolRefExpr *Sym, unsigned Encoding,
   }
 }
 
-const MCExpr *TargetLoweringObjectFile::getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
+const MCExpr *
+TargetLoweringObjectFile::getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
   // FIXME: It's not clear what, if any, default this should have - perhaps a
   // null return could mean 'no location' & we should just do that here.
   return MCSymbolRefExpr::create(Sym, getContext());

@@ -166,8 +166,8 @@ void llvm::reduceOperandsNaNDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
       return nullptr;
 
     if (VectorType *VT = dyn_cast<VectorType>(Ty)) {
-      return ConstantVector::getSplat(VT->getElementCount(),
-                                      ConstantFP::getQNaN(VT->getElementType()));
+      return ConstantVector::getSplat(
+          VT->getElementCount(), ConstantFP::getQNaN(VT->getElementType()));
     }
 
     return ConstantFP::getQNaN(Ty);

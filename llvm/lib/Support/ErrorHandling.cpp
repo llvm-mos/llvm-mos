@@ -32,11 +32,11 @@
 #include <new>
 
 #if defined(HAVE_UNISTD_H)
-# include <unistd.h>
+#include <unistd.h>
 #endif
 #if defined(_WIN32)
-# include <io.h>
-# include <fcntl.h>
+#include <fcntl.h>
+#include <io.h>
 #endif
 
 using namespace llvm;
@@ -102,7 +102,7 @@ void llvm::report_fatal_error(StringRef Reason, bool GenCrashDiag) {
 
 void llvm::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
   llvm::fatal_error_handler_t handler = nullptr;
-  void* handlerData = nullptr;
+  void *handlerData = nullptr;
   {
     // Only acquire the mutex while reading the handler, so as not to invoke a
     // user-supplied callback under a lock.
@@ -211,8 +211,7 @@ void llvm::report_bad_alloc_error(const char *Reason, bool GenCrashDiag) {
 #ifdef LLVM_ENABLE_EXCEPTIONS
 // Do not set custom new handler if exceptions are enabled. In this case OOM
 // errors are handled by throwing 'std::bad_alloc'.
-void llvm::install_out_of_memory_new_handler() {
-}
+void llvm::install_out_of_memory_new_handler() {}
 #else
 // Causes crash on allocation failure. It is called prior to the handler set by
 // 'install_bad_alloc_error_handler'.
@@ -261,9 +260,7 @@ void LLVMInstallFatalErrorHandler(LLVMFatalErrorHandler Handler) {
                               LLVM_EXTENSION reinterpret_cast<void *>(Handler));
 }
 
-void LLVMResetFatalErrorHandler() {
-  remove_fatal_error_handler();
-}
+void LLVMResetFatalErrorHandler() { remove_fatal_error_handler(); }
 
 #ifdef _WIN32
 

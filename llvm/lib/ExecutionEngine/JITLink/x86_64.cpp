@@ -85,9 +85,8 @@ const char NullPointerContent[PointerSize] = {0x00, 0x00, 0x00, 0x00,
 const char PointerJumpStubContent[6] = {
     static_cast<char>(0xFFu), 0x25, 0x00, 0x00, 0x00, 0x00};
 
-const char ReentryTrampolineContent[5] = {
-  static_cast<char>(0xe8), 0x00, 0x00, 0x00, 0x00
-};
+const char ReentryTrampolineContent[5] = {static_cast<char>(0xe8), 0x00, 0x00,
+                                          0x00, 0x00};
 
 void GOTTableManager::registerExistingEntries() {
   for (auto *EntrySym : GOTSection->symbols()) {

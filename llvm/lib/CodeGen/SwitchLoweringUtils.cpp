@@ -80,7 +80,7 @@ void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
       TotalCases[i] += TotalCases[i - 1];
   }
 
-  uint64_t Range = getJumpTableRange(Clusters,0, N - 1);
+  uint64_t Range = getJumpTableRange(Clusters, 0, N - 1);
   uint64_t NumCases = getJumpTableNumCases(TotalCases, 0, N - 1);
   assert(NumCases < UINT64_MAX / 100);
   assert(Range >= NumCases);
@@ -198,8 +198,8 @@ bool SwitchCG::SwitchLowering::buildJumpTable(const CaseClusterVector &Clusters,
   assert(First <= Last);
 
   auto Prob = BranchProbability::getZero();
-  std::vector<MachineBasicBlock*> Table;
-  DenseMap<MachineBasicBlock*, BranchProbability> JTProbs;
+  std::vector<MachineBasicBlock *> Table;
+  DenseMap<MachineBasicBlock *, BranchProbability> JTProbs;
 
   // Initialize probabilities in JTProbs.
   for (unsigned I = First; I <= Last; ++I)
@@ -278,7 +278,7 @@ void SwitchCG::SwitchLowering::findBitTestClusters(CaseClusterVector &Clusters,
   for (const CaseCluster &C : Clusters)
     assert(C.Kind == CC_Range || C.Kind == CC_JumpTable);
   for (unsigned i = 1; i < Clusters.size(); ++i)
-    assert(Clusters[i-1].High->getValue().slt(Clusters[i].Low->getValue()));
+    assert(Clusters[i - 1].High->getValue().slt(Clusters[i].Low->getValue()));
 #endif
 
   // The algorithm below is not suitable for -O0.

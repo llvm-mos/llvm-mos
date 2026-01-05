@@ -37,8 +37,8 @@ class ExecutionSession;
 /// ExecutorProcessControl supports interaction with a JIT target process.
 class LLVM_ABI ExecutorProcessControl {
   friend class ExecutionSession;
-public:
 
+public:
   /// A handler or incoming WrapperFunctionResults -- either return values from
   /// callWrapper* calls, or incoming JIT-dispatch requests.
   ///
@@ -47,13 +47,15 @@ public:
   /// runInPlace function or a RunWithDispatch object.
   class IncomingWFRHandler {
     friend class ExecutorProcessControl;
+
   public:
     IncomingWFRHandler() = default;
     explicit operator bool() const { return !!H; }
     void operator()(shared::WrapperFunctionResult WFR) { H(std::move(WFR)); }
+
   private:
-    template <typename FnT> IncomingWFRHandler(FnT &&Fn)
-      : H(std::forward<FnT>(Fn)) {}
+    template <typename FnT>
+    IncomingWFRHandler(FnT &&Fn) : H(std::forward<FnT>(Fn)) {}
 
     unique_function<void(shared::WrapperFunctionResult)> H;
   };
@@ -66,8 +68,7 @@ public:
   /// work as a Task.
   class RunInPlace {
   public:
-    template <typename FnT>
-    IncomingWFRHandler operator()(FnT &&Fn) {
+    template <typename FnT> IncomingWFRHandler operator()(FnT &&Fn) {
       return IncomingWFRHandler(std::forward<FnT>(Fn));
     }
   };
@@ -81,18 +82,17 @@ public:
   public:
     RunAsTask(TaskDispatcher &D) : D(D) {}
 
-    template <typename FnT>
-    IncomingWFRHandler operator()(FnT &&Fn) {
-      return IncomingWFRHandler(
-          [&D = this->D, Fn = std::move(Fn)]
-          (shared::WrapperFunctionResult WFR) mutable {
-              D.dispatch(
-                makeGenericNamedTask(
-                    [Fn = std::move(Fn), WFR = std::move(WFR)]() mutable {
-                      Fn(std::move(WFR));
-                    }, "WFR handler task"));
-          });
+    template <typename FnT> IncomingWFRHandler operator()(FnT &&Fn) {
+      return IncomingWFRHandler([&D = this->D, Fn = std::move(Fn)](
+                                    shared::WrapperFunctionResult WFR) mutable {
+        D.dispatch(makeGenericNamedTask(
+            [Fn = std::move(Fn), WFR = std::move(WFR)]() mutable {
+              Fn(std::move(WFR));
+            },
+            "WFR handler task"));
+      });
     }
+
   private:
     TaskDispatcher &D;
   };
@@ -230,8 +230,8 @@ public:
   template <typename RunPolicyT, typename FnT>
   void callWrapperAsync(RunPolicyT &&Runner, ExecutorAddr WrapperFnAddr,
                         FnT &&OnComplete, ArrayRef<char> ArgBuffer) {
-    callWrapperAsync(
-        WrapperFnAddr, Runner(std::forward<FnT>(OnComplete)), ArgBuffer);
+    callWrapperAsync(WrapperFnAddr, Runner(std::forward<FnT>(OnComplete)),
+                     ArgBuffer);
   }
 
   /// Run a wrapper function in the executor. OnComplete will be dispatched
@@ -255,9 +255,8 @@ public:
     auto RF = RP.get_future();
     callWrapperAsync(
         RunInPlace(), WrapperFnAddr,
-        [&](shared::WrapperFunctionResult R) {
-          RP.set_value(std::move(R));
-        }, ArgBuffer);
+        [&](shared::WrapperFunctionResult R) { RP.set_value(std::move(R)); },
+        ArgBuffer);
     return RF.get();
   }
 
@@ -268,8 +267,8 @@ public:
   void callSPSWrapperAsync(RunPolicyT &&Runner, ExecutorAddr WrapperFnAddr,
                            SendResultT &&SendResult, const ArgTs &...Args) {
     shared::WrapperFunction<SPSSignature>::callAsync(
-        [this, WrapperFnAddr, Runner = std::move(Runner)]
-        (auto &&SendResult, const char *ArgData, size_t ArgSize) mutable {
+        [this, WrapperFnAddr, Runner = std::move(Runner)](
+            auto &&SendResult, const char *ArgData, size_t ArgSize) mutable {
           this->callWrapperAsync(std::move(Runner), WrapperFnAddr,
                                  std::move(SendResult),
                                  ArrayRef<char>(ArgData, ArgSize));
@@ -308,7 +307,6 @@ public:
   virtual Error disconnect() = 0;
 
 protected:
-
   std::shared_ptr<SymbolStringPool> SSP;
   std::unique_ptr<TaskDispatcher> D;
   ExecutionSession *ES = nullptr;

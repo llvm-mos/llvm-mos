@@ -45,7 +45,7 @@ union DataRefImpl {
 };
 
 template <typename OStream>
-OStream& operator<<(OStream &OS, const DataRefImpl &D) {
+OStream &operator<<(OStream &OS, const DataRefImpl &D) {
   OS << "(" << format("0x%08" PRIxPTR, D.p) << " (" << format("0x%08x", D.d.a)
      << ", " << format("0x%08x", D.d.b) << "))";
   return OS;
@@ -177,9 +177,7 @@ public:
     return createSymbolicFile(Object, llvm::file_magic::unknown, nullptr);
   }
 
-  static bool classof(const Binary *v) {
-    return v->isSymbolic();
-  }
+  static bool classof(const Binary *v) { return v->isSymbolic(); }
 
   static bool isSymbolicFile(file_magic Type, const LLVMContext *Context);
 };

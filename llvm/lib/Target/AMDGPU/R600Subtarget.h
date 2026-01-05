@@ -70,22 +70,16 @@ public:
 
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
-  Generation getGeneration() const {
-    return Gen;
-  }
+  Generation getGeneration() const { return Gen; }
 
   Align getStackAlignment() const { return Align(4); }
 
   R600Subtarget &initializeSubtargetDependencies(const Triple &TT,
                                                  StringRef GPU, StringRef FS);
 
-  bool hasBFE() const {
-    return (getGeneration() >= EVERGREEN);
-  }
+  bool hasBFE() const { return (getGeneration() >= EVERGREEN); }
 
-  bool hasBFI() const {
-    return (getGeneration() >= EVERGREEN);
-  }
+  bool hasBFI() const { return (getGeneration() >= EVERGREEN); }
 
   bool hasBCNT(unsigned Size) const {
     if (Size == 32)
@@ -94,25 +88,15 @@ public:
     return false;
   }
 
-  bool hasBORROW() const {
-    return (getGeneration() >= EVERGREEN);
-  }
+  bool hasBORROW() const { return (getGeneration() >= EVERGREEN); }
 
-  bool hasCARRY() const {
-    return (getGeneration() >= EVERGREEN);
-  }
+  bool hasCARRY() const { return (getGeneration() >= EVERGREEN); }
 
-  bool hasCaymanISA() const {
-    return CaymanISA;
-  }
+  bool hasCaymanISA() const { return CaymanISA; }
 
-  bool hasFFBL() const {
-    return (getGeneration() >= EVERGREEN);
-  }
+  bool hasFFBL() const { return (getGeneration() >= EVERGREEN); }
 
-  bool hasFFBH() const {
-    return (getGeneration() >= EVERGREEN);
-  }
+  bool hasFFBH() const { return (getGeneration() >= EVERGREEN); }
 
   bool hasFMA() const { return FMA; }
 
@@ -122,13 +106,9 @@ public:
 
   short getTexVTXClauseSize() const { return TexVTXClauseSize; }
 
-  bool enableMachineScheduler() const override {
-    return true;
-  }
+  bool enableMachineScheduler() const override { return true; }
 
-  bool enableSubRegLiveness() const override {
-    return true;
-  }
+  bool enableSubRegLiveness() const override { return true; }
 
   /// \returns Maximum number of work groups per compute unit supported by the
   /// subtarget and limited by given \p FlatWorkGroupSize.

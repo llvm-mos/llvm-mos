@@ -929,18 +929,18 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
     if (isAnyOfRecurrenceKind(Kind))
       return isAnyOfPattern(L, OrigPhi, I, Prev);
     auto HasRequiredFMF = [&]() {
-     if (FuncFMF.noNaNs() && FuncFMF.noSignedZeros())
-       return true;
-     if (isa<FPMathOperator>(I) && I->hasNoNaNs() && I->hasNoSignedZeros())
-       return true;
-     // minimum/minnum and maximum/maxnum intrinsics do not require nsz and nnan
-     // flags since NaN and signed zeroes are propagated in the intrinsic
-     // implementation.
-     return match(I, m_Intrinsic<Intrinsic::minimum>(m_Value(), m_Value())) ||
-            match(I, m_Intrinsic<Intrinsic::maximum>(m_Value(), m_Value())) ||
-            match(I,
-                  m_Intrinsic<Intrinsic::minimumnum>(m_Value(), m_Value())) ||
-            match(I, m_Intrinsic<Intrinsic::maximumnum>(m_Value(), m_Value()));
+      if (FuncFMF.noNaNs() && FuncFMF.noSignedZeros())
+        return true;
+      if (isa<FPMathOperator>(I) && I->hasNoNaNs() && I->hasNoSignedZeros())
+        return true;
+      // minimum/minnum and maximum/maxnum intrinsics do not require nsz and
+      // nnan flags since NaN and signed zeroes are propagated in the intrinsic
+      // implementation.
+      return match(I, m_Intrinsic<Intrinsic::minimum>(m_Value(), m_Value())) ||
+             match(I, m_Intrinsic<Intrinsic::maximum>(m_Value(), m_Value())) ||
+             match(I,
+                   m_Intrinsic<Intrinsic::minimumnum>(m_Value(), m_Value())) ||
+             match(I, m_Intrinsic<Intrinsic::maximumnum>(m_Value(), m_Value()));
     };
     if (isIntMinMaxRecurrenceKind(Kind))
       return isMinMaxPattern(I, Kind, Prev);
@@ -994,8 +994,7 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   BasicBlock *Header = TheLoop->getHeader();
   Function &F = *Header->getParent();
   FastMathFlags FMF;
-  FMF.setNoNaNs(
-      F.getFnAttribute("no-nans-fp-math").getValueAsBool());
+  FMF.setNoNaNs(F.getFnAttribute("no-nans-fp-math").getValueAsBool());
   FMF.setNoSignedZeros(
       F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool());
 
@@ -1096,14 +1095,16 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
     LLVM_DEBUG(dbgs() << "Found an FMulAdd reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::FMaximum, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
-    LLVM_DEBUG(dbgs() << "Found a float MAXIMUM reduction PHI." << *Phi << "\n");
+  if (AddReductionVar(Phi, RecurKind::FMaximum, TheLoop, FMF, RedDes, DB, AC,
+                      DT, SE)) {
+    LLVM_DEBUG(dbgs() << "Found a float MAXIMUM reduction PHI." << *Phi
+                      << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::FMinimum, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
-    LLVM_DEBUG(dbgs() << "Found a float MINIMUM reduction PHI." << *Phi << "\n");
+  if (AddReductionVar(Phi, RecurKind::FMinimum, TheLoop, FMF, RedDes, DB, AC,
+                      DT, SE)) {
+    LLVM_DEBUG(dbgs() << "Found a float MINIMUM reduction PHI." << *Phi
+                      << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RecurKind::FMaximumNum, TheLoop, FMF, RedDes, DB, AC,
@@ -1632,8 +1633,8 @@ bool InductionDescriptor::isInductionPHI(
   // This function assumes that InductionPhi is called only on Phi nodes
   // present inside loop headers. Check for the same, and throw an assert if
   // the current Phi is not present inside the loop header.
-  assert(Phi->getParent() == AR->getLoop()->getHeader()
-    && "Invalid Phi node, not present in loop header");
+  assert(Phi->getParent() == AR->getLoop()->getHeader() &&
+         "Invalid Phi node, not present in loop header");
 
   Value *StartValue =
       Phi->getIncomingValueForBlock(AR->getLoop()->getLoopPreheader());

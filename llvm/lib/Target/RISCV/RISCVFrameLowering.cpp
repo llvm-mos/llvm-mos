@@ -413,20 +413,10 @@ static const char *
 getSpillLibCallName(const MachineFunction &MF,
                     const std::vector<CalleeSavedInfo> &CSI) {
   static const char *const SpillLibCalls[] = {
-    "__riscv_save_0",
-    "__riscv_save_1",
-    "__riscv_save_2",
-    "__riscv_save_3",
-    "__riscv_save_4",
-    "__riscv_save_5",
-    "__riscv_save_6",
-    "__riscv_save_7",
-    "__riscv_save_8",
-    "__riscv_save_9",
-    "__riscv_save_10",
-    "__riscv_save_11",
-    "__riscv_save_12"
-  };
+      "__riscv_save_0", "__riscv_save_1", "__riscv_save_2",  "__riscv_save_3",
+      "__riscv_save_4", "__riscv_save_5", "__riscv_save_6",  "__riscv_save_7",
+      "__riscv_save_8", "__riscv_save_9", "__riscv_save_10", "__riscv_save_11",
+      "__riscv_save_12"};
 
   int LibCallID = getLibCallID(MF, CSI);
   if (LibCallID == -1)
@@ -440,20 +430,11 @@ static const char *
 getRestoreLibCallName(const MachineFunction &MF,
                       const std::vector<CalleeSavedInfo> &CSI) {
   static const char *const RestoreLibCalls[] = {
-    "__riscv_restore_0",
-    "__riscv_restore_1",
-    "__riscv_restore_2",
-    "__riscv_restore_3",
-    "__riscv_restore_4",
-    "__riscv_restore_5",
-    "__riscv_restore_6",
-    "__riscv_restore_7",
-    "__riscv_restore_8",
-    "__riscv_restore_9",
-    "__riscv_restore_10",
-    "__riscv_restore_11",
-    "__riscv_restore_12"
-  };
+      "__riscv_restore_0", "__riscv_restore_1",  "__riscv_restore_2",
+      "__riscv_restore_3", "__riscv_restore_4",  "__riscv_restore_5",
+      "__riscv_restore_6", "__riscv_restore_7",  "__riscv_restore_8",
+      "__riscv_restore_9", "__riscv_restore_10", "__riscv_restore_11",
+      "__riscv_restore_12"};
 
   int LibCallID = getLibCallID(MF, CSI);
   if (LibCallID == -1)

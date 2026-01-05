@@ -50,9 +50,9 @@ static cl::opt<bool>
                           cl::init(true));
 
 STATISTIC(NumFinished, "Number of splits finished");
-STATISTIC(NumSimple,   "Number of splits that were simple");
-STATISTIC(NumCopies,   "Number of copies inserted for splitting");
-STATISTIC(NumRemats,   "Number of rematerialized defs for splitting");
+STATISTIC(NumSimple, "Number of splits that were simple");
+STATISTIC(NumCopies, "Number of copies inserted for splitting");
+STATISTIC(NumRemats, "Number of rematerialized defs for splitting");
 
 //===----------------------------------------------------------------------===//
 //                     Last Insert Point Analysis
@@ -231,7 +231,8 @@ void SplitAnalysis::calcLiveBlockInfo() {
       // This block has uses. Find the first and last uses in the block.
       BI.FirstInstr = *UseI;
       assert(BI.FirstInstr >= Start);
-      do ++UseI;
+      do
+        ++UseI;
       while (UseI != UseE && *UseI < Stop);
       BI.LastInstr = UseI[-1];
       assert(BI.LastInstr < Stop);
@@ -309,7 +310,7 @@ void SplitAnalysis::calcLiveBlockInfo() {
 unsigned SplitAnalysis::countLiveBlocks(const LiveInterval *cli) const {
   if (cli->empty())
     return 0;
-  LiveInterval *li = const_cast<LiveInterval*>(cli);
+  LiveInterval *li = const_cast<LiveInterval *>(cli);
   LiveInterval::iterator LVI = li->begin();
   LiveInterval::iterator LVE = li->end();
   unsigned Count = 0;
@@ -465,10 +466,8 @@ void SplitEditor::addDeadDef(LiveInterval &LI, VNInfo *VNI, bool Original) {
   }
 }
 
-VNInfo *SplitEditor::defValue(unsigned RegIdx,
-                              const VNInfo *ParentVNI,
-                              SlotIndex Idx,
-                              bool Original) {
+VNInfo *SplitEditor::defValue(unsigned RegIdx, const VNInfo *ParentVNI,
+                              SlotIndex Idx, bool Original) {
   assert(ParentVNI && "Mapping  NULL value");
   assert(Idx.isValid() && "Invalid SlotIndex");
   assert(Edit->getParent().getVNInfoAt(Idx) == ParentVNI && "Bad Parent VNI");
@@ -481,7 +480,7 @@ VNInfo *SplitEditor::defValue(unsigned RegIdx,
   ValueForcePair FP(Force ? nullptr : VNI, Force);
   // Use insert for lookup, so we can add missing values with a second lookup.
   std::pair<ValueMap::iterator, bool> InsP =
-    Values.insert(std::make_pair(std::make_pair(RegIdx, ParentVNI->id), FP));
+      Values.insert(std::make_pair(std::make_pair(RegIdx, ParentVNI->id), FP));
 
   // This was the first time (RegIdx, ParentVNI) was mapped, and it is not
   // forced. Keep it as a simple def without any liveness.
@@ -526,10 +525,13 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(
     MachineBasicBlock::iterator InsertBefore, unsigned SubIdx,
     LiveInterval &DestLI, bool Late, SlotIndex Def, const MCInstrDesc &Desc) {
   bool FirstCopy = !Def.isValid();
-  MachineInstr *CopyMI = BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
-      .addReg(ToReg, RegState::Define | getUndefRegState(FirstCopy)
-              | getInternalReadRegState(!FirstCopy), SubIdx)
-      .addReg(FromReg, 0, SubIdx);
+  MachineInstr *CopyMI =
+      BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
+          .addReg(ToReg,
+                  RegState::Define | getUndefRegState(FirstCopy) |
+                      getInternalReadRegState(!FirstCopy),
+                  SubIdx)
+          .addReg(FromReg, 0, SubIdx);
 
   SlotIndexes &Indexes = *LIS.getSlotIndexes();
   if (FirstCopy) {
@@ -541,8 +543,9 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(
 }
 
 SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
-    LaneBitmask LaneMask, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator InsertBefore, bool Late, unsigned RegIdx) {
+                                 LaneBitmask LaneMask, MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator InsertBefore,
+                                 bool Late, unsigned RegIdx) {
   const MCInstrDesc &Desc =
       TII.get(TII.getLiveRangeSplitOpcode(FromReg, *MBB.getParent()));
   SlotIndexes &Indexes = *LIS.getSlotIndexes();
@@ -885,7 +888,7 @@ void SplitEditor::overlapIntv(SlotIndex Start, SlotIndex End) {
 //                                  Spill modes
 //===----------------------------------------------------------------------===//
 
-void SplitEditor::removeBackCopies(SmallVectorImpl<VNInfo*> &Copies) {
+void SplitEditor::removeBackCopies(SmallVectorImpl<VNInfo *> &Copies) {
   LiveInterval *LI = &LIS.getInterval(Edit->get(0));
   LLVM_DEBUG(dbgs() << "Removing " << Copies.size() << " back-copies.\n");
   RegAssignMap::iterator AssignI;
@@ -899,7 +902,8 @@ void SplitEditor::removeBackCopies(SmallVectorImpl<VNInfo*> &Copies) {
     MachineBasicBlock *MBB = MI->getParent();
     MachineBasicBlock::iterator MBBI(MI);
     bool AtBegin;
-    do AtBegin = MBBI == MBB->begin();
+    do
+      AtBegin = MBBI == MBB->begin();
     while (!AtBegin && (--MBBI)->isDebugOrPseudoInstr());
 
     LLVM_DEBUG(dbgs() << "Removing " << Def << '\t' << *MI);
@@ -934,7 +938,7 @@ void SplitEditor::removeBackCopies(SmallVectorImpl<VNInfo*> &Copies) {
   }
 }
 
-MachineBasicBlock*
+MachineBasicBlock *
 SplitEditor::findShallowDominator(MachineBasicBlock *MBB,
                                   MachineBasicBlock *DefMBB) {
   if (MBB == DefMBB)
@@ -1101,7 +1105,7 @@ void SplitEditor::hoistCopies() {
     } else {
       // Different basic blocks. Check if one dominates.
       MachineBasicBlock *Near =
-        MDT.findNearestCommonDominator(Dom.first, ValMBB);
+          MDT.findNearestCommonDominator(Dom.first, ValMBB);
       if (Near == ValMBB)
         // Def ValMBB dominates.
         Dom = DomPair(ValMBB, VNI->def);
@@ -1139,12 +1143,13 @@ void SplitEditor::hoistCopies() {
       continue;
     }
     Dom.second = defFromParent(0, ParentVNI, LSP, *Dom.first,
-                               SA.getLastSplitPointIter(Dom.first))->def;
+                               SA.getLastSplitPointIter(Dom.first))
+                     ->def;
   }
 
   // Remove redundant back-copies that are now known to be dominated by another
   // def with the same value.
-  SmallVector<VNInfo*, 8> BackCopies;
+  SmallVector<VNInfo *, 8> BackCopies;
   for (VNInfo *VNI : LI->valnos) {
     if (VNI->isUnused())
       continue;
@@ -1351,14 +1356,14 @@ void SplitEditor::extendPHIKillRanges() {
 void SplitEditor::rewriteAssigned(bool ExtendRanges) {
   struct ExtPoint {
     ExtPoint(const MachineOperand &O, unsigned R, SlotIndex N)
-      : MO(O), RegIdx(R), Next(N) {}
+        : MO(O), RegIdx(R), Next(N) {}
 
     MachineOperand MO;
     unsigned RegIdx;
     SlotIndex Next;
   };
 
-  SmallVector<ExtPoint,4> ExtPoints;
+  SmallVector<ExtPoint, 4> ExtPoints;
 
   for (MachineOperand &MO :
        llvm::make_early_inc_range(MRI.reg_operands(Edit->getReg()))) {
@@ -1473,7 +1478,7 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
 }
 
 void SplitEditor::deleteRematVictims() {
-  SmallVector<MachineInstr*, 8> Dead;
+  SmallVector<MachineInstr *, 8> Dead;
   for (const Register &R : *Edit) {
     LiveInterval *LI = &LIS.getInterval(R);
     for (const LiveRange::Segment &S : LI->segments) {
@@ -1530,7 +1535,7 @@ void SplitEditor::forceRecomputeVNI(const VNInfo &ParentVNI) {
       if (Visited.insert(PredVNI).second)
         WorkList.push_back(PredVNI);
     }
-  } while(!WorkList.empty());
+  } while (!WorkList.empty());
 }
 
 void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
@@ -1597,7 +1602,7 @@ void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
     // Don't use iterators, they are invalidated by create() below.
     Register VReg = Edit->get(i);
     LiveInterval &LI = LIS.getInterval(VReg);
-    SmallVector<LiveInterval*, 8> SplitLIs;
+    SmallVector<LiveInterval *, 8> SplitLIs;
     LIS.splitSeparateComponents(LI, SplitLIs);
     Register Original = VRM.getOriginal(VReg);
     for (LiveInterval *SplitLI : SplitLIs)
@@ -1641,12 +1646,11 @@ bool SplitAnalysis::shouldSplitSingleBlock(const BlockInfo &BI,
 void SplitEditor::splitSingleBlock(const SplitAnalysis::BlockInfo &BI) {
   openIntv();
   SlotIndex LastSplitPoint = SA.getLastSplitPoint(BI.MBB);
-  SlotIndex SegStart = enterIntvBefore(std::min(BI.FirstInstr,
-    LastSplitPoint));
+  SlotIndex SegStart = enterIntvBefore(std::min(BI.FirstInstr, LastSplitPoint));
   if (!BI.LiveOut || BI.LastInstr < LastSplitPoint) {
     useIntv(SegStart, leaveIntvAfter(BI.LastInstr));
   } else {
-      // The last use is after the last valid split point.
+    // The last use is after the last valid split point.
     SlotIndex SegStop = leaveIntvBefore(LastSplitPoint);
     useIntv(SegStart, SegStop);
     // No need to increase the register pressure if the use is already at a
@@ -1667,9 +1671,9 @@ void SplitEditor::splitSingleBlock(const SplitAnalysis::BlockInfo &BI) {
 // Note that splitSingleBlock is also useful for blocks where both CFG edges
 // are on the stack.
 
-void SplitEditor::splitLiveThroughBlock(unsigned MBBNum,
-                                        unsigned IntvIn, SlotIndex LeaveBefore,
-                                        unsigned IntvOut, SlotIndex EnterAfter){
+void SplitEditor::splitLiveThroughBlock(unsigned MBBNum, unsigned IntvIn,
+                                        SlotIndex LeaveBefore, unsigned IntvOut,
+                                        SlotIndex EnterAfter) {
   SlotIndex Start, Stop;
   std::tie(Start, Stop) = LIS.getSlotIndexes()->getMBBRange(MBBNum);
 
@@ -1728,8 +1732,9 @@ void SplitEditor::splitLiveThroughBlock(unsigned MBBNum,
   SlotIndex LSP = SA.getLastSplitPoint(MBBNum);
   assert((!IntvOut || !EnterAfter || EnterAfter < LSP) && "Impossible intf");
 
-  if (IntvIn != IntvOut && (!LeaveBefore || !EnterAfter ||
-                  LeaveBefore.getBaseIndex() > EnterAfter.getBoundaryIndex())) {
+  if (IntvIn != IntvOut &&
+      (!LeaveBefore || !EnterAfter ||
+       LeaveBefore.getBaseIndex() > EnterAfter.getBoundaryIndex())) {
     LLVM_DEBUG(dbgs() << ", switch avoiding interference.\n");
     //
     //    >>>>     <<<<    Non-overlapping EnterAfter/LeaveBefore interference.
@@ -1928,9 +1933,8 @@ void SplitEditor::splitRegOutBlock(const SplitAnalysis::BlockInfo &BI,
 void SplitAnalysis::BlockInfo::print(raw_ostream &OS) const {
   OS << "{" << printMBBReference(*MBB) << ", "
      << "uses " << FirstInstr << " to " << LastInstr << ", "
-     << "1st def " << FirstDef << ", "
-     << (LiveIn ? "live in" : "dead in") << ", "
-     << (LiveOut ? "live out" : "dead out") << "}";
+     << "1st def " << FirstDef << ", " << (LiveIn ? "live in" : "dead in")
+     << ", " << (LiveOut ? "live out" : "dead out") << "}";
 }
 
 void SplitAnalysis::BlockInfo::dump() const {

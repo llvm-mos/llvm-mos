@@ -11,7 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -389,13 +388,15 @@ bool InlineAsmLowering::lowerInlineAsm(
           InstFlagIdx += getNumOpRegs(*Inst, InstFlagIdx) + 1;
         assert(getNumOpRegs(*Inst, InstFlagIdx) == 1 && "Wrong flag");
 
-        const InlineAsm::Flag MatchedOperandFlag(Inst->getOperand(InstFlagIdx).getImm());
+        const InlineAsm::Flag MatchedOperandFlag(
+            Inst->getOperand(InstFlagIdx).getImm());
         if (MatchedOperandFlag.isMemKind()) {
           LLVM_DEBUG(dbgs() << "Matching input constraint to mem operand not "
                                "supported. This should be target specific.\n");
           return false;
         }
-        if (!MatchedOperandFlag.isRegDefKind() && !MatchedOperandFlag.isRegDefEarlyClobberKind()) {
+        if (!MatchedOperandFlag.isRegDefKind() &&
+            !MatchedOperandFlag.isRegDefEarlyClobberKind()) {
           LLVM_DEBUG(dbgs() << "Unknown matching constraint\n");
           return false;
         }
@@ -621,10 +622,11 @@ bool InlineAsmLowering::lowerInlineAsm(
         // Need to truncate the result of the register
         MIRBuilder.buildTrunc(ResRegs[i], Tmp1Reg);
       } else if (ResTy.isScalar() && ResTy.getSizeInBits() > SrcSize) {
-         Register Tmp = SrcReg;
-         if (!MRI->getType(SrcReg).isValid())
-            Tmp = MRI->createGenericVirtualRegister(LLT::scalar(SrcSize)), MIRBuilder.buildCopy(Tmp, SrcReg);
-         MIRBuilder.buildZExt(ResRegs[i], Tmp);
+        Register Tmp = SrcReg;
+        if (!MRI->getType(SrcReg).isValid())
+          Tmp = MRI->createGenericVirtualRegister(LLT::scalar(SrcSize)),
+          MIRBuilder.buildCopy(Tmp, SrcReg);
+        MIRBuilder.buildZExt(ResRegs[i], Tmp);
       } else if (ResTy.getSizeInBits() == SrcSize) {
         MIRBuilder.buildCopy(ResRegs[i], SrcReg);
       } else {

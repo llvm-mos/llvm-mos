@@ -31,7 +31,7 @@ private:
   const DIASession &Session;
   CComPtr<IDiaEnumSourceFiles> Enumerator;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

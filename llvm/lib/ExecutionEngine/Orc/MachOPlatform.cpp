@@ -1296,16 +1296,15 @@ MachOPlatform::MachOPlatformPlugin::findUnwindSectionInfo(
   }
 
   if (Section *CUInfoSec = G.findSectionByName(MachOUnwindInfoSectionName)) {
-    ScanUnwindInfoSection(
-        *CUInfoSec, US.CompactUnwindSection, [&](Block &B) {
-          for (auto &E : B.edges()) {
-            assert(E.getTarget().isDefined() &&
-                   "unwind-info record edge has external target");
-            assert(E.getKind() == Edge::KeepAlive &&
-                   "unwind-info record has unexpected edge kind");
-            CodeBlocks.push_back(&E.getTarget().getBlock());
-          }
-        });
+    ScanUnwindInfoSection(*CUInfoSec, US.CompactUnwindSection, [&](Block &B) {
+      for (auto &E : B.edges()) {
+        assert(E.getTarget().isDefined() &&
+               "unwind-info record edge has external target");
+        assert(E.getKind() == Edge::KeepAlive &&
+               "unwind-info record has unexpected edge kind");
+        CodeBlocks.push_back(&E.getTarget().getBlock());
+      }
+    });
   }
 
   // If we didn't find any pointed-to code-blocks then there's no need to

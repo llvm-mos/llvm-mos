@@ -156,130 +156,126 @@ createLocalCompileCallbackManager(const Triple &T, ExecutionSession &ES,
   case Triple::aarch64_32: {
     typedef orc::LocalJITCompileCallbackManager<orc::OrcAArch64> CCMgrT;
     return CCMgrT::Create(ES, ErrorHandlerAddress);
-    }
+  }
 
-    case Triple::x86: {
-      typedef orc::LocalJITCompileCallbackManager<orc::OrcI386> CCMgrT;
+  case Triple::x86: {
+    typedef orc::LocalJITCompileCallbackManager<orc::OrcI386> CCMgrT;
+    return CCMgrT::Create(ES, ErrorHandlerAddress);
+  }
+
+  case Triple::loongarch64: {
+    typedef orc::LocalJITCompileCallbackManager<orc::OrcLoongArch64> CCMgrT;
+    return CCMgrT::Create(ES, ErrorHandlerAddress);
+  }
+
+  case Triple::mips: {
+    typedef orc::LocalJITCompileCallbackManager<orc::OrcMips32Be> CCMgrT;
+    return CCMgrT::Create(ES, ErrorHandlerAddress);
+  }
+  case Triple::mipsel: {
+    typedef orc::LocalJITCompileCallbackManager<orc::OrcMips32Le> CCMgrT;
+    return CCMgrT::Create(ES, ErrorHandlerAddress);
+  }
+
+  case Triple::mips64:
+  case Triple::mips64el: {
+    typedef orc::LocalJITCompileCallbackManager<orc::OrcMips64> CCMgrT;
+    return CCMgrT::Create(ES, ErrorHandlerAddress);
+  }
+
+  case Triple::riscv64: {
+    typedef orc::LocalJITCompileCallbackManager<orc::OrcRiscv64> CCMgrT;
+    return CCMgrT::Create(ES, ErrorHandlerAddress);
+  }
+
+  case Triple::x86_64: {
+    if (T.getOS() == Triple::OSType::Win32) {
+      typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_Win32> CCMgrT;
+      return CCMgrT::Create(ES, ErrorHandlerAddress);
+    } else {
+      typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_SysV> CCMgrT;
       return CCMgrT::Create(ES, ErrorHandlerAddress);
     }
-
-    case Triple::loongarch64: {
-      typedef orc::LocalJITCompileCallbackManager<orc::OrcLoongArch64> CCMgrT;
-      return CCMgrT::Create(ES, ErrorHandlerAddress);
-    }
-
-    case Triple::mips: {
-      typedef orc::LocalJITCompileCallbackManager<orc::OrcMips32Be> CCMgrT;
-      return CCMgrT::Create(ES, ErrorHandlerAddress);
-    }
-    case Triple::mipsel: {
-      typedef orc::LocalJITCompileCallbackManager<orc::OrcMips32Le> CCMgrT;
-      return CCMgrT::Create(ES, ErrorHandlerAddress);
-    }
-
-    case Triple::mips64:
-    case Triple::mips64el: {
-      typedef orc::LocalJITCompileCallbackManager<orc::OrcMips64> CCMgrT;
-      return CCMgrT::Create(ES, ErrorHandlerAddress);
-    }
-
-    case Triple::riscv64: {
-      typedef orc::LocalJITCompileCallbackManager<orc::OrcRiscv64> CCMgrT;
-      return CCMgrT::Create(ES, ErrorHandlerAddress);
-    }
-
-    case Triple::x86_64: {
-      if (T.getOS() == Triple::OSType::Win32) {
-        typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_Win32> CCMgrT;
-        return CCMgrT::Create(ES, ErrorHandlerAddress);
-      } else {
-        typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_SysV> CCMgrT;
-        return CCMgrT::Create(ES, ErrorHandlerAddress);
-      }
-    }
-
+  }
   }
 }
 
 std::function<std::unique_ptr<IndirectStubsManager>()>
 createLocalIndirectStubsManagerBuilder(const Triple &T) {
   switch (T.getArch()) {
-    default:
-      return [](){
-        return std::make_unique<
-                       orc::LocalIndirectStubsManager<orc::OrcGenericABI>>();
-      };
+  default:
+    return []() {
+      return std::make_unique<
+          orc::LocalIndirectStubsManager<orc::OrcGenericABI>>();
+    };
 
-    case Triple::aarch64:
-    case Triple::aarch64_32:
-      return [](){
-        return std::make_unique<
-                       orc::LocalIndirectStubsManager<orc::OrcAArch64>>();
-      };
+  case Triple::aarch64:
+  case Triple::aarch64_32:
+    return []() {
+      return std::make_unique<
+          orc::LocalIndirectStubsManager<orc::OrcAArch64>>();
+    };
 
-    case Triple::x86:
-      return [](){
-        return std::make_unique<
-                       orc::LocalIndirectStubsManager<orc::OrcI386>>();
-      };
+  case Triple::x86:
+    return []() {
+      return std::make_unique<orc::LocalIndirectStubsManager<orc::OrcI386>>();
+    };
 
-    case Triple::loongarch64:
+  case Triple::loongarch64:
+    return []() {
+      return std::make_unique<
+          orc::LocalIndirectStubsManager<orc::OrcLoongArch64>>();
+    };
+
+  case Triple::mips:
+    return []() {
+      return std::make_unique<
+          orc::LocalIndirectStubsManager<orc::OrcMips32Be>>();
+    };
+
+  case Triple::mipsel:
+    return []() {
+      return std::make_unique<
+          orc::LocalIndirectStubsManager<orc::OrcMips32Le>>();
+    };
+
+  case Triple::mips64:
+  case Triple::mips64el:
+    return []() {
+      return std::make_unique<orc::LocalIndirectStubsManager<orc::OrcMips64>>();
+    };
+
+  case Triple::riscv64:
+    return []() {
+      return std::make_unique<
+          orc::LocalIndirectStubsManager<orc::OrcRiscv64>>();
+    };
+
+  case Triple::x86_64:
+    if (T.getOS() == Triple::OSType::Win32) {
       return []() {
         return std::make_unique<
-            orc::LocalIndirectStubsManager<orc::OrcLoongArch64>>();
+            orc::LocalIndirectStubsManager<orc::OrcX86_64_Win32>>();
       };
-
-    case Triple::mips:
-      return [](){
-          return std::make_unique<
-                      orc::LocalIndirectStubsManager<orc::OrcMips32Be>>();
-      };
-
-    case Triple::mipsel:
-      return [](){
-          return std::make_unique<
-                      orc::LocalIndirectStubsManager<orc::OrcMips32Le>>();
-      };
-
-    case Triple::mips64:
-    case Triple::mips64el:
-      return [](){
-          return std::make_unique<
-                      orc::LocalIndirectStubsManager<orc::OrcMips64>>();
-      };
-
-    case Triple::riscv64:
+    } else {
       return []() {
         return std::make_unique<
-            orc::LocalIndirectStubsManager<orc::OrcRiscv64>>();
+            orc::LocalIndirectStubsManager<orc::OrcX86_64_SysV>>();
       };
-
-    case Triple::x86_64:
-      if (T.getOS() == Triple::OSType::Win32) {
-        return [](){
-          return std::make_unique<
-                     orc::LocalIndirectStubsManager<orc::OrcX86_64_Win32>>();
-        };
-      } else {
-        return [](){
-          return std::make_unique<
-                     orc::LocalIndirectStubsManager<orc::OrcX86_64_SysV>>();
-        };
-      }
-
+    }
   }
 }
 
-Constant* createIRTypedAddress(FunctionType &FT, ExecutorAddr Addr) {
+Constant *createIRTypedAddress(FunctionType &FT, ExecutorAddr Addr) {
   Constant *AddrIntVal =
-    ConstantInt::get(Type::getInt64Ty(FT.getContext()), Addr.getValue());
+      ConstantInt::get(Type::getInt64Ty(FT.getContext()), Addr.getValue());
   Constant *AddrPtrVal = ConstantExpr::getIntToPtr(
       AddrIntVal, PointerType::get(FT.getContext(), 0));
   return AddrPtrVal;
 }
 
-GlobalVariable* createImplPointer(PointerType &PT, Module &M,
-                                  const Twine &Name, Constant *Initializer) {
+GlobalVariable *createImplPointer(PointerType &PT, Module &M, const Twine &Name,
+                                  Constant *Initializer) {
   auto IP = new GlobalVariable(M, &PT, false, GlobalValue::ExternalLinkage,
                                Initializer, Name, nullptr,
                                GlobalValue::NotThreadLocal, 0, true);
@@ -294,7 +290,7 @@ void makeStub(Function &F, Value &ImplPointer) {
   BasicBlock *EntryBlock = BasicBlock::Create(M.getContext(), "entry", &F);
   IRBuilder<> Builder(EntryBlock);
   LoadInst *ImplAddr = Builder.CreateLoad(F.getType(), &ImplPointer);
-  std::vector<Value*> CallArgs;
+  std::vector<Value *> CallArgs;
   for (auto &A : F.args())
     CallArgs.push_back(&A);
   CallInst *Call = Builder.CreateCall(F.getFunctionType(), ImplAddr, CallArgs);
@@ -336,11 +332,10 @@ std::vector<GlobalValue *> SymbolLinkagePromoter::operator()(Module &M) {
   return PromotedGlobals;
 }
 
-Function* cloneFunctionDecl(Module &Dst, const Function &F,
+Function *cloneFunctionDecl(Module &Dst, const Function &F,
                             ValueToValueMapTy *VMap) {
-  Function *NewF =
-    Function::Create(cast<FunctionType>(F.getValueType()),
-                     F.getLinkage(), F.getName(), &Dst);
+  Function *NewF = Function::Create(cast<FunctionType>(F.getValueType()),
+                                    F.getLinkage(), F.getName(), &Dst);
   NewF->copyAttributesFrom(&F);
 
   if (VMap) {
@@ -354,19 +349,19 @@ Function* cloneFunctionDecl(Module &Dst, const Function &F,
   return NewF;
 }
 
-GlobalVariable* cloneGlobalVariableDecl(Module &Dst, const GlobalVariable &GV,
+GlobalVariable *cloneGlobalVariableDecl(Module &Dst, const GlobalVariable &GV,
                                         ValueToValueMapTy *VMap) {
   GlobalVariable *NewGV = new GlobalVariable(
-      Dst, GV.getValueType(), GV.isConstant(),
-      GV.getLinkage(), nullptr, GV.getName(), nullptr,
-      GV.getThreadLocalMode(), GV.getType()->getAddressSpace());
+      Dst, GV.getValueType(), GV.isConstant(), GV.getLinkage(), nullptr,
+      GV.getName(), nullptr, GV.getThreadLocalMode(),
+      GV.getType()->getAddressSpace());
   NewGV->copyAttributesFrom(&GV);
   if (VMap)
     (*VMap)[&GV] = NewGV;
   return NewGV;
 }
 
-GlobalAlias* cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA,
+GlobalAlias *cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA,
                                   ValueToValueMapTy &VMap) {
   assert(OrigA.getAliasee() && "Original alias doesn't have an aliasee?");
   auto *NewA = GlobalAlias::create(OrigA.getValueType(),

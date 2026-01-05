@@ -26,9 +26,9 @@ public:
   ~PPCTargetStreamer() override;
 
   virtual void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) {}
-  virtual void emitMachine(StringRef CPU){};
-  virtual void emitAbiVersion(int AbiVersion){};
-  virtual void emitLocalEntry(MCSymbolELF *S, const MCExpr *LocalOffset){};
+  virtual void emitMachine(StringRef CPU) {};
+  virtual void emitAbiVersion(int AbiVersion) {};
+  virtual void emitLocalEntry(MCSymbolELF *S, const MCExpr *LocalOffset) {};
 };
 
 } // end namespace llvm

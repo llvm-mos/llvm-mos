@@ -67,7 +67,7 @@ void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo,
 
 /// Returns true only if instruction is specified as single issue.
 bool TargetSchedModel::mustBeginGroup(const MachineInstr *MI,
-                                     const MCSchedClassDesc *SC) const {
+                                      const MCSchedClassDesc *SC) const {
   if (hasInstrSchedModel()) {
     if (!SC)
       SC = resolveSchedClass(MI);
@@ -78,7 +78,7 @@ bool TargetSchedModel::mustBeginGroup(const MachineInstr *MI,
 }
 
 bool TargetSchedModel::mustEndGroup(const MachineInstr *MI,
-                                     const MCSchedClassDesc *SC) const {
+                                    const MCSchedClassDesc *SC) const {
   if (hasInstrSchedModel()) {
     if (!SC)
       SC = resolveSchedClass(MI);
@@ -107,14 +107,12 @@ unsigned TargetSchedModel::getNumMicroOps(const MachineInstr *MI,
 // effectively means infinite latency. Since users of the TargetSchedule API
 // don't know how to handle this, we convert it to a very large latency that is
 // easy to distinguish when debugging the DAG but won't induce overflow.
-static unsigned capLatency(int Cycles) {
-  return Cycles >= 0 ? Cycles : 1000;
-}
+static unsigned capLatency(int Cycles) { return Cycles >= 0 ? Cycles : 1000; }
 
 /// Return the MCSchedClassDesc for this instruction. Some SchedClasses require
 /// evaluation of predicates that depend on instruction operands or flags.
-const MCSchedClassDesc *TargetSchedModel::
-resolveSchedClass(const MachineInstr *MI) const {
+const MCSchedClassDesc *
+TargetSchedModel::resolveSchedClass(const MachineInstr *MI) const {
   // Get the definition's scheduling class descriptor from this machine model.
   unsigned SchedClass = MI->getDesc().getSchedClass();
   const MCSchedClassDesc *SCDesc = SchedModel.getSchedClassDesc(SchedClass);
@@ -166,9 +164,10 @@ static unsigned findUseIdx(const MachineInstr *MI, unsigned UseOperIdx) {
 
 // Top-level API for clients that know the operand indices. This doesn't need to
 // return std::optional<unsigned>, as it always returns a valid latency.
-unsigned TargetSchedModel::computeOperandLatency(
-  const MachineInstr *DefMI, unsigned DefOperIdx,
-  const MachineInstr *UseMI, unsigned UseOperIdx) const {
+unsigned TargetSchedModel::computeOperandLatency(const MachineInstr *DefMI,
+                                                 unsigned DefOperIdx,
+                                                 const MachineInstr *UseMI,
+                                                 unsigned UseOperIdx) const {
 
   const unsigned InstrLatency = computeInstrLatency(DefMI);
   const unsigned DefaultDefLatency = TII->defaultDefLatency(SchedModel, *DefMI);
@@ -181,8 +180,7 @@ unsigned TargetSchedModel::computeOperandLatency(
     if (UseMI) {
       OperLatency = TII->getOperandLatency(&InstrItins, *DefMI, DefOperIdx,
                                            *UseMI, UseOperIdx);
-    }
-    else {
+    } else {
       unsigned DefClass = DefMI->getDesc().getSchedClass();
       OperLatency = InstrItins.getOperandCycle(DefClass, DefOperIdx);
     }
@@ -199,7 +197,7 @@ unsigned TargetSchedModel::computeOperandLatency(
   if (DefIdx < SCDesc->NumWriteLatencyEntries) {
     // Lookup the definition's write latency in SubtargetInfo.
     const MCWriteLatencyEntry *WLEntry =
-      STI->getWriteLatencyEntry(SCDesc, DefIdx);
+        STI->getWriteLatencyEntry(SCDesc, DefIdx);
     unsigned WriteID = WLEntry->WriteResourceID;
     unsigned Latency = capLatency(WLEntry->Cycles);
     if (!UseMI)
@@ -266,9 +264,10 @@ TargetSchedModel::computeInstrLatency(const MachineInstr *MI,
   return TII->defaultDefLatency(SchedModel, *MI);
 }
 
-unsigned TargetSchedModel::
-computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
-                     const MachineInstr *DepMI) const {
+unsigned
+TargetSchedModel::computeOutputLatency(const MachineInstr *DefMI,
+                                       unsigned DefOperIdx,
+                                       const MachineInstr *DepMI) const {
   if (!SchedModel.isOutOfOrder())
     return 1;
 
@@ -292,7 +291,8 @@ computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
     const MCSchedClassDesc *SCDesc = resolveSchedClass(DefMI);
     if (SCDesc->isValid()) {
       for (const MCWriteProcResEntry *PRI = STI->getWriteProcResBegin(SCDesc),
-             *PRE = STI->getWriteProcResEnd(SCDesc); PRI != PRE; ++PRI) {
+                                     *PRE = STI->getWriteProcResEnd(SCDesc);
+           PRI != PRE; ++PRI) {
         if (!SchedModel.getProcResource(PRI->ProcResourceIdx)->BufferSize)
           return 1;
       }
@@ -315,8 +315,7 @@ TargetSchedModel::computeReciprocalThroughput(const MachineInstr *MI) const {
   return 0.0;
 }
 
-double
-TargetSchedModel::computeReciprocalThroughput(unsigned Opcode) const {
+double TargetSchedModel::computeReciprocalThroughput(unsigned Opcode) const {
   unsigned SchedClass = TII->get(Opcode).getSchedClass();
   if (hasInstrItineraries())
     return MCSchedModel::getReciprocalThroughput(SchedClass,
@@ -330,8 +329,7 @@ TargetSchedModel::computeReciprocalThroughput(unsigned Opcode) const {
   return 0.0;
 }
 
-double
-TargetSchedModel::computeReciprocalThroughput(const MCInst &MI) const {
+double TargetSchedModel::computeReciprocalThroughput(const MCInst &MI) const {
   if (hasInstrSchedModel())
     return SchedModel.getReciprocalThroughput(*STI, *TII, MI);
   return computeReciprocalThroughput(MI.getOpcode());

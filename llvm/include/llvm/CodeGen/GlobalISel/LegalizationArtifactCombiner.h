@@ -11,7 +11,6 @@
 // at the end of the legalization.
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_CODEGEN_GLOBALISEL_LEGALIZATIONARTIFACTCOMBINER_H
 #define LLVM_CODEGEN_GLOBALISEL_LEGALIZATIONARTIFACTCOMBINER_H
 
@@ -506,8 +505,8 @@ public:
           return false;
 
         // Check if the new unmerge is supported
-        if (IsSupported && isInstUnsupported(
-                {TargetOpcode::G_UNMERGE_VALUES, {DestTy, CastSrcTy}}))
+        if (IsSupported && isInstUnsupported({TargetOpcode::G_UNMERGE_VALUES,
+                                              {DestTy, CastSrcTy}}))
           return false;
 
         // Gather the original destination registers and create new ones for the

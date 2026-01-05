@@ -1539,7 +1539,7 @@ inline uint16_t GET_LIBRARY_ORDINAL(uint16_t n_desc) {
 }
 
 inline void SET_LIBRARY_ORDINAL(uint16_t &n_desc, uint8_t ordinal) {
-  n_desc = (((n_desc)&0x00ff) | (((ordinal)&0xff) << 8));
+  n_desc = (((n_desc) & 0x00ff) | (((ordinal) & 0xff) << 8));
 }
 
 inline uint8_t GET_COMM_ALIGN(uint16_t n_desc) {
@@ -1553,8 +1553,8 @@ inline void SET_COMM_ALIGN(uint16_t &n_desc, uint8_t align) {
 // Enums from <mach/machine.h>
 enum : uint32_t {
   // Capability bits used in the definition of cpu_type.
-  CPU_ARCH_MASK = 0xff000000, // Mask for architecture bits
-  CPU_ARCH_ABI64 = 0x01000000, // 64 bit ABI
+  CPU_ARCH_MASK = 0xff000000,     // Mask for architecture bits
+  CPU_ARCH_ABI64 = 0x01000000,    // 64 bit ABI
   CPU_ARCH_ABI64_32 = 0x02000000, // ILP32 ABI on 64-bit hardware
 };
 

@@ -51,11 +51,9 @@ private:
   void EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
                        VRBaseMapType &VRBaseMap);
 
-  void CreateVirtualRegisters(SDNode *Node,
-                              MachineInstrBuilder &MIB,
-                              const MCInstrDesc &II,
-                              bool IsClone, bool IsCloned,
-                              VRBaseMapType &VRBaseMap);
+  void CreateVirtualRegisters(SDNode *Node, MachineInstrBuilder &MIB,
+                              const MCInstrDesc &II, bool IsClone,
+                              bool IsCloned, VRBaseMapType &VRBaseMap);
 
   /// getVR - Return the virtual register corresponding to the specified result
   /// of the specified node.
@@ -64,23 +62,18 @@ private:
   /// AddRegisterOperand - Add the specified register as an operand to the
   /// specified machine instr. Insert register copies if the register is
   /// not in the required register class.
-  void AddRegisterOperand(MachineInstrBuilder &MIB,
-                          SDValue Op,
-                          unsigned IIOpNum,
-                          const MCInstrDesc *II,
-                          VRBaseMapType &VRBaseMap,
-                          bool IsDebug, bool IsClone, bool IsCloned);
+  void AddRegisterOperand(MachineInstrBuilder &MIB, SDValue Op,
+                          unsigned IIOpNum, const MCInstrDesc *II,
+                          VRBaseMapType &VRBaseMap, bool IsDebug, bool IsClone,
+                          bool IsCloned);
 
   /// AddOperand - Add the specified operand to the specified machine instr.  II
   /// specifies the instruction information for the node, and IIOpNum is the
   /// operand number (in the II) that we are adding. IIOpNum and II are used for
   /// assertions only.
-  void AddOperand(MachineInstrBuilder &MIB,
-                  SDValue Op,
-                  unsigned IIOpNum,
-                  const MCInstrDesc *II,
-                  VRBaseMapType &VRBaseMap,
-                  bool IsDebug, bool IsClone, bool IsCloned);
+  void AddOperand(MachineInstrBuilder &MIB, SDValue Op, unsigned IIOpNum,
+                  const MCInstrDesc *II, VRBaseMapType &VRBaseMap, bool IsDebug,
+                  bool IsClone, bool IsCloned);
 
   /// ConstrainForSubReg - Try to constrain VReg to a register class that
   /// supports SubIdx sub-registers.  Emit a copy if that isn't possible.

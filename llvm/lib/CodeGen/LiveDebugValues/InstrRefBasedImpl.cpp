@@ -400,8 +400,8 @@ public:
         // Continue processing values so that we add any other UseBeforeDef
         // entries needed for later.
         if (Num.getBlock() == (unsigned)MBB.getNumber() && !Num.isPHI()) {
-          LastUseBeforeDef = std::max(LastUseBeforeDef,
-                                      static_cast<unsigned>(Num.getInst()));
+          LastUseBeforeDef =
+              std::max(LastUseBeforeDef, static_cast<unsigned>(Num.getInst()));
           continue;
         }
         recoverAsEntryValue(VarID, Value.Properties, Num);
@@ -1170,8 +1170,8 @@ std::string MLocTracker::LocIdxToName(LocIdx Idx) const {
     ID -= NumRegs;
     unsigned Slot = ID / NumSlotIdxes;
     return Twine("slot ")
-        .concat(Twine(Slot).concat(Twine(" sz ").concat(Twine(Pos.first)
-        .concat(Twine(" offs ").concat(Twine(Pos.second))))))
+        .concat(Twine(Slot).concat(Twine(" sz ").concat(Twine(Pos.first).concat(
+            Twine(" offs ").concat(Twine(Pos.second))))))
         .str();
   } else {
     return TRI.getRegAsmName(ID).str();
@@ -2237,7 +2237,8 @@ bool InstrRefBasedLDV::transferRegisterCopy(MachineInstr &MI) {
   // alternative locations (or else terminating those variables).
   if (TTracker) {
     for (auto LocVal : ClobberedLocs) {
-      TTracker->clobberMloc(LocVal.first, LocVal.second, MI.getIterator(), false);
+      TTracker->clobberMloc(LocVal.first, LocVal.second, MI.getIterator(),
+                            false);
     }
   }
 
@@ -2440,7 +2441,7 @@ void InstrRefBasedLDV::produceMLocTransferFunction(
       // this block never used anyway.
       ValueIDNum NotGeneratedNum = ValueIDNum(I, 1, Idx);
       auto Result =
-        TransferMap.insert(std::make_pair(Idx.asU64(), NotGeneratedNum));
+          TransferMap.insert(std::make_pair(Idx.asU64(), NotGeneratedNum));
       if (!Result.second) {
         ValueIDNum &ValueID = Result.first->second;
         if (ValueID.getBlock() == I && ValueID.isPHI())
@@ -2966,7 +2967,8 @@ std::optional<ValueIDNum> InstrRefBasedLDV::pickOperandPHILoc(
     auto &LocVec = Locs[I];
     SmallVector<LocIdx, 4> NewCandidates;
     std::set_intersection(CandidateLocs.begin(), CandidateLocs.end(),
-                          LocVec.begin(), LocVec.end(), std::inserter(NewCandidates, NewCandidates.begin()));
+                          LocVec.begin(), LocVec.end(),
+                          std::inserter(NewCandidates, NewCandidates.begin()));
     CandidateLocs = std::move(NewCandidates);
   }
   if (CandidateLocs.empty())
@@ -4098,7 +4100,7 @@ public:
   /// solution determined it to be. This includes non-phi values if SSAUpdater
   /// tries to create a PHI where the incoming values are identical.
   static BlockValueNum CreateEmptyPHI(LDVSSABlock *BB, unsigned NumPreds,
-                                   LDVSSAUpdater *Updater) {
+                                      LDVSSAUpdater *Updater) {
     BlockValueNum PHIValNum = Updater->getValue(BB);
     LDVSSAPhi *PHI = BB->newPHI(PHIValNum);
     Updater->PHIs[PHIValNum] = PHI;
@@ -4107,7 +4109,8 @@ public:
 
   /// AddPHIOperand - Add the specified value as an operand of the PHI for
   /// the specified predecessor block.
-  static void AddPHIOperand(LDVSSAPhi *PHI, BlockValueNum Val, LDVSSABlock *Pred) {
+  static void AddPHIOperand(LDVSSAPhi *PHI, BlockValueNum Val,
+                            LDVSSABlock *Pred) {
     PHI->IncomingValues.push_back(std::make_pair(Pred, Val));
   }
 
@@ -4213,7 +4216,8 @@ std::optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIsImpl(
   // Otherwise, we must use the SSA Updater. It will identify the value number
   // that we are to use, and the PHIs that must happen along the way.
   SSAUpdaterImpl<LDVSSAUpdater> Impl(&Updater, &AvailableValues, &CreatedPHIs);
-  BlockValueNum ResultInt = Impl.GetValue(Updater.getSSALDVBlock(Here.getParent()));
+  BlockValueNum ResultInt =
+      Impl.GetValue(Updater.getSSALDVBlock(Here.getParent()));
   ValueIDNum Result = ValueIDNum::fromU64(ResultInt);
 
   // We have the number for a PHI, or possibly live-through value, to be used

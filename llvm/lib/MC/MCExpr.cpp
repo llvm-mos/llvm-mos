@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "llvm/MC/MCExpr.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
@@ -107,10 +106,18 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
   case MCExpr::Unary: {
     const MCUnaryExpr &UE = cast<MCUnaryExpr>(*this);
     switch (UE.getOpcode()) {
-    case MCUnaryExpr::LNot:  OS << '!'; break;
-    case MCUnaryExpr::Minus: OS << '-'; break;
-    case MCUnaryExpr::Not:   OS << '~'; break;
-    case MCUnaryExpr::Plus:  OS << '+'; break;
+    case MCUnaryExpr::LNot:
+      OS << '!';
+      break;
+    case MCUnaryExpr::Minus:
+      OS << '-';
+      break;
+    case MCUnaryExpr::Not:
+      OS << '~';
+      break;
+    case MCUnaryExpr::Plus:
+      OS << '+';
+      break;
     }
     UE.getSubExpr()->print(OS, MAI, MaxPrec);
     return;
@@ -145,27 +152,65 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
         }
       }
 
-      OS <<  '+';
+      OS << '+';
       break;
-    case MCBinaryExpr::AShr: OS << ">>"; break;
-    case MCBinaryExpr::And:  OS <<  '&'; break;
-    case MCBinaryExpr::Div:  OS <<  '/'; break;
-    case MCBinaryExpr::EQ:   OS << "=="; break;
-    case MCBinaryExpr::GT:   OS <<  '>'; break;
-    case MCBinaryExpr::GTE:  OS << ">="; break;
-    case MCBinaryExpr::LAnd: OS << "&&"; break;
-    case MCBinaryExpr::LOr:  OS << "||"; break;
-    case MCBinaryExpr::LShr: OS << ">>"; break;
-    case MCBinaryExpr::LT:   OS <<  '<'; break;
-    case MCBinaryExpr::LTE:  OS << "<="; break;
-    case MCBinaryExpr::Mod:  OS <<  '%'; break;
-    case MCBinaryExpr::Mul:  OS <<  '*'; break;
-    case MCBinaryExpr::NE:   OS << "!="; break;
-    case MCBinaryExpr::Or:   OS <<  '|'; break;
-    case MCBinaryExpr::OrNot: OS << '!'; break;
-    case MCBinaryExpr::Shl:  OS << "<<"; break;
-    case MCBinaryExpr::Sub:  OS <<  '-'; break;
-    case MCBinaryExpr::Xor:  OS <<  '^'; break;
+    case MCBinaryExpr::AShr:
+      OS << ">>";
+      break;
+    case MCBinaryExpr::And:
+      OS << '&';
+      break;
+    case MCBinaryExpr::Div:
+      OS << '/';
+      break;
+    case MCBinaryExpr::EQ:
+      OS << "==";
+      break;
+    case MCBinaryExpr::GT:
+      OS << '>';
+      break;
+    case MCBinaryExpr::GTE:
+      OS << ">=";
+      break;
+    case MCBinaryExpr::LAnd:
+      OS << "&&";
+      break;
+    case MCBinaryExpr::LOr:
+      OS << "||";
+      break;
+    case MCBinaryExpr::LShr:
+      OS << ">>";
+      break;
+    case MCBinaryExpr::LT:
+      OS << '<';
+      break;
+    case MCBinaryExpr::LTE:
+      OS << "<=";
+      break;
+    case MCBinaryExpr::Mod:
+      OS << '%';
+      break;
+    case MCBinaryExpr::Mul:
+      OS << '*';
+      break;
+    case MCBinaryExpr::NE:
+      OS << "!=";
+      break;
+    case MCBinaryExpr::Or:
+      OS << '|';
+      break;
+    case MCBinaryExpr::OrNot:
+      OS << '!';
+      break;
+    case MCBinaryExpr::Shl:
+      OS << "<<";
+      break;
+    case MCBinaryExpr::Sub:
+      OS << '-';
+      break;
+    case MCBinaryExpr::Xor:
+      OS << '^';
+      break;
     }
 
     BE.getRHS()->print(OS, MAI, SubPrec + 1);
@@ -628,9 +673,15 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     // Apple as.
     int64_t Result = 0;
     switch (Op) {
-    case MCBinaryExpr::AShr: Result = LHS >> RHS; break;
-    case MCBinaryExpr::Add:  Result = LHS + RHS; break;
-    case MCBinaryExpr::And:  Result = LHS & RHS; break;
+    case MCBinaryExpr::AShr:
+      Result = LHS >> RHS;
+      break;
+    case MCBinaryExpr::Add:
+      Result = LHS + RHS;
+      break;
+    case MCBinaryExpr::And:
+      Result = LHS & RHS;
+      break;
     case MCBinaryExpr::Div:
     case MCBinaryExpr::Mod:
       // Handle division by zero. gas just emits a warning and keeps going,
@@ -646,21 +697,51 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       else
         Result = LHS % RHS;
       break;
-    case MCBinaryExpr::EQ:   Result = LHS == RHS; break;
-    case MCBinaryExpr::GT:   Result = LHS > RHS; break;
-    case MCBinaryExpr::GTE:  Result = LHS >= RHS; break;
-    case MCBinaryExpr::LAnd: Result = LHS && RHS; break;
-    case MCBinaryExpr::LOr:  Result = LHS || RHS; break;
-    case MCBinaryExpr::LShr: Result = uint64_t(LHS) >> uint64_t(RHS); break;
-    case MCBinaryExpr::LT:   Result = LHS < RHS; break;
-    case MCBinaryExpr::LTE:  Result = LHS <= RHS; break;
-    case MCBinaryExpr::Mul:  Result = LHS * RHS; break;
-    case MCBinaryExpr::NE:   Result = LHS != RHS; break;
-    case MCBinaryExpr::Or:   Result = LHS | RHS; break;
-    case MCBinaryExpr::OrNot: Result = LHS | ~RHS; break;
-    case MCBinaryExpr::Shl:  Result = uint64_t(LHS) << uint64_t(RHS); break;
-    case MCBinaryExpr::Sub:  Result = LHS - RHS; break;
-    case MCBinaryExpr::Xor:  Result = LHS ^ RHS; break;
+    case MCBinaryExpr::EQ:
+      Result = LHS == RHS;
+      break;
+    case MCBinaryExpr::GT:
+      Result = LHS > RHS;
+      break;
+    case MCBinaryExpr::GTE:
+      Result = LHS >= RHS;
+      break;
+    case MCBinaryExpr::LAnd:
+      Result = LHS && RHS;
+      break;
+    case MCBinaryExpr::LOr:
+      Result = LHS || RHS;
+      break;
+    case MCBinaryExpr::LShr:
+      Result = uint64_t(LHS) >> uint64_t(RHS);
+      break;
+    case MCBinaryExpr::LT:
+      Result = LHS < RHS;
+      break;
+    case MCBinaryExpr::LTE:
+      Result = LHS <= RHS;
+      break;
+    case MCBinaryExpr::Mul:
+      Result = LHS * RHS;
+      break;
+    case MCBinaryExpr::NE:
+      Result = LHS != RHS;
+      break;
+    case MCBinaryExpr::Or:
+      Result = LHS | RHS;
+      break;
+    case MCBinaryExpr::OrNot:
+      Result = LHS | ~RHS;
+      break;
+    case MCBinaryExpr::Shl:
+      Result = uint64_t(LHS) << uint64_t(RHS);
+      break;
+    case MCBinaryExpr::Sub:
+      Result = LHS - RHS;
+      break;
+    case MCBinaryExpr::Xor:
+      Result = LHS ^ RHS;
+      break;
     }
 
     switch (Op) {

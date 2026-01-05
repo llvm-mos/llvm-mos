@@ -23,7 +23,7 @@ class StringRef;
 class raw_ostream;
 
 struct MemorySanitizerOptions {
-  MemorySanitizerOptions() : MemorySanitizerOptions(0, false, false, false){};
+  MemorySanitizerOptions() : MemorySanitizerOptions(0, false, false, false) {};
   MemorySanitizerOptions(int TrackOrigins, bool Recover, bool Kernel)
       : MemorySanitizerOptions(TrackOrigins, Recover, Kernel, false) {}
   LLVM_ABI MemorySanitizerOptions(int TrackOrigins, bool Recover, bool Kernel,
@@ -52,6 +52,6 @@ struct MemorySanitizerPass : public PassInfoMixin<MemorySanitizerPass> {
 private:
   MemorySanitizerOptions Options;
 };
-}
+} // namespace llvm
 
 #endif /* LLVM_TRANSFORMS_INSTRUMENTATION_MEMORYSANITIZER_H */

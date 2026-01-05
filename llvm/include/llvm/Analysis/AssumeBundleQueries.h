@@ -49,10 +49,8 @@ inline bool hasAttributeInAssume(AssumeInst &Assume, Value *IsOn,
                               Attribute::getNameFromAttrKind(Kind), ArgVal);
 }
 
-template<> struct DenseMapInfo<Attribute::AttrKind> {
-  static Attribute::AttrKind getEmptyKey() {
-    return Attribute::EmptyKey;
-  }
+template <> struct DenseMapInfo<Attribute::AttrKind> {
+  static Attribute::AttrKind getEmptyKey() { return Attribute::EmptyKey; }
   static Attribute::AttrKind getTombstoneKey() {
     return Attribute::TombstoneKey;
   }

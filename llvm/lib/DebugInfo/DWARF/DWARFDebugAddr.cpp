@@ -120,8 +120,7 @@ Error DWARFDebugAddrTable::extractPreStandard(const DWARFDataExtractor &Data,
 }
 
 Error DWARFDebugAddrTable::extract(const DWARFDataExtractor &Data,
-                                   uint64_t *OffsetPtr,
-                                   uint16_t CUVersion,
+                                   uint64_t *OffsetPtr, uint16_t CUVersion,
                                    uint8_t CUAddrSize,
                                    std::function<void(Error)> WarnCallback) {
   if (CUVersion > 0 && CUVersion < 5)

@@ -20,8 +20,9 @@
 
 namespace llvm {
 
-/// PPCDispatchGroupSBHazardRecognizer - This class implements a scoreboard-based
-/// hazard recognizer for PPC ooo processors with dispatch-group hazards.
+/// PPCDispatchGroupSBHazardRecognizer - This class implements a
+/// scoreboard-based hazard recognizer for PPC ooo processors with
+/// dispatch-group hazards.
 class PPCDispatchGroupSBHazardRecognizer : public ScoreboardHazardRecognizer {
   const ScheduleDAG *DAG;
   SmallVector<SUnit *, 7> CurGroup;
@@ -30,14 +31,15 @@ class PPCDispatchGroupSBHazardRecognizer : public ScoreboardHazardRecognizer {
   bool isLoadAfterStore(SUnit *SU);
   bool isBCTRAfterSet(SUnit *SU);
   bool mustComeFirst(const MCInstrDesc *MCID, unsigned &NSlots);
+
 public:
   PPCDispatchGroupSBHazardRecognizer(const InstrItineraryData *ItinData,
-                         const ScheduleDAG *DAG_) :
-    ScoreboardHazardRecognizer(ItinData, DAG_), DAG(DAG_),
-    CurSlots(0), CurBranches(0) {}
+                                     const ScheduleDAG *DAG_)
+      : ScoreboardHazardRecognizer(ItinData, DAG_), DAG(DAG_), CurSlots(0),
+        CurBranches(0) {}
 
   HazardType getHazardType(SUnit *SU, int Stalls) override;
-  bool ShouldPreferAnother(SUnit* SU) override;
+  bool ShouldPreferAnother(SUnit *SU) override;
   unsigned PreEmitNoops(SUnit *SU) override;
   void EmitInstruction(SUnit *SU) override;
   void AdvanceCycle() override;
@@ -55,7 +57,7 @@ public:
 class PPCHazardRecognizer970 : public ScheduleHazardRecognizer {
   const ScheduleDAG &DAG;
 
-  unsigned NumIssued;  // Number of insts issued, including advanced cycles.
+  unsigned NumIssued; // Number of insts issued, including advanced cycles.
 
   // Various things that can cause a structural hazard.
 
@@ -87,9 +89,9 @@ private:
 
   /// GetInstrType - Classify the specified powerpc opcode according to its
   /// pipeline.
-  PPCII::PPC970_Unit GetInstrType(unsigned Opcode,
-                                  bool &isFirst, bool &isSingle,bool &isCracked,
-                                  bool &isLoad, bool &isStore);
+  PPCII::PPC970_Unit GetInstrType(unsigned Opcode, bool &isFirst,
+                                  bool &isSingle, bool &isCracked, bool &isLoad,
+                                  bool &isStore);
 
   bool isLoadOfStoredAddress(uint64_t LoadSize, int64_t LoadOffset,
                              const Value *LoadValue) const;
@@ -98,4 +100,3 @@ private:
 } // end namespace llvm
 
 #endif
-

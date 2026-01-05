@@ -239,52 +239,54 @@ void IRPartitionLayer::emitPartition(
   //
   // FIXME: We apply this promotion once per partitioning. It's safe, but
   // overkill.
-  auto ExtractedTSM = TSM.withModuleDo([&](Module &M)
-                                           -> Expected<ThreadSafeModule> {
-    auto PromotedGlobals = PromoteSymbols(M);
-    if (!PromotedGlobals.empty()) {
+  auto ExtractedTSM =
+      TSM.withModuleDo([&](Module &M) -> Expected<ThreadSafeModule> {
+        auto PromotedGlobals = PromoteSymbols(M);
+        if (!PromotedGlobals.empty()) {
 
-      MangleAndInterner Mangle(ES, M.getDataLayout());
-      SymbolFlagsMap SymbolFlags;
-      IRSymbolMapper::add(ES, *getManglingOptions(), PromotedGlobals,
-                          SymbolFlags);
+          MangleAndInterner Mangle(ES, M.getDataLayout());
+          SymbolFlagsMap SymbolFlags;
+          IRSymbolMapper::add(ES, *getManglingOptions(), PromotedGlobals,
+                              SymbolFlags);
 
-      if (auto Err = R->defineMaterializing(SymbolFlags))
-        return std::move(Err);
-    }
+          if (auto Err = R->defineMaterializing(SymbolFlags))
+            return std::move(Err);
+        }
 
-    expandPartition(*GVsToExtract);
+        expandPartition(*GVsToExtract);
 
-    // Submodule name is given by hashing the names of the globals.
-    std::string SubModuleName;
-    {
-      std::vector<const GlobalValue *> HashGVs;
-      HashGVs.reserve(GVsToExtract->size());
-      llvm::append_range(HashGVs, *GVsToExtract);
-      llvm::sort(HashGVs, [](const GlobalValue *LHS, const GlobalValue *RHS) {
-        return LHS->getName() < RHS->getName();
+        // Submodule name is given by hashing the names of the globals.
+        std::string SubModuleName;
+        {
+          std::vector<const GlobalValue *> HashGVs;
+          HashGVs.reserve(GVsToExtract->size());
+          llvm::append_range(HashGVs, *GVsToExtract);
+          llvm::sort(HashGVs,
+                     [](const GlobalValue *LHS, const GlobalValue *RHS) {
+                       return LHS->getName() < RHS->getName();
+                     });
+          hash_code HC(0);
+          for (const auto *GV : HashGVs) {
+            assert(GV->hasName() &&
+                   "All GVs to extract should be named by now");
+            auto GVName = GV->getName();
+            HC = hash_combine(HC, hash_combine_range(GVName));
+          }
+          raw_string_ostream(SubModuleName)
+              << ".submodule."
+              << formatv(sizeof(size_t) == 8 ? "{0:x16}" : "{0:x8}",
+                         static_cast<size_t>(HC))
+              << ".ll";
+        }
+
+        // Extract the requested partiton (plus any necessary aliases) and
+        // put the rest back into the impl dylib.
+        auto ShouldExtract = [&](const GlobalValue &GV) -> bool {
+          return GVsToExtract->count(&GV);
+        };
+
+        return extractSubModule(TSM, SubModuleName, ShouldExtract);
       });
-      hash_code HC(0);
-      for (const auto *GV : HashGVs) {
-        assert(GV->hasName() && "All GVs to extract should be named by now");
-        auto GVName = GV->getName();
-        HC = hash_combine(HC, hash_combine_range(GVName));
-      }
-      raw_string_ostream(SubModuleName)
-          << ".submodule."
-          << formatv(sizeof(size_t) == 8 ? "{0:x16}" : "{0:x8}",
-                     static_cast<size_t>(HC))
-          << ".ll";
-    }
-
-    // Extract the requested partiton (plus any necessary aliases) and
-    // put the rest back into the impl dylib.
-    auto ShouldExtract = [&](const GlobalValue &GV) -> bool {
-      return GVsToExtract->count(&GV);
-    };
-
-    return extractSubModule(TSM, SubModuleName, ShouldExtract);
-  });
 
   if (!ExtractedTSM) {
     ES.reportError(ExtractedTSM.takeError());

@@ -38,10 +38,11 @@ using namespace llvm;
 
 STATISTIC(NumInstCombined, "Number of machineinst combined");
 
-static cl::opt<unsigned>
-inc_threshold("machine-combiner-inc-threshold", cl::Hidden,
-              cl::desc("Incremental depth computation will be used for basic "
-                       "blocks with more instructions."), cl::init(500));
+static cl::opt<unsigned> inc_threshold(
+    "machine-combiner-inc-threshold", cl::Hidden,
+    cl::desc("Incremental depth computation will be used for basic "
+             "blocks with more instructions."),
+    cl::init(500));
 
 static cl::opt<bool> dump_intrs("machine-combiner-dump-subst-intrs", cl::Hidden,
                                 cl::desc("Dump all substituted intrs"),
@@ -122,17 +123,17 @@ private:
                           SmallVector<unsigned, 16> &Patterns);
   CombinerObjective getCombinerObjective(unsigned Pattern);
 };
-}
+} // namespace
 
 char MachineCombiner::ID = 0;
 char &llvm::MachineCombinerID = MachineCombiner::ID;
 
-INITIALIZE_PASS_BEGIN(MachineCombiner, DEBUG_TYPE,
-                      "Machine InstCombiner", false, false)
+INITIALIZE_PASS_BEGIN(MachineCombiner, DEBUG_TYPE, "Machine InstCombiner",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetricsWrapperPass)
-INITIALIZE_PASS_END(MachineCombiner, DEBUG_TYPE, "Machine InstCombiner",
-                    false, false)
+INITIALIZE_PASS_END(MachineCombiner, DEBUG_TYPE, "Machine InstCombiner", false,
+                    false)
 
 void MachineCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
@@ -146,8 +147,7 @@ void MachineCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-MachineInstr *
-MachineCombiner::getOperandDef(const MachineOperand &MO) {
+MachineInstr *MachineCombiner::getOperandDef(const MachineOperand &MO) {
   MachineInstr *DefInstr = nullptr;
   // We need a virtual register definition.
   if (MO.isReg() && MO.getReg().isVirtual())
@@ -431,8 +431,8 @@ bool MachineCombiner::preservesResourceLen(
 
   // Compute current resource length
 
-  //ArrayRef<const MachineBasicBlock *> MBBarr(MBB);
-  SmallVector <const MachineBasicBlock *, 1> MBBarr;
+  // ArrayRef<const MachineBasicBlock *> MBBarr(MBB);
+  SmallVector<const MachineBasicBlock *, 1> MBBarr;
   MBBarr.push_back(MBB);
   unsigned ResLenBeforeCombine = BlockTrace.getResourceLength(MBBarr);
 
@@ -455,7 +455,7 @@ bool MachineCombiner::preservesResourceLen(
                     << " and after: " << ResLenAfterCombine << "\n");
   LLVM_DEBUG(
       ResLenAfterCombine <=
-      ResLenBeforeCombine + TII->getExtendResourceLenLimit()
+              ResLenBeforeCombine + TII->getExtendResourceLenLimit()
           ? dbgs() << "\t\t  As result it IMPROVES/PRESERVES Resource Length\n"
           : dbgs() << "\t\t  As result it DOES NOT improve/preserve Resource "
                       "Length\n");
@@ -624,12 +624,12 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         dbgs() << "\tFor the Pattern (" << (int)P
                << ") these instructions could be removed\n";
         for (auto const *InstrPtr : DelInstrs)
-          InstrPtr->print(dbgs(), /*IsStandalone*/false, /*SkipOpers*/false,
-                          /*SkipDebugLoc*/false, /*AddNewLine*/true, TII);
+          InstrPtr->print(dbgs(), /*IsStandalone*/ false, /*SkipOpers*/ false,
+                          /*SkipDebugLoc*/ false, /*AddNewLine*/ true, TII);
         dbgs() << "\tThese instructions could replace the removed ones\n";
         for (auto const *InstrPtr : InsInstrs)
-          InstrPtr->print(dbgs(), /*IsStandalone*/false, /*SkipOpers*/false,
-                          /*SkipDebugLoc*/false, /*AddNewLine*/true, TII);
+          InstrPtr->print(dbgs(), /*IsStandalone*/ false, /*SkipOpers*/ false,
+                          /*SkipDebugLoc*/ false, /*AddNewLine*/ true, TII);
       });
 
       if (IncrementalUpdate && LastUpdate != BlockIter) {
@@ -660,7 +660,8 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
       }
 
       if (ML && TII->isThroughputPattern(P)) {
-        LLVM_DEBUG(dbgs() << "\t Replacing due to throughput pattern in loop\n");
+        LLVM_DEBUG(
+            dbgs() << "\t Replacing due to throughput pattern in loop\n");
         insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, TraceEnsemble,
                                  RegUnits, TII, P, IncrementalUpdate);
         // Eagerly stop after the first pattern fires.
@@ -668,8 +669,8 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         break;
       } else if (OptForSize && InsInstrs.size() < DelInstrs.size()) {
         LLVM_DEBUG(dbgs() << "\t Replacing due to OptForSize ("
-                          << InsInstrs.size() << " < "
-                          << DelInstrs.size() << ")\n");
+                          << InsInstrs.size() << " < " << DelInstrs.size()
+                          << ")\n");
         insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, TraceEnsemble,
                                  RegUnits, TII, P, IncrementalUpdate);
         // Eagerly stop after the first pattern fires.
@@ -725,9 +726,9 @@ bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
   PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  MBFI = (PSI && PSI->hasProfileSummary()) ?
-         &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
-         nullptr;
+  MBFI = (PSI && PSI->hasProfileSummary())
+             ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
+             : nullptr;
   TraceEnsemble = nullptr;
   RegClassInfo.runOnMachineFunction(MF);
 

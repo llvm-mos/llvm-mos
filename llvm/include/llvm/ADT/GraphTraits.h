@@ -34,8 +34,7 @@ namespace llvm {
 // differently without requiring a copy of the original graph. This could
 // be achieved by carrying more data in NodeRef. See LoopBodyTraits for one
 // example.
-template<class GraphType>
-struct GraphTraits {
+template <class GraphType> struct GraphTraits {
   // Elements to provide:
 
   // typedef NodeRef           - Type of Node token in the graph, which should
@@ -119,8 +118,7 @@ constexpr bool GraphHasNodeNumbers =
 // df_iterator<Inverse<Method*>> I = idf_begin(M), E = idf_end(M);
 // for (; I != E; ++I) { ... }
 //
-template <class GraphType>
-struct Inverse {
+template <class GraphType> struct Inverse {
   const GraphType &Graph;
 
   inline Inverse(const GraphType &G) : Graph(G) {}

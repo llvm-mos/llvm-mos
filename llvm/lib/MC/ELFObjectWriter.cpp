@@ -174,9 +174,7 @@ public:
       W.write<uint32_t>(Word);
   }
 
-  template <typename T> void write(T Val) {
-    W.write(Val);
-  }
+  template <typename T> void write(T Val) { W.write(Val); }
 
   void writeHeader();
 
@@ -293,13 +291,14 @@ void ELFWriter::writeHeader() {
 
   W.OS << ELF::ElfMagic; // e_ident[EI_MAG0] to e_ident[EI_MAG3]
 
-  W.OS << char(is64Bit() ? ELF::ELFCLASS64 : ELF::ELFCLASS32); // e_ident[EI_CLASS]
+  W.OS << char(is64Bit() ? ELF::ELFCLASS64
+                         : ELF::ELFCLASS32); // e_ident[EI_CLASS]
 
   // e_ident[EI_DATA]
   W.OS << char(W.Endian == llvm::endianness::little ? ELF::ELFDATA2LSB
                                                     : ELF::ELFDATA2MSB);
 
-  W.OS << char(ELF::EV_CURRENT);        // e_ident[EI_VERSION]
+  W.OS << char(ELF::EV_CURRENT); // e_ident[EI_VERSION]
   // e_ident[EI_OSABI]
   uint8_t OSABI = OWriter.TargetObjectWriter->getOSABI();
   W.OS << char(OSABI == ELF::ELFOSABI_NONE && OWriter.seenGnuAbi()
@@ -312,14 +311,15 @@ void ELFWriter::writeHeader() {
 
   W.OS.write_zeros(ELF::EI_NIDENT - ELF::EI_PAD);
 
-  W.write<uint16_t>(ELF::ET_REL);             // e_type
+  W.write<uint16_t>(ELF::ET_REL); // e_type
 
-  W.write<uint16_t>(OWriter.TargetObjectWriter->getEMachine()); // e_machine = target
+  W.write<uint16_t>(
+      OWriter.TargetObjectWriter->getEMachine()); // e_machine = target
 
-  W.write<uint32_t>(ELF::EV_CURRENT);         // e_version
-  writeWord(0); // e_entry, no entry point in .o file
-  writeWord(0); // e_phoff, no program header for .o
-  writeWord(0); // e_shoff = sec hdr table off in bytes
+  W.write<uint32_t>(ELF::EV_CURRENT); // e_version
+  writeWord(0);                       // e_entry, no entry point in .o file
+  writeWord(0);                       // e_phoff, no program header for .o
+  writeWord(0);                       // e_shoff = sec hdr table off in bytes
 
   // e_flags = whatever the target wants
   W.write<uint32_t>(OWriter.getELFHeaderEFlags());
@@ -328,8 +328,8 @@ void ELFWriter::writeHeader() {
   W.write<uint16_t>(is64Bit() ? sizeof(ELF::Elf64_Ehdr)
                               : sizeof(ELF::Elf32_Ehdr));
 
-  W.write<uint16_t>(0);                  // e_phentsize = prog header entry size
-  W.write<uint16_t>(0);                  // e_phnum = # prog header entries = 0
+  W.write<uint16_t>(0); // e_phentsize = prog header entry size
+  W.write<uint16_t>(0); // e_phnum = # prog header entries = 0
 
   // e_shentsize = Section header entry size
   W.write<uint16_t>(is64Bit() ? sizeof(ELF::Elf64_Shdr)
@@ -527,7 +527,8 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
       continue;
 
     if (Symbol.isTemporary() && Symbol.isUndefined()) {
-      Ctx.reportError(SMLoc(), "Undefined temporary symbol " + Symbol.getName());
+      Ctx.reportError(SMLoc(),
+                      "Undefined temporary symbol " + Symbol.getName());
       continue;
     }
 
@@ -772,14 +773,14 @@ void ELFWriter::writeSectionHeaderEntry(uint32_t Name, uint32_t Type,
                                         uint32_t Link, uint32_t Info,
                                         MaybeAlign Alignment,
                                         uint64_t EntrySize) {
-  W.write<uint32_t>(Name);        // sh_name: index into string table
-  W.write<uint32_t>(Type);        // sh_type
-  writeWord(Flags);               // sh_flags
-  writeWord(Address);             // sh_addr
-  writeWord(Offset);              // sh_offset
-  writeWord(Size);                // sh_size
-  W.write<uint32_t>(Link);        // sh_link
-  W.write<uint32_t>(Info);        // sh_info
+  W.write<uint32_t>(Name); // sh_name: index into string table
+  W.write<uint32_t>(Type); // sh_type
+  writeWord(Flags);        // sh_flags
+  writeWord(Address);      // sh_addr
+  writeWord(Offset);       // sh_offset
+  writeWord(Size);         // sh_size
+  W.write<uint32_t>(Link); // sh_link
+  W.write<uint32_t>(Info); // sh_info
   writeWord(Alignment ? Alignment->value() : 0); // sh_addralign
   writeWord(EntrySize);                          // sh_entsize
 }
@@ -869,7 +870,7 @@ void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
   uint64_t sh_link = 0;
   uint64_t sh_info = 0;
 
-  switch(Section.getType()) {
+  switch (Section.getType()) {
   default:
     // Nothing to do.
     break;

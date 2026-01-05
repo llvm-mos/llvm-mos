@@ -21,7 +21,7 @@ namespace llvm {
 /// unique entry that is added.  T is the type of entries in the vector. This
 /// class should have an implementation of operator== and of operator<.
 /// Entries can be fetched using operator[] with the entry ID.
-template<class T> class UniqueVector {
+template <class T> class UniqueVector {
 public:
   using VectorType = typename std::vector<T>;
   using iterator = typename VectorType::iterator;
@@ -42,7 +42,8 @@ public:
     unsigned &Val = Map[Entry];
 
     // See if entry exists, if so return prior ID.
-    if (Val) return Val;
+    if (Val)
+      return Val;
 
     // Compute ID for entry.
     Val = static_cast<unsigned>(Vector.size()) + 1;
@@ -59,7 +60,8 @@ public:
     typename std::map<T, unsigned>::const_iterator MI = Map.find(Entry);
 
     // See if entry exists, if so return ID.
-    if (MI != Map.end()) return MI->second;
+    if (MI != Map.end())
+      return MI->second;
 
     // No luck.
     return 0;
@@ -67,7 +69,7 @@ public:
 
   /// operator[] - Returns a reference to the entry with the specified ID.
   const T &operator[](unsigned ID) const {
-    assert(ID-1 < size() && "ID is 0 or out of range!");
+    assert(ID - 1 < size() && "ID is 0 or out of range!");
     return Vector[ID - 1];
   }
 

@@ -43,7 +43,6 @@ void InfoStreamBuilder::setSignature(uint32_t S) { Signature = S; }
 
 void InfoStreamBuilder::setGuid(GUID G) { Guid = G; }
 
-
 Error InfoStreamBuilder::finalizeMsfLayout() {
   uint32_t Length = sizeof(InfoStreamHeader) +
                     NamedStreams.calculateSerializedLength() +

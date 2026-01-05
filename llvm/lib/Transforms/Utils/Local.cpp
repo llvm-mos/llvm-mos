@@ -139,12 +139,13 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
 
   // Branch - See if we are conditional jumping on constant
   if (auto *BI = dyn_cast<BranchInst>(T)) {
-    if (BI->isUnconditional()) return false;  // Can't optimize uncond branch
+    if (BI->isUnconditional())
+      return false; // Can't optimize uncond branch
 
     BasicBlock *Dest1 = BI->getSuccessor(0);
     BasicBlock *Dest2 = BI->getSuccessor(1);
 
-    if (Dest2 == Dest1) {       // Conditional branch to same location?
+    if (Dest2 == Dest1) { // Conditional branch to same location?
       // This branch matches something like this:
       //     br bool %cond, label %Dest, label %Dest
       // and changes it into:  br label %Dest
@@ -310,12 +311,11 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       // instruction if it has only one non-default destination.
       auto FirstCase = *SI->case_begin();
       Value *Cond = Builder.CreateICmpEQ(SI->getCondition(),
-          FirstCase.getCaseValue(), "cond");
+                                         FirstCase.getCaseValue(), "cond");
 
       // Insert the new branch.
-      BranchInst *NewBr = Builder.CreateCondBr(Cond,
-                                               FirstCase.getCaseSuccessor(),
-                                               SI->getDefaultDest());
+      BranchInst *NewBr = Builder.CreateCondBr(
+          Cond, FirstCase.getCaseSuccessor(), SI->getDefaultDest());
       SmallVector<uint32_t> Weights;
       if (extractBranchWeights(*SI, Weights) && Weights.size() == 2) {
         uint32_t DefWeight = Weights[0];
@@ -341,7 +341,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
   if (auto *IBI = dyn_cast<IndirectBrInst>(T)) {
     // indirectbr blockaddress(@F, @BB) -> br label @BB
     if (auto *BA =
-          dyn_cast<BlockAddress>(IBI->getAddress()->stripPointerCasts())) {
+            dyn_cast<BlockAddress>(IBI->getAddress()->stripPointerCasts())) {
       BasicBlock *TheOnlyDest = BA->getBasicBlock();
       SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
 
@@ -641,7 +641,7 @@ static bool areAllUsesEqual(Instruction *I) {
 bool llvm::RecursivelyDeleteDeadPHINode(PHINode *PN,
                                         const TargetLibraryInfo *TLI,
                                         llvm::MemorySSAUpdater *MSSAU) {
-  SmallPtrSet<Instruction*, 4> Visited;
+  SmallPtrSet<Instruction *, 4> Visited;
   for (Instruction *I = PN; areAllUsesEqual(I) && !I->mayHaveSideEffects();
        I = cast<Instruction>(*I->user_begin())) {
     if (I->use_empty())
@@ -662,8 +662,7 @@ bool llvm::RecursivelyDeleteDeadPHINode(PHINode *PN,
 static bool
 simplifyAndDCEInstruction(Instruction *I,
                           SmallSetVector<Instruction *, 16> &WorkList,
-                          const DataLayout &DL,
-                          const TargetLibraryInfo *TLI) {
+                          const DataLayout &DL, const TargetLibraryInfo *TLI) {
   if (isInstructionTriviallyDead(I, TLI)) {
     salvageDebugInfo(*I);
 
@@ -765,7 +764,8 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
   while (PHINode *PN = dyn_cast<PHINode>(DestBB->begin())) {
     Value *NewVal = PN->getIncomingValue(0);
     // Replace self referencing PHI with poison, it must be dead.
-    if (NewVal == PN) NewVal = PoisonValue::get(PN->getType());
+    if (NewVal == PN)
+      NewVal = PoisonValue::get(PN->getType());
     PN->replaceAllUsesWith(NewVal);
     PN->eraseFromParent();
   }
@@ -800,9 +800,9 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
   if (DestBB->hasAddressTaken()) {
     BlockAddress *BA = BlockAddress::get(DestBB);
     Constant *Replacement =
-      ConstantInt::get(Type::getInt32Ty(BA->getContext()), 1);
-    BA->replaceAllUsesWith(ConstantExpr::getIntToPtr(Replacement,
-                                                     BA->getType()));
+        ConstantInt::get(Type::getInt32Ty(BA->getContext()), 1);
+    BA->replaceAllUsesWith(
+        ConstantExpr::getIntToPtr(Replacement, BA->getType()));
     BA->destroyConstant();
   }
 
@@ -887,7 +887,7 @@ CanPropagatePredecessorsForPHIs(BasicBlock *BB, BasicBlock *Succ,
         }
       }
     } else {
-      Value* Val = PN->getIncomingValueForBlock(BB);
+      Value *Val = PN->getIncomingValueForBlock(BB);
       for (unsigned PI = 0, PE = PN->getNumIncomingValues(); PI != PE; ++PI) {
         // See if the incoming value for the common predecessor is equal to the
         // one for BB, in which case this phi node will not prevent the merging
@@ -935,7 +935,8 @@ static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
   }
 
   IncomingValueMap::const_iterator It = IncomingValues.find(BB);
-  if (It != IncomingValues.end()) return It->second;
+  if (It != IncomingValues.end())
+    return It->second;
 
   return OldVal;
 }
@@ -970,7 +971,8 @@ static void replaceUndefValuesInPhi(PHINode *PN,
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
     Value *V = PN->getIncomingValue(i);
 
-    if (!isa<UndefValue>(V)) continue;
+    if (!isa<UndefValue>(V))
+      continue;
 
     BasicBlock *BB = PN->getIncomingBlock(i);
     IncomingValueMap::const_iterator It = IncomingValues.find(BB);
@@ -1181,7 +1183,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     BasicBlock::iterator BBI = BB->begin();
     while (isa<PHINode>(*BBI)) {
       for (Use &U : BBI->uses()) {
-        if (PHINode* PN = dyn_cast<PHINode>(U.getUser())) {
+        if (PHINode *PN = dyn_cast<PHINode>(U.getUser())) {
           if (PN->getIncomingBlock(U) != BB)
             return false;
         } else {
@@ -1593,8 +1595,7 @@ Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
 ///
 
 /// See if there is a dbg.value intrinsic for DIVar for the PHI node.
-static bool PhiHasDebugValue(DILocalVariable *DIVar,
-                             DIExpression *DIExpr,
+static bool PhiHasDebugValue(DILocalVariable *DIVar, DIExpression *DIExpr,
                              PHINode *APN) {
   // Since we can't guarantee that the original dbg.declare intrinsic
   // is removed by LowerDbgDeclare(), we need to make sure that we are
@@ -1633,7 +1634,8 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableRecord *DVR) {
            "address of variable must have exactly 1 location operand.");
     if (auto *AI =
             dyn_cast_or_null<AllocaInst>(DVR->getVariableLocationOp(0))) {
-      if (std::optional<TypeSize> FragmentSize = AI->getAllocationSizeInBits(DL)) {
+      if (std::optional<TypeSize> FragmentSize =
+              AI->getAllocationSizeInBits(DL)) {
         return TypeSize::isKnownGE(ValueSize, *FragmentSize);
       }
     }
@@ -2354,8 +2356,8 @@ static bool rewriteDebugUsers(
         DomPoint.getParent()->insertDbgRecordAfter(DVR, &DomPoint);
         Changed = true;
 
-      // Users which otherwise aren't dominated by the replacement value must
-      // be salvaged or deleted.
+        // Users which otherwise aren't dominated by the replacement value must
+        // be salvaged or deleted.
       } else if (!DT.dominates(&DomPoint, MarkedInstr)) {
         UndefOrSalvageDVR.insert(DVR);
       }
@@ -2646,7 +2648,7 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
 static bool markAliveBlocks(Function &F,
                             SmallPtrSetImpl<BasicBlock *> &Reachable,
                             DomTreeUpdater *DTU = nullptr) {
-  SmallVector<BasicBlock*, 128> Worklist;
+  SmallVector<BasicBlock *, 128> Worklist;
   BasicBlock *BB = &F.front();
   Worklist.push_back(BB);
   Reachable.insert(BB);
@@ -2717,7 +2719,8 @@ static bool markAliveBlocks(Function &F,
         // modify the CFG.
 
         // Don't touch volatile stores.
-        if (SI->isVolatile()) continue;
+        if (SI->isVolatile())
+          continue;
 
         Value *Ptr = SI->getOperand(1);
 
@@ -2852,7 +2855,8 @@ Instruction *llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
   BasicBlock *UnwindDest;
 
   if (auto *CRI = dyn_cast<CleanupReturnInst>(TI)) {
-    NewTI = CleanupReturnInst::Create(CRI->getCleanupPad(), nullptr, CRI->getIterator());
+    NewTI = CleanupReturnInst::Create(CRI->getCleanupPad(), nullptr,
+                                      CRI->getIterator());
     UnwindDest = CRI->getUnwindDest();
   } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(TI)) {
     auto *NewCatchSwitch = CatchSwitchInst::Create(
@@ -2930,115 +2934,114 @@ static void combineMetadata(Instruction *K, const Instruction *J,
 
     // TODO: Assert that this switch is exhaustive for fixed MD kinds.
     switch (Kind) {
-      default:
-        K->setMetadata(Kind, nullptr); // Remove unknown metadata
-        break;
-      case LLVMContext::MD_dbg:
-        llvm_unreachable("getAllMetadataOtherThanDebugLoc returned a MD_dbg");
-      case LLVMContext::MD_DIAssignID:
-        if (!AAOnly)
-          K->mergeDIAssignID(J);
-        break;
-      case LLVMContext::MD_tbaa:
-        if (DoesKMove)
-          K->setMetadata(Kind, MDNode::getMostGenericTBAA(JMD, KMD));
-        break;
-      case LLVMContext::MD_alias_scope:
-        if (DoesKMove)
-          K->setMetadata(Kind, MDNode::getMostGenericAliasScope(JMD, KMD));
-        break;
-      case LLVMContext::MD_noalias:
-      case LLVMContext::MD_mem_parallel_loop_access:
-        if (DoesKMove)
-          K->setMetadata(Kind, MDNode::intersect(JMD, KMD));
-        break;
-      case LLVMContext::MD_access_group:
-        if (DoesKMove)
-          K->setMetadata(LLVMContext::MD_access_group,
-                         intersectAccessGroups(K, J));
-        break;
-      case LLVMContext::MD_range:
-        if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
-          K->setMetadata(Kind, MDNode::getMostGenericRange(JMD, KMD));
-        break;
-      case LLVMContext::MD_fpmath:
-        if (!AAOnly)
-          K->setMetadata(Kind, MDNode::getMostGenericFPMath(JMD, KMD));
-        break;
-      case LLVMContext::MD_invariant_load:
-        // If K moves, only set the !invariant.load if it is present in both
-        // instructions.
-        if (DoesKMove)
-          K->setMetadata(Kind, JMD);
-        break;
-      case LLVMContext::MD_nonnull:
-        if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
-          K->setMetadata(Kind, JMD);
-        break;
-      case LLVMContext::MD_invariant_group:
-        // Preserve !invariant.group in K.
-        break;
-      // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
-      // from being removed as unknown metadata. The actual merging is handled
-      // separately below.
-      case LLVMContext::MD_prof:
-      case LLVMContext::MD_mmra:
-      case LLVMContext::MD_memprof:
-      case LLVMContext::MD_callsite:
-        break;
-      case LLVMContext::MD_callee_type:
-        if (!AAOnly) {
-          K->setMetadata(LLVMContext::MD_callee_type,
-                         MDNode::getMergedCalleeTypeMetadata(KMD, JMD));
-        }
-        break;
-      case LLVMContext::MD_align:
-        if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
-          K->setMetadata(
-              Kind, MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
-        break;
-      case LLVMContext::MD_dereferenceable:
-      case LLVMContext::MD_dereferenceable_or_null:
-        if (!AAOnly && DoesKMove)
-          K->setMetadata(Kind,
-            MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
-        break;
-      case LLVMContext::MD_preserve_access_index:
-        // Preserve !preserve.access.index in K.
-        break;
-      case LLVMContext::MD_noundef:
-        // If K does move, keep noundef if it is present in both instructions.
-        if (!AAOnly && DoesKMove)
-          K->setMetadata(Kind, JMD);
-        break;
-      case LLVMContext::MD_nontemporal:
-        // Preserve !nontemporal if it is present on both instructions.
-        if (!AAOnly)
-          K->setMetadata(Kind, JMD);
-        break;
-      case LLVMContext::MD_noalias_addrspace:
-        if (DoesKMove)
-          K->setMetadata(Kind,
-                         MDNode::getMostGenericNoaliasAddrspace(JMD, KMD));
-        break;
-      case LLVMContext::MD_nosanitize:
-        // Preserve !nosanitize if both K and J have it.
+    default:
+      K->setMetadata(Kind, nullptr); // Remove unknown metadata
+      break;
+    case LLVMContext::MD_dbg:
+      llvm_unreachable("getAllMetadataOtherThanDebugLoc returned a MD_dbg");
+    case LLVMContext::MD_DIAssignID:
+      if (!AAOnly)
+        K->mergeDIAssignID(J);
+      break;
+    case LLVMContext::MD_tbaa:
+      if (DoesKMove)
+        K->setMetadata(Kind, MDNode::getMostGenericTBAA(JMD, KMD));
+      break;
+    case LLVMContext::MD_alias_scope:
+      if (DoesKMove)
+        K->setMetadata(Kind, MDNode::getMostGenericAliasScope(JMD, KMD));
+      break;
+    case LLVMContext::MD_noalias:
+    case LLVMContext::MD_mem_parallel_loop_access:
+      if (DoesKMove)
+        K->setMetadata(Kind, MDNode::intersect(JMD, KMD));
+      break;
+    case LLVMContext::MD_access_group:
+      if (DoesKMove)
+        K->setMetadata(LLVMContext::MD_access_group,
+                       intersectAccessGroups(K, J));
+      break;
+    case LLVMContext::MD_range:
+      if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
+        K->setMetadata(Kind, MDNode::getMostGenericRange(JMD, KMD));
+      break;
+    case LLVMContext::MD_fpmath:
+      if (!AAOnly)
+        K->setMetadata(Kind, MDNode::getMostGenericFPMath(JMD, KMD));
+      break;
+    case LLVMContext::MD_invariant_load:
+      // If K moves, only set the !invariant.load if it is present in both
+      // instructions.
+      if (DoesKMove)
         K->setMetadata(Kind, JMD);
-        break;
-      case LLVMContext::MD_captures:
-        K->setMetadata(
-            Kind, MDNode::fromCaptureComponents(
-                      K->getContext(), MDNode::toCaptureComponents(JMD) |
-                                           MDNode::toCaptureComponents(KMD)));
-        break;
-      case LLVMContext::MD_alloc_token:
-        // Preserve !alloc_token if both K and J have it, and they are equal.
-        if (KMD == JMD)
-          K->setMetadata(Kind, JMD);
-        else
-          K->setMetadata(Kind, nullptr);
-        break;
+      break;
+    case LLVMContext::MD_nonnull:
+      if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
+        K->setMetadata(Kind, JMD);
+      break;
+    case LLVMContext::MD_invariant_group:
+      // Preserve !invariant.group in K.
+      break;
+    // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
+    // from being removed as unknown metadata. The actual merging is handled
+    // separately below.
+    case LLVMContext::MD_prof:
+    case LLVMContext::MD_mmra:
+    case LLVMContext::MD_memprof:
+    case LLVMContext::MD_callsite:
+      break;
+    case LLVMContext::MD_callee_type:
+      if (!AAOnly) {
+        K->setMetadata(LLVMContext::MD_callee_type,
+                       MDNode::getMergedCalleeTypeMetadata(KMD, JMD));
       }
+      break;
+    case LLVMContext::MD_align:
+      if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
+        K->setMetadata(
+            Kind, MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
+      break;
+    case LLVMContext::MD_dereferenceable:
+    case LLVMContext::MD_dereferenceable_or_null:
+      if (!AAOnly && DoesKMove)
+        K->setMetadata(
+            Kind, MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
+      break;
+    case LLVMContext::MD_preserve_access_index:
+      // Preserve !preserve.access.index in K.
+      break;
+    case LLVMContext::MD_noundef:
+      // If K does move, keep noundef if it is present in both instructions.
+      if (!AAOnly && DoesKMove)
+        K->setMetadata(Kind, JMD);
+      break;
+    case LLVMContext::MD_nontemporal:
+      // Preserve !nontemporal if it is present on both instructions.
+      if (!AAOnly)
+        K->setMetadata(Kind, JMD);
+      break;
+    case LLVMContext::MD_noalias_addrspace:
+      if (DoesKMove)
+        K->setMetadata(Kind, MDNode::getMostGenericNoaliasAddrspace(JMD, KMD));
+      break;
+    case LLVMContext::MD_nosanitize:
+      // Preserve !nosanitize if both K and J have it.
+      K->setMetadata(Kind, JMD);
+      break;
+    case LLVMContext::MD_captures:
+      K->setMetadata(
+          Kind, MDNode::fromCaptureComponents(
+                    K->getContext(), MDNode::toCaptureComponents(JMD) |
+                                         MDNode::toCaptureComponents(KMD)));
+      break;
+    case LLVMContext::MD_alloc_token:
+      // Preserve !alloc_token if both K and J have it, and they are equal.
+      if (KMD == JMD)
+        K->setMetadata(Kind, JMD);
+      else
+        K->setMetadata(Kind, nullptr);
+      break;
+    }
   }
   // Set !invariant.group from J if J has it. If both instructions have it
   // then we will just pick it from J - even when they are different.
@@ -3218,11 +3221,11 @@ static unsigned replaceDominatedUsesWith(Value *From, Value *To,
 }
 
 unsigned llvm::replaceNonLocalUsesWith(Instruction *From, Value *To) {
-   assert(From->getType() == To->getType());
-   auto *BB = From->getParent();
-   unsigned Count = 0;
+  assert(From->getType() == To->getType());
+  auto *BB = From->getParent();
+  unsigned Count = 0;
 
-   for (Use &U : llvm::make_early_inc_range(From->uses())) {
+  for (Use &U : llvm::make_early_inc_range(From->uses())) {
     auto *I = cast<Instruction>(U.getUser());
     if (I->getParent() == BB)
       continue;
@@ -3478,9 +3481,7 @@ namespace {
 /// A potential constituent of a bitreverse or bswap expression. See
 /// collectBitParts for a fuller explanation.
 struct BitPart {
-  BitPart(Value *P, unsigned BW) : Provider(P) {
-    Provenance.resize(BW);
-  }
+  BitPart(Value *P, unsigned BW) : Provider(P) { Provenance.resize(BW); }
 
   /// The Value that this is a bitreverse/bswap of.
   Value *Provider;
@@ -3771,7 +3772,7 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   Type *ITy = I->getType();
   if (!ITy->isIntOrIntVectorTy() || ITy->getScalarSizeInBits() == 1 ||
       ITy->getScalarSizeInBits() > 128)
-    return false;  // Can't do integer/elements > 128 bits.
+    return false; // Can't do integer/elements > 128 bits.
 
   // Try to find all the pieces corresponding to the bswap.
   bool FoundRoot = false;
@@ -3833,8 +3834,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
 
   // We may need to truncate the provider.
   if (DemandedTy != Provider->getType()) {
-    auto *Trunc =
-        CastInst::CreateIntegerCast(Provider, DemandedTy, false, "trunc", I->getIterator());
+    auto *Trunc = CastInst::CreateIntegerCast(Provider, DemandedTy, false,
+                                              "trunc", I->getIterator());
     InsertedInsts.push_back(Trunc);
     Provider = Trunc;
   }
@@ -3844,13 +3845,15 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
 
   if (!DemandedMask.isAllOnes()) {
     auto *Mask = ConstantInt::get(DemandedTy, DemandedMask);
-    Result = BinaryOperator::Create(Instruction::And, Result, Mask, "mask", I->getIterator());
+    Result = BinaryOperator::Create(Instruction::And, Result, Mask, "mask",
+                                    I->getIterator());
     InsertedInsts.push_back(Result);
   }
 
   // We may need to zeroextend back to the result type.
   if (ITy != Result->getType()) {
-    auto *ExtInst = CastInst::CreateIntegerCast(Result, ITy, false, "zext", I->getIterator());
+    auto *ExtInst = CastInst::CreateIntegerCast(Result, ITy, false, "zext",
+                                                I->getIterator());
     InsertedInsts.push_back(ExtInst);
   }
 
@@ -3996,8 +3999,8 @@ bool llvm::inferAttributesFromOthers(Function &F) {
 
   bool Changed = false;
   // readnone + not convergent implies nosync
-  if (!F.hasFnAttribute(Attribute::NoSync) &&
-      F.doesNotAccessMemory() && !F.isConvergent()) {
+  if (!F.hasFnAttribute(Attribute::NoSync) && F.doesNotAccessMemory() &&
+      !F.isConvergent()) {
     F.setNoSync();
     Changed = true;
   }

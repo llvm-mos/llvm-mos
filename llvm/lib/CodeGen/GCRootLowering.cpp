@@ -77,7 +77,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
-}
+} // namespace
 
 PreservedAnalyses GCLoweringPass::run(Function &F,
                                       FunctionAnalysisManager &FAM) {
@@ -213,7 +213,8 @@ bool DoLowering(Function &F, GCStrategy &S) {
 
       Function *F = CI->getCalledFunction();
       switch (F->getIntrinsicID()) {
-      default: break;
+      default:
+        break;
       case Intrinsic::gcwrite: {
         // Replace a write barrier with a simple store.
         Value *St = new StoreInst(CI->getArgOperand(0), CI->getArgOperand(2),

@@ -32,11 +32,11 @@ bool MSP430FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-          MF.getFrameInfo().hasVarSizedObjects() ||
-          MFI.isFrameAddressTaken());
+          MF.getFrameInfo().hasVarSizedObjects() || MFI.isFrameAddressTaken());
 }
 
-bool MSP430FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
+bool MSP430FrameLowering::hasReservedCallFrame(
+    const MachineFunction &MF) const {
   return !MF.getFrameInfo().hasVarSizedObjects();
 }
 
@@ -162,7 +162,7 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
   if (NumBytes) { // adjust stack pointer: SP -= numbytes
     // If there is an SUB16ri of SP immediately before this instruction, merge
     // the two.
-    //NumBytes -= mergeSPUpdates(MBB, MBBI, true);
+    // NumBytes -= mergeSPUpdates(MBB, MBBI, true);
     // If there is an ADD16ri or SUB16ri of SP immediately after this
     // instruction, merge the two instructions.
     // mergeSPUpdatesDown(MBB, MBBI, &NumBytes);
@@ -201,7 +201,8 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
 
   switch (RetOpcode) {
   case MSP430::RET:
-  case MSP430::RETI: break;  // These are ok
+  case MSP430::RETI:
+    break; // These are ok
   default:
     llvm_unreachable("Can only insert epilog into returning blocks");
   }
@@ -253,7 +254,7 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
 
   // If there is an ADD16ri or SUB16ri of SP immediately before this
   // instruction, merge the two instructions.
-  //if (NumBytes || MFI.hasVarSizedObjects())
+  // if (NumBytes || MFI.hasVarSizedObjects())
   //  mergeSPUpdatesUp(MBB, MBBI, StackPtr, &NumBytes);
 
   if (MFI.hasVarSizedObjects()) {
@@ -317,7 +318,8 @@ bool MSP430FrameLowering::spillCalleeSavedRegisters(
     return false;
 
   DebugLoc DL;
-  if (MI != MBB.end()) DL = MI->getDebugLoc();
+  if (MI != MBB.end())
+    DL = MI->getDebugLoc();
 
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
@@ -342,7 +344,8 @@ bool MSP430FrameLowering::restoreCalleeSavedRegisters(
     return false;
 
   DebugLoc DL;
-  if (MI != MBB.end()) DL = MI->getDebugLoc();
+  if (MI != MBB.end())
+    DL = MI->getDebugLoc();
 
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
@@ -420,9 +423,8 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
   return MBB.erase(I);
 }
 
-void
-MSP430FrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
-                                                         RegScavenger *) const {
+void MSP430FrameLowering::processFunctionBeforeFrameFinalized(
+    MachineFunction &MF, RegScavenger *) const {
   // Create a frame entry for the FP register that must be saved.
   if (hasFP(MF)) {
     int FrameIdx = MF.getFrameInfo().CreateFixedObject(2, -4, true);

@@ -28,8 +28,10 @@ STATISTIC(NumFused, "Number of instr pairs fused");
 
 using namespace llvm;
 
-static cl::opt<bool> EnableMacroFusion("misched-fusion", cl::Hidden,
-  cl::desc("Enable scheduling for macro fusion."), cl::init(true));
+static cl::opt<bool>
+    EnableMacroFusion("misched-fusion", cl::Hidden,
+                      cl::desc("Enable scheduling for macro fusion."),
+                      cl::init(true));
 
 static bool isHazard(const SDep &Dep) {
   return Dep.getKind() == SDep::Anti || Dep.getKind() == SDep::Output;
@@ -46,7 +48,8 @@ static SUnit *getPredClusterSU(const SUnit &SU) {
 bool llvm::hasLessThanNumFused(const SUnit &SU, unsigned FuseLimit) {
   unsigned Num = 1;
   const SUnit *CurrentSU = &SU;
-  while ((CurrentSU = getPredClusterSU(*CurrentSU)) && Num < FuseLimit) Num ++;
+  while ((CurrentSU = getPredClusterSU(*CurrentSU)) && Num < FuseLimit)
+    Num++;
   return Num < FuseLimit;
 }
 
@@ -66,8 +69,9 @@ bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
          SecondSU.ParentClusterIdx == InvalidClusterId);
 
   // Though the reachability checks above could be made more generic,
-  // perhaps as part of ScheduleDAGInstrs::addEdge(), since such edges are valid,
-  // the extra computation cost makes it less interesting in general cases.
+  // perhaps as part of ScheduleDAGInstrs::addEdge(), since such edges are
+  // valid, the extra computation cost makes it less interesting in general
+  // cases.
 
   // Create a single weak edge between the adjacent instrs. The only effect is
   // to cause bottom-up scheduling to heavily prioritize the clustered instrs.
@@ -110,8 +114,8 @@ bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
   if (&SecondSU != &DAG.ExitSU)
     for (const SDep &SI : FirstSU.Succs) {
       SUnit *SU = SI.getSUnit();
-      if (SI.isWeak() || isHazard(SI) ||
-          SU == &DAG.ExitSU || SU == &SecondSU || SU->isPred(&SecondSU))
+      if (SI.isWeak() || isHazard(SI) || SU == &DAG.ExitSU || SU == &SecondSU ||
+          SU->isPred(&SecondSU))
         continue;
       LLVM_DEBUG(dbgs() << "  Bind "; DAG.dumpNodeName(SecondSU);
                  dbgs() << " - "; DAG.dumpNodeName(*SU); dbgs() << '\n';);
@@ -182,7 +186,7 @@ void MacroFusion::apply(ScheduleDAGInstrs *DAG) {
     // For each of the SUnits in the scheduling block, try to fuse the instr in
     // it with one in its predecessors.
     for (SUnit &ISU : DAG->SUnits)
-        scheduleAdjacentImpl(*DAG, ISU);
+      scheduleAdjacentImpl(*DAG, ISU);
 
   if (DAG->ExitSU.getInstr())
     // Try to fuse the instr in the ExitSU with one in its predecessors.
@@ -191,7 +195,8 @@ void MacroFusion::apply(ScheduleDAGInstrs *DAG) {
 
 /// Implement the fusion of instr pairs in the scheduling DAG,
 /// anchored at the instr in AnchorSU..
-bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU) {
+bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG,
+                                       SUnit &AnchorSU) {
   const MachineInstr &AnchorMI = *AnchorSU.getInstr();
   const TargetInstrInfo &TII = *DAG.TII;
   const TargetSubtargetInfo &ST = DAG.MF.getSubtarget();

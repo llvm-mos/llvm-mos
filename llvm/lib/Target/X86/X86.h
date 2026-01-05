@@ -83,7 +83,8 @@ FunctionPass *createX86OptimizeLEAs();
 /// Return a pass that transforms setcc + movzx pairs into xor + setcc.
 FunctionPass *createX86FixupSetCC();
 
-/// Return a pass that avoids creating store forward block issues in the hardware.
+/// Return a pass that avoids creating store forward block issues in the
+/// hardware.
 FunctionPass *createX86AvoidStoreForwardingBlocks();
 
 /// Return a pass that lowers EFLAGS copy pseudo instructions.
@@ -156,8 +157,8 @@ FunctionPass *createX86FixupBWInsts();
 /// to another, when profitable.
 FunctionPass *createX86DomainReassignmentPass();
 
-/// This pass compress instructions from EVEX space to legacy/VEX/EVEX space when
-/// possible in order to reduce code size or facilitate HW decoding.
+/// This pass compress instructions from EVEX space to legacy/VEX/EVEX space
+/// when possible in order to reduce code size or facilitate HW decoding.
 FunctionPass *createX86CompressEVEXPass();
 
 /// This pass creates the thunks for the retpoline feature.
@@ -273,8 +274,8 @@ enum : unsigned {
   PTR32_UPTR = 271,
   PTR64 = 272
 };
-} // End X86AS namespace
+} // namespace X86AS
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

@@ -32,9 +32,9 @@ void SmallPtrSetImplBase::shrink_and_clear() {
   NumEntries = NumTombstones = 0;
 
   // Install the new array.  Clear all the buckets to empty.
-  CurArray = (const void**)safe_malloc(sizeof(void*) * CurArraySize);
+  CurArray = (const void **)safe_malloc(sizeof(void *) * CurArraySize);
 
-  memset(CurArray, -1, CurArraySize*sizeof(void*));
+  memset(CurArray, -1, CurArraySize * sizeof(void *));
 }
 
 std::pair<const void *const *, bool>
@@ -50,7 +50,7 @@ SmallPtrSetImplBase::insert_imp_big(const void *Ptr) {
   }
 
   // Okay, we know we have space.  Find a hash bucket.
-  const void **Bucket = const_cast<const void**>(FindBucketFor(Ptr));
+  const void **Bucket = const_cast<const void **>(FindBucketFor(Ptr));
   if (*Bucket == Ptr)
     return {Bucket, false}; // Already inserted, good.
 
@@ -82,7 +82,8 @@ const void *const *SmallPtrSetImplBase::doFind(const void *Ptr) const {
 }
 
 const void *const *SmallPtrSetImplBase::FindBucketFor(const void *Ptr) const {
-  unsigned Bucket = DenseMapInfo<void *>::getHashValue(Ptr) & (CurArraySize-1);
+  unsigned Bucket =
+      DenseMapInfo<void *>::getHashValue(Ptr) & (CurArraySize - 1);
   unsigned ArraySize = CurArraySize;
   unsigned ProbeAmt = 1;
   const void *const *Array = CurArray;
@@ -92,19 +93,19 @@ const void *const *SmallPtrSetImplBase::FindBucketFor(const void *Ptr) const {
     // Return a tombstone if we've seen one so far, or the empty bucket if
     // not.
     if (LLVM_LIKELY(Array[Bucket] == getEmptyMarker()))
-      return Tombstone ? Tombstone : Array+Bucket;
+      return Tombstone ? Tombstone : Array + Bucket;
 
     // Found Ptr's bucket?
     if (LLVM_LIKELY(Array[Bucket] == Ptr))
-      return Array+Bucket;
+      return Array + Bucket;
 
     // If this is a tombstone, remember it.  If Ptr ends up not in the set, we
     // prefer to return it than something that would require more probing.
     if (Array[Bucket] == getTombstoneMarker() && !Tombstone)
-      Tombstone = Array+Bucket;  // Remember the first tombstone found.
+      Tombstone = Array + Bucket; // Remember the first tombstone found.
 
     // It's a hash collision or a tombstone. Reprobe.
-    Bucket = (Bucket + ProbeAmt++) & (ArraySize-1);
+    Bucket = (Bucket + ProbeAmt++) & (ArraySize - 1);
   }
 }
 
@@ -115,12 +116,13 @@ void SmallPtrSetImplBase::Grow(unsigned NewSize) {
   bool WasSmall = isSmall();
 
   // Install the new array.  Clear all the buckets to empty.
-  const void **NewBuckets = (const void**) safe_malloc(sizeof(void*) * NewSize);
+  const void **NewBuckets =
+      (const void **)safe_malloc(sizeof(void *) * NewSize);
 
   // Reset member only if memory was allocated successfully
   CurArray = NewBuckets;
   CurArraySize = NewSize;
-  memset(CurArray, -1, NewSize*sizeof(void*));
+  memset(CurArray, -1, NewSize * sizeof(void *));
 
   // Copy over all valid entries.
   for (const void *&Bucket : OldBuckets) {
@@ -143,7 +145,7 @@ SmallPtrSetImplBase::SmallPtrSetImplBase(const void **SmallStorage,
     CurArray = SmallStorage;
   } else {
     // Otherwise, allocate new heap space (unless we were the same size)
-    CurArray = (const void**)safe_malloc(sizeof(void*) * that.CurArraySize);
+    CurArray = (const void **)safe_malloc(sizeof(void *) * that.CurArraySize);
   }
 
   // Copy over the that array.
@@ -174,10 +176,10 @@ void SmallPtrSetImplBase::copyFrom(const void **SmallStorage,
     // Otherwise, allocate new heap space (unless we were the same size)
   } else if (CurArraySize != RHS.CurArraySize) {
     if (isSmall())
-      CurArray = (const void**)safe_malloc(sizeof(void*) * RHS.CurArraySize);
+      CurArray = (const void **)safe_malloc(sizeof(void *) * RHS.CurArraySize);
     else {
-      const void **T = (const void**)safe_realloc(CurArray,
-                                             sizeof(void*) * RHS.CurArraySize);
+      const void **T = (const void **)safe_realloc(
+          CurArray, sizeof(void *) * RHS.CurArraySize);
       CurArray = T;
     }
     IsSmall = false;
@@ -237,7 +239,8 @@ void SmallPtrSetImplBase::moveHelper(const void **SmallStorage,
 void SmallPtrSetImplBase::swap(const void **SmallStorage,
                                const void **RHSSmallStorage,
                                SmallPtrSetImplBase &RHS) {
-  if (this == &RHS) return;
+  if (this == &RHS)
+    return;
 
   // We can only avoid copying elements if neither set is small.
   if (!this->isSmall() && !RHS.isSmall()) {

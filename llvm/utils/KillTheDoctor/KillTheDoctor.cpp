@@ -50,130 +50,109 @@
 #include <system_error>
 
 // These includes must be last.
-#include <windows.h>
-#include <winerror.h>
 #include <dbghelp.h>
 #include <psapi.h>
+#include <windows.h>
+#include <winerror.h>
 
 using namespace llvm;
 
 #undef max
 
 namespace {
-  cl::opt<std::string> ProgramToRun(cl::Positional,
-    cl::desc("<program to run>"));
-  cl::list<std::string>  Argv(cl::ConsumeAfter,
-    cl::desc("<program arguments>..."));
-  cl::opt<bool> TraceExecution("x",
-    cl::desc("Print detailed output about what is being run to stderr."));
-  cl::opt<unsigned> Timeout("t", cl::init(0),
-    cl::desc("Set maximum runtime in seconds. Defaults to infinite."));
-  cl::opt<bool> NoUser32("no-user32",
-    cl::desc("Terminate process if it loads user32.dll."));
+cl::opt<std::string> ProgramToRun(cl::Positional, cl::desc("<program to run>"));
+cl::list<std::string> Argv(cl::ConsumeAfter,
+                           cl::desc("<program arguments>..."));
+cl::opt<bool> TraceExecution(
+    "x", cl::desc("Print detailed output about what is being run to stderr."));
+cl::opt<unsigned>
+    Timeout("t", cl::init(0),
+            cl::desc("Set maximum runtime in seconds. Defaults to infinite."));
+cl::opt<bool> NoUser32("no-user32",
+                       cl::desc("Terminate process if it loads user32.dll."));
 
-  StringRef ToolName;
+StringRef ToolName;
 
-  template <typename HandleType>
-  class ScopedHandle {
-    typedef typename HandleType::handle_type handle_type;
+template <typename HandleType> class ScopedHandle {
+  typedef typename HandleType::handle_type handle_type;
 
-    handle_type Handle;
+  handle_type Handle;
 
-  public:
-    ScopedHandle()
-      : Handle(HandleType::GetInvalidHandle()) {}
+public:
+  ScopedHandle() : Handle(HandleType::GetInvalidHandle()) {}
 
-    explicit ScopedHandle(handle_type handle)
-      : Handle(handle) {}
+  explicit ScopedHandle(handle_type handle) : Handle(handle) {}
 
-    ~ScopedHandle() {
+  ~ScopedHandle() { HandleType::Destruct(Handle); }
+
+  ScopedHandle &operator=(handle_type handle) {
+    // Cleanup current handle.
+    if (!HandleType::isValid(Handle))
       HandleType::Destruct(Handle);
-    }
+    Handle = handle;
+    return *this;
+  }
 
-    ScopedHandle& operator=(handle_type handle) {
-      // Cleanup current handle.
-      if (!HandleType::isValid(Handle))
-        HandleType::Destruct(Handle);
-      Handle = handle;
-      return *this;
-    }
+  operator bool() const { return HandleType::isValid(Handle); }
 
-    operator bool() const {
-      return HandleType::isValid(Handle);
-    }
+  operator handle_type() { return Handle; }
+};
 
-    operator handle_type() {
-      return Handle;
-    }
-  };
+// This implements the most common handle in the Windows API.
+struct CommonHandle {
+  typedef HANDLE handle_type;
 
-  // This implements the most common handle in the Windows API.
-  struct CommonHandle {
-    typedef HANDLE handle_type;
+  static handle_type GetInvalidHandle() { return INVALID_HANDLE_VALUE; }
 
-    static handle_type GetInvalidHandle() {
-      return INVALID_HANDLE_VALUE;
-    }
+  static void Destruct(handle_type Handle) { ::CloseHandle(Handle); }
 
-    static void Destruct(handle_type Handle) {
-      ::CloseHandle(Handle);
-    }
+  static bool isValid(handle_type Handle) {
+    return Handle != GetInvalidHandle();
+  }
+};
 
-    static bool isValid(handle_type Handle) {
-      return Handle != GetInvalidHandle();
-    }
-  };
+struct FileMappingHandle {
+  typedef HANDLE handle_type;
 
-  struct FileMappingHandle {
-    typedef HANDLE handle_type;
+  static handle_type GetInvalidHandle() { return NULL; }
 
-    static handle_type GetInvalidHandle() {
-      return NULL;
-    }
+  static void Destruct(handle_type Handle) { ::CloseHandle(Handle); }
 
-    static void Destruct(handle_type Handle) {
-      ::CloseHandle(Handle);
-    }
+  static bool isValid(handle_type Handle) {
+    return Handle != GetInvalidHandle();
+  }
+};
 
-    static bool isValid(handle_type Handle) {
-      return Handle != GetInvalidHandle();
-    }
-  };
+struct MappedViewOfFileHandle {
+  typedef LPVOID handle_type;
 
-  struct MappedViewOfFileHandle {
-    typedef LPVOID handle_type;
+  static handle_type GetInvalidHandle() { return NULL; }
 
-    static handle_type GetInvalidHandle() {
-      return NULL;
-    }
+  static void Destruct(handle_type Handle) { ::UnmapViewOfFile(Handle); }
 
-    static void Destruct(handle_type Handle) {
-      ::UnmapViewOfFile(Handle);
-    }
+  static bool isValid(handle_type Handle) {
+    return Handle != GetInvalidHandle();
+  }
+};
 
-    static bool isValid(handle_type Handle) {
-      return Handle != GetInvalidHandle();
-    }
-  };
+struct ProcessHandle : CommonHandle {};
+struct ThreadHandle : CommonHandle {};
+struct TokenHandle : CommonHandle {};
+struct FileHandle : CommonHandle {};
 
-  struct ProcessHandle : CommonHandle {};
-  struct ThreadHandle  : CommonHandle {};
-  struct TokenHandle   : CommonHandle {};
-  struct FileHandle    : CommonHandle {};
-
-  typedef ScopedHandle<FileMappingHandle>       FileMappingScopedHandle;
-  typedef ScopedHandle<MappedViewOfFileHandle>  MappedViewOfFileScopedHandle;
-  typedef ScopedHandle<ProcessHandle>           ProcessScopedHandle;
-  typedef ScopedHandle<ThreadHandle>            ThreadScopedHandle;
-  typedef ScopedHandle<TokenHandle>             TokenScopedHandle;
-  typedef ScopedHandle<FileHandle>              FileScopedHandle;
-}
+typedef ScopedHandle<FileMappingHandle> FileMappingScopedHandle;
+typedef ScopedHandle<MappedViewOfFileHandle> MappedViewOfFileScopedHandle;
+typedef ScopedHandle<ProcessHandle> ProcessScopedHandle;
+typedef ScopedHandle<ThreadHandle> ThreadScopedHandle;
+typedef ScopedHandle<TokenHandle> TokenScopedHandle;
+typedef ScopedHandle<FileHandle> FileScopedHandle;
+} // namespace
 
 static std::error_code windows_error(DWORD E) { return mapWindowsError(E); }
 
 static std::error_code GetFileNameFromHandle(HANDLE FileHandle,
                                              std::string &Name) {
-  char Filename[MAX_PATH+1];
+  char Filename[MAX_PATH + 1];
   bool Success = false;
   Name.clear();
 
@@ -186,19 +165,14 @@ static std::error_code GetFileNameFromHandle(HANDLE FileHandle,
 
   // Create a file mapping object.
   FileMappingScopedHandle FileMapping(
-    ::CreateFileMappingA(FileHandle,
-                         NULL,
-                         PAGE_READONLY,
-                         0,
-                         1,
-                         NULL));
+      ::CreateFileMappingA(FileHandle, NULL, PAGE_READONLY, 0, 1, NULL));
 
   if (!FileMapping)
     return windows_error(::GetLastError());
 
   // Create a file mapping to get the file name.
   MappedViewOfFileScopedHandle MappedFile(
-    ::MapViewOfFile(FileMapping, FILE_MAP_READ, 0, 0, 1));
+      ::MapViewOfFile(FileMapping, FILE_MAP_READ, 0, 0, 1));
 
   if (!MappedFile)
     return windows_error(::GetLastError());
@@ -229,7 +203,8 @@ static std::string FindProgram(const std::string &Program,
   pathext.push_back("");
   SplitString(std::getenv("PATHEXT"), pathext, ";");
 
-  for (pathext_t::iterator i = pathext.begin(), e = pathext.end(); i != e; ++i){
+  for (pathext_t::iterator i = pathext.begin(), e = pathext.end(); i != e;
+       ++i) {
     SmallString<5> ext;
     for (std::size_t ii = 0, e = i->size(); ii != e; ++ii)
       ext.push_back(::tolower((*i)[ii]));
@@ -257,32 +232,49 @@ static std::string FindProgram(const std::string &Program,
 }
 
 static StringRef ExceptionCodeToString(DWORD ExceptionCode) {
-  switch(ExceptionCode) {
-  case EXCEPTION_ACCESS_VIOLATION: return "EXCEPTION_ACCESS_VIOLATION";
+  switch (ExceptionCode) {
+  case EXCEPTION_ACCESS_VIOLATION:
+    return "EXCEPTION_ACCESS_VIOLATION";
   case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
     return "EXCEPTION_ARRAY_BOUNDS_EXCEEDED";
-  case EXCEPTION_BREAKPOINT: return "EXCEPTION_BREAKPOINT";
+  case EXCEPTION_BREAKPOINT:
+    return "EXCEPTION_BREAKPOINT";
   case EXCEPTION_DATATYPE_MISALIGNMENT:
     return "EXCEPTION_DATATYPE_MISALIGNMENT";
-  case EXCEPTION_FLT_DENORMAL_OPERAND: return "EXCEPTION_FLT_DENORMAL_OPERAND";
-  case EXCEPTION_FLT_DIVIDE_BY_ZERO: return "EXCEPTION_FLT_DIVIDE_BY_ZERO";
-  case EXCEPTION_FLT_INEXACT_RESULT: return "EXCEPTION_FLT_INEXACT_RESULT";
+  case EXCEPTION_FLT_DENORMAL_OPERAND:
+    return "EXCEPTION_FLT_DENORMAL_OPERAND";
+  case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+    return "EXCEPTION_FLT_DIVIDE_BY_ZERO";
+  case EXCEPTION_FLT_INEXACT_RESULT:
+    return "EXCEPTION_FLT_INEXACT_RESULT";
   case EXCEPTION_FLT_INVALID_OPERATION:
     return "EXCEPTION_FLT_INVALID_OPERATION";
-  case EXCEPTION_FLT_OVERFLOW: return "EXCEPTION_FLT_OVERFLOW";
-  case EXCEPTION_FLT_STACK_CHECK: return "EXCEPTION_FLT_STACK_CHECK";
-  case EXCEPTION_FLT_UNDERFLOW: return "EXCEPTION_FLT_UNDERFLOW";
-  case EXCEPTION_ILLEGAL_INSTRUCTION: return "EXCEPTION_ILLEGAL_INSTRUCTION";
-  case EXCEPTION_IN_PAGE_ERROR: return "EXCEPTION_IN_PAGE_ERROR";
-  case EXCEPTION_INT_DIVIDE_BY_ZERO: return "EXCEPTION_INT_DIVIDE_BY_ZERO";
-  case EXCEPTION_INT_OVERFLOW: return "EXCEPTION_INT_OVERFLOW";
-  case EXCEPTION_INVALID_DISPOSITION: return "EXCEPTION_INVALID_DISPOSITION";
+  case EXCEPTION_FLT_OVERFLOW:
+    return "EXCEPTION_FLT_OVERFLOW";
+  case EXCEPTION_FLT_STACK_CHECK:
+    return "EXCEPTION_FLT_STACK_CHECK";
+  case EXCEPTION_FLT_UNDERFLOW:
+    return "EXCEPTION_FLT_UNDERFLOW";
+  case EXCEPTION_ILLEGAL_INSTRUCTION:
+    return "EXCEPTION_ILLEGAL_INSTRUCTION";
+  case EXCEPTION_IN_PAGE_ERROR:
+    return "EXCEPTION_IN_PAGE_ERROR";
+  case EXCEPTION_INT_DIVIDE_BY_ZERO:
+    return "EXCEPTION_INT_DIVIDE_BY_ZERO";
+  case EXCEPTION_INT_OVERFLOW:
+    return "EXCEPTION_INT_OVERFLOW";
+  case EXCEPTION_INVALID_DISPOSITION:
+    return "EXCEPTION_INVALID_DISPOSITION";
   case EXCEPTION_NONCONTINUABLE_EXCEPTION:
     return "EXCEPTION_NONCONTINUABLE_EXCEPTION";
-  case EXCEPTION_PRIV_INSTRUCTION: return "EXCEPTION_PRIV_INSTRUCTION";
-  case EXCEPTION_SINGLE_STEP: return "EXCEPTION_SINGLE_STEP";
-  case EXCEPTION_STACK_OVERFLOW: return "EXCEPTION_STACK_OVERFLOW";
-  default: return "<unknown>";
+  case EXCEPTION_PRIV_INSTRUCTION:
+    return "EXCEPTION_PRIV_INSTRUCTION";
+  case EXCEPTION_SINGLE_STEP:
+    return "EXCEPTION_SINGLE_STEP";
+  case EXCEPTION_STACK_OVERFLOW:
+    return "EXCEPTION_STACK_OVERFLOW";
+  default:
+    return "<unknown>";
   }
 }
 
@@ -290,7 +282,7 @@ int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
   sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
-  llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
+  llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
   ToolName = argv[0];
 
@@ -302,8 +294,7 @@ int main(int argc, char **argv) {
 
   if (Timeout > std::numeric_limits<uint32_t>::max() / 1000) {
     errs() << ToolName << ": Timeout value too large, must be less than: "
-                       << std::numeric_limits<uint32_t>::max() / 1000
-                       << '\n';
+           << std::numeric_limits<uint32_t>::max() / 1000 << '\n';
     return -1;
   }
 
@@ -340,16 +331,9 @@ int main(int argc, char **argv) {
   ::SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
   ::_set_error_mode(_OUT_TO_STDERR);
 
-  BOOL success = ::CreateProcessA(ProgramToRun.c_str(),
-                                  const_cast<LPSTR>(CommandLine.c_str()),
-                                  NULL,
-                                  NULL,
-                                  FALSE,
-                                  DEBUG_PROCESS,
-                                  NULL,
-                                  NULL,
-                                  &StartupInfo,
-                                  &ProcessInfo);
+  BOOL success = ::CreateProcessA(
+      ProgramToRun.c_str(), const_cast<LPSTR>(CommandLine.c_str()), NULL, NULL,
+      FALSE, DEBUG_PROCESS, NULL, NULL, &StartupInfo, &ProcessInfo);
   if (!success) {
     errs() << ToolName << ": Failed to run program: '" << ProgramToRun << "': "
            << std::error_code(windows_error(::GetLastError())).message()
@@ -369,21 +353,18 @@ int main(int argc, char **argv) {
   if (TraceExecution)
     errs() << ToolName << ": Debugging...\n";
 
-  while(true) {
+  while (true) {
     DWORD TimeLeft = INFINITE;
     if (Timeout > 0) {
       FILETIME CreationTime, ExitTime, KernelTime, UserTime;
       ULARGE_INTEGER a, b;
-      success = ::GetProcessTimes(ProcessInfo.hProcess,
-                                  &CreationTime,
-                                  &ExitTime,
-                                  &KernelTime,
-                                  &UserTime);
+      success = ::GetProcessTimes(ProcessInfo.hProcess, &CreationTime,
+                                  &ExitTime, &KernelTime, &UserTime);
       if (!success) {
         ec = windows_error(::GetLastError());
 
-        errs() << ToolName << ": Failed to get process times: "
-               << ec.message() << '\n';
+        errs() << ToolName << ": Failed to get process times: " << ec.message()
+               << '\n';
         return -1;
       }
       a.LowPart = KernelTime.dwLowDateTime;
@@ -395,8 +376,9 @@ int main(int argc, char **argv) {
       // Handle the case where the process has been running for more than 49
       // days.
       if (TotalTimeMiliseconds > std::numeric_limits<uint32_t>::max()) {
-        errs() << ToolName << ": Timeout Failed: Process has been running for"
-                              "more than 49 days.\n";
+        errs() << ToolName
+               << ": Timeout Failed: Process has been running for"
+                  "more than 49 days.\n";
         return -1;
       }
 
@@ -430,100 +412,95 @@ int main(int argc, char **argv) {
       return -1;
     }
 
-    switch(DebugEvent.dwDebugEventCode) {
+    switch (DebugEvent.dwDebugEventCode) {
     case CREATE_PROCESS_DEBUG_EVENT:
       // Make sure we remove the handle on exit.
       if (TraceExecution)
         errs() << ToolName << ": Debug Event: CREATE_PROCESS_DEBUG_EVENT\n";
       ProcessIDToHandle[DebugEvent.dwProcessId] =
-        DebugEvent.u.CreateProcessInfo.hProcess;
+          DebugEvent.u.CreateProcessInfo.hProcess;
       ::CloseHandle(DebugEvent.u.CreateProcessInfo.hFile);
       break;
     case EXIT_PROCESS_DEBUG_EVENT: {
-        if (TraceExecution)
-          errs() << ToolName << ": Debug Event: EXIT_PROCESS_DEBUG_EVENT\n";
+      if (TraceExecution)
+        errs() << ToolName << ": Debug Event: EXIT_PROCESS_DEBUG_EVENT\n";
 
-        // If this is the process we originally created, exit with its exit
-        // code.
-        if (DebugEvent.dwProcessId == ProcessInfo.dwProcessId)
-          return DebugEvent.u.ExitProcess.dwExitCode;
+      // If this is the process we originally created, exit with its exit
+      // code.
+      if (DebugEvent.dwProcessId == ProcessInfo.dwProcessId)
+        return DebugEvent.u.ExitProcess.dwExitCode;
 
-        // Otherwise cleanup any resources we have for it.
-        std::map<DWORD, HANDLE>::iterator ExitingProcess =
+      // Otherwise cleanup any resources we have for it.
+      std::map<DWORD, HANDLE>::iterator ExitingProcess =
           ProcessIDToHandle.find(DebugEvent.dwProcessId);
-        if (ExitingProcess == ProcessIDToHandle.end()) {
-          errs() << ToolName << ": Got unknown process id!\n";
-          return -1;
-        }
-        ::CloseHandle(ExitingProcess->second);
-        ProcessIDToHandle.erase(ExitingProcess);
+      if (ExitingProcess == ProcessIDToHandle.end()) {
+        errs() << ToolName << ": Got unknown process id!\n";
+        return -1;
       }
-      break;
+      ::CloseHandle(ExitingProcess->second);
+      ProcessIDToHandle.erase(ExitingProcess);
+    } break;
     case CREATE_THREAD_DEBUG_EVENT:
       ::CloseHandle(DebugEvent.u.CreateThread.hThread);
       break;
     case LOAD_DLL_DEBUG_EVENT: {
-        // Cleanup the file handle.
-        FileScopedHandle DLLFile(DebugEvent.u.LoadDll.hFile);
-        std::string DLLName;
-        ec = GetFileNameFromHandle(DLLFile, DLLName);
-        if (ec) {
-          DLLName = "<failed to get file name from file handle> : ";
-          DLLName += ec.message();
-        }
-        if (TraceExecution) {
-          errs() << ToolName << ": Debug Event: LOAD_DLL_DEBUG_EVENT\n";
-          errs().indent(ToolName.size()) << ": DLL Name : " << DLLName << '\n';
-        }
-
-        if (NoUser32 && sys::path::stem(DLLName) == "user32") {
-          // Program is loading user32.dll, in the applications we are testing,
-          // this only happens if an assert has fired. By now the message has
-          // already been printed, so simply close the program.
-          errs() << ToolName << ": user32.dll loaded!\n";
-          errs().indent(ToolName.size())
-                 << ": This probably means that assert was called. Closing "
-                    "program to prevent message box from popping up.\n";
-          dwContinueStatus = DBG_CONTINUE;
-          ::TerminateProcess(ProcessIDToHandle[DebugEvent.dwProcessId], -1);
-          return -1;
-        }
+      // Cleanup the file handle.
+      FileScopedHandle DLLFile(DebugEvent.u.LoadDll.hFile);
+      std::string DLLName;
+      ec = GetFileNameFromHandle(DLLFile, DLLName);
+      if (ec) {
+        DLLName = "<failed to get file name from file handle> : ";
+        DLLName += ec.message();
       }
-      break;
+      if (TraceExecution) {
+        errs() << ToolName << ": Debug Event: LOAD_DLL_DEBUG_EVENT\n";
+        errs().indent(ToolName.size()) << ": DLL Name : " << DLLName << '\n';
+      }
+
+      if (NoUser32 && sys::path::stem(DLLName) == "user32") {
+        // Program is loading user32.dll, in the applications we are testing,
+        // this only happens if an assert has fired. By now the message has
+        // already been printed, so simply close the program.
+        errs() << ToolName << ": user32.dll loaded!\n";
+        errs().indent(ToolName.size())
+            << ": This probably means that assert was called. Closing "
+               "program to prevent message box from popping up.\n";
+        dwContinueStatus = DBG_CONTINUE;
+        ::TerminateProcess(ProcessIDToHandle[DebugEvent.dwProcessId], -1);
+        return -1;
+      }
+    } break;
     case EXCEPTION_DEBUG_EVENT: {
-        // Close the application if this exception will not be handled by the
-        // child application.
-        if (TraceExecution)
-          errs() << ToolName << ": Debug Event: EXCEPTION_DEBUG_EVENT\n";
+      // Close the application if this exception will not be handled by the
+      // child application.
+      if (TraceExecution)
+        errs() << ToolName << ": Debug Event: EXCEPTION_DEBUG_EVENT\n";
 
-        EXCEPTION_DEBUG_INFO  &Exception = DebugEvent.u.Exception;
-        if (Exception.dwFirstChance > 0) {
-          if (TraceExecution) {
-            errs().indent(ToolName.size()) << ": Debug Info : ";
-            errs() << "First chance exception at "
-                   << Exception.ExceptionRecord.ExceptionAddress
-                   << ", exception code: "
-                   << ExceptionCodeToString(
+      EXCEPTION_DEBUG_INFO &Exception = DebugEvent.u.Exception;
+      if (Exception.dwFirstChance > 0) {
+        if (TraceExecution) {
+          errs().indent(ToolName.size()) << ": Debug Info : ";
+          errs() << "First chance exception at "
+                 << Exception.ExceptionRecord.ExceptionAddress
+                 << ", exception code: "
+                 << ExceptionCodeToString(
                         Exception.ExceptionRecord.ExceptionCode)
-                   << " (" << Exception.ExceptionRecord.ExceptionCode << ")\n";
-          }
-          dwContinueStatus = DBG_EXCEPTION_NOT_HANDLED;
-        } else {
-          errs() << ToolName << ": Unhandled exception in: " << ProgramToRun
-                 << "!\n";
-                 errs().indent(ToolName.size()) << ": location: ";
-                 errs() << Exception.ExceptionRecord.ExceptionAddress
-                        << ", exception code: "
-                        << ExceptionCodeToString(
-                            Exception.ExceptionRecord.ExceptionCode)
-                        << " (" << Exception.ExceptionRecord.ExceptionCode
-                        << ")\n";
-          dwContinueStatus = DBG_CONTINUE;
-          ::TerminateProcess(ProcessIDToHandle[DebugEvent.dwProcessId], -1);
-          return -1;
+                 << " (" << Exception.ExceptionRecord.ExceptionCode << ")\n";
         }
+        dwContinueStatus = DBG_EXCEPTION_NOT_HANDLED;
+      } else {
+        errs() << ToolName << ": Unhandled exception in: " << ProgramToRun
+               << "!\n";
+        errs().indent(ToolName.size()) << ": location: ";
+        errs() << Exception.ExceptionRecord.ExceptionAddress
+               << ", exception code: "
+               << ExceptionCodeToString(Exception.ExceptionRecord.ExceptionCode)
+               << " (" << Exception.ExceptionRecord.ExceptionCode << ")\n";
+        dwContinueStatus = DBG_CONTINUE;
+        ::TerminateProcess(ProcessIDToHandle[DebugEvent.dwProcessId], -1);
+        return -1;
       }
-      break;
+    } break;
     default:
       // Do nothing.
       if (TraceExecution)
@@ -531,8 +508,7 @@ int main(int argc, char **argv) {
       break;
     }
 
-    success = ContinueDebugEvent(DebugEvent.dwProcessId,
-                                 DebugEvent.dwThreadId,
+    success = ContinueDebugEvent(DebugEvent.dwProcessId, DebugEvent.dwThreadId,
                                  dwContinueStatus);
     if (!success) {
       ec = windows_error(::GetLastError());

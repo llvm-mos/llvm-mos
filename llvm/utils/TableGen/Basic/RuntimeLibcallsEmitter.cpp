@@ -88,7 +88,7 @@ public:
   void run(raw_ostream &OS);
 };
 
-} // End anonymous namespace.
+} // namespace llvm
 
 void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
   IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALL_ENUM");

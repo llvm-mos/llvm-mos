@@ -33,10 +33,10 @@ public:
 private:
   std::unique_ptr<msf::MappedBlockStream> Stream;
 
-  const SrcHeaderBlockHeader* Header;
+  const SrcHeaderBlockHeader *Header;
   HashTable<SrcHeaderBlockEntry> InjectedSourceTable;
 };
-}
+} // namespace pdb
 } // namespace llvm
 
 #endif

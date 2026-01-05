@@ -813,16 +813,18 @@ const TargetRegisterClass *MOSInstrInfo::canFoldCopy(const MachineInstr &MI,
 
 void MOSInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-    bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+    bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   loadStoreRegStackSlot(MBB, MI, SrcReg, isKill, FrameIndex, RC, Flags,
                         /*IsLoad=*/false);
 }
 
-void MOSInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-    int FrameIndex, const TargetRegisterClass *RC, Register VReg,
-    MachineInstr::MIFlag Flags) const {
+void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MI,
+                                        Register DestReg, int FrameIndex,
+                                        const TargetRegisterClass *RC,
+                                        Register VReg,
+                                        MachineInstr::MIFlag Flags) const {
   loadStoreRegStackSlot(MBB, MI, DestReg, false, FrameIndex, RC, Flags,
                         /*IsLoad=*/true);
 }
@@ -973,8 +975,8 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   });
 }
 
-const TargetRegisterClass *
-MOSInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum) const {
+const TargetRegisterClass *MOSInstrInfo::getRegClass(const MCInstrDesc &MCID,
+                                                     unsigned OpNum) const {
   auto *RC = TargetInstrInfo::getRegClass(MCID, OpNum);
 
   // On SPC700, LDImm can be used for imaginary registers.

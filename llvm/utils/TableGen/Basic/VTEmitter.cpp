@@ -134,7 +134,7 @@ void VTEmitter::run(raw_ostream &OS) {
     bool IsRISCVVecTuple = VT->getValueAsBit("isRISCVVecTuple");
     bool IsCheriCapability = VT->getValueAsBit("isCheriCapability");
     int64_t NF = VT->getValueAsInt("NF");
-    bool IsNormalValueType =  VT->getValueAsBit("isNormalValueType");
+    bool IsNormalValueType = VT->getValueAsBit("isNormalValueType");
     int64_t NElem = IsVector ? VT->getValueAsInt("nElem") : 0;
     StringRef EltName = IsVector ? VT->getValueAsDef("ElementType")->getName()
                                  : "INVALID_SIMPLE_VALUE_TYPE";

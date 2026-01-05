@@ -109,7 +109,7 @@ public:
 
   StringRef getPassName() const override { return FIXUPBW_DESC; }
 
-  FixupBWInstPass() : MachineFunctionPass(ID) { }
+  FixupBWInstPass() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
@@ -144,7 +144,7 @@ private:
   MachineBlockFrequencyInfo *MBFI = nullptr;
 };
 char FixupBWInstPass::ID = 0;
-}
+} // namespace
 
 INITIALIZE_PASS(FixupBWInstPass, FIXUPBW_NAME, FIXUPBW_DESC, false, false)
 
@@ -158,9 +158,9 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
   TRI = MF.getRegInfo().getTargetRegisterInfo();
   PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  MBFI = (PSI && PSI->hasProfileSummary()) ?
-         &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
-         nullptr;
+  MBFI = (PSI && PSI->hasProfileSummary())
+             ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
+             : nullptr;
   LiveUnits.init(TII->getRegisterInfo());
 
   LLVM_DEBUG(dbgs() << "Start X86FixupBWInsts\n";);
@@ -250,7 +250,7 @@ Register FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
     return Register();
 
   bool IsDefined = false;
-  for (auto &MO: OrigMI->implicit_operands()) {
+  for (auto &MO : OrigMI->implicit_operands()) {
     if (!MO.isReg())
       continue;
 

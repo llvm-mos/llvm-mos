@@ -346,7 +346,7 @@ struct ContextKey {
   enum ContextKind { CK_StringBased, CK_AddrBased };
   const ContextKind Kind;
   ContextKind getKind() const { return Kind; }
-  ContextKey(ContextKind K) : Kind(K){};
+  ContextKey(ContextKind K) : Kind(K) {};
 };
 
 // String based context id
@@ -354,7 +354,7 @@ struct StringBasedCtxKey : public ContextKey {
   SampleContextFrameVector Context;
 
   bool WasLeafInlined;
-  StringBasedCtxKey() : ContextKey(CK_StringBased), WasLeafInlined(false){};
+  StringBasedCtxKey() : ContextKey(CK_StringBased), WasLeafInlined(false) {};
   static bool classof(const ContextKey *K) {
     return K->getKind() == CK_StringBased;
   }
@@ -374,7 +374,7 @@ struct AddrBasedCtxKey : public ContextKey {
   SmallVector<uint64_t, 16> Context;
 
   bool WasLeafInlined;
-  AddrBasedCtxKey() : ContextKey(CK_AddrBased), WasLeafInlined(false){};
+  AddrBasedCtxKey() : ContextKey(CK_AddrBased), WasLeafInlined(false) {};
   static bool classof(const ContextKey *K) {
     return K->getKind() == CK_AddrBased;
   }
@@ -662,7 +662,7 @@ protected:
   void parseSample(TraceStream &TraceIt);
   // An aggregated count is given to indicate how many times the sample is
   // repeated.
-  virtual void parseSample(TraceStream &TraceIt, uint64_t Count){};
+  virtual void parseSample(TraceStream &TraceIt, uint64_t Count) {};
   void computeCounterFromLBR(const PerfSample *Sample, uint64_t Repeat);
   // Post process the profile after trace aggregation, we will do simple range
   // overlap computation for AutoFDO, or unwind for CSSPGO(hybrid sample).
@@ -738,7 +738,7 @@ Note that non-CS profile doesn't have the empty `[]` context.
 class UnsymbolizedProfileReader : public PerfReaderBase {
 public:
   UnsymbolizedProfileReader(ProfiledBinary *Binary, StringRef PerfTrace)
-      : PerfReaderBase(Binary, PerfTrace){};
+      : PerfReaderBase(Binary, PerfTrace) {};
   void parsePerfTraces() override;
 
 private:

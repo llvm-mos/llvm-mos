@@ -12,8 +12,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
-#include <string>
 #include <optional>
+#include <string>
 
 namespace llvm {
 namespace pdb {
@@ -57,7 +57,7 @@ private:
 
 void discoverStreamPurposes(PDBFile &File,
                             SmallVectorImpl<StreamInfo> &Streams);
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

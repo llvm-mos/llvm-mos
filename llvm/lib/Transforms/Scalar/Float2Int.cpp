@@ -42,9 +42,9 @@ using namespace llvm;
 
 /// The largest integer type worth dealing with.
 static cl::opt<unsigned>
-MaxIntegerBW("float2int-max-integer-bw", cl::init(64), cl::Hidden,
-             cl::desc("Max integer bitwidth to consider in float2int"
-                      "(default=64)"));
+    MaxIntegerBW("float2int-max-integer-bw", cl::init(64), cl::Hidden,
+                 cl::desc("Max integer bitwidth to consider in float2int"
+                          "(default=64)"));
 
 // Given a FCmp predicate, return a matching ICmp predicate if one
 // exists, otherwise return BAD_ICMP_PREDICATE.
@@ -77,10 +77,14 @@ static CmpInst::Predicate mapFCmpPred(CmpInst::Predicate P) {
 // integer version.
 static Instruction::BinaryOps mapBinOpcode(unsigned Opcode) {
   switch (Opcode) {
-  default: llvm_unreachable("Unhandled opcode!");
-  case Instruction::FAdd: return Instruction::Add;
-  case Instruction::FSub: return Instruction::Sub;
-  case Instruction::FMul: return Instruction::Mul;
+  default:
+    llvm_unreachable("Unhandled opcode!");
+  case Instruction::FAdd:
+    return Instruction::Add;
+  case Instruction::FSub:
+    return Instruction::Sub;
+  case Instruction::FMul:
+    return Instruction::Mul;
   }
 }
 
@@ -97,7 +101,8 @@ void Float2IntPass::findRoots(Function &F, const DominatorTree &DT) {
       if (isa<VectorType>(I.getType()))
         continue;
       switch (I.getOpcode()) {
-      default: break;
+      default:
+        break;
       case Instruction::FPToUI:
       case Instruction::FPToSI:
         Roots.insert(&I);
@@ -146,7 +151,7 @@ ConstantRange Float2IntPass::validateRange(ConstantRange R) {
 // Breadth-first walk of the use-def graph; determine the set of nodes
 // we care about and eagerly determine if some of them are poisonous.
 void Float2IntPass::walkBackwards() {
-  std::deque<Instruction*> Worklist(Roots.begin(), Roots.end());
+  std::deque<Instruction *> Worklist(Roots.begin(), Roots.end());
   while (!Worklist.empty()) {
     Instruction *I = Worklist.back();
     Worklist.pop_back();
@@ -169,7 +174,7 @@ void Float2IntPass::walkBackwards() {
       unsigned BW = I->getOperand(0)->getType()->getPrimitiveSizeInBits();
       auto Input = ConstantRange::getFull(BW);
       auto CastOp = (Instruction::CastOps)I->getOpcode();
-      seen(I, validateRange(Input.castOp(CastOp, MaxIntegerBW+1)));
+      seen(I, validateRange(Input.castOp(CastOp, MaxIntegerBW + 1)));
       continue;
     }
 
@@ -224,9 +229,8 @@ std::optional<ConstantRange> Float2IntPass::calcRange(Instruction *I) {
       // First, weed out obviously incorrect values. Non-finite numbers
       // can't be represented and neither can negative zero, unless
       // we're in fast math mode.
-      if (!F.isFinite() ||
-          (F.isZero() && F.isNegative() && isa<FPMathOperator>(I) &&
-           !I->hasNoSignedZeros()))
+      if (!F.isFinite() || (F.isZero() && F.isNegative() &&
+                            isa<FPMathOperator>(I) && !I->hasNoSignedZeros()))
         return badRange();
 
       APFloat NewF = F;
@@ -235,7 +239,7 @@ std::optional<ConstantRange> Float2IntPass::calcRange(Instruction *I) {
         return badRange();
 
       // OK, it's representable. Now get it.
-      APSInt Int(MaxIntegerBW+1, false);
+      APSInt Int(MaxIntegerBW + 1, false);
       bool Exact;
       APFloat::opStatus Status = CF->getValueAPF().convertToInteger(
           Int, APFloat::rmNearestTiesToEven, &Exact);
@@ -268,7 +272,7 @@ std::optional<ConstantRange> Float2IntPass::calcRange(Instruction *I) {
   case Instruction::FSub:
   case Instruction::FMul: {
     assert(OpRanges.size() == 2 && "its a binary operator!");
-    auto BinOp = (Instruction::BinaryOps) I->getOpcode();
+    auto BinOp = (Instruction::BinaryOps)I->getOpcode();
     return OpRanges[0].binaryOp(BinOp, OpRanges[1]);
   }
 
@@ -282,7 +286,7 @@ std::optional<ConstantRange> Float2IntPass::calcRange(Instruction *I) {
     // Note: We're ignoring the casts output size here as that's what the
     // caller expects.
     auto CastOp = (Instruction::CastOps)I->getOpcode();
-    return OpRanges[0].castOp(CastOp, MaxIntegerBW+1);
+    return OpRanges[0].castOp(CastOp, MaxIntegerBW + 1);
   }
 
   case Instruction::FCmp:
@@ -369,8 +373,8 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
     // Do we need more bits than are in the mantissa of the type we converted
     // to? semanticsPrecision returns the number of mantissa bits plus one
     // for the sign bit.
-    unsigned MaxRepresentableBits
-      = APFloat::semanticsPrecision(ConvertedToTy->getFltSemantics()) - 1;
+    unsigned MaxRepresentableBits =
+        APFloat::semanticsPrecision(ConvertedToTy->getFltSemantics()) - 1;
     if (MinBW > MaxRepresentableBits) {
       LLVM_DEBUG(dbgs() << "F2I: Value not guaranteed to be representable!\n");
       continue;
@@ -406,7 +410,7 @@ Value *Float2IntPass::convert(Instruction *I, Type *ToTy) {
     // Already converted this instruction.
     return It->second;
 
-  SmallVector<Value*,4> NewOperands;
+  SmallVector<Value *, 4> NewOperands;
   for (Value *V : I->operands()) {
     // Don't recurse if we're an instruction that terminates the path.
     if (I->getOpcode() == Instruction::UIToFP ||
@@ -417,8 +421,7 @@ Value *Float2IntPass::convert(Instruction *I, Type *ToTy) {
     } else if (ConstantFP *CF = dyn_cast<ConstantFP>(V)) {
       APSInt Val(ToTy->getPrimitiveSizeInBits(), /*isUnsigned=*/false);
       bool Exact;
-      CF->getValueAPF().convertToInteger(Val,
-                                         APFloat::rmNearestTiesToEven,
+      CF->getValueAPF().convertToInteger(Val, APFloat::rmNearestTiesToEven,
                                          &Exact);
       NewOperands.push_back(ConstantInt::get(ToTy, Val));
     } else {
@@ -430,7 +433,8 @@ Value *Float2IntPass::convert(Instruction *I, Type *ToTy) {
   IRBuilder<> IRB(I);
   Value *NewV = nullptr;
   switch (I->getOpcode()) {
-  default: llvm_unreachable("Unhandled instruction!");
+  default:
+    llvm_unreachable("Unhandled instruction!");
 
   case Instruction::FPToUI:
     NewV = IRB.CreateZExtOrTrunc(NewOperands[0], I->getType());
@@ -462,9 +466,8 @@ Value *Float2IntPass::convert(Instruction *I, Type *ToTy) {
   case Instruction::FAdd:
   case Instruction::FSub:
   case Instruction::FMul:
-    NewV = IRB.CreateBinOp(mapBinOpcode(I->getOpcode()),
-                           NewOperands[0], NewOperands[1],
-                           I->getName());
+    NewV = IRB.CreateBinOp(mapBinOpcode(I->getOpcode()), NewOperands[0],
+                           NewOperands[1], I->getName());
     break;
   }
 
@@ -485,7 +488,7 @@ void Float2IntPass::cleanup() {
 bool Float2IntPass::runImpl(Function &F, const DominatorTree &DT) {
   LLVM_DEBUG(dbgs() << "F2I: Looking at function " << F.getName() << "\n");
   // Clear out all state.
-  ECs = EquivalenceClasses<Instruction*>();
+  ECs = EquivalenceClasses<Instruction *>();
   SeenInsts.clear();
   ConvertedInsts.clear();
   Roots.clear();

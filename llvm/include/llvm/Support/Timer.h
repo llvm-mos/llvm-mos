@@ -93,8 +93,8 @@ class Timer {
   bool Triggered = false;   ///< Has the timer ever been triggered?
   TimerGroup *TG = nullptr; ///< The TimerGroup this Timer is in.
 
-  Timer **Prev = nullptr;   ///< Pointer to \p Next of previous timer in group.
-  Timer *Next = nullptr;    ///< Next timer in the group.
+  Timer **Prev = nullptr; ///< Pointer to \p Next of previous timer in group.
+  Timer *Next = nullptr;  ///< Next timer in the group.
 public:
   explicit Timer(StringRef TimerName, StringRef TimerDescription) {
     init(TimerName, TimerDescription);
@@ -157,14 +157,14 @@ class TimeRegion {
   TimeRegion(const TimeRegion &) = delete;
 
 public:
-  explicit TimeRegion(Timer &t) : T(&t) {
-    T->startTimer();
-  }
+  explicit TimeRegion(Timer &t) : T(&t) { T->startTimer(); }
   explicit TimeRegion(Timer *t) : T(t) {
-    if (T) T->startTimer();
+    if (T)
+      T->startTimer();
   }
   ~TimeRegion() {
-    if (T) T->stopTimer();
+    if (T)
+      T->stopTimer();
   }
 };
 
@@ -198,11 +198,9 @@ class TimerGroup {
     PrintRecord &operator=(const PrintRecord &Other) = default;
     PrintRecord(const TimeRecord &Time, const std::string &Name,
                 const std::string &Description)
-      : Time(Time), Name(Name), Description(Description) {}
+        : Time(Time), Name(Name), Description(Description) {}
 
-    bool operator <(const PrintRecord &Other) const {
-      return Time < Other.Time;
-    }
+    bool operator<(const PrintRecord &Other) const { return Time < Other.Time; }
   };
   std::string Name;
   std::string Description;
@@ -271,8 +269,8 @@ private:
   void removeTimer(Timer &T);
   void prepareToPrintList(bool reset_time = false);
   void PrintQueuedTimers(raw_ostream &OS);
-  void printJSONValue(raw_ostream &OS, const PrintRecord &R,
-                      const char *suffix, double Value);
+  void printJSONValue(raw_ostream &OS, const PrintRecord &R, const char *suffix,
+                      double Value);
 };
 
 } // end namespace llvm

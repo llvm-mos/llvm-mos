@@ -147,8 +147,7 @@ public:
                                     const APInt &DemandedElts,
                                     TargetLoweringOpt &TLO) const override;
 
-  void computeKnownBitsForTargetNode(const SDValue Op,
-                                     KnownBits &Known,
+  void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth) const override;
@@ -338,15 +337,16 @@ public:
   EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
-  bool splitValueIntoRegisterParts(
-      SelectionDAG & DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
-      unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC)
-      const override;
+  bool
+  splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
+                              SDValue *Parts, unsigned NumParts, MVT PartVT,
+                              std::optional<CallingConv::ID> CC) const override;
 
-  SDValue joinRegisterPartsIntoValue(
-      SelectionDAG & DAG, const SDLoc &DL, const SDValue *Parts,
-      unsigned NumParts, MVT PartVT, EVT ValueVT,
-      std::optional<CallingConv::ID> CC) const override;
+  SDValue
+  joinRegisterPartsIntoValue(SelectionDAG &DAG, const SDLoc &DL,
+                             const SDValue *Parts, unsigned NumParts,
+                             MVT PartVT, EVT ValueVT,
+                             std::optional<CallingConv::ID> CC) const override;
 
   // Return the value of VLMax for the given vector type (i.e. SEW and LMUL)
   SDValue computeVLMax(MVT VecVT, const SDLoc &DL, SelectionDAG &DAG) const;

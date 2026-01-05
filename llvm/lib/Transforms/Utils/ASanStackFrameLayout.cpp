@@ -40,12 +40,18 @@ static const uint64_t kMinAlignment = 16;
 static uint64_t VarAndRedzoneSize(uint64_t Size, uint64_t Granularity,
                                   uint64_t Alignment) {
   uint64_t Res = 0;
-  if (Size <= 4)  Res = 16;
-  else if (Size <= 16) Res = 32;
-  else if (Size <= 128) Res = Size + 32;
-  else if (Size <= 512) Res = Size + 64;
-  else if (Size <= 4096) Res = Size + 128;
-  else                   Res = Size + 256;
+  if (Size <= 4)
+    Res = 16;
+  else if (Size <= 16)
+    Res = 32;
+  else if (Size <= 128)
+    Res = Size + 32;
+  else if (Size <= 512)
+    Res = Size + 64;
+  else if (Size <= 4096)
+    Res = Size + 128;
+  else
+    Res = Size + 256;
   return alignTo(std::max(Res, 2 * Granularity), Alignment);
 }
 
@@ -72,7 +78,7 @@ ComputeASanStackFrameLayout(SmallVectorImpl<ASanStackVariableDescription> &Vars,
   for (size_t i = 0; i < NumVars; i++) {
     bool IsLast = i == NumVars - 1;
     uint64_t Alignment = std::max(Granularity, Vars[i].Alignment);
-    (void)Alignment;  // Used only in asserts.
+    (void)Alignment; // Used only in asserts.
     uint64_t Size = Vars[i].Size;
     assert((Alignment & (Alignment - 1)) == 0);
     assert(Layout.FrameAlignment >= Alignment);
@@ -148,4 +154,4 @@ SmallVector<uint8_t, 64> GetShadowBytesAfterScope(
   return SB;
 }
 
-} // llvm namespace
+} // namespace llvm

@@ -189,9 +189,7 @@ public:
     return *this;
   }
 
-  bool is_displayed() const override {
-    return TheStream->is_displayed();
-  }
+  bool is_displayed() const override { return TheStream->is_displayed(); }
 
 private:
   void releaseStream() {
@@ -218,7 +216,6 @@ LLVM_ABI formatted_raw_ostream &ferrs();
 /// debug output.  Use it like: fdbgs() << "foo" << "bar";
 LLVM_ABI formatted_raw_ostream &fdbgs();
 
-} // end llvm namespace
-
+} // namespace llvm
 
 #endif

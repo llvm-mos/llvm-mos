@@ -707,7 +707,8 @@ bool FunctionAnalysisManagerCGSCCProxy::Result::invalidate(
   // forcibly cleared. When preserved, this proxy will only invalidate results
   // cached on functions *still in the module* at the end of the module pass.
   auto PAC = PA.getChecker<FunctionAnalysisManagerCGSCCProxy>();
-  if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<LazyCallGraph::SCC>>()) {
+  if (!PAC.preserved() &&
+      !PAC.preservedSet<AllAnalysesOn<LazyCallGraph::SCC>>()) {
     for (LazyCallGraph::Node &N : C)
       FAM->invalidate(N.getFunction(), PA);
 
@@ -970,8 +971,8 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     (void)TargetRC;
     // TODO: This only allows trivial edges to be added for now.
 #ifdef EXPENSIVE_CHECKS
-    assert((RC == &TargetRC ||
-           RC->isAncestorOf(TargetRC)) && "New ref edge is not trivial!");
+    assert((RC == &TargetRC || RC->isAncestorOf(TargetRC)) &&
+           "New ref edge is not trivial!");
 #endif
     RC->insertTrivialRefEdge(N, *RefTarget);
   }
@@ -983,8 +984,8 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     (void)TargetRC;
     // TODO: This only allows trivial edges to be added for now.
 #ifdef EXPENSIVE_CHECKS
-    assert((RC == &TargetRC ||
-           RC->isAncestorOf(TargetRC)) && "New call edge is not trivial!");
+    assert((RC == &TargetRC || RC->isAncestorOf(TargetRC)) &&
+           "New call edge is not trivial!");
 #endif
     // Add a trivial ref edge to be promoted later on alongside
     // PromotedRefTargets.

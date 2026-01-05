@@ -28,15 +28,16 @@ using namespace llvm;
 #include "BPFGenSubtargetInfo.inc"
 
 static cl::opt<bool> Disable_ldsx("disable-ldsx", cl::Hidden, cl::init(false),
-  cl::desc("Disable ldsx insns"));
+                                  cl::desc("Disable ldsx insns"));
 static cl::opt<bool> Disable_movsx("disable-movsx", cl::Hidden, cl::init(false),
-  cl::desc("Disable movsx insns"));
+                                   cl::desc("Disable movsx insns"));
 static cl::opt<bool> Disable_bswap("disable-bswap", cl::Hidden, cl::init(false),
-  cl::desc("Disable bswap insns"));
+                                   cl::desc("Disable bswap insns"));
 static cl::opt<bool> Disable_sdiv_smod("disable-sdiv-smod", cl::Hidden,
-  cl::init(false), cl::desc("Disable sdiv/smod insns"));
+                                       cl::init(false),
+                                       cl::desc("Disable sdiv/smod insns"));
 static cl::opt<bool> Disable_gotol("disable-gotol", cl::Hidden, cl::init(false),
-  cl::desc("Disable gotol insn"));
+                                   cl::desc("Disable gotol insn"));
 static cl::opt<bool>
     Disable_StoreImm("disable-storeimm", cl::Hidden, cl::init(false),
                      cl::desc("Disable BPF_ST (immediate store) insn"));

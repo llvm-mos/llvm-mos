@@ -41,8 +41,9 @@ class LLT {
 public:
   /// Get a low-level scalar or aggregate "bag of bits".
   static constexpr LLT scalar(unsigned SizeInBits) {
-    return LLT{/*isPointer=*/false, /*isVector=*/false, /*isScalar=*/true,
-               ElementCount::getFixed(0), SizeInBits,
+    return LLT{/*isPointer=*/false, /*isVector=*/false,
+               /*isScalar=*/true,   ElementCount::getFixed(0),
+               SizeInBits,
                /*AddressSpace=*/0};
   }
 
@@ -57,15 +58,17 @@ public:
   /// Get a low-level pointer in the given address space.
   static constexpr LLT pointer(unsigned AddressSpace, unsigned SizeInBits) {
     assert(SizeInBits > 0 && "invalid pointer size");
-    return LLT{/*isPointer=*/true, /*isVector=*/false, /*isScalar=*/false,
-               ElementCount::getFixed(0), SizeInBits, AddressSpace};
+    return LLT{/*isPointer=*/true, /*isVector=*/false,
+               /*isScalar=*/false, ElementCount::getFixed(0),
+               SizeInBits,         AddressSpace};
   }
 
   /// Get a low-level vector of some number of elements and element width.
   static constexpr LLT vector(ElementCount EC, unsigned ScalarSizeInBits) {
     assert(!EC.isScalar() && "invalid number of vector elements");
-    return LLT{/*isPointer=*/false, /*isVector=*/true, /*isScalar=*/false,
-               EC, ScalarSizeInBits, /*AddressSpace=*/0};
+    return LLT{/*isPointer=*/false, /*isVector=*/true,
+               /*isScalar=*/false,  EC,
+               ScalarSizeInBits,    /*AddressSpace=*/0};
   }
 
   /// Get a low-level vector of some number of elements and element type.
@@ -81,20 +84,15 @@ public:
   }
 
   /// Get a 16-bit IEEE half value.
-  /// TODO: Add IEEE semantics to type - This currently returns a simple `scalar(16)`.
-  static constexpr LLT float16() {
-    return scalar(16);
-  }
+  /// TODO: Add IEEE semantics to type - This currently returns a simple
+  /// `scalar(16)`.
+  static constexpr LLT float16() { return scalar(16); }
 
   /// Get a 32-bit IEEE float value.
-  static constexpr LLT float32() {
-    return scalar(32);
-  }
+  static constexpr LLT float32() { return scalar(32); }
 
   /// Get a 64-bit IEEE double value.
-  static constexpr LLT float64() {
-    return scalar(64);
-  }
+  static constexpr LLT float64() { return scalar(64); }
 
   /// Get a low-level fixed-width vector of some number of elements and element
   /// width.
@@ -408,12 +406,12 @@ public:
   }
 };
 
-inline raw_ostream& operator<<(raw_ostream &OS, const LLT &Ty) {
+inline raw_ostream &operator<<(raw_ostream &OS, const LLT &Ty) {
   Ty.print(OS);
   return OS;
 }
 
-template<> struct DenseMapInfo<LLT> {
+template <> struct DenseMapInfo<LLT> {
   static inline LLT getEmptyKey() {
     LLT Invalid;
     Invalid.IsPointer = true;
@@ -428,11 +426,9 @@ template<> struct DenseMapInfo<LLT> {
     uint64_t Val = Ty.getUniqueRAWLLTData();
     return DenseMapInfo<uint64_t>::getHashValue(Val);
   }
-  static bool isEqual(const LLT &LHS, const LLT &RHS) {
-    return LHS == RHS;
-  }
+  static bool isEqual(const LLT &LHS, const LLT &RHS) { return LHS == RHS; }
 };
 
-}
+} // namespace llvm
 
 #endif // LLVM_CODEGEN_LOWLEVELTYPE_H

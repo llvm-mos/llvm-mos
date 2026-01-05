@@ -30,24 +30,24 @@
 using namespace llvm;
 
 static cl::opt<unsigned> MaxThreads(
-  "xcore-max-threads", cl::Optional,
-  cl::desc("Maximum number of threads (for emulation thread-local storage)"),
-  cl::Hidden, cl::value_desc("number"), cl::init(8));
+    "xcore-max-threads", cl::Optional,
+    cl::desc("Maximum number of threads (for emulation thread-local storage)"),
+    cl::Hidden, cl::value_desc("number"), cl::init(8));
 
 namespace {
-  /// Lowers thread local variables on the XCore. Each thread local variable is
-  /// expanded to an array of n elements indexed by the thread ID where n is the
-  /// fixed number hardware threads supported by the device.
-  struct XCoreLowerThreadLocal : public ModulePass {
-    static char ID;
+/// Lowers thread local variables on the XCore. Each thread local variable is
+/// expanded to an array of n elements indexed by the thread ID where n is the
+/// fixed number hardware threads supported by the device.
+struct XCoreLowerThreadLocal : public ModulePass {
+  static char ID;
 
-    XCoreLowerThreadLocal() : ModulePass(ID) {}
+  XCoreLowerThreadLocal() : ModulePass(ID) {}
 
-    bool lowerGlobal(GlobalVariable *GV);
+  bool lowerGlobal(GlobalVariable *GV);
 
-    bool runOnModule(Module &M) override;
-  };
-}
+  bool runOnModule(Module &M) override;
+};
+} // namespace
 
 char XCoreLowerThreadLocal::ID = 0;
 
@@ -62,15 +62,14 @@ static ArrayType *createLoweredType(Type *OriginalType) {
   return ArrayType::get(OriginalType, MaxThreads);
 }
 
-static Constant *
-createLoweredInitializer(ArrayType *NewType, Constant *OriginalInitializer) {
+static Constant *createLoweredInitializer(ArrayType *NewType,
+                                          Constant *OriginalInitializer) {
   SmallVector<Constant *, 8> Elements(MaxThreads);
   for (unsigned i = 0; i != MaxThreads; ++i) {
     Elements[i] = OriginalInitializer;
   }
   return ConstantArray::get(NewType, Elements);
 }
-
 
 static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
   do {
@@ -132,22 +131,19 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
     return false;
 
   // Skip globals that we can't lower and leave it for the backend to error.
-  if (!rewriteNonInstructionUses(GV, this) ||
-      !GV->getType()->isSized() || isZeroLengthArray(GV->getType()))
+  if (!rewriteNonInstructionUses(GV, this) || !GV->getType()->isSized() ||
+      isZeroLengthArray(GV->getType()))
     return false;
 
   // Create replacement global.
   ArrayType *NewType = createLoweredType(GV->getValueType());
   Constant *NewInitializer = nullptr;
   if (GV->hasInitializer())
-    NewInitializer = createLoweredInitializer(NewType,
-                                              GV->getInitializer());
-  GlobalVariable *NewGV =
-    new GlobalVariable(*M, NewType, GV->isConstant(), GV->getLinkage(),
-                       NewInitializer, "", nullptr,
-                       GlobalVariable::NotThreadLocal,
-                       GV->getType()->getAddressSpace(),
-                       GV->isExternallyInitialized());
+    NewInitializer = createLoweredInitializer(NewType, GV->getInitializer());
+  GlobalVariable *NewGV = new GlobalVariable(
+      *M, NewType, GV->isConstant(), GV->getLinkage(), NewInitializer, "",
+      nullptr, GlobalVariable::NotThreadLocal, GV->getType()->getAddressSpace(),
+      GV->isExternallyInitialized());
 
   // Update uses.
   SmallVector<User *, 16> Users(GV->users());

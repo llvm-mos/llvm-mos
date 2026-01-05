@@ -42,7 +42,7 @@ public:
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const override;
 };
-}
+} // namespace
 
 static MCDisassembler *createSparcDisassembler(const Target &T,
                                                const MCSubtargetInfo &STI,
@@ -334,7 +334,8 @@ DecodeStatus SparcDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     Result = decodeInstruction(DecoderTableSparcV932, Instr, Insn, Address,
                                this, STI);
   else
-    Result = decodeInstruction(DecoderTableSparcV832, Instr, Insn, Address, this, STI);
+    Result = decodeInstruction(DecoderTableSparcV832, Instr, Insn, Address,
+                               this, STI);
 
   if (Result != MCDisassembler::Fail)
     return Result;

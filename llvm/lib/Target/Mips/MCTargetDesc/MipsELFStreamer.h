@@ -30,7 +30,7 @@ struct MCDwarfFrameInfo;
 class MipsELFStreamer : public MCELFStreamer {
   SmallVector<std::unique_ptr<MipsOptionRecord>, 8> MipsOptionRecords;
   MipsRegInfoRecord *RegInfoRecord;
-  SmallVector<MCSymbol*, 4> Labels;
+  SmallVector<MCSymbol *, 4> Labels;
 
 public:
   MipsELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,

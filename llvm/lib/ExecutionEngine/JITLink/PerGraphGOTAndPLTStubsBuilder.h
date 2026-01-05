@@ -28,8 +28,7 @@ namespace jitlink {
 /// in the JITLinkDylib, but allows graphs to be trivially removed independently
 /// without affecting other graphs (since those other graphs will have their own
 /// copies of any required entries).
-template <typename BuilderImplT>
-class PerGraphGOTAndPLTStubsBuilder {
+template <typename BuilderImplT> class PerGraphGOTAndPLTStubsBuilder {
 public:
   PerGraphGOTAndPLTStubsBuilder(LinkGraph &G) : G(G) {}
 

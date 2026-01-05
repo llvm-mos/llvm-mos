@@ -174,7 +174,8 @@ public:
 
   //// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
-    static_assert(ConstantFirstVal == 0, "V->getValueID() >= ConstantFirstVal always succeeds");
+    static_assert(ConstantFirstVal == 0,
+                  "V->getValueID() >= ConstantFirstVal always succeeds");
     return V->getValueID() <= ConstantLastVal;
   }
 
@@ -224,8 +225,8 @@ public:
   }
 
   Constant *stripPointerCasts() {
-    return const_cast<Constant*>(
-                      static_cast<const Constant *>(this)->stripPointerCasts());
+    return const_cast<Constant *>(
+        static_cast<const Constant *>(this)->stripPointerCasts());
   }
 
   /// Try to replace undefined constant C or undefined elements in C with

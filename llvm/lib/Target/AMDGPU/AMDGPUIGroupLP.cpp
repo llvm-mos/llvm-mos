@@ -94,9 +94,8 @@ protected:
   std::optional<SmallVector<SUnit *, 4>> Cache;
 
 public:
-  virtual bool
-  apply(const SUnit *, const ArrayRef<SUnit *>,
-        SmallVectorImpl<SchedGroup> &) {
+  virtual bool apply(const SUnit *, const ArrayRef<SUnit *>,
+                     SmallVectorImpl<SchedGroup> &) {
     return true;
   };
 
@@ -2609,8 +2608,10 @@ void IGroupLPDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
   // Preserve original instruction ordering relative to the SCHED_BARRIER.
   SG.link(
       SchedBarrier,
-      (function_ref<bool(const SUnit *A, const SUnit *B)>)[](
-          const SUnit *A, const SUnit *B) { return A->NodeNum > B->NodeNum; });
+      (function_ref<bool(const SUnit *A, const SUnit *B)>)[](const SUnit *A,
+                                                             const SUnit *B) {
+        return A->NodeNum > B->NodeNum;
+      });
 }
 
 SchedGroupMask

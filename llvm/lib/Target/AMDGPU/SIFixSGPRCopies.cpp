@@ -77,10 +77,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-fix-sgpr-copies"
 
-static cl::opt<bool> EnableM0Merge(
-  "amdgpu-enable-merge-m0",
-  cl::desc("Merge and hoist M0 initializations"),
-  cl::init(true));
+static cl::opt<bool>
+    EnableM0Merge("amdgpu-enable-merge-m0",
+                  cl::desc("Merge and hoist M0 initializations"),
+                  cl::init(true));
 
 namespace {
 
@@ -107,9 +107,9 @@ public:
   // current copy SChain
   unsigned SiblingPenalty = 0;
   SetVector<unsigned> Siblings;
-  V2SCopyInfo() : Copy(nullptr), ID(0){};
+  V2SCopyInfo() : Copy(nullptr), ID(0) {};
   V2SCopyInfo(unsigned Id, MachineInstr *C, unsigned Width)
-      : Copy(C), NumReadfirstlanes(Width / 32), ID(Id){};
+      : Copy(C), NumReadfirstlanes(Width / 32), ID(Id) {};
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() {
     dbgs() << ID << " : " << *Copy << "\n\tS:" << SChain.size()
@@ -121,10 +121,10 @@ public:
 
 class SIFixSGPRCopies {
   MachineDominatorTree *MDT;
-  SmallVector<MachineInstr*, 4> SCCCopies;
-  SmallVector<MachineInstr*, 4> RegSequences;
-  SmallVector<MachineInstr*, 4> PHINodes;
-  SmallVector<MachineInstr*, 4> S2VCopies;
+  SmallVector<MachineInstr *, 4> SCCCopies;
+  SmallVector<MachineInstr *, 4> RegSequences;
+  SmallVector<MachineInstr *, 4> PHINodes;
+  SmallVector<MachineInstr *, 4> S2VCopies;
   unsigned NextVGPRToSGPRCopyID = 0;
   MapVector<unsigned, V2SCopyInfo> V2SCopies;
   DenseMap<MachineInstr *, SetVector<unsigned>> SiblingPenalty;
@@ -201,8 +201,7 @@ FunctionPass *llvm::createSIFixSGPRCopiesLegacyPass() {
 }
 
 static std::pair<const TargetRegisterClass *, const TargetRegisterClass *>
-getCopyRegClasses(const MachineInstr &Copy,
-                  const SIRegisterInfo &TRI,
+getCopyRegClasses(const MachineInstr &Copy, const SIRegisterInfo &TRI,
                   const MachineRegisterInfo &MRI) {
   Register DstReg = Copy.getOperand(0).getReg();
   Register SrcReg = Copy.getOperand(1).getReg();
@@ -340,11 +339,11 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
     if (IsAGPR) {
       const TargetRegisterClass *NewSrcRC = TRI->getEquivalentAGPRClass(SrcRC);
       Register TmpAReg = MRI.createVirtualRegister(NewSrcRC);
-      unsigned Opc = NewSrcRC == &AMDGPU::AGPR_32RegClass ?
-        AMDGPU::V_ACCVGPR_WRITE_B32_e64 : AMDGPU::COPY;
-      BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(), TII->get(Opc),
-            TmpAReg)
-        .addReg(TmpReg, RegState::Kill);
+      unsigned Opc = NewSrcRC == &AMDGPU::AGPR_32RegClass
+                         ? AMDGPU::V_ACCVGPR_WRITE_B32_e64
+                         : AMDGPU::COPY;
+      BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(), TII->get(Opc), TmpAReg)
+          .addReg(TmpReg, RegState::Kill);
       TmpReg = TmpAReg;
     }
 
@@ -357,8 +356,7 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
 
 static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
                                     const MachineInstr *MoveImm,
-                                    const SIInstrInfo *TII,
-                                    unsigned &SMovOp,
+                                    const SIInstrInfo *TII, unsigned &SMovOp,
                                     int64_t &Imm) {
   if (Copy->getOpcode() != AMDGPU::COPY)
     return false;
@@ -419,8 +417,7 @@ bool searchPredecessors(const MachineBasicBlock *MBB,
 // Checks if there is potential path From instruction To instruction.
 // If CutOff is specified and it sits in between of that path we ignore
 // a higher portion of the path and report it is not reachable.
-static bool isReachable(const MachineInstr *From,
-                        const MachineInstr *To,
+static bool isReachable(const MachineInstr *From, const MachineInstr *To,
                         const MachineBasicBlock *CutOff,
                         MachineDominatorTree &MDT) {
   if (MDT.dominates(From, To))
@@ -432,8 +429,9 @@ static bool isReachable(const MachineInstr *From,
   // Do predecessor search.
   // We should almost never get here since we do not usually produce M0 stores
   // other than -1.
-  return searchPredecessors(MBBTo, CutOff, [MBBFrom]
-           (const MachineBasicBlock *MBB) { return MBB == MBBFrom; });
+  return searchPredecessors(
+      MBBTo, CutOff,
+      [MBBFrom](const MachineBasicBlock *MBB) { return MBB == MBBFrom; });
 }
 
 // Return the first non-prologue instruction in the block.
@@ -450,8 +448,7 @@ getFirstNonPrologue(MachineBasicBlock *MBB, const TargetInstrInfo *TII) {
 // This is intended to combine M0 initializations, but can work with any
 // SGPR. A VGPR cannot be processed since we cannot guarantee vector
 // executioon.
-static bool hoistAndMergeSGPRInits(unsigned Reg,
-                                   const MachineRegisterInfo &MRI,
+static bool hoistAndMergeSGPRInits(unsigned Reg, const MachineRegisterInfo &MRI,
                                    const TargetRegisterInfo *TRI,
                                    MachineDominatorTree &MDT,
                                    const TargetInstrInfo *TII) {
@@ -459,7 +456,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
   using InitListMap = std::map<unsigned, std::list<MachineInstr *>>;
   InitListMap Inits;
   // List of clobbering instructions.
-  SmallVector<MachineInstr*, 8> Clobbers;
+  SmallVector<MachineInstr *, 8> Clobbers;
   // List of instructions marked for deletion.
   SmallPtrSet<MachineInstr *, 8> MergedInstrs;
 
@@ -485,19 +482,18 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
   for (auto &Init : Inits) {
     auto &Defs = Init.second;
 
-    for (auto I1 = Defs.begin(), E = Defs.end(); I1 != E; ) {
+    for (auto I1 = Defs.begin(), E = Defs.end(); I1 != E;) {
       MachineInstr *MI1 = *I1;
 
-      for (auto I2 = std::next(I1); I2 != E; ) {
+      for (auto I2 = std::next(I1); I2 != E;) {
         MachineInstr *MI2 = *I2;
 
         // Check any possible interference
         auto interferes = [&](MachineBasicBlock::iterator From,
                               MachineBasicBlock::iterator To) -> bool {
-
           assert(MDT.dominates(&*To, &*From));
 
-          auto interferes = [&MDT, From, To](MachineInstr* &Clobber) -> bool {
+          auto interferes = [&MDT, From, To](MachineInstr *&Clobber) -> bool {
             const MachineBasicBlock *MBBFrom = From->getParent();
             const MachineBasicBlock *MBBTo = To->getParent();
             bool MayClobberFrom = isReachable(Clobber, &*From, MBBTo, MDT);
@@ -511,17 +507,16 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
             // dominated by Clobber and belong to the same block or if Clobber
             // properly dominates To, given that To >> From, so it dominates
             // both and located in a common dominator.
-            return !((MBBFrom == MBBTo &&
-                      MDT.dominates(Clobber, &*From) &&
+            return !((MBBFrom == MBBTo && MDT.dominates(Clobber, &*From) &&
                       MDT.dominates(Clobber, &*To)) ||
                      MDT.properlyDominates(Clobber->getParent(), MBBTo));
           };
 
           return (llvm::any_of(Clobbers, interferes)) ||
                  (llvm::any_of(Inits, [&](InitListMap::value_type &C) {
-                    return C.first != Init.first &&
-                           llvm::any_of(C.second, interferes);
-                  }));
+                   return C.first != Init.first &&
+                          llvm::any_of(C.second, interferes);
+                 }));
         };
 
         if (MDT.dominates(MI1, MI2)) {
@@ -750,8 +745,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
               MachineInstr *DefMI = MRI->getVRegDef(MO->getReg());
               if (DefMI && TII->isFoldableCopy(*DefMI)) {
                 const MachineOperand &Def = DefMI->getOperand(0);
-                if (Def.isReg() &&
-                    MO->getReg() == Def.getReg() &&
+                if (Def.isReg() && MO->getReg() == Def.getReg() &&
                     MO->getSubReg() == Def.getSubReg()) {
                   const MachineOperand &Copied = DefMI->getOperand(1);
                   if (Copied.isImm() &&
@@ -856,8 +850,7 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
     }
   }
 
-  if (TRI->isVectorRegister(*MRI, PHIRes) ||
-       RC0 == &AMDGPU::VReg_1RegClass) {
+  if (TRI->isVectorRegister(*MRI, PHIRes) || RC0 == &AMDGPU::VReg_1RegClass) {
     LLVM_DEBUG(dbgs() << "Legalizing PHI: " << MI);
     TII->legalizeOperands(MI, MDT);
   }
@@ -951,7 +944,7 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
   return false;
 }
 
-void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
+void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr *MI) {
   if (PHISources.contains(MI))
     return;
   Register DstReg = MI->getOperand(0).getReg();

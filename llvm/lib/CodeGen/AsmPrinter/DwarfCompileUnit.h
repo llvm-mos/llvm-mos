@@ -144,7 +144,7 @@ class DwarfCompileUnit final : public DwarfUnit {
     return DU->getFinalizedAbstractSubprograms();
   }
 
-  void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) override;
+  void finishNonUnitTypeDIE(DIE &D, const DICompositeType *CTy) override;
 
   /// Add info for Wasm-global-based relocation.
   void addWasmRelocBaseGlobal(DIELoc *Loc, StringRef GlobalName,
@@ -167,9 +167,7 @@ public:
 
   bool hasRangeLists() const { return HasRangeLists; }
 
-  DwarfCompileUnit *getSkeleton() const {
-    return Skeleton;
-  }
+  DwarfCompileUnit *getSkeleton() const { return Skeleton; }
 
   bool includeMinimalInlineScopes() const;
 
@@ -190,8 +188,8 @@ public:
   };
 
   struct BaseTypeRef {
-    BaseTypeRef(unsigned BitSize, dwarf::TypeKind Encoding) :
-      BitSize(BitSize), Encoding(Encoding) {}
+    BaseTypeRef(unsigned BitSize, dwarf::TypeKind Encoding)
+        : BitSize(BitSize), Encoding(Encoding) {}
     unsigned BitSize;
     dwarf::TypeKind Encoding;
     DIE *Die = nullptr;
@@ -200,9 +198,8 @@ public:
   std::vector<BaseTypeRef> ExprRefedBaseTypes;
 
   /// Get or create global variable DIE.
-  DIE *
-  getOrCreateGlobalVariableDIE(const DIGlobalVariable *GV,
-                               ArrayRef<GlobalExpr> GlobalExprs);
+  DIE *getOrCreateGlobalVariableDIE(const DIGlobalVariable *GV,
+                                    ArrayRef<GlobalExpr> GlobalExprs);
 
   DIE *getOrCreateCommonBlock(const DICommonBlock *CB,
                               ArrayRef<GlobalExpr> GlobalExprs);
@@ -341,9 +338,9 @@ public:
 
   unsigned getHeaderSize() const override {
     // DWARF v5 added the DWO ID to the header for split/skeleton units.
-    unsigned DWOIdSize =
-        DD->getDwarfVersion() >= 5 && DD->useSplitDwarf() ? sizeof(uint64_t)
-                                                          : 0;
+    unsigned DWOIdSize = DD->getDwarfVersion() >= 5 && DD->useSplitDwarf()
+                             ? sizeof(uint64_t)
+                             : 0;
     return DwarfUnit::getHeaderSize() + DWOIdSize;
   }
   unsigned getLength() {
@@ -356,9 +353,7 @@ public:
   /// Add the DW_AT_addr_base attribute to the unit DIE.
   void addAddrTableBase();
 
-  MCSymbol *getMacroLabelBegin() const {
-    return MacroLabelBegin;
-  }
+  MCSymbol *getMacroLabelBegin() const { return MacroLabelBegin; }
 
   /// Add a new global name to the compile unit.
   void addGlobalName(StringRef Name, const DIE &Die,

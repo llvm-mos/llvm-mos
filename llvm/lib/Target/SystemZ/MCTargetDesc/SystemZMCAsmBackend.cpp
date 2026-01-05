@@ -125,12 +125,12 @@ SystemZMCAsmBackend::getFixupKind(StringRef Name) const {
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/SystemZ.def"
 #undef ELF_RELOC
-			.Case("BFD_RELOC_NONE", ELF::R_390_NONE)
-			.Case("BFD_RELOC_8", ELF::R_390_8)
-			.Case("BFD_RELOC_16", ELF::R_390_16)
-			.Case("BFD_RELOC_32", ELF::R_390_32)
-			.Case("BFD_RELOC_64", ELF::R_390_64)
-			.Default(-1u);
+                      .Case("BFD_RELOC_NONE", ELF::R_390_NONE)
+                      .Case("BFD_RELOC_8", ELF::R_390_8)
+                      .Case("BFD_RELOC_16", ELF::R_390_16)
+                      .Case("BFD_RELOC_32", ELF::R_390_32)
+                      .Case("BFD_RELOC_64", ELF::R_390_64)
+                      .Default(-1u);
   if (Type != -1u)
     return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
   return std::nullopt;
@@ -187,7 +187,7 @@ class ELFSystemZAsmBackend : public SystemZMCAsmBackend {
   uint8_t OSABI;
 
 public:
-  ELFSystemZAsmBackend(uint8_t OsABI) : SystemZMCAsmBackend(), OSABI(OsABI){};
+  ELFSystemZAsmBackend(uint8_t OsABI) : SystemZMCAsmBackend(), OSABI(OsABI) {};
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -197,7 +197,7 @@ public:
 
 class GOFFSystemZAsmBackend : public SystemZMCAsmBackend {
 public:
-  GOFFSystemZAsmBackend() : SystemZMCAsmBackend(){};
+  GOFFSystemZAsmBackend() : SystemZMCAsmBackend() {};
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {

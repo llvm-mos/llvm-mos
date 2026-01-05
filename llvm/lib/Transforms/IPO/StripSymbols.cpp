@@ -54,12 +54,13 @@ static bool OnlyUsedBy(Value *V, Value *Usr) {
 
 static void RemoveDeadConstant(Constant *C) {
   assert(C->use_empty() && "Constant is not dead!");
-  SmallPtrSet<Constant*, 4> Operands;
+  SmallPtrSet<Constant *, 4> Operands;
   for (Value *Op : C->operands())
     if (OnlyUsedBy(Op, C))
       Operands.insert(cast<Constant>(Op));
   if (GlobalVariable *GV = dyn_cast<GlobalVariable>(C)) {
-    if (!GV->hasLocalLinkage()) return;   // Don't delete non-static globals.
+    if (!GV->hasLocalLinkage())
+      return; // Don't delete non-static globals.
     GV->eraseFromParent();
   } else if (!isa<Function>(C)) {
     // FIXME: Why does the type of the constant matter here?
@@ -76,7 +77,7 @@ static void RemoveDeadConstant(Constant *C) {
 // Strip the symbol table of its names.
 //
 static void StripSymtab(ValueSymbolTable &ST, bool PreserveDbgInfo) {
-  for (ValueSymbolTable::iterator VI = ST.begin(), VE = ST.end(); VI != VE; ) {
+  for (ValueSymbolTable::iterator VI = ST.begin(), VE = ST.end(); VI != VE;) {
     Value *V = VI->getValue();
     ++VI;
     if (!isa<GlobalValue>(V) || cast<GlobalValue>(V)->hasLocalLinkage()) {
@@ -93,7 +94,8 @@ static void StripTypeNames(Module &M, bool PreserveDbgInfo) {
   StructTypes.run(M, false);
 
   for (StructType *STy : StructTypes) {
-    if (STy->isLiteral() || STy->getName().empty()) continue;
+    if (STy->isLiteral() || STy->getName().empty())
+      continue;
 
     if (PreserveDbgInfo && STy->getName().starts_with("llvm.dbg"))
       continue;
@@ -104,22 +106,23 @@ static void StripTypeNames(Module &M, bool PreserveDbgInfo) {
 
 /// Find values that are marked as llvm.used.
 static void findUsedValues(GlobalVariable *LLVMUsed,
-                           SmallPtrSetImpl<const GlobalValue*> &UsedValues) {
-  if (!LLVMUsed) return;
+                           SmallPtrSetImpl<const GlobalValue *> &UsedValues) {
+  if (!LLVMUsed)
+    return;
   UsedValues.insert(LLVMUsed);
 
   ConstantArray *Inits = cast<ConstantArray>(LLVMUsed->getInitializer());
 
   for (unsigned i = 0, e = Inits->getNumOperands(); i != e; ++i)
     if (GlobalValue *GV =
-          dyn_cast<GlobalValue>(Inits->getOperand(i)->stripPointerCasts()))
+            dyn_cast<GlobalValue>(Inits->getOperand(i)->stripPointerCasts()))
       UsedValues.insert(GV);
 }
 
 /// StripSymbolNames - Strip symbol names.
 static bool StripSymbolNames(Module &M, bool PreserveDbgInfo) {
 
-  SmallPtrSet<const GlobalValue*, 8> llvmUsedValues;
+  SmallPtrSet<const GlobalValue *, 8> llvmUsedValues;
   findUsedValues(M.getGlobalVariable("llvm.used"), llvmUsedValues);
   findUsedValues(M.getGlobalVariable("llvm.compiler.used"), llvmUsedValues);
 
@@ -146,7 +149,7 @@ static bool StripSymbolNames(Module &M, bool PreserveDbgInfo) {
 static bool stripDebugDeclareImpl(Module &M) {
   Function *Declare =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::dbg_declare);
-  std::vector<Constant*> DeadConstants;
+  std::vector<Constant *> DeadConstants;
 
   if (Declare) {
     while (!Declare->use_empty()) {

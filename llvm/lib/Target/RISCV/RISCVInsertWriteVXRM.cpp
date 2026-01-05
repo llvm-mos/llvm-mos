@@ -216,7 +216,8 @@ public:
 private:
   bool computeVXRMChanges(const MachineBasicBlock &MBB);
   void computeAvailable(const MachineBasicBlock &MBB);
-  void computeAnticipated(const MachineFunction &MF, const MachineBasicBlock &MBB);
+  void computeAnticipated(const MachineFunction &MF,
+                          const MachineBasicBlock &MBB);
   void emitWriteVXRM(MachineBasicBlock &MBB);
 };
 
@@ -298,7 +299,8 @@ void RISCVInsertWriteVXRM::computeAvailable(const MachineBasicBlock &MBB) {
   }
 }
 
-void RISCVInsertWriteVXRM::computeAnticipated(const MachineFunction &MF, const MachineBasicBlock &MBB) {
+void RISCVInsertWriteVXRM::computeAnticipated(const MachineFunction &MF,
+                                              const MachineBasicBlock &MBB) {
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
 
@@ -310,11 +312,11 @@ void RISCVInsertWriteVXRM::computeAnticipated(const MachineFunction &MF, const M
   } else {
     for (const MachineBasicBlock *S : MBB.successors())
       if (ST.hasVXRMPipelineFlush())
-        Anticipated =
-          Anticipated.intersectAnticipated(BlockInfo[S->getNumber()].AnticipatedIn);
+        Anticipated = Anticipated.intersectAnticipated(
+            BlockInfo[S->getNumber()].AnticipatedIn);
       else
         Anticipated =
-          Anticipated.intersect(BlockInfo[S->getNumber()].AnticipatedIn);
+            Anticipated.intersect(BlockInfo[S->getNumber()].AnticipatedIn);
   }
 
   // If we don't have any valid anticipated info, wait until we do.

@@ -21,57 +21,43 @@ class MachineDominanceFrontier : public MachineFunctionPass {
   ForwardDominanceFrontierBase<MachineBasicBlock> Base;
 
 public:
- using DomTreeT = DomTreeBase<MachineBasicBlock>;
- using DomTreeNodeT = DomTreeNodeBase<MachineBasicBlock>;
- using DomSetType = DominanceFrontierBase<MachineBasicBlock, false>::DomSetType;
- using iterator = DominanceFrontierBase<MachineBasicBlock, false>::iterator;
- using const_iterator =
-     DominanceFrontierBase<MachineBasicBlock, false>::const_iterator;
+  using DomTreeT = DomTreeBase<MachineBasicBlock>;
+  using DomTreeNodeT = DomTreeNodeBase<MachineBasicBlock>;
+  using DomSetType =
+      DominanceFrontierBase<MachineBasicBlock, false>::DomSetType;
+  using iterator = DominanceFrontierBase<MachineBasicBlock, false>::iterator;
+  using const_iterator =
+      DominanceFrontierBase<MachineBasicBlock, false>::const_iterator;
 
- MachineDominanceFrontier(const MachineDominanceFrontier &) = delete;
- MachineDominanceFrontier &operator=(const MachineDominanceFrontier &) = delete;
+  MachineDominanceFrontier(const MachineDominanceFrontier &) = delete;
+  MachineDominanceFrontier &
+  operator=(const MachineDominanceFrontier &) = delete;
 
- static char ID;
+  static char ID;
 
- MachineDominanceFrontier();
+  MachineDominanceFrontier();
 
- ForwardDominanceFrontierBase<MachineBasicBlock> &getBase() { return Base; }
+  ForwardDominanceFrontierBase<MachineBasicBlock> &getBase() { return Base; }
 
- const SmallVectorImpl<MachineBasicBlock *> &getRoots() const {
-   return Base.getRoots();
+  const SmallVectorImpl<MachineBasicBlock *> &getRoots() const {
+    return Base.getRoots();
   }
 
-  MachineBasicBlock *getRoot() const {
-    return Base.getRoot();
-  }
+  MachineBasicBlock *getRoot() const { return Base.getRoot(); }
 
-  bool isPostDominator() const {
-    return Base.isPostDominator();
-  }
+  bool isPostDominator() const { return Base.isPostDominator(); }
 
-  iterator begin() {
-    return Base.begin();
-  }
+  iterator begin() { return Base.begin(); }
 
-  const_iterator begin() const {
-    return Base.begin();
-  }
+  const_iterator begin() const { return Base.begin(); }
 
-  iterator end() {
-    return Base.end();
-  }
+  iterator end() { return Base.end(); }
 
-  const_iterator end() const {
-    return Base.end();
-  }
+  const_iterator end() const { return Base.end(); }
 
-  iterator find(MachineBasicBlock *B) {
-    return Base.find(B);
-  }
+  iterator find(MachineBasicBlock *B) { return Base.find(B); }
 
-  const_iterator find(MachineBasicBlock *B) const {
-    return Base.find(B);
-  }
+  const_iterator find(MachineBasicBlock *B) const { return Base.find(B); }
 
   bool runOnMachineFunction(MachineFunction &F) override;
 

@@ -55,7 +55,7 @@ private:
   /// HasSectionLabel - map of which sections have already had a non-local
   /// label emitted to them. Used so we don't emit extraneous linker local
   /// labels in the middle of the section.
-  DenseMap<const MCSection*, bool> HasSectionLabel;
+  DenseMap<const MCSection *, bool> HasSectionLabel;
 
   void emitDataRegion(MachO::DataRegionType Kind);
   void emitDataRegionEnd();

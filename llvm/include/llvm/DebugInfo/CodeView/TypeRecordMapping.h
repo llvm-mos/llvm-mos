@@ -52,7 +52,7 @@ private:
 
   CodeViewRecordIO IO;
 };
-}
-}
+} // namespace codeview
+} // namespace llvm
 
 #endif

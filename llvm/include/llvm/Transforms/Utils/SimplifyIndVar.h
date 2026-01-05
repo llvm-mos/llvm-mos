@@ -66,8 +66,8 @@ bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
                      SmallVectorImpl<WeakTrackingVH> &Dead);
 
 /// Collect information about induction variables that are used by sign/zero
-/// extend operations. This information is recorded by CollectExtend and provides
-/// the input to WidenIV.
+/// extend operations. This information is recorded by CollectExtend and
+/// provides the input to WidenIV.
 struct WideIVInfo {
   PHINode *NarrowIV = nullptr;
 
@@ -80,11 +80,11 @@ struct WideIVInfo {
 
 /// Widen Induction Variables - Extend the width of an IV to cover its
 /// widest uses.
-PHINode *createWideIV(const WideIVInfo &WI,
-    LoopInfo *LI, ScalarEvolution *SE, SCEVExpander &Rewriter,
-    DominatorTree *DT, SmallVectorImpl<WeakTrackingVH> &DeadInsts,
-    unsigned &NumElimExt, unsigned &NumWidened,
-    bool HasGuards, bool UsePostIncrementRanges);
+PHINode *createWideIV(const WideIVInfo &WI, LoopInfo *LI, ScalarEvolution *SE,
+                      SCEVExpander &Rewriter, DominatorTree *DT,
+                      SmallVectorImpl<WeakTrackingVH> &DeadInsts,
+                      unsigned &NumElimExt, unsigned &NumWidened,
+                      bool HasGuards, bool UsePostIncrementRanges);
 
 } // end namespace llvm
 

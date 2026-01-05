@@ -34,38 +34,32 @@ template class RegionInfoBase<RegionTraits<Function>>;
 
 } // end namespace llvm
 
-STATISTIC(numRegions,       "The # of regions");
+STATISTIC(numRegions, "The # of regions");
 STATISTIC(numSimpleRegions, "The # of simple regions");
 
 // Always verify if expensive checking is enabled.
 
-static cl::opt<bool,true>
-VerifyRegionInfoX(
-  "verify-region-info",
-  cl::location(RegionInfoBase<RegionTraits<Function>>::VerifyRegionInfo),
-  cl::desc("Verify region info (time consuming)"));
+static cl::opt<bool, true> VerifyRegionInfoX(
+    "verify-region-info",
+    cl::location(RegionInfoBase<RegionTraits<Function>>::VerifyRegionInfo),
+    cl::desc("Verify region info (time consuming)"));
 
-static cl::opt<Region::PrintStyle, true> printStyleX("print-region-style",
-  cl::location(RegionInfo::printStyle),
-  cl::Hidden,
-  cl::desc("style of printing regions"),
-  cl::values(
-    clEnumValN(Region::PrintNone, "none",  "print no details"),
-    clEnumValN(Region::PrintBB, "bb",
-               "print regions in detail with block_iterator"),
-    clEnumValN(Region::PrintRN, "rn",
-               "print regions in detail with element_iterator")));
+static cl::opt<Region::PrintStyle, true> printStyleX(
+    "print-region-style", cl::location(RegionInfo::printStyle), cl::Hidden,
+    cl::desc("style of printing regions"),
+    cl::values(clEnumValN(Region::PrintNone, "none", "print no details"),
+               clEnumValN(Region::PrintBB, "bb",
+                          "print regions in detail with block_iterator"),
+               clEnumValN(Region::PrintRN, "rn",
+                          "print regions in detail with element_iterator")));
 
 //===----------------------------------------------------------------------===//
 // Region implementation
 //
 
-Region::Region(BasicBlock *Entry, BasicBlock *Exit,
-               RegionInfo* RI,
-               DominatorTree *DT, Region *Parent) :
-  RegionBase<RegionTraits<Function>>(Entry, Exit, RI, DT, Parent) {
-
-}
+Region::Region(BasicBlock *Entry, BasicBlock *Exit, RegionInfo *RI,
+               DominatorTree *DT, Region *Parent)
+    : RegionBase<RegionTraits<Function>>(Entry, Exit, RI, DT, Parent) {}
 
 Region::~Region() = default;
 
@@ -100,8 +94,7 @@ void RegionInfo::recalculate(Function &F, DominatorTree *DT_,
   PDT = PDT_;
   DF = DF_;
 
-  TopLevelRegion = new Region(&F.getEntryBlock(), nullptr,
-                              this, DT, nullptr);
+  TopLevelRegion = new Region(&F.getEntryBlock(), nullptr, this, DT, nullptr);
   updateStatistics(TopLevelRegion);
   calculate(F);
 }
@@ -131,13 +124,9 @@ bool RegionInfoPass::runOnFunction(Function &F) {
   return false;
 }
 
-void RegionInfoPass::releaseMemory() {
-  RI.releaseMemory();
-}
+void RegionInfoPass::releaseMemory() { RI.releaseMemory(); }
 
-void RegionInfoPass::verifyAnalysis() const {
-    RI.verifyAnalysis();
-}
+void RegionInfoPass::verifyAnalysis() const { RI.verifyAnalysis(); }
 
 void RegionInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -151,20 +140,18 @@ void RegionInfoPass::print(raw_ostream &OS, const Module *) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void RegionInfoPass::dump() const {
-  RI.dump();
-}
+LLVM_DUMP_METHOD void RegionInfoPass::dump() const { RI.dump(); }
 #endif
 
 char RegionInfoPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(RegionInfoPass, "regions",
-                "Detect single entry single exit regions", true, true)
+                      "Detect single entry single exit regions", true, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominanceFrontierWrapperPass)
 INITIALIZE_PASS_END(RegionInfoPass, "regions",
-                "Detect single entry single exit regions", true, true)
+                    "Detect single entry single exit regions", true, true)
 
 // Create methods available outside of this file, to use them
 // "include/llvm/LinkAllPasses.h". Otherwise the pass would be deleted by
@@ -172,9 +159,7 @@ INITIALIZE_PASS_END(RegionInfoPass, "regions",
 
 namespace llvm {
 
-  FunctionPass *createRegionInfoPass() {
-    return new RegionInfoPass();
-  }
+FunctionPass *createRegionInfoPass() { return new RegionInfoPass(); }
 
 } // end namespace llvm
 
@@ -194,8 +179,7 @@ RegionInfo RegionInfoAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   return RI;
 }
 
-RegionInfoPrinterPass::RegionInfoPrinterPass(raw_ostream &OS)
-  : OS(OS) {}
+RegionInfoPrinterPass::RegionInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
 
 PreservedAnalyses RegionInfoPrinterPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {

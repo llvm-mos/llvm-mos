@@ -918,4 +918,3 @@ void llvm::format_provider<llvm::json::Value>::format(
     llvm_unreachable("json::Value format options should be an integer");
   json::OStream(OS, IndentAmount).value(E);
 }
-

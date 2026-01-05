@@ -29,13 +29,13 @@ using ProbeCounterMap =
 class ProfileGeneratorBase {
 
 public:
-  ProfileGeneratorBase(ProfiledBinary *Binary) : Binary(Binary){};
+  ProfileGeneratorBase(ProfiledBinary *Binary) : Binary(Binary) {};
   ProfileGeneratorBase(ProfiledBinary *Binary,
                        const ContextSampleCounterMap *Counters)
-      : Binary(Binary), SampleCounters(Counters){};
+      : Binary(Binary), SampleCounters(Counters) {};
   ProfileGeneratorBase(ProfiledBinary *Binary,
                        const SampleProfileMap &&Profiles)
-      : Binary(Binary), ProfileMap(std::move(Profiles)){};
+      : Binary(Binary), ProfileMap(std::move(Profiles)) {};
 
   virtual ~ProfileGeneratorBase() = default;
   static std::unique_ptr<ProfileGeneratorBase>
@@ -158,9 +158,9 @@ class ProfileGenerator : public ProfileGeneratorBase {
 public:
   ProfileGenerator(ProfiledBinary *Binary,
                    const ContextSampleCounterMap *Counters)
-      : ProfileGeneratorBase(Binary, Counters){};
+      : ProfileGeneratorBase(Binary, Counters) {};
   ProfileGenerator(ProfiledBinary *Binary, const SampleProfileMap &&Profiles)
-      : ProfileGeneratorBase(Binary, std::move(Profiles)){};
+      : ProfileGeneratorBase(Binary, std::move(Profiles)) {};
   void generateProfile() override;
 
 private:
@@ -194,9 +194,9 @@ class CSProfileGenerator : public ProfileGeneratorBase {
 public:
   CSProfileGenerator(ProfiledBinary *Binary,
                      const ContextSampleCounterMap *Counters)
-      : ProfileGeneratorBase(Binary, Counters){};
+      : ProfileGeneratorBase(Binary, Counters) {};
   CSProfileGenerator(ProfiledBinary *Binary, SampleProfileMap &Profiles)
-      : ProfileGeneratorBase(Binary), ContextTracker(Profiles, nullptr){};
+      : ProfileGeneratorBase(Binary), ContextTracker(Profiles, nullptr) {};
   void generateProfile() override;
 
   // Trim the context stack at a given depth.

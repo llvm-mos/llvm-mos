@@ -27,7 +27,7 @@ public:
   void getDataBytes(llvm::SmallVector<uint8_t, 32> &bytes);
 };
 
+} // namespace pdb
 } // namespace llvm
-}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLCUSTOM_H

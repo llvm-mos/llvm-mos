@@ -50,7 +50,7 @@ void MCDisassembler::setSymbolizer(std::unique_ptr<MCSymbolizer> Symzer) {
   Symbolizer = std::move(Symzer);
 }
 
-#define SMC_PCASE(A, P)                                                         \
+#define SMC_PCASE(A, P)                                                        \
   case XCOFF::XMC_##A:                                                         \
     return P;
 

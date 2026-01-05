@@ -44,9 +44,9 @@ static SDValue createMemMemNode(SelectionDAG &DAG, const SDLoc &DL, unsigned Op,
                                        : DAG.getVTList(MVT::Other);
   SmallVector<SDValue, 6> Ops;
   if (Op == SystemZISD::MEMSET_MVC)
-    Ops = { Chain, Dst, LenAdj, Byte };
+    Ops = {Chain, Dst, LenAdj, Byte};
   else
-    Ops = { Chain, Dst, Src, LenAdj };
+    Ops = {Chain, Dst, Src, LenAdj};
   return DAG.getNode(Op, DL, VTs, Ops);
 }
 
@@ -178,8 +178,9 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
 static SDValue addIPMSequence(const SDLoc &DL, SDValue CCReg,
                               SelectionDAG &DAG) {
   SDValue IPM = DAG.getNode(SystemZISD::IPM, DL, MVT::i32, CCReg);
-  SDValue SHL = DAG.getNode(ISD::SHL, DL, MVT::i32, IPM,
-                            DAG.getConstant(30 - SystemZ::IPM_CC, DL, MVT::i32));
+  SDValue SHL =
+      DAG.getNode(ISD::SHL, DL, MVT::i32, IPM,
+                  DAG.getConstant(30 - SystemZ::IPM_CC, DL, MVT::i32));
   SDValue SRA = DAG.getNode(ISD::SRA, DL, MVT::i32, SHL,
                             DAG.getConstant(30, DL, MVT::i32));
   return SRA;
@@ -211,8 +212,8 @@ std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForMemchr(
   Char = DAG.getNode(ISD::AND, DL, MVT::i32, Char,
                      DAG.getConstant(255, DL, MVT::i32));
   SDValue Limit = DAG.getNode(ISD::ADD, DL, PtrVT, Src, Length);
-  SDValue End = DAG.getNode(SystemZISD::SEARCH_STRING, DL, VTs, Chain,
-                            Limit, Src, Char);
+  SDValue End =
+      DAG.getNode(SystemZISD::SEARCH_STRING, DL, VTs, Chain, Limit, Src, Char);
   SDValue CCReg = End.getValue(1);
   Chain = End.getValue(2);
 
@@ -260,8 +261,8 @@ static std::pair<SDValue, SDValue> getBoundedStrlen(SelectionDAG &DAG,
                                                     SDValue Limit) {
   EVT PtrVT = Src.getValueType();
   SDVTList VTs = DAG.getVTList(PtrVT, MVT::i32, MVT::Other);
-  SDValue End = DAG.getNode(SystemZISD::SEARCH_STRING, DL, VTs, Chain,
-                            Limit, Src, DAG.getConstant(0, DL, MVT::i32));
+  SDValue End = DAG.getNode(SystemZISD::SEARCH_STRING, DL, VTs, Chain, Limit,
+                            Src, DAG.getConstant(0, DL, MVT::i32));
   Chain = End.getValue(2);
   SDValue Len = DAG.getNode(ISD::SUB, DL, PtrVT, End, Src);
   return std::make_pair(Len, Chain);

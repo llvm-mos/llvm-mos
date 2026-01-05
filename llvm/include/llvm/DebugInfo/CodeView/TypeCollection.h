@@ -41,7 +41,7 @@ public:
     }
   }
 };
-}
-}
+} // namespace codeview
+} // namespace llvm
 
 #endif

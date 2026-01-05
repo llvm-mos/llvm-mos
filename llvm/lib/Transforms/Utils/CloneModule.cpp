@@ -220,5 +220,4 @@ extern "C" {
 LLVMModuleRef LLVMCloneModule(LLVMModuleRef M) {
   return wrap(CloneModule(*unwrap(M)).release());
 }
-
 }

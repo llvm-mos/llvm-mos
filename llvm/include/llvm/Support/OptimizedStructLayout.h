@@ -75,9 +75,7 @@ struct OptimizedStructLayoutField {
 
   /// Return true if this field has been assigned a fixed offset.
   /// After layout, this will be true of all the fields.
-  bool hasFixedOffset() const {
-    return (Offset != FlexibleOffset);
-  }
+  bool hasFixedOffset() const { return (Offset != FlexibleOffset); }
 
   /// Given that this field has a fixed offset, return the offset
   /// of the first byte following it.

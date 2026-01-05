@@ -28,7 +28,7 @@ private:
 
   LinePrinter &Printer;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

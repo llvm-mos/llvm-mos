@@ -26,7 +26,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "dead-mi-elimination"
 
-STATISTIC(NumDeletes,          "Number of dead instructions deleted");
+STATISTIC(NumDeletes, "Number of dead instructions deleted");
 
 namespace {
 class DeadMachineInstructionElimImpl {

@@ -52,10 +52,7 @@ cl::opt<uint64_t> DebugifyFunctionsLimit(
     cl::desc("Set max number of processed functions per pass."),
     cl::init(UINT_MAX));
 
-enum class Level {
-  Locations,
-  LocationsAndVariables
-};
+enum class Level { Locations, LocationsAndVariables };
 
 cl::opt<Level> DebugifyLevel(
     "debugify-level", cl::desc("Kind of debug info to add"),
@@ -937,12 +934,12 @@ struct CheckDebugifyModulePass : public ModulePass {
     bool Result;
     if (Mode == DebugifyMode::SyntheticDebugInfo)
       Result = checkDebugifyMetadata(M, M.functions(), NameOfWrappedPass,
-                                   "CheckModuleDebugify", Strip, StatsMap);
+                                     "CheckModuleDebugify", Strip, StatsMap);
     else
       Result = checkDebugInfoMetadata(
-        M, M.functions(), *DebugInfoBeforePass,
-        "CheckModuleDebugify (original debuginfo)", NameOfWrappedPass,
-        OrigDIVerifyBugsReportFilePath);
+          M, M.functions(), *DebugInfoBeforePass,
+          "CheckModuleDebugify (original debuginfo)", NameOfWrappedPass,
+          OrigDIVerifyBugsReportFilePath);
 
     return Result;
   }
@@ -955,8 +952,8 @@ struct CheckDebugifyModulePass : public ModulePass {
       StringRef OrigDIVerifyBugsReportFilePath = "")
       : ModulePass(ID), NameOfWrappedPass(NameOfWrappedPass),
         OrigDIVerifyBugsReportFilePath(OrigDIVerifyBugsReportFilePath),
-        StatsMap(StatsMap), DebugInfoBeforePass(DebugInfoBeforePass), Mode(Mode),
-        Strip(Strip) {}
+        StatsMap(StatsMap), DebugInfoBeforePass(DebugInfoBeforePass),
+        Mode(Mode), Strip(Strip) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -982,13 +979,13 @@ struct CheckDebugifyFunctionPass : public FunctionPass {
     bool Result;
     if (Mode == DebugifyMode::SyntheticDebugInfo)
       Result = checkDebugifyMetadata(M, make_range(FuncIt, std::next(FuncIt)),
-                                   NameOfWrappedPass, "CheckFunctionDebugify",
-                                   Strip, StatsMap);
+                                     NameOfWrappedPass, "CheckFunctionDebugify",
+                                     Strip, StatsMap);
     else
       Result = checkDebugInfoMetadata(
-        M, make_range(FuncIt, std::next(FuncIt)), *DebugInfoBeforePass,
-        "CheckFunctionDebugify (original debuginfo)", NameOfWrappedPass,
-        OrigDIVerifyBugsReportFilePath);
+          M, make_range(FuncIt, std::next(FuncIt)), *DebugInfoBeforePass,
+          "CheckFunctionDebugify (original debuginfo)", NameOfWrappedPass,
+          OrigDIVerifyBugsReportFilePath);
 
     return Result;
   }
@@ -1001,8 +998,8 @@ struct CheckDebugifyFunctionPass : public FunctionPass {
       StringRef OrigDIVerifyBugsReportFilePath = "")
       : FunctionPass(ID), NameOfWrappedPass(NameOfWrappedPass),
         OrigDIVerifyBugsReportFilePath(OrigDIVerifyBugsReportFilePath),
-        StatsMap(StatsMap), DebugInfoBeforePass(DebugInfoBeforePass), Mode(Mode),
-        Strip(Strip) {}
+        StatsMap(StatsMap), DebugInfoBeforePass(DebugInfoBeforePass),
+        Mode(Mode), Strip(Strip) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -1068,7 +1065,7 @@ PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &) {
   else
     collectDebugInfoMetadata(M, M.functions(), *DebugInfoBeforePass,
                              "ModuleDebugify (original debuginfo)",
-                              NameOfWrappedPass);
+                             NameOfWrappedPass);
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
@@ -1103,12 +1100,11 @@ PreservedAnalyses NewPMCheckDebugifyPass::run(Module &M,
                                               ModuleAnalysisManager &) {
   if (Mode == DebugifyMode::SyntheticDebugInfo)
     checkDebugifyMetadata(M, M.functions(), NameOfWrappedPass,
-                                   "CheckModuleDebugify", Strip, StatsMap);
+                          "CheckModuleDebugify", Strip, StatsMap);
   else
-    checkDebugInfoMetadata(
-      M, M.functions(), *DebugInfoBeforePass,
-      "CheckModuleDebugify (original debuginfo)", NameOfWrappedPass,
-      OrigDIVerifyBugsReportFilePath);
+    checkDebugInfoMetadata(M, M.functions(), *DebugInfoBeforePass,
+                           "CheckModuleDebugify (original debuginfo)",
+                           NameOfWrappedPass, OrigDIVerifyBugsReportFilePath);
 
   return PreservedAnalyses::all();
 }

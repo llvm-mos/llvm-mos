@@ -69,7 +69,8 @@ public:
   void emitGlobalType(const MCSymbolWasm *Sym) override;
   void emitTableType(const MCSymbolWasm *Sym) override;
   void emitTagType(const MCSymbolWasm *Sym) override;
-  void emitImportModule(const MCSymbolWasm *Sym, StringRef ImportModule) override;
+  void emitImportModule(const MCSymbolWasm *Sym,
+                        StringRef ImportModule) override;
   void emitImportName(const MCSymbolWasm *Sym, StringRef ImportName) override;
   void emitExportName(const MCSymbolWasm *Sym, StringRef ExportName) override;
 };
@@ -87,10 +88,8 @@ public:
   void emitTagType(const MCSymbolWasm *Sym) override {}
   void emitImportModule(const MCSymbolWasm *Sym,
                         StringRef ImportModule) override {}
-  void emitImportName(const MCSymbolWasm *Sym,
-                      StringRef ImportName) override {}
-  void emitExportName(const MCSymbolWasm *Sym,
-                      StringRef ExportName) override {}
+  void emitImportName(const MCSymbolWasm *Sym, StringRef ImportName) override {}
+  void emitExportName(const MCSymbolWasm *Sym, StringRef ExportName) override {}
 };
 
 /// This part is for null output

@@ -267,9 +267,7 @@ public:
   LLVM_ABI void dump(raw_ostream &OS, std::optional<FileEntry> FE);
 
   /// Get the number of addresses in this Gsym file.
-  uint32_t getNumAddresses() const {
-    return Hdr->NumAddresses;
-  }
+  uint32_t getNumAddresses() const { return Hdr->NumAddresses; }
 
   /// Gets an address from the address table.
   ///
@@ -281,7 +279,6 @@ public:
   LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const;
 
 protected:
-
   /// Get an appropriate address info offsets array.
   ///
   /// The address table in the GSYM file is stored as array of 1, 2, 4 or 8
@@ -292,10 +289,9 @@ protected:
   /// AddrOffsets member variable.
   ///
   /// \returns An ArrayRef of an appropriate address offset size.
-  template <class T> ArrayRef<T>
-  getAddrOffsets() const {
+  template <class T> ArrayRef<T> getAddrOffsets() const {
     return ArrayRef<T>(reinterpret_cast<const T *>(AddrOffsets.data()),
-                       AddrOffsets.size()/sizeof(T));
+                       AddrOffsets.size() / sizeof(T));
   }
 
   /// Get an appropriate address from the address table.

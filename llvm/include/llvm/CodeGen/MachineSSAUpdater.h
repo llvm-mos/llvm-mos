@@ -25,8 +25,8 @@ class MachineOperand;
 class MachineRegisterInfo;
 class TargetInstrInfo;
 class TargetRegisterClass;
-template<typename T> class SmallVectorImpl;
-template<typename T> class SSAUpdaterTraits;
+template <typename T> class SmallVectorImpl;
+template <typename T> class SSAUpdaterTraits;
 
 /// MachineSSAUpdater - This class updates SSA form for a set of virtual
 /// registers defined in multiple blocks.  This is used when code duplication
@@ -38,7 +38,7 @@ class MachineSSAUpdater {
 private:
   /// AvailableVals - This keeps track of which value to use on a per-block
   /// basis.  When we insert PHI nodes, we keep track of them here.
-  //typedef DenseMap<MachineBasicBlock*, Register> AvailableValsTy;
+  // typedef DenseMap<MachineBasicBlock*, Register> AvailableValsTy;
   void *AV = nullptr;
 
   /// Register class or bank and LLT of current virtual register.
@@ -46,7 +46,7 @@ private:
 
   /// InsertedPHIs - If this is non-null, the MachineSSAUpdater adds all PHI
   /// nodes that it creates to the vector.
-  SmallVectorImpl<MachineInstr*> *InsertedPHIs;
+  SmallVectorImpl<MachineInstr *> *InsertedPHIs;
 
   const TargetInstrInfo *TII = nullptr;
   MachineRegisterInfo *MRI = nullptr;
@@ -55,7 +55,7 @@ public:
   /// MachineSSAUpdater constructor.  If InsertedPHIs is specified, it will be
   /// filled in with all PHI Nodes created by rewriting.
   explicit MachineSSAUpdater(MachineFunction &MF,
-                        SmallVectorImpl<MachineInstr*> *NewPHI = nullptr);
+                             SmallVectorImpl<MachineInstr *> *NewPHI = nullptr);
   MachineSSAUpdater(const MachineSSAUpdater &) = delete;
   MachineSSAUpdater &operator=(const MachineSSAUpdater &) = delete;
   ~MachineSSAUpdater();

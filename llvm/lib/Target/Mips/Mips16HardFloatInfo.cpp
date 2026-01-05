@@ -19,18 +19,12 @@ namespace llvm {
 namespace Mips16HardFloatInfo {
 
 const FuncNameSignature PredefinedFuncs[] = {
-  { "__floatdidf", { NoSig, DRet } },
-  { "__floatdisf", { NoSig, FRet } },
-  { "__floatundidf", { NoSig, DRet } },
-  { "__fixsfdi", { FSig, NoFPRet } },
-  { "__fixunsdfsi", { DSig, NoFPRet } },
-  { "__fixunsdfdi", { DSig, NoFPRet } },
-  { "__fixdfdi", { DSig, NoFPRet } },
-  { "__fixunssfsi", { FSig, NoFPRet } },
-  { "__fixunssfdi", { FSig, NoFPRet } },
-  { "__floatundisf", { NoSig, FRet } },
-  { nullptr, { NoSig, NoFPRet } }
-};
+    {"__floatdidf", {NoSig, DRet}},    {"__floatdisf", {NoSig, FRet}},
+    {"__floatundidf", {NoSig, DRet}},  {"__fixsfdi", {FSig, NoFPRet}},
+    {"__fixunsdfsi", {DSig, NoFPRet}}, {"__fixunsdfdi", {DSig, NoFPRet}},
+    {"__fixdfdi", {DSig, NoFPRet}},    {"__fixunssfsi", {FSig, NoFPRet}},
+    {"__fixunssfdi", {FSig, NoFPRet}}, {"__floatundisf", {NoSig, FRet}},
+    {nullptr, {NoSig, NoFPRet}}};
 
 // just do a search for now. there are very few of these special cases.
 //
@@ -45,5 +39,5 @@ extern FuncSignature const *findFuncSignature(const char *name) {
   }
   return nullptr;
 }
-}
-}
+} // namespace Mips16HardFloatInfo
+} // namespace llvm

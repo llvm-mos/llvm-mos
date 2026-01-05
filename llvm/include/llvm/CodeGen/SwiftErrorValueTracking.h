@@ -22,14 +22,13 @@
 #include "llvm/IR/DebugLoc.h"
 #include <utility>
 
-
 namespace llvm {
-  class Function;
-  class MachineBasicBlock;
-  class MachineFunction;
-  class MachineInstr;
-  class TargetInstrInfo;
-  class TargetLowering;
+class Function;
+class MachineBasicBlock;
+class MachineFunction;
+class MachineInstr;
+class TargetInstrInfo;
+class TargetLowering;
 
 class SwiftErrorValueTracking {
   // Some useful objects to reduce the number of function arguments needed.
@@ -57,7 +56,7 @@ class SwiftErrorValueTracking {
   /// The swifterror argument of the current function.
   const Value *SwiftErrorArg;
 
-  using SwiftErrorValues = SmallVector<const Value*, 1>;
+  using SwiftErrorValues = SmallVector<const Value *, 1>;
   /// A function can only have a single swifterror argument. And if it does
   /// have a swifterror argument, it must be the first entry in
   /// SwiftErrorVals.
@@ -69,9 +68,7 @@ public:
 
   /// Get the (unique) function argument that was marked swifterror, or nullptr
   /// if this function has no swifterror args.
-  const Value *getFunctionArg() const {
-    return SwiftErrorArg;
-  }
+  const Value *getFunctionArg() const { return SwiftErrorArg; }
 
   /// Get or create the swifterror value virtual register in
   /// VRegDefMap for this basic block.
@@ -103,6 +100,6 @@ public:
                       BasicBlock::const_iterator End);
 };
 
-}
+} // namespace llvm
 
 #endif

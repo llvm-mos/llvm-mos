@@ -196,9 +196,8 @@ public:
   bool isCoalescableExtInstr(const MachineInstr &MI, Register &SrcReg,
                              Register &DstReg, unsigned &SubIdx) const override;
 
-  bool
-  areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
-                                  const MachineInstr &MIb) const override;
+  bool areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
+                                       const MachineInstr &MIb) const override;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
@@ -352,8 +351,9 @@ public:
                         MCRegister SrcReg, bool KillSrc, unsigned Opcode,
                         llvm::ArrayRef<unsigned> Indices) const;
   void copyGPRRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                       const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                       bool KillSrc, unsigned Opcode, unsigned ZeroReg,
+                       const DebugLoc &DL, MCRegister DestReg,
+                       MCRegister SrcReg, bool KillSrc, unsigned Opcode,
+                       unsigned ZeroReg,
                        llvm::ArrayRef<unsigned> Indices) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, Register DestReg, Register SrcReg,
@@ -376,12 +376,12 @@ public:
   bool isSubregFoldable() const override { return true; }
 
   using TargetInstrInfo::foldMemoryOperandImpl;
-  MachineInstr *
-  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr,
-                        VirtRegMap *VRM = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops,
+                                      MachineBasicBlock::iterator InsertPt,
+                                      int FrameIndex,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
 
   /// \returns true if a branch from an instruction with opcode \p BranchOpc
   ///  bytes is capable of jumping to a position \p BrOffset bytes away.
@@ -774,8 +774,12 @@ unsigned getBLRCallOpcode(const MachineFunction &MF);
 static inline unsigned getXPACOpcodeForKey(AArch64PACKey::ID K) {
   using namespace AArch64PACKey;
   switch (K) {
-  case IA: case IB: return AArch64::XPACI;
-  case DA: case DB: return AArch64::XPACD;
+  case IA:
+  case IB:
+    return AArch64::XPACI;
+  case DA:
+  case DB:
+    return AArch64::XPACD;
   }
   llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
@@ -785,10 +789,14 @@ static inline unsigned getXPACOpcodeForKey(AArch64PACKey::ID K) {
 static inline unsigned getAUTOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   using namespace AArch64PACKey;
   switch (K) {
-  case IA: return Zero ? AArch64::AUTIZA : AArch64::AUTIA;
-  case IB: return Zero ? AArch64::AUTIZB : AArch64::AUTIB;
-  case DA: return Zero ? AArch64::AUTDZA : AArch64::AUTDA;
-  case DB: return Zero ? AArch64::AUTDZB : AArch64::AUTDB;
+  case IA:
+    return Zero ? AArch64::AUTIZA : AArch64::AUTIA;
+  case IB:
+    return Zero ? AArch64::AUTIZB : AArch64::AUTIB;
+  case DA:
+    return Zero ? AArch64::AUTDZA : AArch64::AUTDA;
+  case DB:
+    return Zero ? AArch64::AUTDZB : AArch64::AUTDB;
   }
   llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
@@ -798,20 +806,24 @@ static inline unsigned getAUTOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
 static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   using namespace AArch64PACKey;
   switch (K) {
-  case IA: return Zero ? AArch64::PACIZA : AArch64::PACIA;
-  case IB: return Zero ? AArch64::PACIZB : AArch64::PACIB;
-  case DA: return Zero ? AArch64::PACDZA : AArch64::PACDA;
-  case DB: return Zero ? AArch64::PACDZB : AArch64::PACDB;
+  case IA:
+    return Zero ? AArch64::PACIZA : AArch64::PACIA;
+  case IB:
+    return Zero ? AArch64::PACIZB : AArch64::PACIB;
+  case DA:
+    return Zero ? AArch64::PACDZA : AArch64::PACDA;
+  case DB:
+    return Zero ? AArch64::PACDZB : AArch64::PACDB;
   }
   llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
 // struct TSFlags {
-#define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)        // 3-bits
-#define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3)  // 4-bits
-#define TSFLAG_FALSE_LANE_TYPE(X)       ((X) << 7)  // 2-bits
-#define TSFLAG_INSTR_FLAGS(X)           ((X) << 9)  // 2-bits
-#define TSFLAG_SME_MATRIX_TYPE(X)       ((X) << 11) // 3-bits
+#define TSFLAG_ELEMENT_SIZE_TYPE(X) (X)            // 3-bits
+#define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3) // 4-bits
+#define TSFLAG_FALSE_LANE_TYPE(X) ((X) << 7)       // 2-bits
+#define TSFLAG_INSTR_FLAGS(X) ((X) << 9)           // 2-bits
+#define TSFLAG_SME_MATRIX_TYPE(X) ((X) << 11)      // 3-bits
 // }
 
 namespace AArch64 {
@@ -819,46 +831,46 @@ namespace AArch64 {
 enum ElementSizeType {
   ElementSizeMask = TSFLAG_ELEMENT_SIZE_TYPE(0x7),
   ElementSizeNone = TSFLAG_ELEMENT_SIZE_TYPE(0x0),
-  ElementSizeB    = TSFLAG_ELEMENT_SIZE_TYPE(0x1),
-  ElementSizeH    = TSFLAG_ELEMENT_SIZE_TYPE(0x2),
-  ElementSizeS    = TSFLAG_ELEMENT_SIZE_TYPE(0x3),
-  ElementSizeD    = TSFLAG_ELEMENT_SIZE_TYPE(0x4),
+  ElementSizeB = TSFLAG_ELEMENT_SIZE_TYPE(0x1),
+  ElementSizeH = TSFLAG_ELEMENT_SIZE_TYPE(0x2),
+  ElementSizeS = TSFLAG_ELEMENT_SIZE_TYPE(0x3),
+  ElementSizeD = TSFLAG_ELEMENT_SIZE_TYPE(0x4),
 };
 
 enum DestructiveInstType {
-  DestructiveInstTypeMask       = TSFLAG_DESTRUCTIVE_INST_TYPE(0xf),
-  NotDestructive                = TSFLAG_DESTRUCTIVE_INST_TYPE(0x0),
-  DestructiveOther              = TSFLAG_DESTRUCTIVE_INST_TYPE(0x1),
-  DestructiveUnary              = TSFLAG_DESTRUCTIVE_INST_TYPE(0x2),
-  DestructiveBinaryImm          = TSFLAG_DESTRUCTIVE_INST_TYPE(0x3),
-  DestructiveBinaryShImmUnpred  = TSFLAG_DESTRUCTIVE_INST_TYPE(0x4),
-  DestructiveBinary             = TSFLAG_DESTRUCTIVE_INST_TYPE(0x5),
-  DestructiveBinaryComm         = TSFLAG_DESTRUCTIVE_INST_TYPE(0x6),
-  DestructiveBinaryCommWithRev  = TSFLAG_DESTRUCTIVE_INST_TYPE(0x7),
+  DestructiveInstTypeMask = TSFLAG_DESTRUCTIVE_INST_TYPE(0xf),
+  NotDestructive = TSFLAG_DESTRUCTIVE_INST_TYPE(0x0),
+  DestructiveOther = TSFLAG_DESTRUCTIVE_INST_TYPE(0x1),
+  DestructiveUnary = TSFLAG_DESTRUCTIVE_INST_TYPE(0x2),
+  DestructiveBinaryImm = TSFLAG_DESTRUCTIVE_INST_TYPE(0x3),
+  DestructiveBinaryShImmUnpred = TSFLAG_DESTRUCTIVE_INST_TYPE(0x4),
+  DestructiveBinary = TSFLAG_DESTRUCTIVE_INST_TYPE(0x5),
+  DestructiveBinaryComm = TSFLAG_DESTRUCTIVE_INST_TYPE(0x6),
+  DestructiveBinaryCommWithRev = TSFLAG_DESTRUCTIVE_INST_TYPE(0x7),
   DestructiveTernaryCommWithRev = TSFLAG_DESTRUCTIVE_INST_TYPE(0x8),
-  Destructive2xRegImmUnpred     = TSFLAG_DESTRUCTIVE_INST_TYPE(0x9),
-  DestructiveUnaryPassthru      = TSFLAG_DESTRUCTIVE_INST_TYPE(0xa),
+  Destructive2xRegImmUnpred = TSFLAG_DESTRUCTIVE_INST_TYPE(0x9),
+  DestructiveUnaryPassthru = TSFLAG_DESTRUCTIVE_INST_TYPE(0xa),
 };
 
 enum FalseLaneType {
-  FalseLanesMask  = TSFLAG_FALSE_LANE_TYPE(0x3),
-  FalseLanesZero  = TSFLAG_FALSE_LANE_TYPE(0x1),
+  FalseLanesMask = TSFLAG_FALSE_LANE_TYPE(0x3),
+  FalseLanesZero = TSFLAG_FALSE_LANE_TYPE(0x1),
   FalseLanesUndef = TSFLAG_FALSE_LANE_TYPE(0x2),
 };
 
 // NOTE: This is a bit field.
-static const uint64_t InstrFlagIsWhile     = TSFLAG_INSTR_FLAGS(0x1);
+static const uint64_t InstrFlagIsWhile = TSFLAG_INSTR_FLAGS(0x1);
 static const uint64_t InstrFlagIsPTestLike = TSFLAG_INSTR_FLAGS(0x2);
 
 enum SMEMatrixType {
   SMEMatrixTypeMask = TSFLAG_SME_MATRIX_TYPE(0x7),
-  SMEMatrixNone     = TSFLAG_SME_MATRIX_TYPE(0x0),
-  SMEMatrixTileB    = TSFLAG_SME_MATRIX_TYPE(0x1),
-  SMEMatrixTileH    = TSFLAG_SME_MATRIX_TYPE(0x2),
-  SMEMatrixTileS    = TSFLAG_SME_MATRIX_TYPE(0x3),
-  SMEMatrixTileD    = TSFLAG_SME_MATRIX_TYPE(0x4),
-  SMEMatrixTileQ    = TSFLAG_SME_MATRIX_TYPE(0x5),
-  SMEMatrixArray    = TSFLAG_SME_MATRIX_TYPE(0x6),
+  SMEMatrixNone = TSFLAG_SME_MATRIX_TYPE(0x0),
+  SMEMatrixTileB = TSFLAG_SME_MATRIX_TYPE(0x1),
+  SMEMatrixTileH = TSFLAG_SME_MATRIX_TYPE(0x2),
+  SMEMatrixTileS = TSFLAG_SME_MATRIX_TYPE(0x3),
+  SMEMatrixTileD = TSFLAG_SME_MATRIX_TYPE(0x4),
+  SMEMatrixTileQ = TSFLAG_SME_MATRIX_TYPE(0x5),
+  SMEMatrixArray = TSFLAG_SME_MATRIX_TYPE(0x6),
 };
 
 #undef TSFLAG_ELEMENT_SIZE_TYPE
@@ -872,7 +884,7 @@ int getSVERevInstr(uint16_t Opcode);
 int getSVENonRevInstr(uint16_t Opcode);
 
 int getSMEPseudoMap(uint16_t Opcode);
-}
+} // namespace AArch64
 
 } // end namespace llvm
 

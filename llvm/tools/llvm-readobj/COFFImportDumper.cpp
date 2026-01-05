@@ -27,9 +27,15 @@ void dumpCOFFImportFile(const COFFImportFile *File, ScopedPrinter &Writer) {
 
   const coff_import_header *H = File->getCOFFImportHeader();
   switch (H->getType()) {
-  case COFF::IMPORT_CODE:  Writer.printString("Type", "code"); break;
-  case COFF::IMPORT_DATA:  Writer.printString("Type", "data"); break;
-  case COFF::IMPORT_CONST: Writer.printString("Type", "const"); break;
+  case COFF::IMPORT_CODE:
+    Writer.printString("Type", "code");
+    break;
+  case COFF::IMPORT_DATA:
+    Writer.printString("Type", "data");
+    break;
+  case COFF::IMPORT_CONST:
+    Writer.printString("Type", "const");
+    break;
   }
 
   switch (H->getNameType()) {

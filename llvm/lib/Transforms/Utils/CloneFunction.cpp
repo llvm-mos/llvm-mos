@@ -539,16 +539,16 @@ void PruningFunctionCloner::CloneBlock(
 
   // Keep a cursor pointing at the last place we cloned debug-info records from.
   BasicBlock::const_iterator DbgCursor = StartingInst;
-  auto CloneDbgRecordsToHere =
-      [&DbgCursor](Instruction *NewInst, BasicBlock::const_iterator II) {
-        // Clone debug-info records onto this instruction. Iterate through any
-        // source-instructions we've cloned and then subsequently optimised
-        // away, so that their debug-info doesn't go missing.
-        for (; DbgCursor != II; ++DbgCursor)
-          NewInst->cloneDebugInfoFrom(&*DbgCursor, std::nullopt, false);
-        NewInst->cloneDebugInfoFrom(&*II);
-        DbgCursor = std::next(II);
-      };
+  auto CloneDbgRecordsToHere = [&DbgCursor](Instruction *NewInst,
+                                            BasicBlock::const_iterator II) {
+    // Clone debug-info records onto this instruction. Iterate through any
+    // source-instructions we've cloned and then subsequently optimised
+    // away, so that their debug-info doesn't go missing.
+    for (; DbgCursor != II; ++DbgCursor)
+      NewInst->cloneDebugInfoFrom(&*DbgCursor, std::nullopt, false);
+    NewInst->cloneDebugInfoFrom(&*II);
+    DbgCursor = std::next(II);
+  };
 
   // Loop over all instructions, and copy them over, DCE'ing as we go.  This
   // loop doesn't include the terminator.
@@ -581,8 +581,7 @@ void PruningFunctionCloner::CloneBlock(
       // a mapping to the new value. Non-constant operands may be incomplete at
       // this stage, thus instruction simplification is performed after
       // processing phi-nodes.
-      if (Value *V = ConstantFoldInstruction(
-              NewInst, BB->getDataLayout())) {
+      if (Value *V = ConstantFoldInstruction(NewInst, BB->getDataLayout())) {
         if (isInstructionTriviallyDead(NewInst)) {
           VMap[&*II] = V;
           NewInst->eraseFromParent();
@@ -980,10 +979,12 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 /// constant arguments cause a significant amount of code in the callee to be
 /// dead.  Since this doesn't produce an exact copy of the input, it can't be
 /// used for things like CloneFunction or CloneModule.
-void llvm::CloneAndPruneFunctionInto(
-    Function *NewFunc, const Function *OldFunc, ValueToValueMapTy &VMap,
-    bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
-    const char *NameSuffix, ClonedCodeInfo *CodeInfo) {
+void llvm::CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
+                                     ValueToValueMapTy &VMap,
+                                     bool ModuleLevelChanges,
+                                     SmallVectorImpl<ReturnInst *> &Returns,
+                                     const char *NameSuffix,
+                                     ClonedCodeInfo *CodeInfo) {
   CloneAndPruneIntoFromInst(NewFunc, OldFunc, &OldFunc->front().front(), VMap,
                             ModuleLevelChanges, Returns, NameSuffix, CodeInfo);
 }

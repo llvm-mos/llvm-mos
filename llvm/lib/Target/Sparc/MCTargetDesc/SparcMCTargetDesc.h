@@ -60,7 +60,7 @@ struct PrefetchTag {
 #define GET_PrefetchTagsList_DECL
 #include "SparcGenSearchableTables.inc"
 } // end namespace SparcPrefetchTag
-} // End llvm namespace
+} // namespace llvm
 
 // Defines symbolic names for Sparc registers.  This defines a mapping from
 // register name to register number.

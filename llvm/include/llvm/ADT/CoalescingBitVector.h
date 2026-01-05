@@ -53,8 +53,7 @@ public:
 
   /// Construct by passing in a CoalescingBitVector<IndexT>::Allocator
   /// reference.
-  CoalescingBitVector(Allocator &Alloc)
-      : Alloc(&Alloc), Intervals(Alloc) {}
+  CoalescingBitVector(Allocator &Alloc) : Alloc(&Alloc), Intervals(Alloc) {}
 
   /// \name Copy/move constructors and assignment operators.
   /// @{
@@ -162,8 +161,8 @@ public:
     getOverlaps(RHS, Overlaps);
 
     // Insert the non-overlapping parts of all the intervals from RHS.
-    for (auto It = RHS.Intervals.begin(), End = RHS.Intervals.end();
-         It != End; ++It) {
+    for (auto It = RHS.Intervals.begin(), End = RHS.Intervals.end(); It != End;
+         ++It) {
       IndexT Start = It.start();
       IndexT Stop = It.stop();
       SmallVector<IntervalT, 8> NonOverlappingParts;
@@ -372,8 +371,7 @@ public:
 
   void print(raw_ostream &OS) const {
     OS << "{";
-    for (auto It = Intervals.begin(), End = Intervals.end(); It != End;
-         ++It) {
+    for (auto It = Intervals.begin(), End = Intervals.end(); It != End; ++It) {
       OS << "[" << It.start();
       if (It.start() != It.stop())
         OS << ", " << It.stop();

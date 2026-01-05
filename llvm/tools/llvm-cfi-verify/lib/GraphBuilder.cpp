@@ -69,7 +69,7 @@ std::vector<uint64_t> GraphResult::flattenAddress(uint64_t Address) const {
 }
 
 void printPairToDOT(const FileAnalysis &Analysis, raw_ostream &OS,
-                          uint64_t From, uint64_t To) {
+                    uint64_t From, uint64_t To) {
   OS << "  \"" << format_hex(From, 2) << ": ";
   Analysis.printInstruction(Analysis.getInstructionOrDie(From), OS);
   OS << "\" -> \"" << format_hex(To, 2) << ": ";

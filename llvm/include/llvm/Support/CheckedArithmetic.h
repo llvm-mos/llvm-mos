@@ -35,7 +35,7 @@ checkedOp(T LHS, T RHS, F Op, bool Signed = true) {
     return std::nullopt;
   return Signed ? Out.getSExtValue() : Out.getZExtValue();
 }
-}
+} // namespace
 
 namespace llvm {
 
@@ -106,6 +106,6 @@ checkedMulAddUnsigned(T A, T B, T C) {
   return std::nullopt;
 }
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

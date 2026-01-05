@@ -10,7 +10,7 @@
 
 using namespace llvm;
 
-void SparcMachineFunctionInfo::anchor() { }
+void SparcMachineFunctionInfo::anchor() {}
 
 MachineFunctionInfo *SparcMachineFunctionInfo::clone(
     BumpPtrAllocator &Allocator, MachineFunction &DestMF,

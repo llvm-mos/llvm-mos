@@ -96,6 +96,6 @@ private:
   /// Advance the iterator to the next line.
   LLVM_ABI void advance();
 };
-}
+} // namespace llvm
 
 #endif

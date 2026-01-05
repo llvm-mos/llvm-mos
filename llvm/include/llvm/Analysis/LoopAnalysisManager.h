@@ -157,6 +157,6 @@ typedef OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop,
 
 /// Returns the minimum set of Analyses that all loop passes must preserve.
 LLVM_ABI PreservedAnalyses getLoopPassPreservedAnalyses();
-}
+} // namespace llvm
 
 #endif // LLVM_ANALYSIS_LOOPANALYSISMANAGER_H

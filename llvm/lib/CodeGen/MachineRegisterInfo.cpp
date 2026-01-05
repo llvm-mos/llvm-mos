@@ -34,8 +34,9 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableSubRegLiveness("enable-subreg-liveness", cl::Hidden,
-  cl::init(true), cl::desc("Enable subregister liveness tracking."));
+static cl::opt<bool>
+    EnableSubRegLiveness("enable-subreg-liveness", cl::Hidden, cl::init(true),
+                         cl::desc("Enable subregister liveness tracking."));
 
 // Pin the vtable to this file.
 void MachineRegisterInfo::Delegate::anchor() {}
@@ -48,14 +49,14 @@ MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
   unsigned NumRegs = getTargetRegisterInfo()->getNumRegs();
   VRegInfo.reserve(256);
   UsedPhysRegMask.resize(NumRegs);
-  PhysRegUseDefLists.reset(new MachineOperand*[NumRegs]());
+  PhysRegUseDefLists.reset(new MachineOperand *[NumRegs]());
   TheDelegates.clear();
 }
 
 /// setRegClass - Set the register class of the specified virtual register.
 ///
-void
-MachineRegisterInfo::setRegClass(Register Reg, const TargetRegisterClass *RC) {
+void MachineRegisterInfo::setRegClass(Register Reg,
+                                      const TargetRegisterClass *RC) {
   assert(RC && RC->isAllocatable() && "Invalid RC for virtual register");
   VRegInfo[Reg].first = RC;
 }
@@ -86,10 +87,9 @@ const TargetRegisterClass *MachineRegisterInfo::constrainRegClass(
   return ::constrainRegClass(*this, Reg, getRegClass(Reg), RC, MinNumRegs);
 }
 
-bool
-MachineRegisterInfo::constrainRegAttrs(Register Reg,
-                                       Register ConstrainingReg,
-                                       unsigned MinNumRegs) {
+bool MachineRegisterInfo::constrainRegAttrs(Register Reg,
+                                            Register ConstrainingReg,
+                                            unsigned MinNumRegs) {
   const LLT RegTy = getType(Reg);
   const LLT ConstrainingRegTy = getType(ConstrainingReg);
   if (RegTy.isValid() && ConstrainingRegTy.isValid() &&
@@ -116,8 +116,7 @@ MachineRegisterInfo::constrainRegAttrs(Register Reg,
   return true;
 }
 
-bool
-MachineRegisterInfo::recomputeRegClass(Register Reg) {
+bool MachineRegisterInfo::recomputeRegClass(Register Reg) {
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   const TargetRegisterClass *OldRC = getRegClass(Reg);
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
@@ -187,8 +186,8 @@ void MachineRegisterInfo::setType(Register VReg, LLT Ty) {
   VRegToType[VReg] = Ty;
 }
 
-Register
-MachineRegisterInfo::createGenericVirtualRegister(LLT Ty, StringRef Name) {
+Register MachineRegisterInfo::createGenericVirtualRegister(LLT Ty,
+                                                           StringRef Name) {
   // New virtual register number.
   Register Reg = createIncompleteVirtualRegister(Name);
   // FIXME: Should we use a dummy register class?
@@ -235,22 +234,21 @@ void MachineRegisterInfo::verifyUseList(Register Reg) const {
     }
     MachineOperand *MO0 = &MI->getOperand(0);
     unsigned NumOps = MI->getNumOperands();
-    if (!(MO >= MO0 && MO < MO0+NumOps)) {
+    if (!(MO >= MO0 && MO < MO0 + NumOps)) {
       errs() << printReg(Reg, getTargetRegisterInfo())
              << " use list MachineOperand " << MO
              << " doesn't belong to parent MI: " << *MI;
       Valid = false;
     }
     if (!MO->isReg()) {
-      errs() << printReg(Reg, getTargetRegisterInfo())
-             << " MachineOperand " << MO << ": " << *MO
-             << " is not a register\n";
+      errs() << printReg(Reg, getTargetRegisterInfo()) << " MachineOperand "
+             << MO << ": " << *MO << " is not a register\n";
       Valid = false;
     }
     if (MO->getReg() != Reg) {
       errs() << printReg(Reg, getTargetRegisterInfo())
-             << " use-list MachineOperand " << MO << ": "
-             << *MO << " is the wrong register\n";
+             << " use-list MachineOperand " << MO << ": " << *MO
+             << " is the wrong register\n";
       Valid = false;
     }
   }
@@ -336,8 +334,7 @@ void MachineRegisterInfo::removeRegOperandFromUseList(MachineOperand *MO) {
 /// trivial anyway).
 ///
 /// The Src and Dst ranges may overlap.
-void MachineRegisterInfo::moveOperands(MachineOperand *Dst,
-                                       MachineOperand *Src,
+void MachineRegisterInfo::moveOperands(MachineOperand *Dst, MachineOperand *Src,
                                        unsigned NumOps) {
   assert(Src != Dst && NumOps && "Noop moveOperands");
 
@@ -415,7 +412,8 @@ MachineInstr *MachineRegisterInfo::getVRegDef(Register Reg) const {
 /// specified virtual register or null if none is found.  If there are
 /// multiple definitions or no definition, return null.
 MachineInstr *MachineRegisterInfo::getUniqueVRegDef(Register Reg) const {
-  if (def_empty(Reg)) return nullptr;
+  if (def_empty(Reg))
+    return nullptr;
   def_instr_iterator I = def_instr_begin(Reg);
   if (std::next(I) != def_instr_end())
     return nullptr;
@@ -482,10 +480,9 @@ Register MachineRegisterInfo::getLiveInVirtReg(MCRegister PReg) const {
 
 /// EmitLiveInCopies - Emit copies to initialize livein virtual registers
 /// into the given entry block.
-void
-MachineRegisterInfo::EmitLiveInCopies(MachineBasicBlock *EntryMBB,
-                                      const TargetRegisterInfo &TRI,
-                                      const TargetInstrInfo &TII) {
+void MachineRegisterInfo::EmitLiveInCopies(MachineBasicBlock *EntryMBB,
+                                           const TargetRegisterInfo &TRI,
+                                           const TargetInstrInfo &TII) {
   // Emit the copies into the top of the block.
   for (unsigned i = 0, e = LiveIns.size(); i != e; ++i)
     if (LiveIns[i].second) {
@@ -496,12 +493,13 @@ MachineRegisterInfo::EmitLiveInCopies(MachineBasicBlock *EntryMBB,
         // records for unused arguments in the first place, but it's
         // complicated by the debug info code for arguments.
         LiveIns.erase(LiveIns.begin() + i);
-        --i; --e;
+        --i;
+        --e;
       } else {
         // Emit a copy.
         BuildMI(*EntryMBB, EntryMBB->begin(), DebugLoc(),
                 TII.get(TargetOpcode::COPY), LiveIns[i].second)
-          .addReg(LiveIns[i].first);
+            .addReg(LiveIns[i].first);
 
         // Add the register to the entry block live-in set.
         EntryMBB->addLiveIn(LiveIns[i].first);
@@ -541,8 +539,7 @@ bool MachineRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
 
   // Check if any overlapping register is modified, or allocatable so it may be
   // used later.
-  for (MCRegAliasIterator AI(PhysReg, TRI, true);
-       AI.isValid(); ++AI)
+  for (MCRegAliasIterator AI(PhysReg, TRI, true); AI.isValid(); ++AI)
     if (!def_empty(*AI) || isAllocatable(*AI))
       return false;
   return true;
@@ -554,7 +551,8 @@ bool MachineRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
 void MachineRegisterInfo::markUsesInDebugValueAsUndef(Register Reg) const {
   // Mark any DBG_VALUE* that uses Reg as undef (but don't delete it.)
   // We use make_early_inc_range because setReg invalidates the iterator.
-  for (MachineInstr &UseMI : llvm::make_early_inc_range(use_instructions(Reg))) {
+  for (MachineInstr &UseMI :
+       llvm::make_early_inc_range(use_instructions(Reg))) {
     if (UseMI.isDebugValue() && UseMI.hasDebugOperandForReg(Reg))
       UseMI.setDebugValueUndef();
   }

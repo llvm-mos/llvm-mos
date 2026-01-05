@@ -164,7 +164,7 @@ class [[nodiscard]] Error {
 
   // handleErrors needs to be able to set the Checked flag.
   template <typename... HandlerTs>
-  friend Error handleErrors(Error E, HandlerTs &&... Handlers);
+  friend Error handleErrors(Error E, HandlerTs &&...Handlers);
   // visitErrors needs direct access to the payload.
   template <typename HandlerT>
   friend void visitErrors(const Error &E, HandlerT H);
@@ -249,7 +249,7 @@ public:
 
   /// Returns the dynamic class id of this error, or null if this is a success
   /// value.
-  const void* dynamicClassID() const {
+  const void *dynamicClassID() const {
     if (!getPtr())
       return nullptr;
     return getPtr()->dynamicClassID();
@@ -274,9 +274,8 @@ private:
 
   ErrorInfoBase *getPtr() const {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    return reinterpret_cast<ErrorInfoBase*>(
-             reinterpret_cast<uintptr_t>(Payload) &
-             ~static_cast<uintptr_t>(0x1));
+    return reinterpret_cast<ErrorInfoBase *>(
+        reinterpret_cast<uintptr_t>(Payload) & ~static_cast<uintptr_t>(0x1));
 #else
     return Payload;
 #endif
@@ -284,10 +283,9 @@ private:
 
   void setPtr(ErrorInfoBase *EI) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    Payload = reinterpret_cast<ErrorInfoBase*>(
-                (reinterpret_cast<uintptr_t>(EI) &
-                 ~static_cast<uintptr_t>(0x1)) |
-                (reinterpret_cast<uintptr_t>(Payload) & 0x1));
+    Payload = reinterpret_cast<ErrorInfoBase *>(
+        (reinterpret_cast<uintptr_t>(EI) & ~static_cast<uintptr_t>(0x1)) |
+        (reinterpret_cast<uintptr_t>(Payload) & 0x1));
 #else
     Payload = EI;
 #endif
@@ -303,10 +301,9 @@ private:
 
   void setChecked(bool V) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    Payload = reinterpret_cast<ErrorInfoBase*>(
-                (reinterpret_cast<uintptr_t>(Payload) &
-                  ~static_cast<uintptr_t>(0x1)) |
-                  (V ? 0 : 1));
+    Payload = reinterpret_cast<ErrorInfoBase *>(
+        (reinterpret_cast<uintptr_t>(Payload) & ~static_cast<uintptr_t>(0x1)) |
+        (V ? 0 : 1));
 #endif
   }
 
@@ -337,7 +334,7 @@ inline ErrorSuccess Error::success() { return ErrorSuccess(); }
 
 /// Make a Error instance representing failure using the given error info
 /// type.
-template <typename ErrT, typename... ArgTs> Error make_error(ArgTs &&... Args) {
+template <typename ErrT, typename... ArgTs> Error make_error(ArgTs &&...Args) {
   return Error(std::make_unique<ErrT>(std::forward<ArgTs>(Args)...));
 }
 
@@ -370,7 +367,7 @@ class LLVM_ABI ErrorList final : public ErrorInfo<ErrorList> {
   // handleErrors needs to be able to iterate the payload list of an
   // ErrorList.
   template <typename... HandlerTs>
-  friend Error handleErrors(Error E, HandlerTs &&... Handlers);
+  friend Error handleErrors(Error E, HandlerTs &&...Handlers);
   // visitErrors needs to be able to iterate the payload list of an
   // ErrorList.
   template <typename HandlerT>
@@ -508,7 +505,8 @@ public:
       : HasError(true)
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
         // Expected is unchecked upon construction in Debug builds.
-        , Unchecked(true)
+        ,
+        Unchecked(true)
 #endif
   {
     assert(Err && "Cannot create Expected<T> from Error success value.");
@@ -825,7 +823,7 @@ T cantFail(Expected<T> ValOrErr, const char *Msg = nullptr) {
 ///   Bar &X = cantFail(foo(false));
 ///   @endcode
 template <typename T>
-T& cantFail(Expected<T&> ValOrErr, const char *Msg = nullptr) {
+T &cantFail(Expected<T &> ValOrErr, const char *Msg = nullptr) {
   if (ValOrErr)
     return *ValOrErr;
   else {
@@ -949,7 +947,7 @@ inline Error handleErrorImpl(std::unique_ptr<ErrorInfoBase> Payload) {
 
 template <typename HandlerT, typename... HandlerTs>
 Error handleErrorImpl(std::unique_ptr<ErrorInfoBase> Payload,
-                      HandlerT &&Handler, HandlerTs &&... Handlers) {
+                      HandlerT &&Handler, HandlerTs &&...Handlers) {
   if (ErrorHandlerTraits<HandlerT>::appliesTo(*Payload))
     return ErrorHandlerTraits<HandlerT>::apply(std::forward<HandlerT>(Handler),
                                                std::move(Payload));
@@ -964,7 +962,7 @@ Error handleErrorImpl(std::unique_ptr<ErrorInfoBase> Payload,
 /// or returned. If you intend to handle all errors use handleAllErrors
 /// (which returns void, and will abort() on unhandled errors) instead.
 template <typename... HandlerTs>
-Error handleErrors(Error E, HandlerTs &&... Hs) {
+Error handleErrors(Error E, HandlerTs &&...Hs) {
   if (!E)
     return Error::success();
 
@@ -987,15 +985,13 @@ Error handleErrors(Error E, HandlerTs &&... Hs) {
 /// *must* be handled by the given handlers (i.e. there must be no remaining
 /// errors after running the handlers, or llvm_unreachable is called).
 template <typename... HandlerTs>
-void handleAllErrors(Error E, HandlerTs &&... Handlers) {
+void handleAllErrors(Error E, HandlerTs &&...Handlers) {
   cantFail(handleErrors(std::move(E), std::forward<HandlerTs>(Handlers)...));
 }
 
 /// Check that E is a non-error, then drop it.
 /// If E is an error, llvm_unreachable will be called.
-inline void handleAllErrors(Error E) {
-  cantFail(std::move(E));
-}
+inline void handleAllErrors(Error E) { cantFail(std::move(E)); }
 
 /// Visit all the ErrorInfo(s) contained in E by passing them to the respective
 /// handler, without consuming the error.
@@ -1040,7 +1036,7 @@ template <typename HandlerT> void visitErrors(const Error &E, HandlerT H) {
 ///   @endcode
 template <typename T, typename RecoveryFtor, typename... HandlerTs>
 Expected<T> handleExpected(Expected<T> ValOrErr, RecoveryFtor &&RecoveryPath,
-                           HandlerTs &&... Handlers) {
+                           HandlerTs &&...Handlers) {
   if (ValOrErr)
     return ValOrErr;
 
@@ -1143,16 +1139,13 @@ inline bool errorToBool(Error Err) {
 /// function.
 class ErrorAsOutParameter {
 public:
-
   ErrorAsOutParameter(Error *Err) : Err(Err) {
     // Raise the checked bit if Err is success.
     if (Err)
       (void)!!*Err;
   }
 
-  ErrorAsOutParameter(Error &Err) : Err(&Err) {
-    (void)!!Err;
-  }
+  ErrorAsOutParameter(Error &Err) : Err(&Err) { (void)!!Err; }
 
   ~ErrorAsOutParameter() {
     // Clear the checked bit.
@@ -1167,11 +1160,9 @@ private:
 /// Helper for Expected<T>s used as out-parameters.
 ///
 /// See ErrorAsOutParameter.
-template <typename T>
-class ExpectedAsOutParameter {
+template <typename T> class ExpectedAsOutParameter {
 public:
-  ExpectedAsOutParameter(Expected<T> *ValOrErr)
-    : ValOrErr(ValOrErr) {
+  ExpectedAsOutParameter(Expected<T> *ValOrErr) : ValOrErr(ValOrErr) {
     if (ValOrErr)
       (void)!!*ValOrErr;
   }
@@ -1303,7 +1294,7 @@ private:
 /// Create formatted StringError object.
 template <typename... Ts>
 inline Error createStringError(std::error_code EC, char const *Fmt,
-                               const Ts &... Vals) {
+                               const Ts &...Vals) {
   std::string Buffer;
   raw_string_ostream(Buffer) << format(Fmt, Vals...);
   return make_error<StringError>(Buffer, EC);
@@ -1331,7 +1322,7 @@ inline Error createStringError(char const *Fmt, const Ts &...Vals) {
 
 template <typename... Ts>
 inline Error createStringError(std::errc EC, char const *Fmt,
-                               const Ts &... Vals) {
+                               const Ts &...Vals) {
   return createStringError(std::make_error_code(EC), Fmt, Vals...);
 }
 
@@ -1406,7 +1397,7 @@ inline Error createFileError(const Twine &F, size_t Line, Error E) {
   return FileError::build(F, std::optional<size_t>(Line), std::move(E));
 }
 
-/// Concatenate a source file path and/or name with a std::error_code 
+/// Concatenate a source file path and/or name with a std::error_code
 /// to form an Error object.
 inline Error createFileError(const Twine &F, std::error_code EC) {
   return createFileError(F, errorCodeToError(EC));
@@ -1466,9 +1457,9 @@ public:
     return std::move(*E);
   }
 
-  /// Check E. If it's in a success state then return the contained reference. If
-  /// it's in a failure state log the error(s) and exit.
-  template <typename T> T& operator()(Expected<T&> &&E) const {
+  /// Check E. If it's in a success state then return the contained reference.
+  /// If it's in a failure state log the error(s) and exit.
+  template <typename T> T &operator()(Expected<T &> &&E) const {
     checkError(E.takeError());
     return *E;
   }

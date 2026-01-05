@@ -19,19 +19,19 @@ using namespace llvm;
 // Return the S_* enumeration for MachineOperand target flags Flags.
 static SystemZ::Specifier getSpecifierForTFlags(unsigned Flags) {
   switch (Flags & SystemZII::MO_SYMBOL_MODIFIER) {
-    case 0:
-      return SystemZ::S_None;
-    case SystemZII::MO_GOT:
-      return SystemZ::S_GOT;
-    case SystemZII::MO_INDNTPOFF:
-      return SystemZ::S_INDNTPOFF;
+  case 0:
+    return SystemZ::S_None;
+  case SystemZII::MO_GOT:
+    return SystemZ::S_GOT;
+  case SystemZII::MO_INDNTPOFF:
+    return SystemZ::S_INDNTPOFF;
   }
   llvm_unreachable("Unrecognised MO_ACCESS_MODEL");
 }
 
 SystemZMCInstLower::SystemZMCInstLower(MCContext &ctx,
                                        SystemZAsmPrinter &asmprinter)
-  : Ctx(ctx), AsmPrinter(asmprinter) {}
+    : Ctx(ctx), AsmPrinter(asmprinter) {}
 
 const MCExpr *SystemZMCInstLower::getExpr(const MachineOperand &MO,
                                           SystemZ::Specifier Spec) const {

@@ -287,7 +287,7 @@ struct TypeIndexOffset {
 
 LLVM_ABI void printTypeIndex(ScopedPrinter &Printer, StringRef FieldName,
                              TypeIndex TI, TypeCollection &Types);
-}
+} // namespace codeview
 
 template <> struct DenseMapInfo<codeview::TypeIndex> {
   static inline codeview::TypeIndex getEmptyKey() {

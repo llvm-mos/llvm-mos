@@ -53,7 +53,7 @@ static bool PrintInsts(const MCDisassembler &DisAsm, const ByteArrayTy &Bytes,
         return true;
 
       if (Size == 0)
-        Size = 1;  // skip illegible bytes
+        Size = 1; // skip illegible bytes
 
       break;
 

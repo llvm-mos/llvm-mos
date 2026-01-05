@@ -152,7 +152,7 @@ DEFINE_ISA_CONVERSION_FUNCTIONS(Metadata, LLVMMetadataRef)
 
 // Specialized opaque metadata conversions.
 inline Metadata **unwrap(LLVMMetadataRef *MDs) {
-  return reinterpret_cast<Metadata**>(MDs);
+  return reinterpret_cast<Metadata **>(MDs);
 }
 
 #define HANDLE_METADATA(CLASS) class CLASS;
@@ -553,8 +553,7 @@ public:
 class LocalAsMetadata : public ValueAsMetadata {
   friend class ValueAsMetadata;
 
-  LocalAsMetadata(Value *Local)
-      : ValueAsMetadata(LocalAsMetadataKind, Local) {
+  LocalAsMetadata(Value *Local) : ValueAsMetadata(LocalAsMetadataKind, Local) {
     assert(!isa<Constant>(Local) && "Expected local value");
   }
 
@@ -865,8 +864,7 @@ struct AAMDNodes {
 };
 
 // Specialize DenseMapInfo for AAMDNodes.
-template<>
-struct DenseMapInfo<AAMDNodes> {
+template <> struct DenseMapInfo<AAMDNodes> {
   static inline AAMDNodes getEmptyKey() {
     return AAMDNodes(DenseMapInfo<MDNode *>::getEmptyKey(), nullptr, nullptr,
                      nullptr, nullptr);
@@ -1162,8 +1160,8 @@ class MDNode : public Metadata {
     MutableArrayRef<MDOperand> operands() {
       if (IsLarge)
         return getLarge();
-      return MutableArrayRef(
-          reinterpret_cast<MDOperand *>(this) - SmallSize, SmallNumOps);
+      return MutableArrayRef(reinterpret_cast<MDOperand *>(this) - SmallSize,
+                             SmallNumOps);
     }
 
     ArrayRef<MDOperand> operands() const {
@@ -1843,14 +1841,16 @@ public:
   using op_iterator = op_iterator_impl<MDNode *>;
 
   op_iterator op_begin() { return op_iterator(this, 0); }
-  op_iterator op_end()   { return op_iterator(this, getNumOperands()); }
+  op_iterator op_end() { return op_iterator(this, getNumOperands()); }
 
   using const_op_iterator = op_iterator_impl<const MDNode *>;
 
   const_op_iterator op_begin() const { return const_op_iterator(this, 0); }
-  const_op_iterator op_end()   const { return const_op_iterator(this, getNumOperands()); }
+  const_op_iterator op_end() const {
+    return const_op_iterator(this, getNumOperands());
+  }
 
-  inline iterator_range<op_iterator>  operands() {
+  inline iterator_range<op_iterator> operands() {
     return make_range(op_begin(), op_end());
   }
   inline iterator_range<const_op_iterator> operands() const {

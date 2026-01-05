@@ -23,9 +23,7 @@
 namespace llvm {
 namespace sys {
 
-std::string StrError() {
-  return StrError(errno);
-}
+std::string StrError() { return StrError(errno); }
 
 std::string StrError(int errnum) {
   std::string str;
@@ -59,5 +57,5 @@ std::string StrError(int errnum) {
   return str;
 }
 
-}  // namespace sys
-}  // namespace llvm
+} // namespace sys
+} // namespace llvm

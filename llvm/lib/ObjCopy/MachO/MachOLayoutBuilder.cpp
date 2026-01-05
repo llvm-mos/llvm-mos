@@ -284,7 +284,8 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
   uint64_t StartOfIndirectSymbols =
       updateOffset(sizeof(uint32_t) * O.IndirectSymTable.Symbols.size());
   uint64_t StartOfSymbolStrings = updateOffset(StrTableBuilder.getSize());
-  uint64_t StartOfDylibCodeSignDRs = updateOffset(O.DylibCodeSignDRs.Data.size());
+  uint64_t StartOfDylibCodeSignDRs =
+      updateOffset(O.DylibCodeSignDRs.Data.size());
 
   uint64_t StartOfCodeSignature = Offset;
   uint32_t CodeSignatureSize = 0;

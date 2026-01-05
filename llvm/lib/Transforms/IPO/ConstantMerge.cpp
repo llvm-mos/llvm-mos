@@ -43,8 +43,9 @@ STATISTIC(NumIdenticalMerged, "Number of identical global constants merged");
 
 /// Find values that are marked as llvm.used.
 static void FindUsedValues(GlobalVariable *LLVMUsed,
-                           SmallPtrSetImpl<const GlobalValue*> &UsedValues) {
-  if (!LLVMUsed) return;
+                           SmallPtrSetImpl<const GlobalValue *> &UsedValues) {
+  if (!LLVMUsed)
+    return;
   ConstantArray *Inits = cast<ConstantArray>(LLVMUsed->getInitializer());
 
   for (unsigned i = 0, e = Inits->getNumOperands(); i != e; ++i) {
@@ -84,8 +85,7 @@ static void copyDebugLocMetadata(const GlobalVariable *From,
 }
 
 static Align getAlign(GlobalVariable *GV) {
-  return GV->getAlign().value_or(
-      GV->getDataLayout().getPreferredAlign(GV));
+  return GV->getAlign().value_or(GV->getDataLayout().getPreferredAlign(GV));
 }
 
 static bool
@@ -133,7 +133,7 @@ static void replace(Module &M, GlobalVariable *Old, GlobalVariable *New) {
 
 static bool mergeConstants(Module &M) {
   // Find all the globals that are marked "used".  These cannot be merged.
-  SmallPtrSet<const GlobalValue*, 8> UsedGlobals;
+  SmallPtrSet<const GlobalValue *, 8> UsedGlobals;
   FindUsedValues(M.getGlobalVariable("llvm.used"), UsedGlobals);
   FindUsedValues(M.getGlobalVariable("llvm.compiler.used"), UsedGlobals);
 

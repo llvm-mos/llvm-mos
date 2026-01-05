@@ -44,24 +44,24 @@ finalizeBundle(MachineBasicBlock &MBB,
 LLVM_ABI bool finalizeBundles(MachineFunction &MF);
 
 /// Returns an iterator to the first instruction in the bundle containing \p I.
-inline MachineBasicBlock::instr_iterator getBundleStart(
-    MachineBasicBlock::instr_iterator I) {
+inline MachineBasicBlock::instr_iterator
+getBundleStart(MachineBasicBlock::instr_iterator I) {
   while (I->isBundledWithPred())
     --I;
   return I;
 }
 
 /// Returns an iterator to the first instruction in the bundle containing \p I.
-inline MachineBasicBlock::const_instr_iterator getBundleStart(
-    MachineBasicBlock::const_instr_iterator I) {
+inline MachineBasicBlock::const_instr_iterator
+getBundleStart(MachineBasicBlock::const_instr_iterator I) {
   while (I->isBundledWithPred())
     --I;
   return I;
 }
 
 /// Returns an iterator pointing beyond the bundle containing \p I.
-inline MachineBasicBlock::instr_iterator getBundleEnd(
-    MachineBasicBlock::instr_iterator I) {
+inline MachineBasicBlock::instr_iterator
+getBundleEnd(MachineBasicBlock::instr_iterator I) {
   while (I->isBundledWithSucc())
     ++I;
   ++I;
@@ -69,8 +69,8 @@ inline MachineBasicBlock::instr_iterator getBundleEnd(
 }
 
 /// Returns an iterator pointing beyond the bundle containing \p I.
-inline MachineBasicBlock::const_instr_iterator getBundleEnd(
-    MachineBasicBlock::const_instr_iterator I) {
+inline MachineBasicBlock::const_instr_iterator
+getBundleEnd(MachineBasicBlock::const_instr_iterator I) {
   while (I->isBundledWithSucc())
     ++I;
   ++I;
@@ -158,9 +158,7 @@ public:
   /// getOperandNo - Returns the number of the current operand relative to its
   /// instruction.
   ///
-  unsigned getOperandNo() const {
-    return OpI - InstrI->operands_begin();
-  }
+  unsigned getOperandNo() const { return OpI - InstrI->operands_begin(); }
 };
 
 /// MIBundleOperands - Iterate over all operands in a bundle of machine
@@ -301,6 +299,6 @@ public:
                                  MachineFunctionAnalysisManager &MFAM);
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

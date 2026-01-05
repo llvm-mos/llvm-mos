@@ -38,8 +38,7 @@ public:
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
   MachineBasicBlock::iterator
-  eliminateCallFramePseudoInstr(MachineFunction &MF,
-                                MachineBasicBlock &MBB,
+  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
 
   /// Check whether or not the given \p MBB can be used as a epilogue

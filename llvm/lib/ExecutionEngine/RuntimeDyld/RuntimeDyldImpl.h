@@ -37,8 +37,8 @@ using namespace llvm::object;
 
 namespace llvm {
 
-#define UNIMPLEMENTED_RELOC(RelType) \
-  case RelType: \
+#define UNIMPLEMENTED_RELOC(RelType)                                           \
+  case RelType:                                                                \
     return make_error<RuntimeDyldError>("Unimplemented relocation: " #RelType)
 
 /// SectionEntry - represents a section emitted into memory by the dynamic
@@ -232,6 +232,7 @@ typedef StringMap<SymbolTableEntry> RTDyldSymbolTable;
 
 class RuntimeDyldImpl {
   friend class RuntimeDyld::LoadedObjectInfo;
+
 protected:
   static const unsigned AbsoluteSymbolSection = ~0U;
 
@@ -277,7 +278,6 @@ protected:
   // modules.  This map is indexed by symbol name.
   StringMap<RelocationList> ExternalSymbolRelocations;
 
-
   typedef std::map<RelocationValueRef, uintptr_t> StubMap;
 
   Triple::ArchType Arch;
@@ -302,8 +302,7 @@ protected:
   // the end of the list while the list is being processed.
   sys::Mutex lock;
 
-  using NotifyStubEmittedFunction =
-    RuntimeDyld::NotifyStubEmittedFunction;
+  using NotifyStubEmittedFunction = RuntimeDyld::NotifyStubEmittedFunction;
   NotifyStubEmittedFunction NotifyStubEmitted;
 
   virtual unsigned getMaxStubSize() const = 0;
@@ -370,8 +369,7 @@ protected:
   ///        used for emits, else allocateDataSection() will be used.
   /// \return SectionID.
   Expected<unsigned> emitSection(const ObjectFile &Obj,
-                                 const SectionRef &Section,
-                                 bool IsCode);
+                                 const SectionRef &Section, bool IsCode);
 
   /// Find Section in LocalSections. If the secton is not found - emit
   ///        it and store in LocalSections.
@@ -438,7 +436,8 @@ protected:
 
   // Hook for the subclasses to do further processing when a symbol is added to
   // the global symbol table. This function may modify the symbol table entry.
-  virtual void processNewSymbol(const SymbolRef &ObjSymbol, SymbolTableEntry& Entry) {}
+  virtual void processNewSymbol(const SymbolRef &ObjSymbol,
+                                SymbolTableEntry &Entry) {}
 
   // Return true if the relocation R may require allocating a GOT entry.
   virtual bool relocationNeedsGot(const RelocationRef &R) const {
@@ -447,7 +446,7 @@ protected:
 
   // Return true if the relocation R may require allocating a stub.
   virtual bool relocationNeedsStub(const RelocationRef &R) const {
-    return true;    // Conservative answer
+    return true; // Conservative answer
   }
 
   // Return true if the relocation R may require allocating a DLL import stub.
@@ -463,9 +462,8 @@ protected:
 public:
   RuntimeDyldImpl(RuntimeDyld::MemoryManager &MemMgr,
                   JITSymbolResolver &Resolver)
-    : MemMgr(MemMgr), Resolver(Resolver),
-      ProcessAllSections(false), HasError(false) {
-  }
+      : MemMgr(MemMgr), Resolver(Resolver), ProcessAllSections(false),
+        HasError(false) {}
 
   virtual ~RuntimeDyldImpl();
 
@@ -499,7 +497,7 @@ public:
           Sections[SectionID].getStubOffset() + getMaxStubSize());
   }
 
-  uint8_t* getSymbolLocalAddress(StringRef Name) const {
+  uint8_t *getSymbolLocalAddress(StringRef Name) const {
     // FIXME: Just look up as a function for now. Overly simple of course.
     // Work in progress.
     RTDyldSymbolTable::const_iterator pos = GlobalSymbolTable.find(Name);
@@ -545,8 +543,8 @@ public:
     for (const auto &KV : GlobalSymbolTable) {
       auto SectionID = KV.second.getSectionID();
       uint64_t SectionAddr = getSectionLoadAddress(SectionID);
-      Result[KV.first()] =
-        JITEvaluatedSymbol(SectionAddr + KV.second.getOffset(), KV.second.getFlags());
+      Result[KV.first()] = JITEvaluatedSymbol(
+          SectionAddr + KV.second.getOffset(), KV.second.getFlags());
     }
 
     return Result;

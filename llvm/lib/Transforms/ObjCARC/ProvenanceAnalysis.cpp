@@ -37,8 +37,7 @@
 using namespace llvm;
 using namespace llvm::objcarc;
 
-bool ProvenanceAnalysis::relatedSelect(const SelectInst *A,
-                                       const Value *B) {
+bool ProvenanceAnalysis::relatedSelect(const SelectInst *A, const Value *B) {
   // If the values are Selects with the same condition, we can do a more precise
   // check: just check for relations between the values on corresponding arms.
   if (const SelectInst *SB = dyn_cast<SelectInst>(B))
@@ -50,8 +49,7 @@ bool ProvenanceAnalysis::relatedSelect(const SelectInst *A,
   return related(A->getTrueValue(), B) || related(A->getFalseValue(), B);
 }
 
-bool ProvenanceAnalysis::relatedPHI(const PHINode *A,
-                                    const Value *B) {
+bool ProvenanceAnalysis::relatedPHI(const PHINode *A, const Value *B) {
   // If the values are PHIs in the same block, we can do a more precise as well
   // as efficient check: just check for relations between the values on
   // corresponding edges.
@@ -144,7 +142,7 @@ bool ProvenanceAnalysis::relatedCheck(const Value *A, const Value *B) {
       return IsStoredObjCPointer(B);
   }
 
-   // Special handling for PHI and Select.
+  // Special handling for PHI and Select.
   if (const PHINode *PN = dyn_cast<PHINode>(A))
     return relatedPHI(PN, B);
   if (const PHINode *PN = dyn_cast<PHINode>(B))
@@ -170,7 +168,7 @@ bool ProvenanceAnalysis::related(const Value *A, const Value *B) {
   // fails, we have the answer already. If it succeeds, leave it there until we
   // compute the real answer to guard against recursive queries.
   std::pair<CachedResultsTy::iterator, bool> Pair =
-    CachedResults.insert(std::make_pair(ValuePairTy(A, B), true));
+      CachedResults.insert(std::make_pair(ValuePairTy(A, B), true));
   if (!Pair.second)
     return Pair.first->second;
 

@@ -49,50 +49,52 @@ public:
   InstIterator() = default;
 
   // Copy constructor...
-  template<typename A, typename B, typename C, typename D>
-  InstIterator(const InstIterator<A,B,C,D> &II)
-    : BBs(II.BBs), BB(II.BB), BI(II.BI) {}
+  template <typename A, typename B, typename C, typename D>
+  InstIterator(const InstIterator<A, B, C, D> &II)
+      : BBs(II.BBs), BB(II.BB), BI(II.BI) {}
 
-  template<typename A, typename B, typename C, typename D>
-  InstIterator(InstIterator<A,B,C,D> &II)
-    : BBs(II.BBs), BB(II.BB), BI(II.BI) {}
+  template <typename A, typename B, typename C, typename D>
+  InstIterator(InstIterator<A, B, C, D> &II)
+      : BBs(II.BBs), BB(II.BB), BI(II.BI) {}
 
-  template<class M> InstIterator(M &m)
-    : BBs(&m.getBasicBlockList()), BB(BBs->begin()) {    // begin ctor
+  template <class M>
+  InstIterator(M &m)
+      : BBs(&m.getBasicBlockList()), BB(BBs->begin()) { // begin ctor
     if (BB != BBs->end()) {
       BI = BB->begin();
       advanceToNextBB();
     }
   }
 
-  template<class M> InstIterator(M &m, bool)
-    : BBs(&m.getBasicBlockList()), BB(BBs->end()) {    // end ctor
+  template <class M>
+  InstIterator(M &m, bool)
+      : BBs(&m.getBasicBlockList()), BB(BBs->end()) { // end ctor
   }
 
   // Accessors to get at the underlying iterators...
-  inline BBIty &getBasicBlockIterator()  { return BB; }
-  inline BIty  &getInstructionIterator() { return BI; }
+  inline BBIty &getBasicBlockIterator() { return BB; }
+  inline BIty &getInstructionIterator() { return BI; }
 
-  inline reference operator*()  const { return *BI; }
+  inline reference operator*() const { return *BI; }
   inline pointer operator->() const { return &operator*(); }
 
   inline bool operator==(const InstIterator &y) const {
     return BB == y.BB && (BB == BBs->end() || BI == y.BI);
   }
-  inline bool operator!=(const InstIterator& y) const {
-    return !operator==(y);
-  }
+  inline bool operator!=(const InstIterator &y) const { return !operator==(y); }
 
-  InstIterator& operator++() {
+  InstIterator &operator++() {
     ++BI;
     advanceToNextBB();
     return *this;
   }
   inline InstIterator operator++(int) {
-    InstIterator tmp = *this; ++*this; return tmp;
+    InstIterator tmp = *this;
+    ++*this;
+    return tmp;
   }
 
-  InstIterator& operator--() {
+  InstIterator &operator--() {
     while (BB == BBs->end() || BI == BB->begin()) {
       --BB;
       BI = BB->end();
@@ -101,7 +103,9 @@ public:
     return *this;
   }
   inline InstIterator operator--(int) {
-    InstIterator tmp = *this; --*this; return tmp;
+    InstIterator tmp = *this;
+    --*this;
+    return tmp;
   }
 
 private:
@@ -110,7 +114,8 @@ private:
     // the end() of the current BasicBlock and there are successor BBs.
     while (BI == BB->end()) {
       ++BB;
-      if (BB == BBs->end()) break;
+      if (BB == BBs->end())
+        break;
       BI = BB->begin();
     }
   }
@@ -120,14 +125,13 @@ using inst_iterator =
     InstIterator<SymbolTableList<BasicBlock>, Function::iterator,
                  BasicBlock::iterator, Instruction>;
 using const_inst_iterator =
-    InstIterator<const SymbolTableList<BasicBlock>,
-                 Function::const_iterator, BasicBlock::const_iterator,
-                 const Instruction>;
+    InstIterator<const SymbolTableList<BasicBlock>, Function::const_iterator,
+                 BasicBlock::const_iterator, const Instruction>;
 using inst_range = iterator_range<inst_iterator>;
 using const_inst_range = iterator_range<const_inst_iterator>;
 
 inline inst_iterator inst_begin(Function *F) { return inst_iterator(*F); }
-inline inst_iterator inst_end(Function *F)   { return inst_iterator(*F, true); }
+inline inst_iterator inst_end(Function *F) { return inst_iterator(*F, true); }
 inline inst_range instructions(Function *F) {
   return inst_range(inst_begin(F), inst_end(F));
 }
@@ -141,7 +145,7 @@ inline const_inst_range instructions(const Function *F) {
   return const_inst_range(inst_begin(F), inst_end(F));
 }
 inline inst_iterator inst_begin(Function &F) { return inst_iterator(F); }
-inline inst_iterator inst_end(Function &F)   { return inst_iterator(F, true); }
+inline inst_iterator inst_end(Function &F) { return inst_iterator(F, true); }
 inline inst_range instructions(Function &F) {
   return inst_range(inst_begin(F), inst_end(F));
 }

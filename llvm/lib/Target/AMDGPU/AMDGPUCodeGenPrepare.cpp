@@ -44,10 +44,10 @@ using namespace llvm::PatternMatch;
 namespace {
 
 static cl::opt<bool> WidenLoads(
-  "amdgpu-codegenprepare-widen-constant-loads",
-  cl::desc("Widen sub-dword constant address space loads in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(false));
+    "amdgpu-codegenprepare-widen-constant-loads",
+    cl::desc(
+        "Widen sub-dword constant address space loads in AMDGPUCodeGenPrepare"),
+    cl::ReallyHidden, cl::init(false));
 
 static cl::opt<bool>
     BreakLargePHIs("amdgpu-codegenprepare-break-large-phis",
@@ -66,32 +66,29 @@ static cl::opt<unsigned> BreakLargePHIsThreshold(
     cl::ReallyHidden, cl::init(32));
 
 static cl::opt<bool> UseMul24Intrin(
-  "amdgpu-codegenprepare-mul24",
-  cl::desc("Introduce mul24 intrinsics in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(true));
+    "amdgpu-codegenprepare-mul24",
+    cl::desc("Introduce mul24 intrinsics in AMDGPUCodeGenPrepare"),
+    cl::ReallyHidden, cl::init(true));
 
 // Legalize 64-bit division by using the generic IR expansion.
-static cl::opt<bool> ExpandDiv64InIR(
-  "amdgpu-codegenprepare-expand-div64",
-  cl::desc("Expand 64-bit division in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(false));
+static cl::opt<bool>
+    ExpandDiv64InIR("amdgpu-codegenprepare-expand-div64",
+                    cl::desc("Expand 64-bit division in AMDGPUCodeGenPrepare"),
+                    cl::ReallyHidden, cl::init(false));
 
 // Leave all division operations as they are. This supersedes ExpandDiv64InIR
 // and is used for testing the legalizer.
 static cl::opt<bool> DisableIDivExpand(
-  "amdgpu-codegenprepare-disable-idiv-expansion",
-  cl::desc("Prevent expanding integer division in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(false));
+    "amdgpu-codegenprepare-disable-idiv-expansion",
+    cl::desc("Prevent expanding integer division in AMDGPUCodeGenPrepare"),
+    cl::ReallyHidden, cl::init(false));
 
 // Disable processing of fdiv so we can better test the backend implementations.
 static cl::opt<bool> DisableFDivExpand(
-  "amdgpu-codegenprepare-disable-fdiv-expansion",
-  cl::desc("Prevent expanding floating point division in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(false));
+    "amdgpu-codegenprepare-disable-fdiv-expansion",
+    cl::desc(
+        "Prevent expanding floating point division in AMDGPUCodeGenPrepare"),
+    cl::ReallyHidden, cl::init(false));
 
 class AMDGPUCodeGenPrepareImpl
     : public InstVisitor<AMDGPUCodeGenPrepareImpl, bool> {
@@ -183,26 +180,25 @@ public:
   /// we expand some divisions here, we need to perform this before obscuring.
   bool foldBinOpIntoSelect(BinaryOperator &I) const;
 
-  bool divHasSpecialOptimization(BinaryOperator &I,
-                                 Value *Num, Value *Den) const;
+  bool divHasSpecialOptimization(BinaryOperator &I, Value *Num,
+                                 Value *Den) const;
   unsigned getDivNumBits(BinaryOperator &I, Value *Num, Value *Den,
                          unsigned MaxDivBits, bool Signed) const;
 
   /// Expands 24 bit div or rem.
-  Value* expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I,
-                        Value *Num, Value *Den,
-                        bool IsDiv, bool IsSigned) const;
+  Value *expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I, Value *Num,
+                        Value *Den, bool IsDiv, bool IsSigned) const;
 
-  Value *expandDivRem24Impl(IRBuilder<> &Builder, BinaryOperator &I,
-                            Value *Num, Value *Den, unsigned NumBits,
-                            bool IsDiv, bool IsSigned) const;
+  Value *expandDivRem24Impl(IRBuilder<> &Builder, BinaryOperator &I, Value *Num,
+                            Value *Den, unsigned NumBits, bool IsDiv,
+                            bool IsSigned) const;
 
   /// Expands 32 bit div or rem.
-  Value* expandDivRem32(IRBuilder<> &Builder, BinaryOperator &I,
-                        Value *Num, Value *Den) const;
+  Value *expandDivRem32(IRBuilder<> &Builder, BinaryOperator &I, Value *Num,
+                        Value *Den) const;
 
-  Value *shrinkDivRem64(IRBuilder<> &Builder, BinaryOperator &I,
-                        Value *Num, Value *Den) const;
+  Value *shrinkDivRem64(IRBuilder<> &Builder, BinaryOperator &I, Value *Num,
+                        Value *Den) const;
   void expandDivRem64(BinaryOperator &I) const;
 
   /// Widen a scalar load.
@@ -306,7 +302,8 @@ bool AMDGPUCodeGenPrepareImpl::run() {
 
 bool AMDGPUCodeGenPrepareImpl::isSigned(const BinaryOperator &I) const {
   return I.getOpcode() == Instruction::AShr ||
-      I.getOpcode() == Instruction::SDiv || I.getOpcode() == Instruction::SRem;
+         I.getOpcode() == Instruction::SDiv ||
+         I.getOpcode() == Instruction::SRem;
 }
 
 bool AMDGPUCodeGenPrepareImpl::isSigned(const SelectInst &I) const {
@@ -347,8 +344,7 @@ static void extractValues(IRBuilder<> &Builder,
     Values.push_back(Builder.CreateExtractElement(V, I));
 }
 
-static Value *insertValues(IRBuilder<> &Builder,
-                           Type *Ty,
+static Value *insertValues(IRBuilder<> &Builder, Type *Ty,
                            SmallVectorImpl<Value *> &Values) {
   if (!Ty->isVectorTy()) {
     assert(Values.size() == 1);
@@ -490,8 +486,8 @@ bool AMDGPUCodeGenPrepareImpl::foldBinOpIntoSelect(BinaryOperator &BO) const {
   if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(&BO))
     Builder.setFastMathFlags(FPOp->getFastMathFlags());
 
-  Value *NewSelect = Builder.CreateSelect(Sel->getCondition(),
-                                          FoldedT, FoldedF);
+  Value *NewSelect =
+      Builder.CreateSelect(Sel->getCondition(), FoldedT, FoldedF);
   NewSelect->takeName(&BO);
   BO.replaceAllUsesWith(NewSelect);
   DeadVals.push_back(&BO);
@@ -899,8 +895,8 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   return true;
 }
 
-static std::pair<Value*, Value*> getMul64(IRBuilder<> &Builder,
-                                          Value *LHS, Value *RHS) {
+static std::pair<Value *, Value *> getMul64(IRBuilder<> &Builder, Value *LHS,
+                                            Value *RHS) {
   Type *I32Ty = Builder.getInt32Ty();
   Type *I64Ty = Builder.getInt64Ty();
 
@@ -913,7 +909,7 @@ static std::pair<Value*, Value*> getMul64(IRBuilder<> &Builder,
   return std::pair(Lo, Hi);
 }
 
-static Value* getMulHu(IRBuilder<> &Builder, Value *LHS, Value *RHS) {
+static Value *getMulHu(IRBuilder<> &Builder, Value *LHS, Value *RHS) {
   return getMul64(Builder, LHS, RHS).second;
 }
 
@@ -1007,8 +1003,8 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
                        : Builder.CreateUIToFP(IA, F32Ty);
 
   // float fb = (float)ib;
-  Value *FB = IsSigned ? Builder.CreateSIToFP(IB,F32Ty)
-                       : Builder.CreateUIToFP(IB,F32Ty);
+  Value *FB = IsSigned ? Builder.CreateSIToFP(IB, F32Ty)
+                       : Builder.CreateUIToFP(IB, F32Ty);
 
   Value *RCP = Builder.CreateIntrinsic(Intrinsic::amdgcn_rcp,
                                        Builder.getFloatTy(), {FB});
@@ -1025,8 +1021,8 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
   auto FMAD = !ST.hasMadMacF32Insts()
                   ? Intrinsic::fma
                   : (Intrinsic::ID)Intrinsic::amdgcn_fmad_ftz;
-  Value *FR = Builder.CreateIntrinsic(FMAD,
-                                      {FQNeg->getType()}, {FQNeg, FB, FA}, FQ);
+  Value *FR =
+      Builder.CreateIntrinsic(FMAD, {FQNeg->getType()}, {FQNeg, FB, FA}, FQ);
 
   // int iq = (int)fq;
   Value *IQ = IsSigned ? Builder.CreateFPToSI(FQ, I32Ty)
@@ -1062,8 +1058,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
       Res = Builder.CreateShl(Res, InRegBits);
       Res = Builder.CreateAShr(Res, InRegBits);
     } else {
-      ConstantInt *TruncMask
-        = Builder.getInt32((UINT64_C(1) << DivBits) - 1);
+      ConstantInt *TruncMask = Builder.getInt32((UINT64_C(1) << DivBits) - 1);
       Res = Builder.CreateAnd(Res, TruncMask);
     }
   }
@@ -1129,7 +1124,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
   Builder.setFastMathFlags(FMF);
 
   if (divHasSpecialOptimization(I, X, Y))
-    return nullptr;  // Keep it for later optimization.
+    return nullptr; // Keep it for later optimization.
 
   bool IsDiv = Opc == Instruction::UDiv || Opc == Instruction::SDiv;
   bool IsSigned = Opc == Instruction::SRem || Opc == Instruction::SDiv;
@@ -1149,8 +1144,8 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
   }
 
   if (Value *Res = expandDivRem24(Builder, I, X, Y, IsDiv, IsSigned)) {
-    return IsSigned ? Builder.CreateSExtOrTrunc(Res, Ty) :
-                      Builder.CreateZExtOrTrunc(Res, Ty);
+    return IsSigned ? Builder.CreateSExtOrTrunc(Res, Ty)
+                    : Builder.CreateZExtOrTrunc(Res, Ty);
   }
 
   ConstantInt *Zero = Builder.getInt32(0);
@@ -1245,7 +1240,7 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
                                                 BinaryOperator &I, Value *Num,
                                                 Value *Den) const {
   if (!ExpandDiv64InIR && divHasSpecialOptimization(I, Num, Den))
-    return nullptr;  // Keep it for later optimization.
+    return nullptr; // Keep it for later optimization.
 
   Instruction::BinaryOps Opc = I.getOpcode();
 
@@ -1258,15 +1253,15 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
 
   Value *Narrowed = nullptr;
   if (NumDivBits <= 24) {
-    Narrowed = expandDivRem24Impl(Builder, I, Num, Den, NumDivBits,
-                                  IsDiv, IsSigned);
+    Narrowed =
+        expandDivRem24Impl(Builder, I, Num, Den, NumDivBits, IsDiv, IsSigned);
   } else if (NumDivBits <= 32) {
     Narrowed = expandDivRem32(Builder, I, Num, Den);
   }
 
   if (Narrowed) {
-    return IsSigned ? Builder.CreateSExt(Narrowed, Num->getType()) :
-                      Builder.CreateZExt(Narrowed, Num->getType());
+    return IsSigned ? Builder.CreateSExt(Narrowed, Num->getType())
+                    : Builder.CreateZExt(Narrowed, Num->getType());
   }
 
   return nullptr;
@@ -1379,8 +1374,7 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
 
   if ((Opc == Instruction::URem || Opc == Instruction::UDiv ||
        Opc == Instruction::SRem || Opc == Instruction::SDiv) &&
-      ScalarSize <= 64 &&
-      !DisableIDivExpand) {
+      ScalarSize <= 64 && !DisableIDivExpand) {
     Value *Num = I.getOperand(0);
     Value *Den = I.getOperand(1);
     IRBuilder<> Builder(&I);
@@ -1465,17 +1459,16 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
     // If we have range metadata, we need to convert the type, and not make
     // assumptions about the high bits.
     if (auto *Range = WidenLoad->getMetadata(LLVMContext::MD_range)) {
-      ConstantInt *Lower =
-        mdconst::extract<ConstantInt>(Range->getOperand(0));
+      ConstantInt *Lower = mdconst::extract<ConstantInt>(Range->getOperand(0));
 
       if (Lower->isNullValue()) {
         WidenLoad->setMetadata(LLVMContext::MD_range, nullptr);
       } else {
         Metadata *LowAndHigh[] = {
-          ConstantAsMetadata::get(ConstantInt::get(I32Ty, Lower->getValue().zext(32))),
-          // Don't make assumptions about the high bits.
-          ConstantAsMetadata::get(ConstantInt::get(I32Ty, 0))
-        };
+            ConstantAsMetadata::get(
+                ConstantInt::get(I32Ty, Lower->getValue().zext(32))),
+            // Don't make assumptions about the high bits.
+            ConstantAsMetadata::get(ConstantInt::get(I32Ty, 0))};
 
         WidenLoad->setMetadata(LLVMContext::MD_range,
                                MDNode::get(F.getContext(), LowAndHigh));

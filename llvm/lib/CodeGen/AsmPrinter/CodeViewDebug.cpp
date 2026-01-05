@@ -419,7 +419,8 @@ TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
 }
 
 static bool isNonTrivial(const DICompositeType *DCTy) {
-  return ((DCTy->getFlags() & DINode::FlagNonTrivial) == DINode::FlagNonTrivial);
+  return ((DCTy->getFlags() & DINode::FlagNonTrivial) ==
+          DINode::FlagNonTrivial);
 }
 
 static FunctionOptions
@@ -443,8 +444,7 @@ getFunctionOptions(const DISubroutineType *Ty,
   if (ClassTy && isNonTrivial(ClassTy) && SPName == ClassTy->getName()) {
     FO |= FunctionOptions::Constructor;
 
-  // TODO: put the FunctionOptions::ConstructorWithVirtualBases flag.
-
+    // TODO: put the FunctionOptions::ConstructorWithVirtualBases flag.
   }
   return FO;
 }
@@ -918,12 +918,11 @@ void CodeViewDebug::emitCompilerInformation() {
   // Some Microsoft tools, like Binscope, expect a backend version number of at
   // least 8.something, so we'll coerce the LLVM version into a form that
   // guarantees it'll be big enough without really lying about the version.
-  int Major = 1000 * LLVM_VERSION_MAJOR +
-              10 * LLVM_VERSION_MINOR +
-              LLVM_VERSION_PATCH;
+  int Major =
+      1000 * LLVM_VERSION_MAJOR + 10 * LLVM_VERSION_MINOR + LLVM_VERSION_PATCH;
   // Clamp it for builds that use unusually large version numbers.
   Major = std::min<int>(Major, std::numeric_limits<uint16_t>::max());
-  Version BackVer = {{ Major, 0, 0, 0 }};
+  Version BackVer = {{Major, 0, 0, 0}};
   OS.AddComment("Backend version");
   for (int N : BackVer.Part)
     OS.emitInt16(N);
@@ -965,8 +964,8 @@ void CodeViewDebug::emitBuildInfo() {
       getStringIdTypeIdx(TypeTable, "");
   BuildInfoArgs[BuildInfoRecord::BuildTool] =
       getStringIdTypeIdx(TypeTable, Asm->TM.Options.MCOptions.Argv0);
-  BuildInfoArgs[BuildInfoRecord::CommandLine] = getStringIdTypeIdx(
-      TypeTable, Asm->TM.Options.MCOptions.CommandlineArgs);
+  BuildInfoArgs[BuildInfoRecord::CommandLine] =
+      getStringIdTypeIdx(TypeTable, Asm->TM.Options.MCOptions.CommandlineArgs);
 
   BuildInfoRecord BIR(BuildInfoArgs);
   TypeIndex BuildInfoIndex = TypeTable.writeLeafType(BIR);
@@ -1075,8 +1074,7 @@ void CodeViewDebug::switchToDebugSectionForSymbol(const MCSymbol *GVSym) {
 
 // Emit an S_THUNK32/S_END symbol pair for a thunk routine.
 // The only supported thunk ordinal is currently the standard type.
-void CodeViewDebug::emitDebugInfoForThunk(const Function *GV,
-                                          FunctionInfo &FI,
+void CodeViewDebug::emitDebugInfoForThunk(const Function *GV, FunctionInfo &FI,
                                           const MCSymbol *Fn) {
   std::string FuncName =
       std::string(GlobalValue::dropLLVMManglingEscape(GV->getName()));
@@ -1273,8 +1271,8 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
   OS.emitCVLinetableDirective(FI.FuncId, Fn, FI.End);
 }
 
-CodeViewDebug::LocalVarDef
-CodeViewDebug::createDefRangeMem(uint16_t CVRegister, int Offset) {
+CodeViewDebug::LocalVarDef CodeViewDebug::createDefRangeMem(uint16_t CVRegister,
+                                                            int Offset) {
   LocalVarDef DR;
   DR.InMemory = -1;
   DR.DataOffset = Offset;
@@ -1374,8 +1372,7 @@ void CodeViewDebug::calculateRanges(
     // relatively common.
     std::optional<DbgVariableLocation> Location =
         DbgVariableLocation::extractFromMachineInstruction(*DVInst);
-    if (!Location)
-    {
+    if (!Location) {
       // When we don't have a location this is usually because LLVM has
       // transformed it into a constant and we only have an llvm.dbg.value. We
       // can't represent these well in CodeView since S_LOCAL only works on
@@ -1699,7 +1696,7 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty, const DIType *ClassTy) {
   case dwarf::DW_TAG_restrict_type:
   case dwarf::DW_TAG_const_type:
   case dwarf::DW_TAG_volatile_type:
-  // TODO: add support for DW_TAG_atomic_type here
+    // TODO: add support for DW_TAG_atomic_type here
     return lowerTypeModifier(cast<DIDerivedType>(Ty));
   case dwarf::DW_TAG_subroutine_type:
     if (ClassTy) {
@@ -1837,57 +1834,115 @@ TypeIndex CodeViewDebug::lowerTypeBasic(const DIBasicType *Ty) {
     break;
   case dwarf::DW_ATE_boolean:
     switch (ByteSize) {
-    case 1:  STK = SimpleTypeKind::Boolean8;   break;
-    case 2:  STK = SimpleTypeKind::Boolean16;  break;
-    case 4:  STK = SimpleTypeKind::Boolean32;  break;
-    case 8:  STK = SimpleTypeKind::Boolean64;  break;
-    case 16: STK = SimpleTypeKind::Boolean128; break;
+    case 1:
+      STK = SimpleTypeKind::Boolean8;
+      break;
+    case 2:
+      STK = SimpleTypeKind::Boolean16;
+      break;
+    case 4:
+      STK = SimpleTypeKind::Boolean32;
+      break;
+    case 8:
+      STK = SimpleTypeKind::Boolean64;
+      break;
+    case 16:
+      STK = SimpleTypeKind::Boolean128;
+      break;
     }
     break;
   case dwarf::DW_ATE_complex_float:
     // The CodeView size for a complex represents the size of
     // an individual component.
     switch (ByteSize) {
-    case 4:  STK = SimpleTypeKind::Complex16;  break;
-    case 8:  STK = SimpleTypeKind::Complex32;  break;
-    case 16: STK = SimpleTypeKind::Complex64;  break;
-    case 20: STK = SimpleTypeKind::Complex80;  break;
-    case 32: STK = SimpleTypeKind::Complex128; break;
+    case 4:
+      STK = SimpleTypeKind::Complex16;
+      break;
+    case 8:
+      STK = SimpleTypeKind::Complex32;
+      break;
+    case 16:
+      STK = SimpleTypeKind::Complex64;
+      break;
+    case 20:
+      STK = SimpleTypeKind::Complex80;
+      break;
+    case 32:
+      STK = SimpleTypeKind::Complex128;
+      break;
     }
     break;
   case dwarf::DW_ATE_float:
     switch (ByteSize) {
-    case 2:  STK = SimpleTypeKind::Float16;  break;
-    case 4:  STK = SimpleTypeKind::Float32;  break;
-    case 6:  STK = SimpleTypeKind::Float48;  break;
-    case 8:  STK = SimpleTypeKind::Float64;  break;
-    case 10: STK = SimpleTypeKind::Float80;  break;
-    case 16: STK = SimpleTypeKind::Float128; break;
+    case 2:
+      STK = SimpleTypeKind::Float16;
+      break;
+    case 4:
+      STK = SimpleTypeKind::Float32;
+      break;
+    case 6:
+      STK = SimpleTypeKind::Float48;
+      break;
+    case 8:
+      STK = SimpleTypeKind::Float64;
+      break;
+    case 10:
+      STK = SimpleTypeKind::Float80;
+      break;
+    case 16:
+      STK = SimpleTypeKind::Float128;
+      break;
     }
     break;
   case dwarf::DW_ATE_signed:
     switch (ByteSize) {
-    case 1:  STK = SimpleTypeKind::SignedCharacter; break;
-    case 2:  STK = SimpleTypeKind::Int16Short;      break;
-    case 4:  STK = SimpleTypeKind::Int32;           break;
-    case 8:  STK = SimpleTypeKind::Int64Quad;       break;
-    case 16: STK = SimpleTypeKind::Int128Oct;       break;
+    case 1:
+      STK = SimpleTypeKind::SignedCharacter;
+      break;
+    case 2:
+      STK = SimpleTypeKind::Int16Short;
+      break;
+    case 4:
+      STK = SimpleTypeKind::Int32;
+      break;
+    case 8:
+      STK = SimpleTypeKind::Int64Quad;
+      break;
+    case 16:
+      STK = SimpleTypeKind::Int128Oct;
+      break;
     }
     break;
   case dwarf::DW_ATE_unsigned:
     switch (ByteSize) {
-    case 1:  STK = SimpleTypeKind::UnsignedCharacter; break;
-    case 2:  STK = SimpleTypeKind::UInt16Short;       break;
-    case 4:  STK = SimpleTypeKind::UInt32;            break;
-    case 8:  STK = SimpleTypeKind::UInt64Quad;        break;
-    case 16: STK = SimpleTypeKind::UInt128Oct;        break;
+    case 1:
+      STK = SimpleTypeKind::UnsignedCharacter;
+      break;
+    case 2:
+      STK = SimpleTypeKind::UInt16Short;
+      break;
+    case 4:
+      STK = SimpleTypeKind::UInt32;
+      break;
+    case 8:
+      STK = SimpleTypeKind::UInt64Quad;
+      break;
+    case 16:
+      STK = SimpleTypeKind::UInt128Oct;
+      break;
     }
     break;
   case dwarf::DW_ATE_UTF:
     switch (ByteSize) {
-    case 1: STK = SimpleTypeKind::Character8; break;
-    case 2: STK = SimpleTypeKind::Character16; break;
-    case 4: STK = SimpleTypeKind::Character32; break;
+    case 1:
+      STK = SimpleTypeKind::Character8;
+      break;
+    case 2:
+      STK = SimpleTypeKind::Character16;
+      break;
+    case 4:
+      STK = SimpleTypeKind::Character32;
+      break;
     }
     break;
   case dwarf::DW_ATE_signed_char:
@@ -1942,7 +1997,8 @@ TypeIndex CodeViewDebug::lowerTypePointer(const DIDerivedType *Ty,
       Ty->getSizeInBits() == 64 ? PointerKind::Near64 : PointerKind::Near32;
   PointerMode PM = PointerMode::Pointer;
   switch (Ty->getTag()) {
-  default: llvm_unreachable("not a pointer tag type");
+  default:
+    llvm_unreachable("not a pointer tag type");
   case dwarf::DW_TAG_pointer_type:
     PM = PointerMode::Pointer;
     break;
@@ -2001,8 +2057,8 @@ TypeIndex CodeViewDebug::lowerTypeMemberPointer(const DIDerivedType *Ty,
   TypeIndex ClassTI = getTypeIndex(Ty->getClassType());
   TypeIndex PointeeTI =
       getTypeIndex(Ty->getBaseType(), IsPMF ? Ty->getClassType() : nullptr);
-  PointerKind PK = getPointerSizeInBytes() == 8 ? PointerKind::Near64
-                                                : PointerKind::Near32;
+  PointerKind PK =
+      getPointerSizeInBytes() == 8 ? PointerKind::Near64 : PointerKind::Near32;
   PointerMode PM = IsPMF ? PointerMode::PointerToMemberFunction
                          : PointerMode::PointerToDataMember;
 
@@ -2018,12 +2074,18 @@ TypeIndex CodeViewDebug::lowerTypeMemberPointer(const DIDerivedType *Ty,
 /// have a translation, use the NearC convention.
 static CallingConvention dwarfCCToCodeView(unsigned DwarfCC) {
   switch (DwarfCC) {
-  case dwarf::DW_CC_normal:             return CallingConvention::NearC;
-  case dwarf::DW_CC_BORLAND_msfastcall: return CallingConvention::NearFast;
-  case dwarf::DW_CC_BORLAND_thiscall:   return CallingConvention::ThisCall;
-  case dwarf::DW_CC_BORLAND_stdcall:    return CallingConvention::NearStdCall;
-  case dwarf::DW_CC_BORLAND_pascal:     return CallingConvention::NearPascal;
-  case dwarf::DW_CC_LLVM_vectorcall:    return CallingConvention::NearVector;
+  case dwarf::DW_CC_normal:
+    return CallingConvention::NearC;
+  case dwarf::DW_CC_BORLAND_msfastcall:
+    return CallingConvention::NearFast;
+  case dwarf::DW_CC_BORLAND_thiscall:
+    return CallingConvention::ThisCall;
+  case dwarf::DW_CC_BORLAND_stdcall:
+    return CallingConvention::NearStdCall;
+  case dwarf::DW_CC_BORLAND_pascal:
+    return CallingConvention::NearPascal;
+  case dwarf::DW_CC_LLVM_vectorcall:
+    return CallingConvention::NearVector;
   }
   return CallingConvention::NearC;
 }
@@ -2173,9 +2235,12 @@ TypeIndex CodeViewDebug::lowerTypeVFTableShape(const DIDerivedType *Ty) {
 
 static MemberAccess translateAccessFlags(unsigned RecordTag, unsigned Flags) {
   switch (Flags & DINode::FlagAccessibility) {
-  case DINode::FlagPrivate:   return MemberAccess::Private;
-  case DINode::FlagPublic:    return MemberAccess::Public;
-  case DINode::FlagProtected: return MemberAccess::Protected;
+  case DINode::FlagPrivate:
+    return MemberAccess::Private;
+  case DINode::FlagPublic:
+    return MemberAccess::Public;
+  case DINode::FlagProtected:
+    return MemberAccess::Protected;
   case 0:
     // If there was no explicit access control, provide the default for the tag.
     return RecordTag == dwarf::DW_TAG_class_type ? MemberAccess::Private
@@ -2445,7 +2510,7 @@ static bool shouldAlwaysEmitCompleteClassType(const DICompositeType *Ty) {
   // This routine is used by lowerTypeClass and lowerTypeUnion to determine
   // if a complete type should be emitted instead of a forward reference.
   return Ty->getName().empty() && Ty->getIdentifier().empty() &&
-      !Ty->isForwardDecl();
+         !Ty->isForwardDecl();
 }
 
 TypeIndex CodeViewDebug::lowerTypeClass(const DICompositeType *Ty) {
@@ -2466,8 +2531,7 @@ TypeIndex CodeViewDebug::lowerTypeClass(const DICompositeType *Ty) {
   // First, construct the forward decl.  Don't look into Ty to compute the
   // forward decl options, since it might not be available in all TUs.
   TypeRecordKind Kind = getRecordKind(Ty);
-  ClassOptions CO =
-      ClassOptions::ForwardReference | getCommonClassOptions(Ty);
+  ClassOptions CO = ClassOptions::ForwardReference | getCommonClassOptions(Ty);
   std::string FullName = getFullyQualifiedName(Ty);
   ClassRecord CR(Kind, 0, CO, TypeIndex(), TypeIndex(), TypeIndex(), 0,
                  FullName, Ty->getIdentifier());
@@ -2519,8 +2583,7 @@ TypeIndex CodeViewDebug::lowerTypeUnion(const DICompositeType *Ty) {
   if (shouldAlwaysEmitCompleteClassType(Ty))
     return getCompleteTypeIndex(Ty);
 
-  ClassOptions CO =
-      ClassOptions::ForwardReference | getCommonClassOptions(Ty);
+  ClassOptions CO = ClassOptions::ForwardReference | getCommonClassOptions(Ty);
   std::string FullName = getFullyQualifiedName(Ty);
   UnionRecord UR(0, CO, TypeIndex(), 0, FullName, Ty->getIdentifier());
   TypeIndex FwdDeclTI = TypeTable.writeLeafType(UR);
@@ -2572,7 +2635,8 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
       unsigned VBPtrOffset = I->getVBPtrOffset();
       // FIXME: Despite the accessor name, the offset is really in bytes.
       unsigned VBTableIndex = I->getOffsetInBits() / 4;
-      auto RecordKind = (I->getFlags() & DINode::FlagIndirectVirtualBase) == DINode::FlagIndirectVirtualBase
+      auto RecordKind = (I->getFlags() & DINode::FlagIndirectVirtualBase) ==
+                                DINode::FlagIndirectVirtualBase
                             ? TypeRecordKind::IndirectVirtualBaseClass
                             : TypeRecordKind::VirtualBaseClass;
       VirtualBaseClassRecord VBCR(
@@ -2950,7 +3014,7 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
 }
 
 void CodeViewDebug::emitLexicalBlockList(ArrayRef<LexicalBlock *> Blocks,
-                                         const FunctionInfo& FI) {
+                                         const FunctionInfo &FI) {
   for (LexicalBlock *Block : Blocks)
     emitLexicalBlock(*Block, FI);
 }
@@ -2958,20 +3022,20 @@ void CodeViewDebug::emitLexicalBlockList(ArrayRef<LexicalBlock *> Blocks,
 /// Emit an S_BLOCK32 and S_END record pair delimiting the contents of a
 /// lexical block scope.
 void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
-                                     const FunctionInfo& FI) {
+                                     const FunctionInfo &FI) {
   MCSymbol *RecordEnd = beginSymbolRecord(SymbolKind::S_BLOCK32);
   OS.AddComment("PtrParent");
   OS.emitInt32(0); // PtrParent
   OS.AddComment("PtrEnd");
   OS.emitInt32(0); // PtrEnd
   OS.AddComment("Code size");
-  OS.emitAbsoluteSymbolDiff(Block.End, Block.Begin, 4);   // Code Size
+  OS.emitAbsoluteSymbolDiff(Block.End, Block.Begin, 4); // Code Size
   OS.AddComment("Function section relative address");
   OS.emitCOFFSecRel32(Block.Begin, /*Offset=*/0); // Func Offset
   OS.AddComment("Function section index");
   OS.emitCOFFSectionIndex(FI.Begin); // Func Symbol
   OS.AddComment("Lexical block name");
-  emitNullTerminatedSymbolName(OS, Block.Name);           // Name
+  emitNullTerminatedSymbolName(OS, Block.Name); // Name
   endSymbolRecord(RecordEnd);
 
   // Emit variables local to this lexical block.
@@ -2988,10 +3052,10 @@ void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
 /// Convenience routine for collecting lexical block information for a list
 /// of lexical scopes.
 void CodeViewDebug::collectLexicalBlockInfo(
-        SmallVectorImpl<LexicalScope *> &Scopes,
-        SmallVectorImpl<LexicalBlock *> &Blocks,
-        SmallVectorImpl<LocalVariable> &Locals,
-        SmallVectorImpl<CVGlobalVariable> &Globals) {
+    SmallVectorImpl<LexicalScope *> &Scopes,
+    SmallVectorImpl<LexicalBlock *> &Blocks,
+    SmallVectorImpl<LocalVariable> &Locals,
+    SmallVectorImpl<CVGlobalVariable> &Globals) {
   for (LexicalScope *Scope : Scopes)
     collectLexicalBlockInfo(*Scope, Blocks, Locals, Globals);
 }
@@ -2999,8 +3063,7 @@ void CodeViewDebug::collectLexicalBlockInfo(
 /// Populate the lexical blocks and local variable lists of the parent with
 /// information about the specified lexical scope.
 void CodeViewDebug::collectLexicalBlockInfo(
-    LexicalScope &Scope,
-    SmallVectorImpl<LexicalBlock *> &ParentBlocks,
+    LexicalScope &Scope, SmallVectorImpl<LexicalBlock *> &ParentBlocks,
     SmallVectorImpl<LocalVariable> &ParentLocals,
     SmallVectorImpl<CVGlobalVariable> &ParentGlobals) {
   if (Scope.isAbstractScope())
@@ -3049,9 +3112,7 @@ void CodeViewDebug::collectLexicalBlockInfo(
       ParentLocals.append(Locals->begin(), Locals->end());
     if (Globals)
       ParentGlobals.append(Globals->begin(), Globals->end());
-    collectLexicalBlockInfo(Scope.getChildren(),
-                            ParentBlocks,
-                            ParentLocals,
+    collectLexicalBlockInfo(Scope.getChildren(), ParentBlocks, ParentLocals,
                             ParentGlobals);
     return;
   }
@@ -3078,9 +3139,7 @@ void CodeViewDebug::collectLexicalBlockInfo(
   if (Globals)
     Block.Globals = std::move(*Globals);
   ParentBlocks.push_back(&Block);
-  collectLexicalBlockInfo(Scope.getChildren(),
-                          Block.Children,
-                          Block.Locals,
+  collectLexicalBlockInfo(Scope.getChildren(), Block.Children, Block.Locals,
                           Block.Globals);
 }
 
@@ -3093,9 +3152,7 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
 
   // Build the lexical block structure to emit for this routine.
   if (LexicalScope *CFS = LScopes.getCurrentFunctionScope())
-    collectLexicalBlockInfo(*CFS,
-                            CurFn->ChildBlocks,
-                            CurFn->Locals,
+    collectLexicalBlockInfo(*CFS, CurFn->ChildBlocks, CurFn->Locals,
                             CurFn->Globals);
 
   // Clear the scope and variable information from the map which will not be
@@ -3137,9 +3194,7 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
 // corresponds to optimized code that doesn't have a distinct source location.
 // In this case, we try to use the previous or next source location depending on
 // the context.
-static bool isUsableDebugLoc(DebugLoc DL) {
-  return DL && DL.getLine() != 0;
-}
+static bool isUsableDebugLoc(DebugLoc DL) { return DL && DL.getLine() != 0; }
 
 void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   DebugHandlerBase::beginInstruction(MI);
@@ -3262,7 +3317,8 @@ void CodeViewDebug::collectGlobalVariableInfo() {
       // generally the filename and line number, which isn't possible to output
       // in CodeView. String literals should be the only unnamed GlobalVariable
       // with debug info.
-      if (DIGV->getName().empty()) continue;
+      if (DIGV->getName().empty())
+        continue;
 
       if ((DIE->getNumElements() == 2) &&
           (DIE->getElement(0) == dwarf::DW_OP_plus_uconst))
@@ -3288,8 +3344,8 @@ void CodeViewDebug::collectGlobalVariableInfo() {
       if (Scope && isa<DILocalScope>(Scope)) {
         // Locate a global variable list for this scope, creating one if
         // necessary.
-        auto Insertion = ScopeGlobals.insert(
-            {Scope, std::unique_ptr<GlobalVariableList>()});
+        auto Insertion =
+            ScopeGlobals.insert({Scope, std::unique_ptr<GlobalVariableList>()});
         if (Insertion.second)
           Insertion.first->second = std::make_unique<GlobalVariableList>();
         VariableList = Insertion.first->second.get();

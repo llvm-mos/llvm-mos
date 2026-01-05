@@ -109,9 +109,7 @@ public:
 
   BlockT *getHeader() const { return Entries[0]; }
 
-  const SmallVectorImpl<BlockT *> & getEntries() const {
-    return Entries;
-  }
+  const SmallVectorImpl<BlockT *> &getEntries() const { return Entries; }
 
   /// Clear the cache of the cycle.
   /// This should be run in all non-const function in GenericCycle

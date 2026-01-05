@@ -49,9 +49,9 @@ private:
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
 
   bool selectFPToInt(MachineInstr &I, MachineBasicBlock &MBB,
-                  MachineRegisterInfo &MRI) const;
+                     MachineRegisterInfo &MRI) const;
   bool selectIntToFP(MachineInstr &I, MachineBasicBlock &MBB,
-                  MachineRegisterInfo &MRI) const;
+                     MachineRegisterInfo &MRI) const;
 
   bool selectZExt(MachineInstr &I, MachineBasicBlock &MBB,
                   MachineRegisterInfo &MRI) const;
@@ -284,11 +284,9 @@ static uint32_t findContiguousZerosAtLeast(uint64_t Imm, unsigned Num) {
 
 // Direct materialization of 64-bit constants by enumerated patterns.
 // Similar to PPCISelDAGToDAG::selectI64ImmDirect().
-std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
-                                                MachineBasicBlock &MBB,
-                                                MachineRegisterInfo &MRI,
-                                                Register Reg,
-                                                uint64_t Imm) const {
+std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(
+    MachineInstr &I, MachineBasicBlock &MBB, MachineRegisterInfo &MRI,
+    Register Reg, uint64_t Imm) const {
   unsigned TZ = llvm::countr_zero<uint64_t>(Imm);
   unsigned LZ = llvm::countl_zero<uint64_t>(Imm);
   unsigned TO = llvm::countr_one<uint64_t>(Imm);
@@ -499,8 +497,8 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
     Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
     Register Tmp2Reg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
     if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LIS8), TmpReg)
-            .addImm((Imm >> (48 - LZ)) & 0xffff)
-            .constrainAllUses(TII, TRI, RBI))
+             .addImm((Imm >> (48 - LZ)) & 0xffff)
+             .constrainAllUses(TII, TRI, RBI))
       return false;
     if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
              .addReg(TmpReg, RegState::Kill)

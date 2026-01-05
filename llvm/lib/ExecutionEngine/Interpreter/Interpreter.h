@@ -24,10 +24,9 @@
 namespace llvm {
 
 class IntrinsicLowering;
-template<typename T> class generic_gep_type_iterator;
+template <typename T> class generic_gep_type_iterator;
 class ConstantExpr;
 typedef generic_gep_type_iterator<User::const_op_iterator> gep_type_iterator;
-
 
 // AllocaHolder - Object to track all of the blocks of memory allocated by
 // alloca.  When the function returns, this object is popped off the execution
@@ -57,14 +56,14 @@ typedef std::vector<GenericValue> ValuePlaneTy;
 // executing.
 //
 struct ExecutionContext {
-  Function             *CurFunction;// The currently executing function
-  BasicBlock           *CurBB;      // The currently executing BB
-  BasicBlock::iterator  CurInst;    // The next instruction to execute
-  CallBase             *Caller;     // Holds the call that called subframes.
-                                    // NULL if main func or debugger invoked fn
+  Function *CurFunction;        // The currently executing function
+  BasicBlock *CurBB;            // The currently executing BB
+  BasicBlock::iterator CurInst; // The next instruction to execute
+  CallBase *Caller;             // Holds the call that called subframes.
+                                // NULL if main func or debugger invoked fn
   std::map<Value *, GenericValue> Values; // LLVM values used in this invocation
-  std::vector<GenericValue>  VarArgs; // Values passed through an ellipsis
-  AllocaHolder Allocas;            // Track memory allocated by alloca
+  std::vector<GenericValue> VarArgs;      // Values passed through an ellipsis
+  AllocaHolder Allocas;                   // Track memory allocated by alloca
 
   ExecutionContext() : CurFunction(nullptr), CurBB(nullptr), CurInst(nullptr) {}
 };
@@ -72,7 +71,7 @@ struct ExecutionContext {
 // Interpreter - This class represents the entirety of the interpreter.
 //
 class Interpreter : public ExecutionEngine, public InstVisitor<Interpreter> {
-  GenericValue ExitValue;          // The return value of the called function
+  GenericValue ExitValue; // The return value of the called function
   IntrinsicLowering *IL;
 
   // The runtime stack of executing code.  The top of the stack is the current
@@ -81,7 +80,7 @@ class Interpreter : public ExecutionEngine, public InstVisitor<Interpreter> {
 
   // AtExitHandlers - List of functions to call when the program exits,
   // registered with the atexit() library function.
-  std::vector<Function*> AtExitHandlers;
+  std::vector<Function *> AtExitHandlers;
 
 public:
   explicit Interpreter(std::unique_ptr<Module> M);
@@ -92,9 +91,7 @@ public:
   ///
   void runAtExitHandlers();
 
-  static void Register() {
-    InterpCtor = create;
-  }
+  static void Register() { InterpCtor = create; }
 
   /// Create an interpreter ExecutionEngine.
   ///
@@ -115,7 +112,7 @@ public:
   // Methods used to execute code:
   // Place a call on the stack
   void callFunction(Function *F, ArrayRef<GenericValue> ArgVals);
-  void run();                // Execute instructions until nothing left to do
+  void run(); // Execute instructions until nothing left to do
 
   // Opcode Implementations
   void visitReturnInst(ReturnInst &I);
@@ -176,15 +173,11 @@ public:
                                     ArrayRef<GenericValue> ArgVals);
   void exitCalled(GenericValue GV);
 
-  void addAtExitHandler(Function *F) {
-    AtExitHandlers.push_back(F);
-  }
+  void addAtExitHandler(Function *F) { AtExitHandlers.push_back(F); }
 
-  GenericValue *getFirstVarArg () {
-    return &(ECStack.back ().VarArgs[0]);
-  }
+  GenericValue *getFirstVarArg() { return &(ECStack.back().VarArgs[0]); }
 
-private:  // Helper functions
+private: // Helper functions
   GenericValue executeGEPOperation(Value *Ptr, gep_type_iterator I,
                                    gep_type_iterator E, ExecutionContext &SF);
 
@@ -194,9 +187,9 @@ private:  // Helper functions
   //
   void SwitchToNewBasicBlock(BasicBlock *Dest, ExecutionContext &SF);
 
-  void *getPointerToFunction(Function *F) override { return (void*)F; }
+  void *getPointerToFunction(Function *F) override { return (void *)F; }
 
-  void initializeExecutionEngine() { }
+  void initializeExecutionEngine() {}
   void initializeExternalFunctions();
   GenericValue getConstantExprValue(ConstantExpr *CE, ExecutionContext &SF);
   GenericValue getOperandValue(Value *V, ExecutionContext &SF);
@@ -225,9 +218,8 @@ private:  // Helper functions
   GenericValue executeBitCastInst(Value *SrcVal, Type *DstTy,
                                   ExecutionContext &SF);
   void popStackAndReturnValueToCaller(Type *RetTy, GenericValue Result);
-
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

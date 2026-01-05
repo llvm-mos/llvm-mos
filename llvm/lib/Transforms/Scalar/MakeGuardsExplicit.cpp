@@ -78,7 +78,7 @@ static bool explicifyGuards(Function &F) {
 }
 
 PreservedAnalyses MakeGuardsExplicitPass::run(Function &F,
-                                           FunctionAnalysisManager &) {
+                                              FunctionAnalysisManager &) {
   if (explicifyGuards(F))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

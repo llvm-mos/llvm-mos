@@ -52,9 +52,8 @@ public:
   static Expected<std::unique_ptr<SimpleRemoteEPC>>
   Create(std::unique_ptr<TaskDispatcher> D, Setup S,
          TransportTCtorArgTs &&...TransportTCtorArgs) {
-    std::unique_ptr<SimpleRemoteEPC> SREPC(
-        new SimpleRemoteEPC(std::make_shared<SymbolStringPool>(),
-                            std::move(D)));
+    std::unique_ptr<SimpleRemoteEPC> SREPC(new SimpleRemoteEPC(
+        std::make_shared<SymbolStringPool>(), std::move(D)));
     auto T = TransportT::Create(
         *SREPC, std::forward<TransportTCtorArgTs>(TransportTCtorArgs)...);
     if (!T)
@@ -123,8 +122,7 @@ private:
   void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
                           SymbolLookupCompleteFn F) override;
 
-  using PendingCallWrapperResultsMap =
-    DenseMap<uint64_t, IncomingWFRHandler>;
+  using PendingCallWrapperResultsMap = DenseMap<uint64_t, IncomingWFRHandler>;
 
   std::mutex SimpleRemoteEPCMutex;
   std::condition_variable DisconnectCV;

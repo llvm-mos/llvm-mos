@@ -117,8 +117,8 @@ struct COFFShortExport {
 
   friend bool operator==(const COFFShortExport &L, const COFFShortExport &R) {
     return L.Name == R.Name && L.ExtName == R.ExtName &&
-            L.Ordinal == R.Ordinal && L.Noname == R.Noname &&
-            L.Data == R.Data && L.Private == R.Private;
+           L.Ordinal == R.Ordinal && L.Noname == R.Noname && L.Data == R.Data &&
+           L.Private == R.Private;
   }
 
   friend bool operator!=(const COFFShortExport &L, const COFFShortExport &R) {

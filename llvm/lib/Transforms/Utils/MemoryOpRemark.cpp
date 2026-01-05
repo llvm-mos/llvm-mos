@@ -24,7 +24,8 @@ using namespace llvm::ore;
 
 MemoryOpRemark::~MemoryOpRemark() = default;
 
-bool MemoryOpRemark::canHandle(const Instruction *I, const TargetLibraryInfo &TLI) {
+bool MemoryOpRemark::canHandle(const Instruction *I,
+                               const TargetLibraryInfo &TLI) {
   if (isa<StoreInst>(I))
     return true;
 
@@ -125,9 +126,9 @@ StringRef MemoryOpRemark::remarkName(RemarkKind RK) const {
   llvm_unreachable("missing RemarkKind case");
 }
 
-static void inlineVolatileOrAtomicWithExtraArgs(bool *Inline, bool Volatile,
-                                                bool Atomic,
-                                                DiagnosticInfoIROptimization &R) {
+static void
+inlineVolatileOrAtomicWithExtraArgs(bool *Inline, bool Volatile, bool Atomic,
+                                    DiagnosticInfoIROptimization &R) {
   if (Inline && *Inline)
     R << " Inlined: " << NV("StoreInlined", true) << ".";
   if (Volatile)
@@ -153,7 +154,7 @@ getSizeInBytes(std::optional<uint64_t> SizeInBits) {
   return *SizeInBits / 8;
 }
 
-template<typename ...Ts>
+template <typename... Ts>
 std::unique_ptr<DiagnosticInfoIROptimization>
 MemoryOpRemark::makeRemark(Ts... Args) {
   switch (diagnosticKind()) {
@@ -293,7 +294,8 @@ void MemoryOpRemark::visitKnownLibCall(const CallInst &CI, LibFunc LF,
   }
 }
 
-void MemoryOpRemark::visitSizeOperand(Value *V, DiagnosticInfoIROptimization &R) {
+void MemoryOpRemark::visitSizeOperand(Value *V,
+                                      DiagnosticInfoIROptimization &R) {
   if (auto *Len = dyn_cast<ConstantInt>(V)) {
     uint64_t Size = Len->getZExtValue();
     R << " Memory operation size: " << NV("StoreSize", Size) << " bytes.";
@@ -351,7 +353,8 @@ void MemoryOpRemark::visitVariable(const Value *V,
     Result.push_back(std::move(Var));
 }
 
-void MemoryOpRemark::visitPtr(Value *Ptr, bool IsRead, DiagnosticInfoIROptimization &R) {
+void MemoryOpRemark::visitPtr(Value *Ptr, bool IsRead,
+                              DiagnosticInfoIROptimization &R) {
   // Find if Ptr is a known variable we can give more information on.
   SmallVector<Value *, 2> Objects;
   getUnderlyingObjectsForCodeGen(Ptr, Objects);
@@ -362,7 +365,8 @@ void MemoryOpRemark::visitPtr(Value *Ptr, bool IsRead, DiagnosticInfoIROptimizat
   if (VIs.empty()) {
     bool CanBeNull;
     bool CanBeFreed;
-    uint64_t Size = Ptr->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
+    uint64_t Size =
+        Ptr->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
     if (!Size)
       return;
     VIs.push_back({std::nullopt, Size});

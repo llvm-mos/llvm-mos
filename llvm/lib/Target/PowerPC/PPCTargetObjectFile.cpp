@@ -14,9 +14,8 @@
 
 using namespace llvm;
 
-void
-PPC64LinuxTargetObjectFile::
-Initialize(MCContext &Ctx, const TargetMachine &TM) {
+void PPC64LinuxTargetObjectFile::Initialize(MCContext &Ctx,
+                                            const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
 }
 
@@ -47,12 +46,10 @@ MCSection *PPC64LinuxTargetObjectFile::SelectSectionForGlobal(
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
 }
 
-const MCExpr *PPC64LinuxTargetObjectFile::
-getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
+const MCExpr *PPC64LinuxTargetObjectFile::getDebugThreadLocalSymbol(
+    const MCSymbol *Sym) const {
   const MCExpr *Expr =
       MCSymbolRefExpr::create(Sym, PPC::S_DTPREL, getContext());
-  return MCBinaryExpr::createAdd(Expr,
-                                 MCConstantExpr::create(0x8000, getContext()),
-                                 getContext());
+  return MCBinaryExpr::createAdd(
+      Expr, MCConstantExpr::create(0x8000, getContext()), getContext());
 }
-

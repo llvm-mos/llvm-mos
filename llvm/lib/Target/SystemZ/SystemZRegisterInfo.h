@@ -162,17 +162,14 @@ public:
                                        CallingConv::ID CC) const override;
   const uint32_t *getNoPreservedMask() const override;
   BitVector getReservedRegs(const MachineFunction &MF) const override;
-  bool eliminateFrameIndex(MachineBasicBlock::iterator MI,
-                           int SPAdj, unsigned FIOperandNum,
+  bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
+                           unsigned FIOperandNum,
                            RegScavenger *RS) const override;
 
   /// SrcRC and DstRC will be morphed into NewRC if this returns true.
- bool shouldCoalesce(MachineInstr *MI,
-                      const TargetRegisterClass *SrcRC,
-                      unsigned SubReg,
-                      const TargetRegisterClass *DstRC,
-                      unsigned DstSubReg,
-                      const TargetRegisterClass *NewRC,
+  bool shouldCoalesce(MachineInstr *MI, const TargetRegisterClass *SrcRC,
+                      unsigned SubReg, const TargetRegisterClass *DstRC,
+                      unsigned DstSubReg, const TargetRegisterClass *NewRC,
                       LiveIntervals &LIS) const override;
 
   Register getFrameRegister(const MachineFunction &MF) const override;

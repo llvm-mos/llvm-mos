@@ -34,7 +34,7 @@ public:
 
   IntrusiveRefCntPtr<vfs::FileSystem> getVFS() const { return VFS; }
 
-  virtual void generate(){};
+  virtual void generate() {};
 
   /// Create a Reproducer instance based on the given mode.
   static llvm::Expected<std::unique_ptr<Reproducer>>

@@ -160,13 +160,12 @@ static inline void AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx,
   }
 }
 
-void
-NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
+void NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
   const TargetFrameLowering &TFI = *Fn.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *RegInfo = Fn.getSubtarget().getRegisterInfo();
 
   bool StackGrowsDown =
-    TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsDown;
+      TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsDown;
 
   // Loop over all of the stack objects, assigning sequential addresses...
   MachineFrameInfo &MFI = Fn.getFrameInfo();
@@ -177,8 +176,8 @@ NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
   int LocalAreaOffset = TFI.getOffsetOfLocalArea();
   if (StackGrowsDown)
     LocalAreaOffset = -LocalAreaOffset;
-  assert(LocalAreaOffset >= 0
-         && "Local area offset should be in direction of stack growth");
+  assert(LocalAreaOffset >= 0 &&
+         "Local area offset should be in direction of stack growth");
   int64_t Offset = LocalAreaOffset;
 
   // If there are fixed sized objects that are preallocated in the local area,
@@ -198,7 +197,8 @@ NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
       // address of the object.
       FixedOff = MFI.getObjectOffset(i) + MFI.getObjectSize(i);
     }
-    if (FixedOff > Offset) Offset = FixedOff;
+    if (FixedOff > Offset)
+      Offset = FixedOff;
   }
 
   // NOTE: We do not have a call stack
@@ -238,8 +238,7 @@ NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
   // Then assign frame offsets to stack objects that are not used to spill
   // callee saved registers.
   for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {
-    if (MFI.isObjectPreAllocated(i) &&
-        MFI.getUseLocalStackAllocationBlock())
+    if (MFI.isObjectPreAllocated(i) && MFI.getUseLocalStackAllocationBlock())
       continue;
     if (MFI.isDeadObjectIndex(i))
       continue;

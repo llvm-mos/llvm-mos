@@ -35,6 +35,6 @@ public:
   void printInstruction(const MCInst *MI, uint64_t Address, raw_ostream &O);
   static const char *getRegisterName(MCRegister Reg);
 };
-}
+} // namespace llvm
 
 #endif

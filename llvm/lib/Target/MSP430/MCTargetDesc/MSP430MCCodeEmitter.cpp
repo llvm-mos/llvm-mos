@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MSP430.h"
-#include "MCTargetDesc/MSP430MCTargetDesc.h"
 #include "MCTargetDesc/MSP430FixupKinds.h"
+#include "MCTargetDesc/MSP430MCTargetDesc.h"
+#include "MSP430.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVector.h"
@@ -112,10 +112,10 @@ void MSP430MCCodeEmitter::encodeInstruction(const MCInst &MI,
   }
 }
 
-unsigned MSP430MCCodeEmitter::getMachineOpValue(const MCInst &MI,
-                                                const MCOperand &MO,
-                                                SmallVectorImpl<MCFixup> &Fixups,
-                                                const MCSubtargetInfo &STI) const {
+unsigned
+MSP430MCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
   if (MO.isReg())
     return Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
 
@@ -161,9 +161,10 @@ unsigned MSP430MCCodeEmitter::getMemOpValue(const MCInst &MI, unsigned Op,
   return Reg;
 }
 
-unsigned MSP430MCCodeEmitter::getPCRelImmOpValue(const MCInst &MI, unsigned Op,
-                                                 SmallVectorImpl<MCFixup> &Fixups,
-                                                 const MCSubtargetInfo &STI) const {
+unsigned
+MSP430MCCodeEmitter::getPCRelImmOpValue(const MCInst &MI, unsigned Op,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(Op);
   if (MO.isImm())
     return MO.getImm();
@@ -173,9 +174,10 @@ unsigned MSP430MCCodeEmitter::getPCRelImmOpValue(const MCInst &MI, unsigned Op,
   return 0;
 }
 
-unsigned MSP430MCCodeEmitter::getCGImmOpValue(const MCInst &MI, unsigned Op,
-                                              SmallVectorImpl<MCFixup> &Fixups,
-                                              const MCSubtargetInfo &STI) const {
+unsigned
+MSP430MCCodeEmitter::getCGImmOpValue(const MCInst &MI, unsigned Op,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(Op);
   assert(MO.isImm() && "Expr operand expected");
 
@@ -183,12 +185,18 @@ unsigned MSP430MCCodeEmitter::getCGImmOpValue(const MCInst &MI, unsigned Op,
   switch (Imm) {
   default:
     llvm_unreachable("Invalid immediate value");
-  case 4:  return 0x22;
-  case 8:  return 0x32;
-  case 0:  return 0x03;
-  case 1:  return 0x13;
-  case 2:  return 0x23;
-  case -1: return 0x33;
+  case 4:
+    return 0x22;
+  case 8:
+    return 0x32;
+  case 0:
+    return 0x03;
+  case 1:
+    return 0x13;
+  case 2:
+    return 0x23;
+  case -1:
+    return 0x33;
   }
 }
 
@@ -198,13 +206,20 @@ unsigned MSP430MCCodeEmitter::getCCOpValue(const MCInst &MI, unsigned Op,
   const MCOperand &MO = MI.getOperand(Op);
   assert(MO.isImm() && "Immediate operand expected");
   switch (MO.getImm()) {
-  case MSP430CC::COND_NE: return 0;
-  case MSP430CC::COND_E:  return 1;
-  case MSP430CC::COND_LO: return 2;
-  case MSP430CC::COND_HS: return 3;
-  case MSP430CC::COND_N:  return 4;
-  case MSP430CC::COND_GE: return 5;
-  case MSP430CC::COND_L:  return 6;
+  case MSP430CC::COND_NE:
+    return 0;
+  case MSP430CC::COND_E:
+    return 1;
+  case MSP430CC::COND_LO:
+    return 2;
+  case MSP430CC::COND_HS:
+    return 3;
+  case MSP430CC::COND_N:
+    return 4;
+  case MSP430CC::COND_GE:
+    return 5;
+  case MSP430CC::COND_L:
+    return 6;
   default:
     llvm_unreachable("Unknown condition code");
   }

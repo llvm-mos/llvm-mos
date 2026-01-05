@@ -46,12 +46,12 @@ private:
     return false;
   }
 };
-}
+} // namespace
 
 char CrashOnCalls::ID = 0;
 static RegisterPass<CrashOnCalls>
-  X("bugpoint-crashcalls",
-    "BugPoint Test Pass - Intentionally crash on CallInsts");
+    X("bugpoint-crashcalls",
+      "BugPoint Test Pass - Intentionally crash on CallInsts");
 
 namespace {
 /// DeleteCalls - This pass is used to test bugpoint.  It intentionally
@@ -74,15 +74,15 @@ private:
     return false;
   }
 };
-}
+} // namespace
 
 char DeleteCalls::ID = 0;
 static RegisterPass<DeleteCalls>
-  Y("bugpoint-deletecalls",
-    "BugPoint Test Pass - Intentionally 'misoptimize' CallInsts");
+    Y("bugpoint-deletecalls",
+      "BugPoint Test Pass - Intentionally 'misoptimize' CallInsts");
 
 namespace {
-  /// CrashOnDeclFunc - This pass is used to test bugpoint.  It intentionally
+/// CrashOnDeclFunc - This pass is used to test bugpoint.  It intentionally
 /// crashes if the module has an undefined function (ie a function that is
 /// defined in an external module).
 class CrashOnDeclFunc : public ModulePass {
@@ -98,13 +98,13 @@ private:
     }
     return false;
   }
-  };
-}
+};
+} // namespace
 
 char CrashOnDeclFunc::ID = 0;
 static RegisterPass<CrashOnDeclFunc>
-  Z("bugpoint-crash-decl-funcs",
-    "BugPoint Test Pass - Intentionally crash on declared functions");
+    Z("bugpoint-crash-decl-funcs",
+      "BugPoint Test Pass - Intentionally crash on declared functions");
 
 namespace {
 /// CrashOnOneCU - This pass is used to test bugpoint. It intentionally
@@ -124,7 +124,7 @@ private:
     return false;
   }
 };
-}
+} // namespace
 
 char CrashOnTooManyCUs::ID = 0;
 static RegisterPass<CrashOnTooManyCUs>

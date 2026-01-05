@@ -97,7 +97,7 @@ public:
   /// can't evaluate it.  ActualArgs contains the formal arguments for the
   /// function.
   bool EvaluateFunction(Function *F, Constant *&RetVal,
-                        const SmallVectorImpl<Constant*> &ActualArgs);
+                        const SmallVectorImpl<Constant *> &ActualArgs);
 
   DenseMap<GlobalVariable *, Constant *> getMutatedInitializers() const {
     DenseMap<GlobalVariable *, Constant *> Result;
@@ -115,15 +115,14 @@ private:
                      bool &StrippedPointerCastsForAliasAnalysis);
 
   Constant *getVal(Value *V) {
-    if (Constant *CV = dyn_cast<Constant>(V)) return CV;
+    if (Constant *CV = dyn_cast<Constant>(V))
+      return CV;
     Constant *R = ValueStack.back().lookup(V);
     assert(R && "Reference to an uncomputed value!");
     return R;
   }
 
-  void setVal(Value *V, Constant *C) {
-    ValueStack.back()[V] = C;
-  }
+  void setVal(Value *V, Constant *C) { ValueStack.back()[V] = C; }
 
   /// Given call site return callee and list of its formal arguments
   Function *getCalleeWithFormalArgs(CallBase &CB,
@@ -141,11 +140,11 @@ private:
   /// As we compute SSA register values, we store their contents here. The back
   /// of the deque contains the current function and the stack contains the
   /// values in the calling frames.
-  std::deque<DenseMap<Value*, Constant*>> ValueStack;
+  std::deque<DenseMap<Value *, Constant *>> ValueStack;
 
   /// This is used to detect recursion.  In pathological situations we could hit
   /// exponential behavior, but at least there is nothing unbounded.
-  SmallVector<Function*, 4> CallStack;
+  SmallVector<Function *, 4> CallStack;
 
   /// For each store we execute, we update this map.  Loads check this to get
   /// the most up-to-date value.  If evaluation is successful, this state is
@@ -159,11 +158,11 @@ private:
 
   /// These global variables have been marked invariant by the static
   /// constructor.
-  SmallPtrSet<GlobalVariable*, 8> Invariants;
+  SmallPtrSet<GlobalVariable *, 8> Invariants;
 
   /// These are constants we have checked and know to be simple enough to live
   /// in a static initializer of a global.
-  SmallPtrSet<Constant*, 8> SimpleConstants;
+  SmallPtrSet<Constant *, 8> SimpleConstants;
 
   const DataLayout &DL;
   const TargetLibraryInfo *TLI;

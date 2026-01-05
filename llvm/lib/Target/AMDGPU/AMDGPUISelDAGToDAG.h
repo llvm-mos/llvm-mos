@@ -261,7 +261,7 @@ private:
                                  SDValue &SrcMods) const;
 
   bool SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1, SDValue &Src2,
-                   SDValue &Tbl) const;
+                    SDValue &Tbl) const;
 
   SDValue getHi16Elt(SDValue In) const;
 

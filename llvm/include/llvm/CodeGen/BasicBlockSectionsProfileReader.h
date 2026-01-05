@@ -64,7 +64,7 @@ class BasicBlockSectionsProfileReader {
 public:
   friend class BasicBlockSectionsProfileReaderWrapperPass;
   BasicBlockSectionsProfileReader(const MemoryBuffer *Buf)
-      : MBuf(Buf), LineIt(*Buf, /*SkipBlanks=*/true, /*CommentMarker=*/'#'){};
+      : MBuf(Buf), LineIt(*Buf, /*SkipBlanks=*/true, /*CommentMarker=*/'#') {};
 
   BasicBlockSectionsProfileReader() = default;
 

@@ -428,30 +428,30 @@ COFFPlatform::COFFPlatform(
     return;
   }
 
-  for (auto& Lib : DylibsToPreload)
+  for (auto &Lib : DylibsToPreload)
     if (auto E2 = this->LoadDynLibrary(PlatformJD, Lib)) {
       Err = std::move(E2);
       return;
     }
 
   if (StaticVCRuntime)
-      if (auto E2 = VCRuntimeBootstrap->initializeStaticVCRuntime(PlatformJD)) {
-          Err = std::move(E2);
-          return;
-      }
+    if (auto E2 = VCRuntimeBootstrap->initializeStaticVCRuntime(PlatformJD)) {
+      Err = std::move(E2);
+      return;
+    }
 
   // Associate wrapper function tags with JIT-side function implementations.
   if (auto E2 = associateRuntimeSupportFunctions(PlatformJD)) {
-      Err = std::move(E2);
-      return;
+    Err = std::move(E2);
+    return;
   }
 
   // Lookup addresses of runtime functions callable by the platform,
   // call the platform bootstrap function to initialize the platform-state
   // object in the executor.
   if (auto E2 = bootstrapCOFFRuntime(PlatformJD)) {
-      Err = std::move(E2);
-      return;
+    Err = std::move(E2);
+    return;
   }
 
   Bootstrapping.store(false);

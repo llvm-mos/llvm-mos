@@ -23,13 +23,14 @@ class BasicBlock;
 
 bool User::replaceUsesOfWith(Value *From, Value *To) {
   bool Changed = false;
-  if (From == To) return Changed;   // Duh what?
+  if (From == To)
+    return Changed; // Duh what?
 
   assert((!isa<Constant>(this) || isa<GlobalValue>(this)) &&
          "Cannot call User::replaceUsesOfWith on a constant!");
 
   for (unsigned i = 0, E = getNumOperands(); i != E; ++i)
-    if (getOperand(i) == From) {  // Is This operand is pointing to oldval?
+    if (getOperand(i) == From) { // Is This operand is pointing to oldval?
       // The side effects of this setOperand call include linking to
       // "To", adding "this" to the uses list of To, and
       // most importantly, removing "this" from the use list of "From".
@@ -60,7 +61,7 @@ void User::allocHungoffUses(unsigned N, bool IsPhi) {
   size_t size = N * sizeof(Use);
   if (IsPhi)
     size += N * sizeof(BasicBlock *);
-  Use *Begin = static_cast<Use*>(::operator new(size));
+  Use *Begin = static_cast<Use *>(::operator new(size));
   Use *End = Begin + N;
   setOperandList(Begin);
   for (; Begin != End; Begin++)
@@ -91,7 +92,6 @@ void User::growHungoffUses(unsigned NewNumUses, bool IsPhi) {
   }
   Use::zap(OldOps, OldOps + OldNumUses, true);
 }
-
 
 // This is a private struct used by `User` to track the co-allocated descriptor
 // section.

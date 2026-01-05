@@ -536,11 +536,9 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
         // anonymous symbol.
         auto &GSym =
             Name->empty()
-                ? G->addAnonymousSymbol(*B, Offset, Sym.st_size,
-                                        false, false)
-                : G->addDefinedSymbol(*B, Offset, *Name, Sym.st_size, L,
-                                      S, Sym.getType() == ELF::STT_FUNC,
-                                      false);
+                ? G->addAnonymousSymbol(*B, Offset, Sym.st_size, false, false)
+                : G->addDefinedSymbol(*B, Offset, *Name, Sym.st_size, L, S,
+                                      Sym.getType() == ELF::STT_FUNC, false);
 
         GSym.setTargetFlags(Flags);
         setGraphSymbol(SymIndex, GSym);

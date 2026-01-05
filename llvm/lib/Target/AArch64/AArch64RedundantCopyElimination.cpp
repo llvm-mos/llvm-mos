@@ -99,7 +99,7 @@ public:
   }
 };
 char AArch64RedundantCopyElimination::ID = 0;
-}
+} // namespace
 
 INITIALIZE_PASS(AArch64RedundantCopyElimination, "aarch64-copyelim",
                 "AArch64 redundant copy elimination pass", false, false)

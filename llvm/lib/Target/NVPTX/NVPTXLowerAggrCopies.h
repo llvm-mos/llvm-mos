@@ -18,6 +18,6 @@ namespace llvm {
 class FunctionPass;
 
 FunctionPass *createLowerAggrCopies();
-}
+} // namespace llvm
 
 #endif

@@ -169,34 +169,34 @@ public:
         : Behavior(B), Key(K), Val(V) {}
   };
 
-/// @}
-/// @name Member Variables
-/// @{
+  /// @}
+  /// @name Member Variables
+  /// @{
 private:
-  LLVMContext &Context;           ///< The LLVMContext from which types and
-                                  ///< constants are allocated.
-  GlobalListType GlobalList;      ///< The Global Variables in the module
-  FunctionListType FunctionList;  ///< The Functions in the module
-  AliasListType AliasList;        ///< The Aliases in the module
-  IFuncListType IFuncList;        ///< The IFuncs in the module
-  NamedMDListType NamedMDList;    ///< The named metadata in the module
-  std::string GlobalScopeAsm;     ///< Inline Asm at global scope.
+  LLVMContext &Context;          ///< The LLVMContext from which types and
+                                 ///< constants are allocated.
+  GlobalListType GlobalList;     ///< The Global Variables in the module
+  FunctionListType FunctionList; ///< The Functions in the module
+  AliasListType AliasList;       ///< The Aliases in the module
+  IFuncListType IFuncList;       ///< The IFuncs in the module
+  NamedMDListType NamedMDList;   ///< The named metadata in the module
+  std::string GlobalScopeAsm;    ///< Inline Asm at global scope.
   std::unique_ptr<ValueSymbolTable> ValSymTab; ///< Symbol table for values
-  ComdatSymTabType ComdatSymTab;  ///< Symbol table for COMDATs
+  ComdatSymTabType ComdatSymTab;               ///< Symbol table for COMDATs
   std::unique_ptr<MemoryBuffer>
-  OwnedMemoryBuffer;              ///< Memory buffer directly owned by this
-                                  ///< module, for legacy clients only.
+      OwnedMemoryBuffer; ///< Memory buffer directly owned by this
+                         ///< module, for legacy clients only.
   std::unique_ptr<GVMaterializer>
-  Materializer;                   ///< Used to materialize GlobalValues
-  std::string ModuleID;           ///< Human readable identifier for the module
-  std::string SourceFileName;     ///< Original source file name for module,
-                                  ///< recorded in bitcode.
+      Materializer;           ///< Used to materialize GlobalValues
+  std::string ModuleID;       ///< Human readable identifier for the module
+  std::string SourceFileName; ///< Original source file name for module,
+                              ///< recorded in bitcode.
   /// Platform target triple Module compiled on
   /// Format: (arch)(sub)-(vendor)-(sys)-(abi)
   // FIXME: Default construction is not the same as empty triple :(
   Triple TargetTriple = Triple("");
-  NamedMDSymTabType NamedMDSymTab;  ///< NamedMDNode names.
-  DataLayout DL;                  ///< DataLayout associated with the module
+  NamedMDSymTabType NamedMDSymTab; ///< NamedMDNode names.
+  DataLayout DL;                   ///< DataLayout associated with the module
   StringMap<unsigned>
       CurrentIntrinsicIds; ///< Keep track of the current unique id count for
                            ///< the specified intrinsic basename.
@@ -211,9 +211,9 @@ private:
 
   friend class Constant;
 
-/// @}
-/// @name Constructors
-/// @{
+  /// @}
+  /// @name Constructors
+  /// @{
 public:
   /// Used when printing this module in the new debug info format; removes all
   /// declarations of debug intrinsics that are replaced by non-intrinsic
@@ -236,7 +236,7 @@ public:
 
   /// The Module constructor. Note that there is no default constructor. You
   /// must provide a name for the module upon construction.
-  explicit Module(StringRef ModuleID, LLVMContext& C);
+  explicit Module(StringRef ModuleID, LLVMContext &C);
   /// The module destructor. This will dropAllReferences.
   ~Module();
 
@@ -339,9 +339,9 @@ public:
       GlobalScopeAsm += '\n';
   }
 
-/// @}
-/// @name Generic Value Accessors
-/// @{
+  /// @}
+  /// @name Generic Value Accessors
+  /// @{
 
   /// Return the global value in the module with the specified name, of
   /// arbitrary type. This method returns null if a global with the specified
@@ -371,9 +371,9 @@ public:
   std::string getUniqueIntrinsicName(StringRef BaseName, Intrinsic::ID Id,
                                      const FunctionType *Proto);
 
-/// @}
-/// @name Function Accessors
-/// @{
+  /// @}
+  /// @name Function Accessors
+  /// @{
 
   /// Look up the specified function in the module symbol table. If it does not
   /// exist, add a prototype for the function and return it. Otherwise, return
@@ -396,9 +396,8 @@ public:
   FunctionCallee getOrInsertFunction(StringRef Name,
                                      AttributeList AttributeList, Type *RetTy,
                                      ArgsTy... Args) {
-    SmallVector<Type*, sizeof...(ArgsTy)> ArgTys{Args...};
-    return getOrInsertFunction(Name,
-                               FunctionType::get(RetTy, ArgTys, false),
+    SmallVector<Type *, sizeof...(ArgsTy)> ArgTys{Args...};
+    return getOrInsertFunction(Name, FunctionType::get(RetTy, ArgTys, false),
                                AttributeList);
   }
 
@@ -419,9 +418,9 @@ public:
   /// exist, return null.
   Function *getFunction(StringRef Name) const;
 
-/// @}
-/// @name Global Variable Accessors
-/// @{
+  /// @}
+  /// @name Global Variable Accessors
+  /// @{
 
   /// Look up the specified global variable in the module symbol table. If it
   /// does not exist, return null. If AllowInternal is set to true, this
@@ -447,7 +446,7 @@ public:
   }
   GlobalVariable *getNamedGlobal(StringRef Name) {
     return const_cast<GlobalVariable *>(
-                       static_cast<const Module *>(this)->getNamedGlobal(Name));
+        static_cast<const Module *>(this)->getNamedGlobal(Name));
   }
 
   /// Look up the specified global in the module symbol table.
@@ -461,27 +460,27 @@ public:
   /// overload constructs the global variable using its constructor's defaults.
   GlobalVariable *getOrInsertGlobal(StringRef Name, Type *Ty);
 
-/// @}
-/// @name Global Alias Accessors
-/// @{
+  /// @}
+  /// @name Global Alias Accessors
+  /// @{
 
   /// Return the global alias in the module with the specified name, of
   /// arbitrary type. This method returns null if a global with the specified
   /// name is not found.
   GlobalAlias *getNamedAlias(StringRef Name) const;
 
-/// @}
-/// @name Global IFunc Accessors
-/// @{
+  /// @}
+  /// @name Global IFunc Accessors
+  /// @{
 
   /// Return the global ifunc in the module with the specified name, of
   /// arbitrary type. This method returns null if a global with the specified
   /// name is not found.
   GlobalIFunc *getNamedIFunc(StringRef Name) const;
 
-/// @}
-/// @name Named Metadata Accessors
-/// @{
+  /// @}
+  /// @name Named Metadata Accessors
+  /// @{
 
   /// Return the first NamedMDNode in the module with the specified name. This
   /// method returns null if a NamedMDNode with the specified name is not found.
@@ -495,17 +494,17 @@ public:
   /// Remove the given NamedMDNode from this module and delete it.
   void eraseNamedMetadata(NamedMDNode *NMD);
 
-/// @}
-/// @name Comdat Accessors
-/// @{
+  /// @}
+  /// @name Comdat Accessors
+  /// @{
 
   /// Return the Comdat in the module with the specified name. It is created
   /// if it didn't already exist.
   Comdat *getOrInsertComdat(StringRef Name);
 
-/// @}
-/// @name Module Flags Accessors
-/// @{
+  /// @}
+  /// @name Module Flags Accessors
+  /// @{
 
   /// Returns the module flags in the provided vector.
   void getModuleFlagsMetadata(SmallVectorImpl<ModuleFlagEntry> &Flags) const;
@@ -570,33 +569,34 @@ public:
   }
   /// Insert global variable \p GV into the global variable list before \p
   /// Where and take ownership.
-  void insertGlobalVariable(GlobalListType::iterator Where, GlobalVariable *GV) {
+  void insertGlobalVariable(GlobalListType::iterator Where,
+                            GlobalVariable *GV) {
     GlobalList.insert(Where, GV);
   }
   // Use global_size() to get the total number of global variables.
   // Use globals() to get the range of all global variables.
 
 private:
-/// @}
-/// @name Direct access to the globals list, functions list, and symbol table
-/// @{
+  /// @}
+  /// @name Direct access to the globals list, functions list, and symbol table
+  /// @{
 
   /// Get the Module's list of global variables (constant).
-  const GlobalListType   &getGlobalList() const       { return GlobalList; }
+  const GlobalListType &getGlobalList() const { return GlobalList; }
   /// Get the Module's list of global variables.
-  GlobalListType         &getGlobalList()             { return GlobalList; }
+  GlobalListType &getGlobalList() { return GlobalList; }
 
-  static GlobalListType Module::*getSublistAccess(GlobalVariable*) {
+  static GlobalListType Module::*getSublistAccess(GlobalVariable *) {
     return &Module::GlobalList;
   }
   friend class llvm::SymbolTableListTraits<llvm::GlobalVariable>;
 
 public:
   /// Get the Module's list of functions (constant).
-  const FunctionListType &getFunctionList() const     { return FunctionList; }
+  const FunctionListType &getFunctionList() const { return FunctionList; }
   /// Get the Module's list of functions.
-  FunctionListType       &getFunctionList()           { return FunctionList; }
-  static FunctionListType Module::*getSublistAccess(Function*) {
+  FunctionListType &getFunctionList() { return FunctionList; }
+  static FunctionListType Module::*getSublistAccess(Function *) {
     return &Module::FunctionList;
   }
 
@@ -605,7 +605,9 @@ public:
   /// Remove \p Alias from the list and delete it.
   void eraseAlias(GlobalAlias *Alias) { AliasList.erase(Alias); }
   /// Insert \p Alias at the end of the alias list and take ownership.
-  void insertAlias(GlobalAlias *Alias) { AliasList.insert(AliasList.end(), Alias); }
+  void insertAlias(GlobalAlias *Alias) {
+    AliasList.insert(AliasList.end(), Alias);
+  }
   // Use alias_size() to get the size of AliasList.
   // Use aliases() to get a range of all Alias objects in AliasList.
 
@@ -623,39 +625,37 @@ public:
   /// Remove \p MDNode from the list and delete it.
   void eraseNamedMDNode(NamedMDNode *MDNode) { NamedMDList.erase(MDNode); }
   /// Insert \p MDNode at the end of the alias list and take ownership.
-  void insertNamedMDNode(NamedMDNode *MDNode) {
-    NamedMDList.push_back(MDNode);
-  }
+  void insertNamedMDNode(NamedMDNode *MDNode) { NamedMDList.push_back(MDNode); }
   // Use named_metadata_size() to get the size of the named meatadata list.
   // Use named_metadata() to get the range of all named metadata.
 
 private: // Please use functions like insertAlias(), removeAlias() etc.
   /// Get the Module's list of aliases (constant).
-  const AliasListType    &getAliasList() const        { return AliasList; }
+  const AliasListType &getAliasList() const { return AliasList; }
   /// Get the Module's list of aliases.
-  AliasListType          &getAliasList()              { return AliasList; }
+  AliasListType &getAliasList() { return AliasList; }
 
-  static AliasListType Module::*getSublistAccess(GlobalAlias*) {
+  static AliasListType Module::*getSublistAccess(GlobalAlias *) {
     return &Module::AliasList;
   }
   friend class llvm::SymbolTableListTraits<llvm::GlobalAlias>;
 
   /// Get the Module's list of ifuncs (constant).
-  const IFuncListType    &getIFuncList() const        { return IFuncList; }
+  const IFuncListType &getIFuncList() const { return IFuncList; }
   /// Get the Module's list of ifuncs.
-  IFuncListType          &getIFuncList()              { return IFuncList; }
+  IFuncListType &getIFuncList() { return IFuncList; }
 
-  static IFuncListType Module::*getSublistAccess(GlobalIFunc*) {
+  static IFuncListType Module::*getSublistAccess(GlobalIFunc *) {
     return &Module::IFuncList;
   }
   friend class llvm::SymbolTableListTraits<llvm::GlobalIFunc>;
 
   /// Get the Module's list of named metadata (constant).
-  const NamedMDListType  &getNamedMDList() const      { return NamedMDList; }
+  const NamedMDListType &getNamedMDList() const { return NamedMDList; }
   /// Get the Module's list of named metadata.
-  NamedMDListType        &getNamedMDList()            { return NamedMDList; }
+  NamedMDListType &getNamedMDList() { return NamedMDList; }
 
-  static NamedMDListType Module::*getSublistAccess(NamedMDNode*) {
+  static NamedMDListType Module::*getSublistAccess(NamedMDNode *) {
     return &Module::NamedMDList;
   }
 
@@ -663,23 +663,23 @@ public:
   /// Get the symbol table of global variable and function identifiers
   const ValueSymbolTable &getValueSymbolTable() const { return *ValSymTab; }
   /// Get the Module's symbol table of global variable and function identifiers.
-  ValueSymbolTable       &getValueSymbolTable()       { return *ValSymTab; }
+  ValueSymbolTable &getValueSymbolTable() { return *ValSymTab; }
 
   /// Get the Module's symbol table for COMDATs (constant).
   const ComdatSymTabType &getComdatSymbolTable() const { return ComdatSymTab; }
   /// Get the Module's symbol table for COMDATs.
   ComdatSymTabType &getComdatSymbolTable() { return ComdatSymTab; }
 
-/// @}
-/// @name Global Variable Iteration
-/// @{
+  /// @}
+  /// @name Global Variable Iteration
+  /// @{
 
-  global_iterator       global_begin()       { return GlobalList.begin(); }
+  global_iterator global_begin() { return GlobalList.begin(); }
   const_global_iterator global_begin() const { return GlobalList.begin(); }
-  global_iterator       global_end  ()       { return GlobalList.end(); }
-  const_global_iterator global_end  () const { return GlobalList.end(); }
-  size_t                global_size () const { return GlobalList.size(); }
-  bool                  global_empty() const { return GlobalList.empty(); }
+  global_iterator global_end() { return GlobalList.end(); }
+  const_global_iterator global_end() const { return GlobalList.end(); }
+  size_t global_size() const { return GlobalList.size(); }
+  bool global_empty() const { return GlobalList.empty(); }
 
   iterator_range<global_iterator> globals() {
     return make_range(global_begin(), global_end());
@@ -688,38 +688,36 @@ public:
     return make_range(global_begin(), global_end());
   }
 
-/// @}
-/// @name Function Iteration
-/// @{
+  /// @}
+  /// @name Function Iteration
+  /// @{
 
-  iterator                begin()       { return FunctionList.begin(); }
-  const_iterator          begin() const { return FunctionList.begin(); }
-  iterator                end  ()       { return FunctionList.end();   }
-  const_iterator          end  () const { return FunctionList.end();   }
-  reverse_iterator        rbegin()      { return FunctionList.rbegin(); }
-  const_reverse_iterator  rbegin() const{ return FunctionList.rbegin(); }
-  reverse_iterator        rend()        { return FunctionList.rend(); }
-  const_reverse_iterator  rend() const  { return FunctionList.rend(); }
-  size_t                  size() const  { return FunctionList.size(); }
-  bool                    empty() const { return FunctionList.empty(); }
+  iterator begin() { return FunctionList.begin(); }
+  const_iterator begin() const { return FunctionList.begin(); }
+  iterator end() { return FunctionList.end(); }
+  const_iterator end() const { return FunctionList.end(); }
+  reverse_iterator rbegin() { return FunctionList.rbegin(); }
+  const_reverse_iterator rbegin() const { return FunctionList.rbegin(); }
+  reverse_iterator rend() { return FunctionList.rend(); }
+  const_reverse_iterator rend() const { return FunctionList.rend(); }
+  size_t size() const { return FunctionList.size(); }
+  bool empty() const { return FunctionList.empty(); }
 
-  iterator_range<iterator> functions() {
-    return make_range(begin(), end());
-  }
+  iterator_range<iterator> functions() { return make_range(begin(), end()); }
   iterator_range<const_iterator> functions() const {
     return make_range(begin(), end());
   }
 
-/// @}
-/// @name Alias Iteration
-/// @{
+  /// @}
+  /// @name Alias Iteration
+  /// @{
 
-  alias_iterator       alias_begin()            { return AliasList.begin(); }
-  const_alias_iterator alias_begin() const      { return AliasList.begin(); }
-  alias_iterator       alias_end  ()            { return AliasList.end();   }
-  const_alias_iterator alias_end  () const      { return AliasList.end();   }
-  size_t               alias_size () const      { return AliasList.size();  }
-  bool                 alias_empty() const      { return AliasList.empty(); }
+  alias_iterator alias_begin() { return AliasList.begin(); }
+  const_alias_iterator alias_begin() const { return AliasList.begin(); }
+  alias_iterator alias_end() { return AliasList.end(); }
+  const_alias_iterator alias_end() const { return AliasList.end(); }
+  size_t alias_size() const { return AliasList.size(); }
+  bool alias_empty() const { return AliasList.empty(); }
 
   iterator_range<alias_iterator> aliases() {
     return make_range(alias_begin(), alias_end());
@@ -728,16 +726,16 @@ public:
     return make_range(alias_begin(), alias_end());
   }
 
-/// @}
-/// @name IFunc Iteration
-/// @{
+  /// @}
+  /// @name IFunc Iteration
+  /// @{
 
-  ifunc_iterator       ifunc_begin()            { return IFuncList.begin(); }
-  const_ifunc_iterator ifunc_begin() const      { return IFuncList.begin(); }
-  ifunc_iterator       ifunc_end  ()            { return IFuncList.end();   }
-  const_ifunc_iterator ifunc_end  () const      { return IFuncList.end();   }
-  size_t               ifunc_size () const      { return IFuncList.size();  }
-  bool                 ifunc_empty() const      { return IFuncList.empty(); }
+  ifunc_iterator ifunc_begin() { return IFuncList.begin(); }
+  const_ifunc_iterator ifunc_begin() const { return IFuncList.begin(); }
+  ifunc_iterator ifunc_end() { return IFuncList.end(); }
+  const_ifunc_iterator ifunc_end() const { return IFuncList.end(); }
+  size_t ifunc_size() const { return IFuncList.size(); }
+  bool ifunc_empty() const { return IFuncList.empty(); }
 
   iterator_range<ifunc_iterator> ifuncs() {
     return make_range(ifunc_begin(), ifunc_end());
@@ -783,7 +781,7 @@ public:
     return NamedMDList.end();
   }
 
-  size_t named_metadata_size() const { return NamedMDList.size();  }
+  size_t named_metadata_size() const { return NamedMDList.size(); }
   bool named_metadata_empty() const { return NamedMDList.empty(); }
 
   iterator_range<named_metadata_iterator> named_metadata() {
@@ -855,10 +853,10 @@ public:
         debug_compile_units_iterator(CUs, 0),
         debug_compile_units_iterator(CUs, CUs ? CUs->getNumOperands() : 0));
   }
-/// @}
+  /// @}
 
-/// @name Utility functions for printing and dumping Module objects
-/// @{
+  /// @name Utility functions for printing and dumping Module objects
+  /// @{
 
   /// Print the module to an output stream with an optional
   /// AssemblyAnnotationWriter.  If \c ShouldPreserveUseListOrder, then include
@@ -879,9 +877,9 @@ public:
   /// that has "dropped all references", except operator delete.
   void dropAllReferences();
 
-/// @}
-/// @name Utility functions for querying Debug information.
-/// @{
+  /// @}
+  /// @name Utility functions for querying Debug information.
+  /// @{
 
   /// Returns the Number of Register ParametersDwarf Version by checking
   /// module flags.
@@ -897,27 +895,27 @@ public:
   /// Returns zero if not present in module.
   unsigned getCodeViewFlag() const;
 
-/// @}
-/// @name Utility functions for querying and setting PIC level
-/// @{
+  /// @}
+  /// @name Utility functions for querying and setting PIC level
+  /// @{
 
   /// Returns the PIC level (small or large model)
   PICLevel::Level getPICLevel() const;
 
   /// Set the PIC level (small or large model)
   void setPICLevel(PICLevel::Level PL);
-/// @}
+  /// @}
 
-/// @}
-/// @name Utility functions for querying and setting PIE level
-/// @{
+  /// @}
+  /// @name Utility functions for querying and setting PIE level
+  /// @{
 
   /// Returns the PIE level (small or large model)
   PIELevel::Level getPIELevel() const;
 
   /// Set the PIE level (small or large model)
   void setPIELevel(PIELevel::Level PL);
-/// @}
+  /// @}
 
   /// @}
   /// @name Utility function for querying and setting code model
@@ -1067,7 +1065,7 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(Module, LLVMModuleRef)
  * Module.
  */
 inline Module *unwrap(LLVMModuleProviderRef MP) {
-  return reinterpret_cast<Module*>(MP);
+  return reinterpret_cast<Module *>(MP);
 }
 
 } // end namespace llvm

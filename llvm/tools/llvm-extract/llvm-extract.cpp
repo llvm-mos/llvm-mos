@@ -62,8 +62,8 @@ static cl::opt<bool> DeleteFn("delete",
                               cl::cat(ExtractCat));
 
 static cl::opt<bool> KeepConstInit("keep-const-init",
-                              cl::desc("Keep initializers of constants"),
-                              cl::cat(ExtractCat));
+                                   cl::desc("Keep initializers of constants"),
+                                   cl::cat(ExtractCat));
 
 static cl::opt<bool>
     Recursive("recursive", cl::desc("Recursively extract all called functions"),
@@ -164,8 +164,10 @@ int main(int argc, char **argv) {
     std::string Error;
     Regex RegEx(ExtractRegExpAliases[i]);
     if (!RegEx.isValid(Error)) {
-      errs() << argv[0] << ": '" << ExtractRegExpAliases[i] << "' "
-        "invalid regex: " << Error;
+      errs() << argv[0] << ": '" << ExtractRegExpAliases[i]
+             << "' "
+                "invalid regex: "
+             << Error;
     }
     bool match = false;
     for (Module::alias_iterator GA = M->alias_begin(), E = M->alias_end();
@@ -198,8 +200,10 @@ int main(int argc, char **argv) {
     std::string Error;
     Regex RegEx(ExtractRegExpGlobals[i]);
     if (!RegEx.isValid(Error)) {
-      errs() << argv[0] << ": '" << ExtractRegExpGlobals[i] << "' "
-        "invalid regex: " << Error;
+      errs() << argv[0] << ": '" << ExtractRegExpGlobals[i]
+             << "' "
+                "invalid regex: "
+             << Error;
     }
     bool match = false;
     for (auto &GV : M->globals()) {
@@ -231,12 +235,13 @@ int main(int argc, char **argv) {
     StringRef RegExStr = ExtractRegExpFuncs[i];
     Regex RegEx(RegExStr);
     if (!RegEx.isValid(Error)) {
-      errs() << argv[0] << ": '" << ExtractRegExpFuncs[i] << "' "
-        "invalid regex: " << Error;
+      errs() << argv[0] << ": '" << ExtractRegExpFuncs[i]
+             << "' "
+                "invalid regex: "
+             << Error;
     }
     bool match = false;
-    for (Module::iterator F = M->begin(), E = M->end(); F != E;
-         F++) {
+    for (Module::iterator F = M->begin(), E = M->end(); F != E; F++) {
       if (RegEx.match(F->getName())) {
         GVs.insert(&*F);
         match = true;

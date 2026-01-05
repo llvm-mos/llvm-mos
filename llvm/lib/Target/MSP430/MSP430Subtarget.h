@@ -29,9 +29,7 @@ class StringRef;
 
 class MSP430Subtarget : public MSP430GenSubtargetInfo {
 public:
-  enum HWMultEnum {
-    NoHWMult, HWMult16, HWMult32, HWMultF5
-  };
+  enum HWMultEnum { NoHWMult, HWMult16, HWMult32, HWMultF5 };
 
 private:
   virtual void anchor();
@@ -75,6 +73,6 @@ public:
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 };
-} // End llvm namespace
+} // namespace llvm
 
-#endif  // LLVM_TARGET_MSP430_SUBTARGET_H
+#endif // LLVM_TARGET_MSP430_SUBTARGET_H

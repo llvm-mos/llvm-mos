@@ -850,7 +850,8 @@ void ASTNode::renderChild(const json::Value &Contexts,
 
 void ASTNode::renderPartial(const json::Value &Contexts,
                             MustacheOutputStream &OS, ASTNode *Partial) {
-  LLVM_DEBUG(dbgs() << "[Render Partial Indentation] Indentation: " << Indentation << "\n");
+  LLVM_DEBUG(dbgs() << "[Render Partial Indentation] Indentation: "
+                    << Indentation << "\n");
   AddIndentationStringStream IS(OS, Indentation);
   Partial->render(Contexts, IS);
 }

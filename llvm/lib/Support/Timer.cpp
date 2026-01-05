@@ -80,8 +80,8 @@ std::unique_ptr<raw_ostream> llvm::CreateInfoOutputFile() {
   if (!EC)
     return Result;
 
-  errs() << "Error opening info-output-file '"
-    << OutputFilename << " for appending!\n";
+  errs() << "Error opening info-output-file '" << OutputFilename
+         << " for appending!\n";
   return std::make_unique<raw_fd_ostream>(2, false); // stderr.
 }
 
@@ -104,7 +104,8 @@ void Timer::init(StringRef TimerName, StringRef TimerDescription,
 }
 
 Timer::~Timer() {
-  if (!TG) return;  // Never initialized, or already cleared.
+  if (!TG)
+    return; // Never initialized, or already cleared.
   TG->removeTimer(*this);
 }
 
@@ -177,10 +178,10 @@ void Timer::yieldTo(Timer &O) {
 }
 
 static void printVal(double Val, double Total, raw_ostream &OS) {
-  if (Total < 1e-7)   // Avoid dividing by zero.
+  if (Total < 1e-7) // Avoid dividing by zero.
     OS << "        -----     ";
   else
-    OS << format("  %7.4f (%5.1f%%)", Val, Val*100/Total);
+    OS << format("  %7.4f (%5.1f%%)", Val, Val * 100 / Total);
 }
 
 void TimeRecord::print(const TimeRecord &Total, raw_ostream &OS) const {
@@ -200,7 +201,6 @@ void TimeRecord::print(const TimeRecord &Total, raw_ostream &OS) const {
     OS << format("%9" PRId64 "  ", (int64_t)getInstructionsExecuted());
 }
 
-
 //===----------------------------------------------------------------------===//
 //   NamedRegionTimer Implementation
 //===----------------------------------------------------------------------===//
@@ -210,11 +210,14 @@ namespace {
 using Name2TimerMap = StringMap<Timer>;
 
 class Name2PairMap {
-  StringMap<std::pair<TimerGroup*, Name2TimerMap> > Map;
+  StringMap<std::pair<TimerGroup *, Name2TimerMap>> Map;
+
 public:
   ~Name2PairMap() {
-    for (StringMap<std::pair<TimerGroup*, Name2TimerMap> >::iterator
-         I = Map.begin(), E = Map.end(); I != E; ++I)
+    for (StringMap<std::pair<TimerGroup *, Name2TimerMap>>::iterator
+             I = Map.begin(),
+             E = Map.end();
+         I != E; ++I)
       delete I->second.first;
   }
 
@@ -247,7 +250,7 @@ private:
   }
 };
 
-}
+} // namespace
 
 NamedRegionTimer::NamedRegionTimer(StringRef Name, StringRef Description,
                                    StringRef GroupName,
@@ -366,8 +369,9 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   // Print out timing header.
   OS << "===" << std::string(73, '-') << "===\n";
   // Figure out how many spaces to indent TimerGroup name.
-  unsigned Padding = (80-Description.length())/2;
-  if (Padding > 80) Padding = 0;         // Don't allow "negative" numbers
+  unsigned Padding = (80 - Description.length()) / 2;
+  if (Padding > 80)
+    Padding = 0; // Don't allow "negative" numbers
   OS.indent(Padding) << Description << '\n';
   OS << "===" << std::string(73, '-') << "===\n";
 
@@ -408,7 +412,8 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
 void TimerGroup::prepareToPrintList(bool ResetTime) {
   // See if any of our timers were started, if so add them to TimersToPrint.
   for (Timer *T = FirstTimer; T; T = T->Next) {
-    if (!T->hasTriggered()) continue;
+    if (!T->hasTriggered())
+      continue;
     bool WasRunning = T->isRunning();
     if (WasRunning)
       T->stopTimer();

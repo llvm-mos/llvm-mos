@@ -35,8 +35,7 @@ DEFINE_PPC_REGCLASSES
 // Evaluate an expression containing condition register
 // or condition register field symbols.  Returns positive
 // value on success, or -1 on error.
-static int64_t
-EvaluateCRExpr(const MCExpr *E) {
+static int64_t EvaluateCRExpr(const MCExpr *E) {
   switch (E->getKind()) {
   case MCExpr::Constant: {
     int64_t Res = cast<MCConstantExpr>(E)->getValue();
@@ -47,20 +46,33 @@ EvaluateCRExpr(const MCExpr *E) {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);
     StringRef Name = SRE->getSymbol().getName();
 
-    if (Name == "lt") return 0;
-    if (Name == "gt") return 1;
-    if (Name == "eq") return 2;
-    if (Name == "so") return 3;
-    if (Name == "un") return 3;
+    if (Name == "lt")
+      return 0;
+    if (Name == "gt")
+      return 1;
+    if (Name == "eq")
+      return 2;
+    if (Name == "so")
+      return 3;
+    if (Name == "un")
+      return 3;
 
-    if (Name == "cr0") return 0;
-    if (Name == "cr1") return 1;
-    if (Name == "cr2") return 2;
-    if (Name == "cr3") return 3;
-    if (Name == "cr4") return 4;
-    if (Name == "cr5") return 5;
-    if (Name == "cr6") return 6;
-    if (Name == "cr7") return 7;
+    if (Name == "cr0")
+      return 0;
+    if (Name == "cr1")
+      return 1;
+    if (Name == "cr2")
+      return 2;
+    if (Name == "cr3")
+      return 3;
+    if (Name == "cr4")
+      return 4;
+    if (Name == "cr5")
+      return 5;
+    if (Name == "cr6")
+      return 6;
+    if (Name == "cr7")
+      return 7;
 
     return -1;
   }
@@ -78,9 +90,14 @@ EvaluateCRExpr(const MCExpr *E) {
       return -1;
 
     switch (BE->getOpcode()) {
-    default: return -1;
-    case MCBinaryExpr::Add: Res = LHSVal + RHSVal; break;
-    case MCBinaryExpr::Mul: Res = LHSVal * RHSVal; break;
+    default:
+      return -1;
+    case MCBinaryExpr::Add:
+      Res = LHSVal + RHSVal;
+      break;
+    case MCBinaryExpr::Mul:
+      Res = LHSVal * RHSVal;
+      break;
     }
 
     return Res < 0 ? -1 : Res;
@@ -139,7 +156,6 @@ class PPCAsmParser : public MCTargetAsmParser {
 
   /// }
 
-
 public:
   PPCAsmParser(const MCSubtargetInfo &STI, MCAsmParser &,
                const MCInstrInfo &MII, const MCTargetOptions &Options)
@@ -187,7 +203,7 @@ struct PPCOperand : public MCParsedAsmOperand {
 
   struct ExprOp {
     const MCExpr *Val;
-    int64_t CRVal;     // Cached result of EvaluateCRExpr(Val)
+    int64_t CRVal; // Cached result of EvaluateCRExpr(Val)
   };
 
   struct TLSRegOp {
@@ -292,12 +308,12 @@ public:
 
   unsigned getVSReg() const {
     assert(isVSRegNumber() && "Invalid access!");
-    return (unsigned) Imm.Val;
+    return (unsigned)Imm.Val;
   }
 
   unsigned getACCReg() const {
     assert(isACCRegNumber() && "Invalid access!");
-    return (unsigned) Imm.Val;
+    return (unsigned)Imm.Val;
   }
 
   unsigned getDMRROWReg() const {
@@ -322,7 +338,7 @@ public:
 
   unsigned getVSRpEvenReg() const {
     assert(isVSRpEvenRegNumber() && "Invalid access!");
-    return (unsigned) Imm.Val >> 1;
+    return (unsigned)Imm.Val >> 1;
   }
 
   unsigned getG8pReg() const {
@@ -332,12 +348,12 @@ public:
 
   unsigned getCCReg() const {
     assert(isCCRegNumber() && "Invalid access!");
-    return (unsigned) (Kind == Immediate ? Imm.Val : Expr.CRVal);
+    return (unsigned)(Kind == Immediate ? Imm.Val : Expr.CRVal);
   }
 
   unsigned getCRBit() const {
     assert(isCRBitNumber() && "Invalid access!");
-    return (unsigned) (Kind == Immediate ? Imm.Val : Expr.CRVal);
+    return (unsigned)(Kind == Immediate ? Imm.Val : Expr.CRVal);
   }
 
   unsigned getCRBitMask() const {
@@ -400,9 +416,10 @@ public:
     }
     return false;
   }
-  bool isCondBr() const { return Kind == Expression ||
-                                 (Kind == Immediate && isInt<16>(getImm()) &&
-                                  (getImm() & 3) == 0); }
+  bool isCondBr() const {
+    return Kind == Expression ||
+           (Kind == Immediate && isInt<16>(getImm()) && (getImm() & 3) == 0);
+  }
   bool isImmZero() const { return Kind == Immediate && getImm() == 0; }
   bool isRegNumber() const { return Kind == Immediate && isUInt<5>(getImm()); }
   bool isACCRegNumber() const {
@@ -426,14 +443,14 @@ public:
   bool isVSRegNumber() const {
     return Kind == Immediate && isUInt<6>(getImm());
   }
-  bool isCCRegNumber() const { return (Kind == Expression
-                                       && isUInt<3>(getExprCRVal())) ||
-                                      (Kind == Immediate
-                                       && isUInt<3>(getImm())); }
-  bool isCRBitNumber() const { return (Kind == Expression
-                                       && isUInt<5>(getExprCRVal())) ||
-                                      (Kind == Immediate
-                                       && isUInt<5>(getImm())); }
+  bool isCCRegNumber() const {
+    return (Kind == Expression && isUInt<3>(getExprCRVal())) ||
+           (Kind == Immediate && isUInt<3>(getImm()));
+  }
+  bool isCRBitNumber() const {
+    return (Kind == Expression && isUInt<5>(getExprCRVal())) ||
+           (Kind == Immediate && isUInt<5>(getImm()));
+  }
 
   bool isEvenRegNumber() const { return isRegNumber() && (getImm() & 1) == 0; }
 
@@ -609,30 +626,30 @@ public:
   void addS16ImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     switch (Kind) {
-      case Immediate:
-        Inst.addOperand(MCOperand::createImm(getImm()));
-        break;
-      case ContextImmediate:
-        Inst.addOperand(MCOperand::createImm(getImmS16Context()));
-        break;
-      default:
-        Inst.addOperand(MCOperand::createExpr(getExpr()));
-        break;
+    case Immediate:
+      Inst.addOperand(MCOperand::createImm(getImm()));
+      break;
+    case ContextImmediate:
+      Inst.addOperand(MCOperand::createImm(getImmS16Context()));
+      break;
+    default:
+      Inst.addOperand(MCOperand::createExpr(getExpr()));
+      break;
     }
   }
 
   void addU16ImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     switch (Kind) {
-      case Immediate:
-        Inst.addOperand(MCOperand::createImm(getImm()));
-        break;
-      case ContextImmediate:
-        Inst.addOperand(MCOperand::createImm(getImmU16Context()));
-        break;
-      default:
-        Inst.addOperand(MCOperand::createExpr(getExpr()));
-        break;
+    case Immediate:
+      Inst.addOperand(MCOperand::createImm(getImm()));
+      break;
+    case ContextImmediate:
+      Inst.addOperand(MCOperand::createImm(getImmU16Context()));
+      break;
+    default:
+      Inst.addOperand(MCOperand::createExpr(getExpr()));
+      break;
     }
   }
 
@@ -718,8 +735,8 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<PPCOperand>
-  CreateContextImm(int64_t Val, SMLoc S, SMLoc E, bool IsPPC64) {
+  static std::unique_ptr<PPCOperand> CreateContextImm(int64_t Val, SMLoc S,
+                                                      SMLoc E, bool IsPPC64) {
     auto Op = std::make_unique<PPCOperand>(ContextImmediate);
     Op->Imm.Val = Val;
     Op->StartLoc = S;
@@ -787,8 +804,7 @@ void PPCOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   }
 }
 
-static void
-addNegOperand(MCInst &Inst, MCOperand &Op, MCContext &Ctx) {
+static void addNegOperand(MCInst &Inst, MCOperand &Op, MCContext &Ctx) {
   if (Op.isImm()) {
     Inst.addOperand(MCOperand::createImm(-Op.getImm()));
     return;
@@ -801,8 +817,8 @@ addNegOperand(MCInst &Inst, MCOperand &Op, MCContext &Ctx) {
     }
   } else if (const MCBinaryExpr *BinExpr = dyn_cast<MCBinaryExpr>(Expr)) {
     if (BinExpr->getOpcode() == MCBinaryExpr::Sub) {
-      const MCExpr *NE = MCBinaryExpr::createSub(BinExpr->getRHS(),
-                                                 BinExpr->getLHS(), Ctx);
+      const MCExpr *NE =
+          MCBinaryExpr::createSub(BinExpr->getRHS(), BinExpr->getLHS(), Ctx);
       Inst.addOperand(MCOperand::createExpr(NE));
       return;
     }
@@ -819,10 +835,11 @@ void PPCAsmParser::processInstruction(MCInst &Inst,
   case PPC::DCBTSTx:
   case PPC::DCBTSTT: {
     MCInst TmpInst;
-    TmpInst.setOpcode((Opcode == PPC::DCBTx || Opcode == PPC::DCBTT) ?
-                      PPC::DCBT : PPC::DCBTST);
+    TmpInst.setOpcode((Opcode == PPC::DCBTx || Opcode == PPC::DCBTT)
+                          ? PPC::DCBT
+                          : PPC::DCBTST);
     TmpInst.addOperand(MCOperand::createImm(
-      (Opcode == PPC::DCBTx || Opcode == PPC::DCBTSTx) ? 0 : 16));
+        (Opcode == PPC::DCBTx || Opcode == PPC::DCBTSTx) ? 0 : 16));
     TmpInst.addOperand(Inst.getOperand(0));
     TmpInst.addOperand(Inst.getOperand(1));
     Inst = TmpInst;
@@ -1276,8 +1293,8 @@ bool PPCAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(IDLoc, "instruction use requires an option to be enabled");
   case Match_MnemonicFail: {
     FeatureBitset FBS = ComputeAvailableFeatures(getSTI().getFeatureBits());
-    std::string Suggestion = PPCMnemonicSpellCheck(
-        ((PPCOperand &)*Operands[0]).getToken(), FBS);
+    std::string Suggestion =
+        PPCMnemonicSpellCheck(((PPCOperand &)*Operands[0]).getToken(), FBS);
     return Error(IDLoc, "invalid instruction" + Suggestion,
                  ((PPCOperand &)*Operands[0]).getLocRange());
   }
@@ -1288,7 +1305,8 @@ bool PPCAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         return Error(IDLoc, "too few operands for instruction");
 
       ErrorLoc = ((PPCOperand &)*Operands[ErrorInfo]).getStartLoc();
-      if (ErrorLoc == SMLoc()) ErrorLoc = IDLoc;
+      if (ErrorLoc == SMLoc())
+        ErrorLoc = IDLoc;
     }
 
     return Error(ErrorLoc, "invalid operand for instruction");
@@ -1612,8 +1630,7 @@ bool PPCAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   //  where th can be omitted when it is 0. dcbtst is the same. We take the
   //  server form to be the default, so swap the operands if we're parsing for
   //  an embedded core (they'll be swapped again upon printing).
-  if (getSTI().hasFeature(PPC::FeatureBookE) &&
-      Operands.size() == 4 &&
+  if (getSTI().hasFeature(PPC::FeatureBookE) && Operands.size() == 4 &&
       (Name == "dcbt" || Name == "dcbtst")) {
     std::swap(Operands[1], Operands[3]);
     std::swap(Operands[2], Operands[1]);
@@ -1682,8 +1699,8 @@ bool PPCAsmParser::parseDirectiveWord(unsigned Size, AsmToken ID) {
 bool PPCAsmParser::parseDirectiveTC(unsigned Size, AsmToken ID) {
   MCAsmParser &Parser = getParser();
   // Skip TC symbol, which is only used with XCOFF.
-  while (getLexer().isNot(AsmToken::EndOfStatement)
-         && getLexer().isNot(AsmToken::Comma))
+  while (getLexer().isNot(AsmToken::EndOfStatement) &&
+         getLexer().isNot(AsmToken::Comma))
     Parser.Lex();
   if (parseToken(AsmToken::Comma))
     return addErrorSuffix(" in '.tc' directive");
@@ -1793,15 +1810,32 @@ unsigned PPCAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   // immediate in the syntax.
   int64_t ImmVal;
   switch (Kind) {
-    case MCK_0: ImmVal = 0; break;
-    case MCK_1: ImmVal = 1; break;
-    case MCK_2: ImmVal = 2; break;
-    case MCK_3: ImmVal = 3; break;
-    case MCK_4: ImmVal = 4; break;
-    case MCK_5: ImmVal = 5; break;
-    case MCK_6: ImmVal = 6; break;
-    case MCK_7: ImmVal = 7; break;
-    default: return Match_InvalidOperand;
+  case MCK_0:
+    ImmVal = 0;
+    break;
+  case MCK_1:
+    ImmVal = 1;
+    break;
+  case MCK_2:
+    ImmVal = 2;
+    break;
+  case MCK_3:
+    ImmVal = 3;
+    break;
+  case MCK_4:
+    ImmVal = 4;
+    break;
+  case MCK_5:
+    ImmVal = 5;
+    break;
+  case MCK_6:
+    ImmVal = 6;
+    break;
+  case MCK_7:
+    ImmVal = 7;
+    break;
+  default:
+    return Match_InvalidOperand;
   }
 
   PPCOperand &Op = static_cast<PPCOperand &>(AsmOp);

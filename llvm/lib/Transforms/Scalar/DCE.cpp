@@ -137,7 +137,7 @@ struct DCELegacyPass : public FunctionPass {
     AU.setPreservesCFG();
   }
 };
-}
+} // namespace
 
 char DCELegacyPass::ID = 0;
 INITIALIZE_PASS(DCELegacyPass, "dce", "Dead Code Elimination", false, false)

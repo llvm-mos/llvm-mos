@@ -329,7 +329,8 @@ char *SharedMemoryMapper::prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
 void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
                                     OnInitializedFunction OnInitialized) {
   auto Reservation = Reservations.upper_bound(AI.MappingBase);
-  assert(Reservation != Reservations.begin() && "Attempt to initialize unreserved range");
+  assert(Reservation != Reservations.begin() &&
+         "Attempt to initialize unreserved range");
   Reservation--;
 
   auto AllocationOffset = AI.MappingBase - Reservation->first;

@@ -68,9 +68,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "livedebugvars"
 
-static cl::opt<bool>
-EnableLDV("live-debug-variables", cl::init(true),
-          cl::desc("Enable the live debug variables pass"), cl::Hidden);
+static cl::opt<bool> EnableLDV("live-debug-variables", cl::init(true),
+                               cl::desc("Enable the live debug variables pass"),
+                               cl::Hidden);
 
 STATISTIC(NumInsertedDebugValues, "Number of DBG_VALUEs inserted");
 STATISTIC(NumInsertedDebugLabels, "Number of DBG_LABELs inserted");
@@ -292,9 +292,9 @@ class UserValue {
   const DILocalVariable *Variable; ///< The debug info variable we are part of.
   /// The part of the variable we describe.
   const std::optional<DIExpression::FragmentInfo> Fragment;
-  DebugLoc dl;            ///< The debug location for the variable. This is
-                          ///< used by dwarf writer to find lexical scope.
-  UserValue *leader;      ///< Equivalence class leader.
+  DebugLoc dl;               ///< The debug location for the variable. This is
+                             ///< used by dwarf writer to find lexical scope.
+  UserValue *leader;         ///< Equivalence class leader.
   UserValue *next = nullptr; ///< Next value in equivalence class, or null.
 
   /// Numbered locations referenced by locmap.
@@ -372,8 +372,7 @@ public:
         return UndefLocNo;
       // For register locations we dont care about use/def and other flags.
       for (unsigned i = 0, e = locations.size(); i != e; ++i)
-        if (locations[i].isReg() &&
-            locations[i].getReg() == LocMO.getReg() &&
+        if (locations[i].isReg() && locations[i].getReg() == LocMO.getReg() &&
             locations[i].getSubReg() == LocMO.getSubReg())
           return i;
     } else
@@ -518,7 +517,7 @@ public:
 
   /// Does this UserLabel match the parameters?
   bool matches(const DILabel *L, const DILocation *IA,
-             const SlotIndex Index) const {
+               const SlotIndex Index) const {
     return Label == L && dl->getInlinedAt() == IA && loc == Index;
   }
 
@@ -655,8 +654,7 @@ public:
     virtRegToEqClass.clear();
     userVarMap.clear();
     // Make sure we call emitDebugValues if the machine function was modified.
-    assert((!ModifiedMF || EmitDone) &&
-           "Dbg values are not emitted in LDV");
+    assert((!ModifiedMF || EmitDone) && "Dbg values are not emitted in LDV");
     EmitDone = false;
     ModifiedMF = false;
   }
@@ -674,7 +672,7 @@ public:
   /// Recreate DBG_VALUE instruction from data structures.
   void emitDebugValues(VirtRegMap *VRM);
 
-  void print(raw_ostream&);
+  void print(raw_ostream &);
 };
 
 /// Implementation of the LiveDebugVariables pass.
@@ -955,8 +953,9 @@ bool LiveDebugVariables::LDVImpl::collectDebugValues(MachineFunction &mf,
                          MBBI->isDebugRef())) {
           MBBI = handleDebugInstr(*MBBI, Idx);
           Changed = true;
-        // In normal debug mode, use the dedicated DBG_VALUE / DBG_LABEL handler
-        // to track things through register allocation, and erase the instr.
+          // In normal debug mode, use the dedicated DBG_VALUE / DBG_LABEL
+          // handler to track things through register allocation, and erase the
+          // instr.
         } else if ((MBBI->isDebugValue() && handleDebugValue(*MBBI, Idx)) ||
                    (MBBI->isDebugLabel() && handleDebugLabel(*MBBI, Idx))) {
           MBBI = MBB.erase(MBBI);
@@ -1374,9 +1373,8 @@ void LiveDebugVariables::analyze(MachineFunction &MF, LiveIntervals *LIS) {
 //                           Live Range Splitting
 //===----------------------------------------------------------------------===//
 
-bool
-UserValue::splitLocation(unsigned OldLocNo, ArrayRef<Register> NewRegs,
-                         LiveIntervals& LIS) {
+bool UserValue::splitLocation(unsigned OldLocNo, ArrayRef<Register> NewRegs,
+                              LiveIntervals &LIS) {
   LLVM_DEBUG({
     dbgs() << "Splitting Loc" << OldLocNo << '\t';
     print(dbgs(), nullptr);
@@ -1474,14 +1472,13 @@ UserValue::splitLocation(unsigned OldLocNo, ArrayRef<Register> NewRegs,
   return DidChange;
 }
 
-bool
-UserValue::splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
-                         LiveIntervals &LIS) {
+bool UserValue::splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
+                              LiveIntervals &LIS) {
   bool DidChange = false;
   // Split locations referring to OldReg. Iterate backwards so splitLocation can
   // safely erase unused locations.
-  for (unsigned i = locations.size(); i ; --i) {
-    unsigned LocNo = i-1;
+  for (unsigned i = locations.size(); i; --i) {
+    unsigned LocNo = i - 1;
     const MachineOperand *Loc = &locations[LocNo];
     if (!Loc->isReg() || Loc->getReg() != OldReg)
       continue;
@@ -1549,8 +1546,9 @@ void LiveDebugVariables::LDVImpl::splitRegister(Register OldReg,
     mapVirtReg(NewReg, UV);
 }
 
-void LiveDebugVariables::
-splitRegister(Register OldReg, ArrayRef<Register> NewRegs, LiveIntervals &LIS) {
+void LiveDebugVariables::splitRegister(Register OldReg,
+                                       ArrayRef<Register> NewRegs,
+                                       LiveIntervals &LIS) {
   if (PImpl)
     PImpl->splitRegister(OldReg, NewRegs);
 }
@@ -1734,8 +1732,8 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
 
   ++NumInsertedDebugValues;
 
-  assert(cast<DILocalVariable>(Variable)
-             ->isValidLocationForIntrinsic(getDebugLoc()) &&
+  assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(
+             getDebugLoc()) &&
          "Expected inlined-at fields to agree");
 
   // If the location was spilled, the new DBG_VALUE will be indirect. If the
@@ -1955,7 +1953,7 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
       auto NextItem = std::next(StashIt);
       while (NextItem != StashedDebugInstrs.end() && NextItem->Idx == Idx) {
         assert(NextItem->MBB == MBB && "Instrs with same slot index should be"
-               "in the same block");
+                                       "in the same block");
         MBB->insert(InsertPos, NextItem->MI);
         StashIt = NextItem;
         NextItem = std::next(StashIt);

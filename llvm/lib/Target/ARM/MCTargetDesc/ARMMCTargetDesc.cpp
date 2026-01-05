@@ -143,7 +143,7 @@ std::string ARM_MC::ParseARMTriple(const Triple &TT, StringRef CPU) {
   std::string ARMArchFeature;
 
   ARM::ArchKind ArchID = ARM::parseArch(TT.getArchName());
-  if (ArchID != ARM::ArchKind::INVALID &&  (CPU.empty() || CPU == "generic"))
+  if (ArchID != ARM::ArchKind::INVALID && (CPU.empty() || CPU == "generic"))
     ARMArchFeature = (ARMArchFeature + "+" + ARM::getArchName(ArchID)).str();
 
   if (TT.isThumb()) {
@@ -395,14 +395,16 @@ public:
 
   bool isUnconditionalBranch(const MCInst &Inst) const override {
     // BCCs with the "always" predicate are unconditional branches.
-    if (Inst.getOpcode() == ARM::Bcc && Inst.getOperand(1).getImm()==ARMCC::AL)
+    if (Inst.getOpcode() == ARM::Bcc &&
+        Inst.getOperand(1).getImm() == ARMCC::AL)
       return true;
     return MCInstrAnalysis::isUnconditionalBranch(Inst);
   }
 
   bool isConditionalBranch(const MCInst &Inst) const override {
     // BCCs with the "always" predicate are unconditional branches.
-    if (Inst.getOpcode() == ARM::Bcc && Inst.getOperand(1).getImm()==ARMCC::AL)
+    if (Inst.getOpcode() == ARM::Bcc &&
+        Inst.getOperand(1).getImm() == ARMCC::AL)
       return false;
     return MCInstrAnalysis::isConditionalBranch(Inst);
   }
@@ -684,9 +686,10 @@ ARMMCInstrAnalysis::findPltEntries(uint64_t PltSectionVA,
           ((MovtPart1 & 0x400) << 17) + ((MovtPart1 & 0xf) << 28);
 
       const uint16_t Insns[] = {
-          0x44fc,         // add ip, pc
-          0xf8dc, 0xf000, // ldr.w pc, [ip]
-          0xe7fc,         // b . -4
+          0x44fc, // add ip, pc
+          0xf8dc,
+          0xf000, // ldr.w pc, [ip]
+          0xe7fc, // b . -4
       };
 
       if (!instructionsMatch(Insns, PltContents.data() + Byte + 8,

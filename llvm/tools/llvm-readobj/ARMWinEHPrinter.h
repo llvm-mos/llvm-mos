@@ -144,8 +144,7 @@ class Decoder {
   bool opcode_pac_sign_lr(const uint8_t *Opcodes, unsigned &Offset,
                           unsigned Length, bool Prologue);
 
-  void decodeOpcodes(ArrayRef<uint8_t> Opcodes, unsigned Offset,
-                     bool Prologue);
+  void decodeOpcodes(ArrayRef<uint8_t> Opcodes, unsigned Offset, bool Prologue);
 
   void printGPRMask(uint16_t Mask);
   void printVFPMask(uint32_t Mask);
@@ -153,9 +152,9 @@ class Decoder {
   ErrorOr<object::SectionRef>
   getSectionContaining(const object::COFFObjectFile &COFF, uint64_t Address);
 
-  ErrorOr<object::SymbolRef>
-  getSymbol(const object::COFFObjectFile &COFF, uint64_t Address,
-            bool FunctionOnly = false);
+  ErrorOr<object::SymbolRef> getSymbol(const object::COFFObjectFile &COFF,
+                                       uint64_t Address,
+                                       bool FunctionOnly = false);
 
   ErrorOr<object::SymbolRef>
   getRelocatedSymbol(const object::COFFObjectFile &COFF,
@@ -191,13 +190,12 @@ class Decoder {
                          const object::SectionRef Section);
 
 public:
-  Decoder(ScopedPrinter &SW, bool isAArch64) : SW(SW),
-                                               OS(SW.getOStream()),
-                                               isAArch64(isAArch64) {}
+  Decoder(ScopedPrinter &SW, bool isAArch64)
+      : SW(SW), OS(SW.getOStream()), isAArch64(isAArch64) {}
   Error dumpProcedureData(const object::COFFObjectFile &COFF);
 };
-}
-}
-}
+} // namespace WinEH
+} // namespace ARM
+} // namespace llvm
 
 #endif

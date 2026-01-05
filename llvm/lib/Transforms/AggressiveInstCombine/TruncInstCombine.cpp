@@ -404,8 +404,8 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
       }
       // Otherwise, must be the same type of cast, so just reinsert a new one.
       // This also handles the case of zext(trunc(x)) -> zext(x).
-      Res = Builder.CreateIntCast(I->getOperand(0), Ty,
-                                  Opc == Instruction::SExt);
+      Res =
+          Builder.CreateIntCast(I->getOperand(0), Ty, Opc == Instruction::SExt);
 
       // Update Worklist entries with new value if needed.
       // There are three possible changes to the Worklist:
@@ -419,7 +419,7 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
         else
           Worklist.erase(Entry);
       } else if (auto *NewCI = dyn_cast<TruncInst>(Res))
-          Worklist.push_back(NewCI);
+        Worklist.push_back(NewCI);
       break;
     }
     case Instruction::Add:

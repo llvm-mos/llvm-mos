@@ -38,13 +38,13 @@ void XCoreInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   printAnnotation(O, Annot);
 }
 
-void XCoreInstPrinter::
-printInlineJT(const MCInst *MI, int opNum, raw_ostream &O) {
+void XCoreInstPrinter::printInlineJT(const MCInst *MI, int opNum,
+                                     raw_ostream &O) {
   report_fatal_error("can't handle InlineJT");
 }
 
-void XCoreInstPrinter::
-printInlineJT32(const MCInst *MI, int opNum, raw_ostream &O) {
+void XCoreInstPrinter::printInlineJT32(const MCInst *MI, int opNum,
+                                       raw_ostream &O) {
   report_fatal_error("can't handle InlineJT32");
 }
 
@@ -73,8 +73,8 @@ static void printExpr(const MCExpr *Expr, const MCAsmInfo *MAI,
   }
 }
 
-void XCoreInstPrinter::
-printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
+void XCoreInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
+                                    raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
     printRegName(O, Op.getReg());

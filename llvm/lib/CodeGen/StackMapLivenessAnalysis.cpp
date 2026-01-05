@@ -1,4 +1,5 @@
-//===-- StackMapLivenessAnalysis.cpp - StackMap live Out Analysis ----------===//
+//===-- StackMapLivenessAnalysis.cpp - StackMap live Out Analysis
+//----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,9 +35,9 @@ static cl::opt<bool> EnablePatchPointLiveness(
 
 STATISTIC(NumStackMapFuncVisited, "Number of functions visited");
 STATISTIC(NumStackMapFuncSkipped, "Number of functions skipped");
-STATISTIC(NumBBsVisited,          "Number of basic blocks visited");
-STATISTIC(NumBBsHaveNoStackmap,   "Number of basic blocks with no stackmap");
-STATISTIC(NumStackMaps,           "Number of StackMaps visited");
+STATISTIC(NumBBsVisited, "Number of basic blocks visited");
+STATISTIC(NumBBsHaveNoStackmap, "Number of basic blocks with no stackmap");
+STATISTIC(NumStackMaps, "Number of StackMaps visited");
 
 namespace {
 /// This pass calculates the liveness information for each basic block in

@@ -154,9 +154,8 @@ void llvm::pdb::discoverStreamPurposes(PDBFile &File,
              StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::SectionHdr))
       Streams[StreamIdx] =
           stream(StreamPurpose::Other, "Section Header Data", StreamIdx);
-    else if (Dbi &&
-             StreamIdx ==
-                 Dbi->getDebugStreamIndex(DbgHeaderType::SectionHdrOrig))
+    else if (Dbi && StreamIdx ==
+                        Dbi->getDebugStreamIndex(DbgHeaderType::SectionHdrOrig))
       Streams[StreamIdx] = stream(StreamPurpose::Other,
                                   "Section Header Original Data", StreamIdx);
     else if (Dbi &&

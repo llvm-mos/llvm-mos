@@ -61,7 +61,7 @@ MachinePostDominatorTreePrinterPass::run(MachineFunction &MF,
 
 char MachinePostDominatorTreeWrapperPass::ID = 0;
 
-//declare initializeMachinePostDominatorTreePass
+// declare initializeMachinePostDominatorTreePass
 INITIALIZE_PASS(MachinePostDominatorTreeWrapperPass, "machinepostdomtree",
                 "MachinePostDominator Tree Construction", true, true)
 

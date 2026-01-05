@@ -156,7 +156,7 @@ static bool isLoopNeverExecuted(Loop *L) {
     return false;
   // All predecessors of the preheader should have a constant conditional
   // branch, with the loop's preheader as not-taken.
-  for (auto *Pred: predecessors(Preheader)) {
+  for (auto *Pred : predecessors(Preheader)) {
     BasicBlock *Taken, *NotTaken;
     ConstantInt *Cond;
     if (!match(Pred->getTerminator(),
@@ -251,7 +251,7 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
     assert((LiveBlocks.count(To) || !Visited.count(To)) &&
            "We already discarded this block as dead!");
     LiveBlocks.insert(To);
-    LiveEdges.insert({ From, To });
+    LiveEdges.insert({From, To});
   };
 
   auto MarkAllSuccessorsLive = [&](BasicBlock *BB) {
@@ -262,7 +262,7 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
   // Check if there is only one value coming from all live predecessor blocks.
   // Note that because we iterate in RPOT, we have already visited all its
   // (non-latch) predecessors.
-  auto GetSoleInputOnFirstIteration = [&](PHINode & PN)->Value * {
+  auto GetSoleInputOnFirstIteration = [&](PHINode &PN) -> Value * {
     BasicBlock *BB = PN.getParent();
     bool HasLivePreds = false;
     (void)HasLivePreds;
@@ -270,7 +270,7 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
       return PN.getIncomingValueForBlock(Predecessor);
     Value *OnlyInput = nullptr;
     for (auto *Pred : predecessors(BB))
-      if (LiveEdges.count({ Pred, BB })) {
+      if (LiveEdges.count({Pred, BB})) {
         HasLivePreds = true;
         Value *Incoming = PN.getIncomingValueForBlock(Pred);
         // Skip poison. If they are present, we can assume they are equal to
@@ -330,8 +330,8 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
     Value *Cond;
     BasicBlock *IfTrue, *IfFalse;
     auto *Term = BB->getTerminator();
-    if (match(Term, m_Br(m_Value(Cond),
-                         m_BasicBlock(IfTrue), m_BasicBlock(IfFalse)))) {
+    if (match(Term, m_Br(m_Value(Cond), m_BasicBlock(IfTrue),
+                         m_BasicBlock(IfFalse)))) {
       auto *ICmp = dyn_cast<ICmpInst>(Cond);
       if (!ICmp || !ICmp->getType()->isIntegerTy()) {
         MarkAllSuccessorsLive(BB);
@@ -352,8 +352,8 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
         // how correct our compiler is at handling such cases. So we are being
         // very conservative here.
         //
-        // If there is a non-loop successor, always assume this branch leaves the
-        // loop. Otherwise, arbitrarily take IfTrue.
+        // If there is a non-loop successor, always assume this branch leaves
+        // the loop. Otherwise, arbitrarily take IfTrue.
         //
         // Once we are certain that branching by undef is handled correctly by
         // other transforms, we should not mark any successors live here.
@@ -389,7 +389,7 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
   }
 
   // We can break the latch if it wasn't live.
-  return !LiveEdges.count({ Latch, Header });
+  return !LiveEdges.count({Latch, Header});
 }
 
 /// If we can prove the backedge is untaken, remove it.  This destroys the
@@ -530,8 +530,8 @@ PreservedAnalyses LoopDeletionPass::run(Loop &L, LoopAnalysisManager &AM,
   // leaves the loop structure in place which means it can handle dispatching
   // to the right exit based on whatever loop invariant structure remains.
   if (Result != LoopDeletionResult::Deleted)
-    Result = merge(Result, breakBackedgeIfNotTaken(&L, AR.DT, AR.SE, AR.LI,
-                                                   AR.MSSA, ORE));
+    Result = merge(
+        Result, breakBackedgeIfNotTaken(&L, AR.DT, AR.SE, AR.LI, AR.MSSA, ORE));
 
   if (Result == LoopDeletionResult::Unmodified)
     return PreservedAnalyses::all();

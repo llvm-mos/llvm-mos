@@ -110,7 +110,7 @@ public:
   /// Link constructs a LinkerImpl instance and calls linkPhase1.
   /// Link should be called with the constructor arguments for LinkerImpl, which
   /// will be forwarded to the constructor.
-  template <typename... ArgTs> static void link(ArgTs &&... Args) {
+  template <typename... ArgTs> static void link(ArgTs &&...Args) {
     auto L = std::make_unique<LinkerImpl>(std::forward<ArgTs>(Args)...);
 
     // Ownership of the linker is passed into the linker's doLink function to

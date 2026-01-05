@@ -174,7 +174,8 @@ struct OutlinableRegion {
   /// \return The corresponding Value to \p V if it exists, otherwise nullptr.
   Value *findCorrespondingValueIn(const OutlinableRegion &Other, Value *V);
 
-  /// Find a corresponding BasicBlock for \p BB in similar OutlinableRegion \p Other.
+  /// Find a corresponding BasicBlock for \p BB in similar OutlinableRegion \p
+  /// Other.
   ///
   /// \param Other [in] - The OutlinableRegion to find the corresponding
   /// BasicBlock in.
@@ -202,7 +203,7 @@ public:
              function_ref<IRSimilarityIdentifier &(Module &)> GIRSI,
              function_ref<OptimizationRemarkEmitter &(Function &)> GORE)
       : getTTI(GTTI), getIRSI(GIRSI), getORE(GORE) {
-    
+
     // Check that the DenseMap implementation has not changed.
     static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
                   static_cast<unsigned>(-1));
@@ -290,8 +291,8 @@ private:
   /// \param Region - The region extracted
   /// \param Outputs - The outputs from the extracted function.
   /// \param LI - The load instruction used to update the mapping.
-  void updateOutputMapping(OutlinableRegion &Region,
-                           ArrayRef<Value *> Outputs, LoadInst *LI);
+  void updateOutputMapping(OutlinableRegion &Region, ArrayRef<Value *> Outputs,
+                           LoadInst *LI);
 
   /// Extract \p Region into its own function.
   ///

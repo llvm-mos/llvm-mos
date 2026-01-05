@@ -37,13 +37,13 @@ using namespace llvm;
 MipsSERegisterInfo::MipsSERegisterInfo(const MipsSubtarget &STI)
     : MipsRegisterInfo(STI) {}
 
-bool MipsSERegisterInfo::
-requiresRegisterScavenging(const MachineFunction &MF) const {
+bool MipsSERegisterInfo::requiresRegisterScavenging(
+    const MachineFunction &MF) const {
   return true;
 }
 
-bool MipsSERegisterInfo::
-requiresFrameIndexScavenging(const MachineFunction &MF) const {
+bool MipsSERegisterInfo::requiresFrameIndexScavenging(
+    const MachineFunction &MF) const {
   return true;
 }
 
@@ -150,8 +150,8 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
 
   MipsABIInfo ABI =
       static_cast<const MipsTargetMachine &>(MF.getTarget()).getABI();
-  const MipsRegisterInfo *RegInfo =
-    static_cast<const MipsRegisterInfo *>(MF.getSubtarget().getRegisterInfo());
+  const MipsRegisterInfo *RegInfo = static_cast<const MipsRegisterInfo *>(
+      MF.getSubtarget().getRegisterInfo());
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   int MinCSFI = 0;
@@ -220,9 +220,8 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
           ABI.ArePtrs64bit() ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
       MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
       Register Reg = RegInfo.createVirtualRegister(PtrRC);
-      const MipsSEInstrInfo &TII =
-          *static_cast<const MipsSEInstrInfo *>(
-              MBB.getParent()->getSubtarget().getInstrInfo());
+      const MipsSEInstrInfo &TII = *static_cast<const MipsSEInstrInfo *>(
+          MBB.getParent()->getSubtarget().getInstrInfo());
       BuildMI(MBB, II, DL, TII.get(ABI.GetPtrAddiuOp()), Reg)
           .addReg(FrameReg)
           .addImm(Offset);
@@ -236,13 +235,13 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
       MachineBasicBlock &MBB = *MI.getParent();
       DebugLoc DL = II->getDebugLoc();
       unsigned NewImm = 0;
-      const MipsSEInstrInfo &TII =
-          *static_cast<const MipsSEInstrInfo *>(
-              MBB.getParent()->getSubtarget().getInstrInfo());
+      const MipsSEInstrInfo &TII = *static_cast<const MipsSEInstrInfo *>(
+          MBB.getParent()->getSubtarget().getInstrInfo());
       unsigned Reg = TII.loadImmediate(Offset, MBB, II, DL,
                                        OffsetBitSize == 16 ? &NewImm : nullptr);
-      BuildMI(MBB, II, DL, TII.get(ABI.GetPtrAdduOp()), Reg).addReg(FrameReg)
-        .addReg(Reg, RegState::Kill);
+      BuildMI(MBB, II, DL, TII.get(ABI.GetPtrAdduOp()), Reg)
+          .addReg(FrameReg)
+          .addReg(Reg, RegState::Kill);
 
       FrameReg = Reg;
       Offset = SignExtend64<16>(NewImm);

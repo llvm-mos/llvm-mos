@@ -15,8 +15,8 @@
 
 using namespace llvm;
 
-void GISelChangeObserver::changingAllUsesOfReg(
-    const MachineRegisterInfo &MRI, Register Reg) {
+void GISelChangeObserver::changingAllUsesOfReg(const MachineRegisterInfo &MRI,
+                                               Register Reg) {
   for (auto &ChangingMI : MRI.use_instructions(Reg)) {
     changingInstr(ChangingMI);
     ChangingAllUsesOfReg.insert(&ChangingMI);

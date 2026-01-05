@@ -178,9 +178,7 @@ struct DemandedFields {
   }
 
   // Return true if any property of VL was used
-  bool usedVL() {
-    return VLAny || VLZeroness;
-  }
+  bool usedVL() { return VLAny || VLZeroness; }
 
   // Mark all VTYPE subfields and properties as demanded
   void demandVTYPE() {
@@ -792,9 +790,7 @@ public:
     return hasSameVTYPE(Other);
   }
 
-  bool operator!=(const VSETVLIInfo &Other) const {
-    return !(*this == Other);
-  }
+  bool operator!=(const VSETVLIInfo &Other) const { return !(*this == Other); }
 
   // Calculate the VSETVLIInfo visible to a block assuming this and Other are
   // both predecessors.
@@ -1031,7 +1027,7 @@ static unsigned computeVLMAX(unsigned VLEN, unsigned SEW,
     VLEN = VLEN / LMul;
   else
     VLEN = VLEN * LMul;
-  return VLEN/SEW;
+  return VLEN / SEW;
 }
 
 VSETVLIInfo
@@ -1104,8 +1100,7 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
           InstrInfo.setAVLImm(VLMAX);
         else
           InstrInfo.setAVLVLMAX();
-      }
-      else
+      } else
         InstrInfo.setAVLImm(Imm);
     } else if (VLOp.isUndef()) {
       // Otherwise use an AVL of 1 to avoid depending on previous vl.
@@ -1265,7 +1260,8 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
 bool RISCVInsertVSETVLI::needVSETVLI(const DemandedFields &Used,
                                      const VSETVLIInfo &Require,
                                      const VSETVLIInfo &CurInfo) const {
-  if (!CurInfo.isValid() || CurInfo.isUnknown() || CurInfo.hasSEWLMULRatioOnly())
+  if (!CurInfo.isValid() || CurInfo.isUnknown() ||
+      CurInfo.hasSEWLMULRatioOnly())
     return true;
 
   if (CurInfo.isCompatible(Used, Require, LIS))
@@ -1721,8 +1717,8 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
   // or modify VL or VTYPE.  Also, fallthrough will return end().
   auto InsertPt = UnavailablePred->getFirstInstrTerminator();
   insertVSETVLI(*UnavailablePred, InsertPt,
-                UnavailablePred->findDebugLoc(InsertPt),
-                AvailableInfo, OldExit);
+                UnavailablePred->findDebugLoc(InsertPt), AvailableInfo,
+                OldExit);
 }
 
 // Return true if we can mutate PrevMI to match MI without changing any the
@@ -1778,7 +1774,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   DemandedFields Used;
   Used.demandVL();
   Used.demandVTYPE();
-  SmallVector<MachineInstr*> ToDelete;
+  SmallVector<MachineInstr *> ToDelete;
 
   auto dropAVLUse = [&](MachineOperand &MO) {
     if (!MO.isReg() || !MO.getReg().isVirtual())
@@ -2005,7 +2001,6 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
     BBInfo.Exit = TmpStatus;
     LLVM_DEBUG(dbgs() << "Initial exit state of " << printMBBReference(MBB)
                       << " is " << BBInfo.Exit << "\n");
-
   }
 
   // If we didn't find any instructions that need VSETVLI, we're done.

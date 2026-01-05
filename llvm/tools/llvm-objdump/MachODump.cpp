@@ -311,7 +311,8 @@ static void getSectionsAndSymbols(MachOObjectFile *MachOObj,
         BaseSegmentAddress = SLC.vmaddr;
       }
     } else if (Command.C.cmd == MachO::LC_SEGMENT_64) {
-      MachO::segment_command_64 SLC = MachOObj->getSegment64LoadCommand(Command);
+      MachO::segment_command_64 SLC =
+          MachOObj->getSegment64LoadCommand(Command);
       StringRef SegName = SLC.segname;
       if (!BaseSegmentAddressSet && SegName != "__PAGEZERO") {
         BaseSegmentAddressSet = true;
@@ -322,7 +323,7 @@ static void getSectionsAndSymbols(MachOObjectFile *MachOObj,
 }
 
 static bool DumpAndSkipDataInCode(uint64_t PC, const uint8_t *bytes,
-                                 DiceTable &Dices, uint64_t &InstSize) {
+                                  DiceTable &Dices, uint64_t &InstSize) {
   // Check the data in code table here to see if this is data not an
   // instruction to be disassembled.
   DiceTable Dice;
@@ -715,51 +716,48 @@ static void PrintIndirectSymbols(MachOObjectFile *O, bool verbose) {
 
 static void PrintRType(const uint64_t cputype, const unsigned r_type) {
   static char const *generic_r_types[] = {
-    "VANILLA ", "PAIR    ", "SECTDIF ", "PBLAPTR ", "LOCSDIF ", "TLV     ",
-    "  6 (?) ", "  7 (?) ", "  8 (?) ", "  9 (?) ", " 10 (?) ", " 11 (?) ",
-    " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "
-  };
+      "VANILLA ", "PAIR    ", "SECTDIF ", "PBLAPTR ", "LOCSDIF ", "TLV     ",
+      "  6 (?) ", "  7 (?) ", "  8 (?) ", "  9 (?) ", " 10 (?) ", " 11 (?) ",
+      " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "};
   static char const *x86_64_r_types[] = {
-    "UNSIGND ", "SIGNED  ", "BRANCH  ", "GOT_LD  ", "GOT     ", "SUB     ",
-    "SIGNED1 ", "SIGNED2 ", "SIGNED4 ", "TLV     ", " 10 (?) ", " 11 (?) ",
-    " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "
-  };
+      "UNSIGND ", "SIGNED  ", "BRANCH  ", "GOT_LD  ", "GOT     ", "SUB     ",
+      "SIGNED1 ", "SIGNED2 ", "SIGNED4 ", "TLV     ", " 10 (?) ", " 11 (?) ",
+      " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "};
   static char const *arm_r_types[] = {
-    "VANILLA ", "PAIR    ", "SECTDIFF", "LOCSDIF ", "PBLAPTR ",
-    "BR24    ", "T_BR22  ", "T_BR32  ", "HALF    ", "HALFDIF ",
-    " 10 (?) ", " 11 (?) ", " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "
-  };
+      "VANILLA ", "PAIR    ", "SECTDIFF", "LOCSDIF ", "PBLAPTR ", "BR24    ",
+      "T_BR22  ", "T_BR32  ", "HALF    ", "HALFDIF ", " 10 (?) ", " 11 (?) ",
+      " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "};
   static char const *arm64_r_types[] = {
-    "UNSIGND ", "SUB     ", "BR26    ", "PAGE21  ", "PAGOF12 ",
-    "GOTLDP  ", "GOTLDPOF", "PTRTGOT ", "TLVLDP  ", "TLVLDPOF",
-    "ADDEND  ", " 11 (?) ", " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "
-  };
+      "UNSIGND ", "SUB     ", "BR26    ", "PAGE21  ", "PAGOF12 ", "GOTLDP  ",
+      "GOTLDPOF", "PTRTGOT ", "TLVLDP  ", "TLVLDPOF", "ADDEND  ", " 11 (?) ",
+      " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "};
 
-  if (r_type > 0xf){
+  if (r_type > 0xf) {
     outs() << format("%-7u", r_type) << " ";
     return;
   }
   switch (cputype) {
-    case MachO::CPU_TYPE_I386:
-      outs() << generic_r_types[r_type];
-      break;
-    case MachO::CPU_TYPE_X86_64:
-      outs() << x86_64_r_types[r_type];
-      break;
-    case MachO::CPU_TYPE_ARM:
-      outs() << arm_r_types[r_type];
-      break;
-    case MachO::CPU_TYPE_ARM64:
-    case MachO::CPU_TYPE_ARM64_32:
-      outs() << arm64_r_types[r_type];
-      break;
-    default:
-      outs() << format("%-7u ", r_type);
+  case MachO::CPU_TYPE_I386:
+    outs() << generic_r_types[r_type];
+    break;
+  case MachO::CPU_TYPE_X86_64:
+    outs() << x86_64_r_types[r_type];
+    break;
+  case MachO::CPU_TYPE_ARM:
+    outs() << arm_r_types[r_type];
+    break;
+  case MachO::CPU_TYPE_ARM64:
+  case MachO::CPU_TYPE_ARM64_32:
+    outs() << arm64_r_types[r_type];
+    break;
+  default:
+    outs() << format("%-7u ", r_type);
   }
 }
 
 static void PrintRLength(const uint64_t cputype, const unsigned r_type,
-                         const unsigned r_length, const bool previous_arm_half){
+                         const unsigned r_length,
+                         const bool previous_arm_half) {
   if (cputype == MachO::CPU_TYPE_ARM &&
       (r_type == MachO::ARM_RELOC_HALF ||
        r_type == MachO::ARM_RELOC_HALF_SECTDIFF || previous_arm_half == true)) {
@@ -773,23 +771,23 @@ static void PrintRLength(const uint64_t cputype, const unsigned r_type,
       outs() << "thm ";
   } else {
     switch (r_length) {
-      case 0:
-        outs() << "byte   ";
-        break;
-      case 1:
-        outs() << "word   ";
-        break;
-      case 2:
-        outs() << "long   ";
-        break;
-      case 3:
-        if (cputype == MachO::CPU_TYPE_X86_64)
-          outs() << "quad   ";
-        else
-          outs() << format("?(%2d)  ", r_length);
-        break;
-      default:
+    case 0:
+      outs() << "byte   ";
+      break;
+    case 1:
+      outs() << "word   ";
+      break;
+    case 2:
+      outs() << "long   ";
+      break;
+    case 3:
+      if (cputype == MachO::CPU_TYPE_X86_64)
+        outs() << "quad   ";
+      else
         outs() << format("?(%2d)  ", r_length);
+      break;
+    default:
+      outs() << format("?(%2d)  ", r_length);
     }
   }
 }
@@ -797,8 +795,7 @@ static void PrintRLength(const uint64_t cputype, const unsigned r_type,
 static void PrintRelocationEntries(const MachOObjectFile *O,
                                    const relocation_iterator Begin,
                                    const relocation_iterator End,
-                                   const uint64_t cputype,
-                                   const bool verbose) {
+                                   const uint64_t cputype, const bool verbose) {
   const MachO::symtab_command Symtab = O->getSymtabLoadCommand();
   bool previous_arm_half = false;
   bool previous_sectdiff = false;
@@ -812,12 +809,12 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
     const unsigned r_pcrel = O->getAnyRelocationPCRel(RE);
     const unsigned r_length = O->getAnyRelocationLength(RE);
     const unsigned r_address = O->getAnyRelocationAddress(RE);
-    const bool r_extern = (r_scattered ? false :
-                           O->getPlainRelocationExternal(RE));
-    const uint32_t r_value = (r_scattered ?
-                              O->getScatteredRelocationValue(RE) : 0);
-    const unsigned r_symbolnum = (r_scattered ? 0 :
-                                  O->getPlainRelocationSymbolNum(RE));
+    const bool r_extern =
+        (r_scattered ? false : O->getPlainRelocationExternal(RE));
+    const uint32_t r_value =
+        (r_scattered ? O->getScatteredRelocationValue(RE) : 0);
+    const unsigned r_symbolnum =
+        (r_scattered ? 0 : O->getPlainRelocationSymbolNum(RE));
 
     if (r_scattered && cputype != MachO::CPU_TYPE_X86_64) {
       if (verbose) {
@@ -871,15 +868,13 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
         else
           previous_arm_half = false;
         outs() << "\n";
-      }
-      else {
+      } else {
         // scattered: address pcrel length extern type scattered value
         outs() << format("%08x %1d     %-2d     n/a    %-7d 1         0x%08x\n",
                          (unsigned int)r_address, r_pcrel, r_length, r_type,
                          (unsigned int)r_value);
       }
-    }
-    else {
+    } else {
       if (verbose) {
         // plain: address
         if (cputype == MachO::CPU_TYPE_ARM && r_type == MachO::ARM_RELOC_PAIR)
@@ -916,8 +911,7 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
             else
               outs() << name << "\n";
           }
-        }
-        else {
+        } else {
           // plain: extern & type & scattered
           outs() << "False  ";
           PrintRType(cputype, r_type);
@@ -939,14 +933,13 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
               uint32_t nsects = O->section_end()->getRawDataRefImpl().d.a;
               if (r_symbolnum > 0 && r_symbolnum <= nsects) {
                 object::DataRefImpl DRI;
-                DRI.d.a = r_symbolnum-1;
+                DRI.d.a = r_symbolnum - 1;
                 StringRef SegName = O->getSectionFinalSegmentName(DRI);
                 if (Expected<StringRef> NameOrErr = O->getSectionName(DRI))
                   outs() << "(" << SegName << "," << *NameOrErr << ")\n";
                 else
                   outs() << "(?,?)\n";
-              }
-              else {
+              } else {
                 outs() << "(?,?)\n";
               }
             }
@@ -958,8 +951,7 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
           previous_arm_half = true;
         else
           previous_arm_half = false;
-      }
-      else {
+      } else {
         // plain: address pcrel length extern type scattered symbolnum/section
         outs() << format("%08x %1d     %-2d     %1d      %-7d 0         %d\n",
                          (unsigned int)r_address, r_pcrel, r_length, r_extern,
@@ -1811,8 +1803,8 @@ static void DumpLiteralPointerSection(MachOObjectFile *O,
 
 static void DumpInitTermPointerSection(MachOObjectFile *O,
                                        const SectionRef &Section,
-                                       const char *sect,
-                                       uint32_t sect_size, uint64_t sect_addr,
+                                       const char *sect, uint32_t sect_size,
+                                       uint64_t sect_addr,
                                        SymbolAddressMap *AddrMap,
                                        bool verbose) {
   uint32_t stride;
@@ -1857,9 +1849,10 @@ static void DumpInitTermPointerSection(MachOObjectFile *O,
     }
     if (verbose) {
       // First look for an external relocation entry for this pointer.
-      auto Reloc = find_if(Relocs, [&](const std::pair<uint64_t, SymbolRef> &P) {
-        return P.first == i;
-      });
+      auto Reloc =
+          find_if(Relocs, [&](const std::pair<uint64_t, SymbolRef> &P) {
+            return P.first == i;
+          });
       if (Reloc != Relocs.end()) {
         symbol_iterator RelocSym = Reloc->second;
         outs() << " " << unwrapOrError(RelocSym->getName(), O->getFileName());
@@ -2048,7 +2041,8 @@ static void DumpInfoPlistSectionContents(StringRef Filename,
     StringRef SegName = O->getSectionFinalSegmentName(Ref);
     if (SegName == "__TEXT" && SectName == "__info_plist") {
       if (LeadingHeaders)
-        outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
+        outs() << "Contents of (" << SegName << "," << SectName
+               << ") section\n";
       StringRef BytesStr =
           unwrapOrError(Section.getContents(), O->getFileName());
       const char *sect = BytesStr.data();
@@ -2079,8 +2073,8 @@ static bool checkMachOAndArchFlags(ObjectFile *O, StringRef Filename) {
                                        &McpuDefault, &ArchFlag);
   } else {
     H = MachO->MachOObjectFile::getHeader();
-    T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype,
-                                       &McpuDefault, &ArchFlag);
+    T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype, &McpuDefault,
+                                       &ArchFlag);
   }
   const std::string ArchFlagName(ArchFlag);
   if (!llvm::is_contained(ArchFlags, ArchFlagName)) {
@@ -2152,8 +2146,7 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
         DisassembleMachO(FileName, MachOOF, SegName, SectName);
       }
     }
-  }
-  else if (Disassemble) {
+  } else if (Disassemble) {
     if (MachOOF->getHeader().filetype == MachO::MH_KEXT_BUNDLE &&
         MachOOF->getHeader().cputype == MachO::CPU_TYPE_ARM64)
       DisassembleMachO(FileName, MachOOF, "__TEXT_EXEC", "__text");
@@ -2406,7 +2399,8 @@ static void printMachOUniversalHeaders(const object::MachOUniversalBinary *UB,
     else
       outs() << "    capabilities "
              << format("0x%" PRIx32,
-                       (cpusubtype & MachO::CPU_SUBTYPE_MASK) >> 24) << "\n";
+                       (cpusubtype & MachO::CPU_SUBTYPE_MASK) >> 24)
+             << "\n";
     outs() << "    offset " << OFA.getOffset();
     if (OFA.getOffset() > size)
       outs() << " (past end of file)";
@@ -2602,12 +2596,11 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
     for (unsigned i = 0; i < ArchFlags.size(); ++i) {
       ArchFound = false;
       for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
-                                                  E = UB->end_objects();
-            I != E; ++I) {
+                                                 E = UB->end_objects();
+           I != E; ++I) {
         if (ArchFlags[i] == I->getArchFlagName()) {
           ArchFound = true;
-          Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
-              I->getAsObjectFile();
+          Expected<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
           std::string ArchitectureName;
           if (ArchFlags.size() > 1)
             ArchitectureName = I->getArchFlagName();
@@ -2669,8 +2662,8 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
   // matches the host architecture dump only that.
   if (!ArchAll) {
     for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
-                                                E = UB->end_objects();
-          I != E; ++I) {
+                                               E = UB->end_objects();
+         I != E; ++I) {
       if (MachOObjectFile::getHostArch().getArchName() ==
           I->getArchFlagName()) {
         Expected<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
@@ -2721,8 +2714,8 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
   // and this does not contain the host architecture so dump all the slices.
   bool moreThanOneArch = UB->getNumberOfObjects() > 1;
   for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
-                                              E = UB->end_objects();
-        I != E; ++I) {
+                                             E = UB->end_objects();
+       I != E; ++I) {
     Expected<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
     std::string ArchitectureName;
     if (moreThanOneArch)
@@ -2758,7 +2751,7 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
                 dyn_cast<MachOObjectFile>(&*ChildOrErr.get())) {
           if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(O))
             ProcessMachO(Filename, MachOOF, MachOOF->getFileName(),
-                          ArchitectureName);
+                         ArchitectureName);
         }
       }
       if (Err)
@@ -2777,7 +2770,7 @@ namespace {
 struct DisassembleInfo {
   DisassembleInfo(MachOObjectFile *O, SymbolAddressMap *AddrMap,
                   std::vector<SectionRef> *Sections, bool verbose)
-    : verbose(verbose), O(O), AddrMap(AddrMap), Sections(Sections) {}
+      : verbose(verbose), O(O), AddrMap(AddrMap), Sections(Sections) {}
   bool verbose;
   MachOObjectFile *O;
   SectionRef S;
@@ -3367,8 +3360,8 @@ static void method_reference(struct DisassembleInfo *info,
     if (strcmp(*ReferenceName, "_objc_msgSend") == 0) {
       if (info->selector_name != nullptr) {
         if (info->class_name != nullptr) {
-          info->method = std::make_unique<char[]>(
-              5 + strlen(info->class_name) + strlen(info->selector_name));
+          info->method = std::make_unique<char[]>(5 + strlen(info->class_name) +
+                                                  strlen(info->selector_name));
           char *method = info->method.get();
           if (method != nullptr) {
             strcpy(method, "+[");
@@ -5708,8 +5701,8 @@ static void print_class64_t(uint64_t p, struct DisassembleInfo *info) {
   if (name != nullptr)
     outs() << " " << name;
   else {
-    name = get_dyld_bind_info_symbolname(S.getAddress() +
-             offset + offsetof(struct class64_t, superclass), info);
+    name = get_dyld_bind_info_symbolname(
+        S.getAddress() + offset + offsetof(struct class64_t, superclass), info);
     if (name != nullptr)
       outs() << " " << name;
   }
@@ -5751,13 +5744,11 @@ static void print_class64_t(uint64_t p, struct DisassembleInfo *info) {
   if (!print_class_ro64_t((c.data + n_value) & ~0x7, info, is_meta_class))
     return;
 
-  if (!is_meta_class &&
-      c.isa + isa_n_value != p &&
-      c.isa + isa_n_value != 0 &&
+  if (!is_meta_class && c.isa + isa_n_value != p && c.isa + isa_n_value != 0 &&
       info->depth < 100) {
-      info->depth++;
-      outs() << "Meta Class\n";
-      print_class64_t(c.isa + isa_n_value, info);
+    info->depth++;
+    outs() << "Meta Class\n";
+    print_class64_t(c.isa + isa_n_value, info);
   }
 }
 
@@ -6321,15 +6312,15 @@ static void print_image_info64(SectionRef S, struct DisassembleInfo *info) {
       outs() << " Swift 1.0";
     else if (swift_version == 2)
       outs() << " Swift 1.1";
-    else if(swift_version == 3)
+    else if (swift_version == 3)
       outs() << " Swift 2.0";
-    else if(swift_version == 4)
+    else if (swift_version == 4)
       outs() << " Swift 3.0";
-    else if(swift_version == 5)
+    else if (swift_version == 5)
       outs() << " Swift 4.0";
-    else if(swift_version == 6)
+    else if (swift_version == 6)
       outs() << " Swift 4.1/Swift 4.2";
-    else if(swift_version == 7)
+    else if (swift_version == 7)
       outs() << " Swift 5 or later";
     else
       outs() << " unknown future Swift version (" << swift_version << ")";
@@ -6379,15 +6370,15 @@ static void print_image_info32(SectionRef S, struct DisassembleInfo *info) {
       outs() << " Swift 1.0";
     else if (swift_version == 2)
       outs() << " Swift 1.1";
-    else if(swift_version == 3)
+    else if (swift_version == 3)
       outs() << " Swift 2.0";
-    else if(swift_version == 4)
+    else if (swift_version == 4)
       outs() << " Swift 3.0";
-    else if(swift_version == 5)
+    else if (swift_version == 5)
       outs() << " Swift 4.0";
-    else if(swift_version == 6)
+    else if (swift_version == 6)
       outs() << " Swift 4.1/Swift 4.2";
-    else if(swift_version == 7)
+    else if (swift_version == 7)
       outs() << " Swift 5 or later";
     else
       outs() << " unknown future Swift version (" << swift_version << ")";
@@ -7098,8 +7089,7 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
       *ReferenceName = info->demangled_name;
       *ReferenceType = LLVMDisassembler_ReferenceType_DeMangled_Name;
     }
-  }
-  else {
+  } else {
     *ReferenceName = nullptr;
     *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
   }
@@ -7528,10 +7518,10 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         continue;
       }
       // The __mh_execute_header is special and we need to deal with that fact
-      // this symbol is before the start of the (__TEXT,__text) section and at the
-      // address of the start of the __TEXT segment.  This is because this symbol
-      // is an N_SECT symbol in the (__TEXT,__text) but its address is before the
-      // start of the section in a standard MH_EXECUTE filetype.
+      // this symbol is before the start of the (__TEXT,__text) section and at
+      // the address of the start of the __TEXT segment.  This is because this
+      // symbol is an N_SECT symbol in the (__TEXT,__text) but its address is
+      // before the start of the section in a standard MH_EXECUTE filetype.
       if (!DisSymName.empty() && DisSymName == "__mh_execute_header") {
         outs() << "-dis-symname: __mh_execute_header not in any section\n";
         return;
@@ -7601,8 +7591,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       if (DisSymName.empty() && FirstSymbol && Start != 0) {
         FirstSymbolAtSectionStart = false;
         Start = 0;
-      }
-      else
+      } else
         outs() << SymName << ":\n";
 
       DILineInfo lastLine;
@@ -7691,7 +7680,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                               (*(Bytes.data() + Index + 1) & 0xff) << 8;
             outs() << format("\t.short\t0x%04x\n", opcode);
             Size = 2;
-          } else{
+          } else {
             WithColor::warning(errs(), "llvm-objdump")
                 << "invalid instruction encoding\n";
             if (Size == 0)
@@ -7823,7 +7812,7 @@ private:
     LSDAAddr = readNext<UIntPtr>(Contents, Offset);
   }
 };
-}
+} // namespace
 
 /// Given a relocation from __compact_unwind, consisting of the RelocationRef
 /// and data being relocated, determine the best base Name and Addend to use for
@@ -7953,8 +7942,8 @@ printMachOCompactUnwindSection(const MachOObjectFile *Obj,
            << format("0x%" PRIx32, Entry.OffsetInSection) << ":\n";
 
     // 1. Start of the region this entry applies to.
-    outs() << "    start:                " << format("0x%" PRIx64,
-                                                     Entry.FunctionAddr) << ' ';
+    outs() << "    start:                "
+           << format("0x%" PRIx64, Entry.FunctionAddr) << ' ';
     printUnwindRelocDest(Obj, Symbols, Entry.FunctionReloc, Entry.FunctionAddr);
     outs() << '\n';
 
@@ -7976,8 +7965,8 @@ printMachOCompactUnwindSection(const MachOObjectFile *Obj,
 
     // 5. This entry's language-specific data area.
     if (Entry.LSDAReloc.getObject()) {
-      outs() << "    LSDA:                 " << format("0x%" PRIx64,
-                                                       Entry.LSDAAddr) << ' ';
+      outs() << "    LSDA:                 "
+             << format("0x%" PRIx64, Entry.LSDAAddr) << ' ';
       printUnwindRelocDest(Obj, Symbols, Entry.LSDAReloc, Entry.LSDAAddr);
       outs() << '\n';
     }
@@ -8216,7 +8205,8 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
 
     Pos = IndexEntries[i].SecondLevelPageStart;
     if (Pos + sizeof(uint32_t) > Contents.size()) {
-      outs() << "warning: invalid offset for second level page: " << Pos << '\n';
+      outs() << "warning: invalid offset for second level page: " << Pos
+             << '\n';
       continue;
     }
 
@@ -8622,9 +8612,8 @@ static void PrintSegmentCommand(uint32_t cmd, uint32_t cmdsize,
   else
     outs() << "\n";
   if (verbose) {
-    if ((maxprot &
-         ~(MachO::VM_PROT_READ | MachO::VM_PROT_WRITE |
-           MachO::VM_PROT_EXECUTE)) != 0)
+    if ((maxprot & ~(MachO::VM_PROT_READ | MachO::VM_PROT_WRITE |
+                     MachO::VM_PROT_EXECUTE)) != 0)
       outs() << "  maxprot ?" << format("0x%08" PRIx32, maxprot) << "\n";
     else {
       outs() << "  maxprot ";
@@ -8632,9 +8621,8 @@ static void PrintSegmentCommand(uint32_t cmd, uint32_t cmdsize,
       outs() << ((maxprot & MachO::VM_PROT_WRITE) ? "w" : "-");
       outs() << ((maxprot & MachO::VM_PROT_EXECUTE) ? "x\n" : "-\n");
     }
-    if ((initprot &
-         ~(MachO::VM_PROT_READ | MachO::VM_PROT_WRITE |
-           MachO::VM_PROT_EXECUTE)) != 0)
+    if ((initprot & ~(MachO::VM_PROT_READ | MachO::VM_PROT_WRITE |
+                      MachO::VM_PROT_EXECUTE)) != 0)
       outs() << " initprot ?" << format("0x%08" PRIx32, initprot) << "\n";
     else {
       outs() << " initprot ";
@@ -9150,9 +9138,8 @@ static void PrintVersionMinLoadCommand(MachO::version_min_command vd) {
     outs() << " Incorrect size\n";
   else
     outs() << "\n";
-  outs() << "  version "
-         << MachOObjectFile::getVersionMinMajor(vd, false) << "."
-         << MachOObjectFile::getVersionMinMinor(vd, false);
+  outs() << "  version " << MachOObjectFile::getVersionMinMajor(vd, false)
+         << "." << MachOObjectFile::getVersionMinMinor(vd, false);
   uint32_t Update = MachOObjectFile::getVersionMinUpdate(vd, false);
   if (Update != 0)
     outs() << "." << Update;
@@ -9160,9 +9147,8 @@ static void PrintVersionMinLoadCommand(MachO::version_min_command vd) {
   if (vd.sdk == 0)
     outs() << "      sdk n/a";
   else {
-    outs() << "      sdk "
-           << MachOObjectFile::getVersionMinMajor(vd, true) << "."
-           << MachOObjectFile::getVersionMinMinor(vd, true);
+    outs() << "      sdk " << MachOObjectFile::getVersionMinMajor(vd, true)
+           << "." << MachOObjectFile::getVersionMinMinor(vd, true);
   }
   Update = MachOObjectFile::getVersionMinUpdate(vd, true);
   if (Update != 0)
@@ -9199,9 +9185,8 @@ static void PrintBuildVersionLoadCommand(const MachOObjectFile *obj,
                                          bool verbose) {
   outs() << "       cmd LC_BUILD_VERSION\n";
   outs() << "   cmdsize " << bd.cmdsize;
-  if (bd.cmdsize !=
-      sizeof(struct MachO::build_version_command) +
-          bd.ntools * sizeof(struct MachO::build_tool_version))
+  if (bd.cmdsize != sizeof(struct MachO::build_version_command) +
+                        bd.ntools * sizeof(struct MachO::build_tool_version))
     outs() << " Incorrect size\n";
   else
     outs() << "\n";
@@ -9614,59 +9599,59 @@ static void Print_x86_exception_state_t(MachO::x86_exception_state64_t &exc64) {
 
 static void Print_arm_thread_state32_t(MachO::arm_thread_state32_t &cpu32) {
   outs() << "\t    r0  " << format("0x%08" PRIx32, cpu32.r[0]);
-  outs() << " r1     "   << format("0x%08" PRIx32, cpu32.r[1]);
-  outs() << " r2  "      << format("0x%08" PRIx32, cpu32.r[2]);
-  outs() << " r3  "      << format("0x%08" PRIx32, cpu32.r[3]) << "\n";
+  outs() << " r1     " << format("0x%08" PRIx32, cpu32.r[1]);
+  outs() << " r2  " << format("0x%08" PRIx32, cpu32.r[2]);
+  outs() << " r3  " << format("0x%08" PRIx32, cpu32.r[3]) << "\n";
   outs() << "\t    r4  " << format("0x%08" PRIx32, cpu32.r[4]);
-  outs() << " r5     "   << format("0x%08" PRIx32, cpu32.r[5]);
-  outs() << " r6  "      << format("0x%08" PRIx32, cpu32.r[6]);
-  outs() << " r7  "      << format("0x%08" PRIx32, cpu32.r[7]) << "\n";
+  outs() << " r5     " << format("0x%08" PRIx32, cpu32.r[5]);
+  outs() << " r6  " << format("0x%08" PRIx32, cpu32.r[6]);
+  outs() << " r7  " << format("0x%08" PRIx32, cpu32.r[7]) << "\n";
   outs() << "\t    r8  " << format("0x%08" PRIx32, cpu32.r[8]);
-  outs() << " r9     "   << format("0x%08" PRIx32, cpu32.r[9]);
-  outs() << " r10 "      << format("0x%08" PRIx32, cpu32.r[10]);
-  outs() << " r11 "      << format("0x%08" PRIx32, cpu32.r[11]) << "\n";
+  outs() << " r9     " << format("0x%08" PRIx32, cpu32.r[9]);
+  outs() << " r10 " << format("0x%08" PRIx32, cpu32.r[10]);
+  outs() << " r11 " << format("0x%08" PRIx32, cpu32.r[11]) << "\n";
   outs() << "\t    r12 " << format("0x%08" PRIx32, cpu32.r[12]);
-  outs() << " sp     "   << format("0x%08" PRIx32, cpu32.sp);
-  outs() << " lr  "      << format("0x%08" PRIx32, cpu32.lr);
-  outs() << " pc  "      << format("0x%08" PRIx32, cpu32.pc) << "\n";
+  outs() << " sp     " << format("0x%08" PRIx32, cpu32.sp);
+  outs() << " lr  " << format("0x%08" PRIx32, cpu32.lr);
+  outs() << " pc  " << format("0x%08" PRIx32, cpu32.pc) << "\n";
   outs() << "\t   cpsr " << format("0x%08" PRIx32, cpu32.cpsr) << "\n";
 }
 
 static void Print_arm_thread_state64_t(MachO::arm_thread_state64_t &cpu64) {
   outs() << "\t    x0  " << format("0x%016" PRIx64, cpu64.x[0]);
-  outs() << " x1  "      << format("0x%016" PRIx64, cpu64.x[1]);
-  outs() << " x2  "      << format("0x%016" PRIx64, cpu64.x[2]) << "\n";
+  outs() << " x1  " << format("0x%016" PRIx64, cpu64.x[1]);
+  outs() << " x2  " << format("0x%016" PRIx64, cpu64.x[2]) << "\n";
   outs() << "\t    x3  " << format("0x%016" PRIx64, cpu64.x[3]);
-  outs() << " x4  "      << format("0x%016" PRIx64, cpu64.x[4]);
-  outs() << " x5  "      << format("0x%016" PRIx64, cpu64.x[5]) << "\n";
+  outs() << " x4  " << format("0x%016" PRIx64, cpu64.x[4]);
+  outs() << " x5  " << format("0x%016" PRIx64, cpu64.x[5]) << "\n";
   outs() << "\t    x6  " << format("0x%016" PRIx64, cpu64.x[6]);
-  outs() << " x7  "      << format("0x%016" PRIx64, cpu64.x[7]);
-  outs() << " x8  "      << format("0x%016" PRIx64, cpu64.x[8]) << "\n";
+  outs() << " x7  " << format("0x%016" PRIx64, cpu64.x[7]);
+  outs() << " x8  " << format("0x%016" PRIx64, cpu64.x[8]) << "\n";
   outs() << "\t    x9  " << format("0x%016" PRIx64, cpu64.x[9]);
-  outs() << " x10 "      << format("0x%016" PRIx64, cpu64.x[10]);
-  outs() << " x11 "      << format("0x%016" PRIx64, cpu64.x[11]) << "\n";
+  outs() << " x10 " << format("0x%016" PRIx64, cpu64.x[10]);
+  outs() << " x11 " << format("0x%016" PRIx64, cpu64.x[11]) << "\n";
   outs() << "\t    x12 " << format("0x%016" PRIx64, cpu64.x[12]);
-  outs() << " x13 "      << format("0x%016" PRIx64, cpu64.x[13]);
-  outs() << " x14 "      << format("0x%016" PRIx64, cpu64.x[14]) << "\n";
+  outs() << " x13 " << format("0x%016" PRIx64, cpu64.x[13]);
+  outs() << " x14 " << format("0x%016" PRIx64, cpu64.x[14]) << "\n";
   outs() << "\t    x15 " << format("0x%016" PRIx64, cpu64.x[15]);
-  outs() << " x16 "      << format("0x%016" PRIx64, cpu64.x[16]);
-  outs() << " x17 "      << format("0x%016" PRIx64, cpu64.x[17]) << "\n";
+  outs() << " x16 " << format("0x%016" PRIx64, cpu64.x[16]);
+  outs() << " x17 " << format("0x%016" PRIx64, cpu64.x[17]) << "\n";
   outs() << "\t    x18 " << format("0x%016" PRIx64, cpu64.x[18]);
-  outs() << " x19 "      << format("0x%016" PRIx64, cpu64.x[19]);
-  outs() << " x20 "      << format("0x%016" PRIx64, cpu64.x[20]) << "\n";
+  outs() << " x19 " << format("0x%016" PRIx64, cpu64.x[19]);
+  outs() << " x20 " << format("0x%016" PRIx64, cpu64.x[20]) << "\n";
   outs() << "\t    x21 " << format("0x%016" PRIx64, cpu64.x[21]);
-  outs() << " x22 "      << format("0x%016" PRIx64, cpu64.x[22]);
-  outs() << " x23 "      << format("0x%016" PRIx64, cpu64.x[23]) << "\n";
+  outs() << " x22 " << format("0x%016" PRIx64, cpu64.x[22]);
+  outs() << " x23 " << format("0x%016" PRIx64, cpu64.x[23]) << "\n";
   outs() << "\t    x24 " << format("0x%016" PRIx64, cpu64.x[24]);
-  outs() << " x25 "      << format("0x%016" PRIx64, cpu64.x[25]);
-  outs() << " x26 "      << format("0x%016" PRIx64, cpu64.x[26]) << "\n";
+  outs() << " x25 " << format("0x%016" PRIx64, cpu64.x[25]);
+  outs() << " x26 " << format("0x%016" PRIx64, cpu64.x[26]) << "\n";
   outs() << "\t    x27 " << format("0x%016" PRIx64, cpu64.x[27]);
-  outs() << " x28 "      << format("0x%016" PRIx64, cpu64.x[28]);
-  outs() << "  fp "      << format("0x%016" PRIx64, cpu64.fp) << "\n";
+  outs() << " x28 " << format("0x%016" PRIx64, cpu64.x[28]);
+  outs() << "  fp " << format("0x%016" PRIx64, cpu64.fp) << "\n";
   outs() << "\t     lr " << format("0x%016" PRIx64, cpu64.lr);
-  outs() << " sp  "      << format("0x%016" PRIx64, cpu64.sp);
-  outs() << "  pc "      << format("0x%016" PRIx64, cpu64.pc) << "\n";
-  outs() << "\t   cpsr " << format("0x%08"  PRIx32, cpu64.cpsr) << "\n";
+  outs() << " sp  " << format("0x%016" PRIx64, cpu64.sp);
+  outs() << "  pc " << format("0x%016" PRIx64, cpu64.pc) << "\n";
+  outs() << "\t   cpsr " << format("0x%08" PRIx32, cpu64.cpsr) << "\n";
 }
 
 static void PrintThreadCommand(MachO::thread_command t, const char *Ptr,
@@ -10348,8 +10333,7 @@ static void printMachOExportsTrie(const object::MachOObjectFile *Obj) {
     if (ReExport)
       outs() << "[re-export] ";
     else
-      outs() << format("0x%08llX  ",
-                       Entry.address() + BaseSegmentAddress);
+      outs() << format("0x%08llX  ", Entry.address() + BaseSegmentAddress);
     outs() << Entry.name();
     if (WeakDef || ThreadLocal || Resolver || Abs) {
       ListSeparator LS;
@@ -10538,9 +10522,8 @@ void objdump::printLazyBindTable(ObjectFile *o) {
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOLazyBindTable(MachO);
   else
-    WithColor::error()
-        << "This operation is only currently supported "
-           "for Mach-O executable files.\n";
+    WithColor::error() << "This operation is only currently supported "
+                          "for Mach-O executable files.\n";
 }
 
 void objdump::printWeakBindTable(ObjectFile *o) {
@@ -10548,9 +10531,8 @@ void objdump::printWeakBindTable(ObjectFile *o) {
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOWeakBindTable(MachO);
   else
-    WithColor::error()
-        << "This operation is only currently supported "
-           "for Mach-O executable files.\n";
+    WithColor::error() << "This operation is only currently supported "
+                          "for Mach-O executable files.\n";
 }
 
 void objdump::printExportsTrie(const ObjectFile *o) {
@@ -10558,9 +10540,8 @@ void objdump::printExportsTrie(const ObjectFile *o) {
   if (const MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOExportsTrie(MachO);
   else
-    WithColor::error()
-        << "This operation is only currently supported "
-           "for Mach-O executable files.\n";
+    WithColor::error() << "This operation is only currently supported "
+                          "for Mach-O executable files.\n";
 }
 
 void objdump::printRebaseTable(ObjectFile *o) {
@@ -10568,9 +10549,8 @@ void objdump::printRebaseTable(ObjectFile *o) {
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachORebaseTable(MachO);
   else
-    WithColor::error()
-        << "This operation is only currently supported "
-           "for Mach-O executable files.\n";
+    WithColor::error() << "This operation is only currently supported "
+                          "for Mach-O executable files.\n";
 }
 
 void objdump::printBindTable(ObjectFile *o) {
@@ -10578,7 +10558,6 @@ void objdump::printBindTable(ObjectFile *o) {
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOBindTable(MachO);
   else
-    WithColor::error()
-        << "This operation is only currently supported "
-           "for Mach-O executable files.\n";
+    WithColor::error() << "This operation is only currently supported "
+                          "for Mach-O executable files.\n";
 }

@@ -356,8 +356,8 @@ static bool doDefKillClear(MachineBasicBlock *MBB) {
   return Changed;
 }
 
-static bool runOnBasicBlock(MachineBasicBlock *MBB,
-                            unsigned BasicBlockNum, VRegRenamer &Renamer) {
+static bool runOnBasicBlock(MachineBasicBlock *MBB, unsigned BasicBlockNum,
+                            VRegRenamer &Renamer) {
   LLVM_DEBUG({
     dbgs() << "\n\n  NEW BASIC BLOCK: " << MBB->getName() << "  \n\n";
     dbgs() << "\n\n================================================\n\n";
@@ -408,8 +408,7 @@ bool MIRCanonicalizer::runOnMachineFunction(MachineFunction &MF) {
       dbgs() << "\n\n  NEW MACHINE FUNCTION: " << MF.getName() << "  \n\n";
       dbgs() << "\n\n================================================\n\n";
       dbgs() << "Total Basic Blocks: " << RPOList.size() << "\n";
-      for (auto MBB
-           : RPOList) { dbgs() << MBB->getName() << "\n"; } dbgs()
+      for (auto MBB : RPOList) { dbgs() << MBB->getName() << "\n"; } dbgs()
       << "\n\n================================================\n\n";);
 
   unsigned BBNum = 0;

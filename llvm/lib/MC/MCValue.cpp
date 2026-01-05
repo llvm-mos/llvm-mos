@@ -38,7 +38,5 @@ void MCValue::print(raw_ostream &OS) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MCValue::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void MCValue::dump() const { print(dbgs()); }
 #endif

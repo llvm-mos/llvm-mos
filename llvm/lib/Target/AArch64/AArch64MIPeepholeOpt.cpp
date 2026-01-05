@@ -114,8 +114,8 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   ///     %tmp = <Instr>ri %src (encode half IMM) [...]
   ///     %dst = <Instr>ri %tmp (encode half IMM) [...]
   template <typename T>
-  bool splitTwoPartImm(MachineInstr &MI,
-                       SplitAndOpcFunc<T> SplitAndOpc, BuildMIFunc BuildInstr);
+  bool splitTwoPartImm(MachineInstr &MI, SplitAndOpcFunc<T> SplitAndOpc,
+                       BuildMIFunc BuildInstr);
 
   bool checkMovImmInstr(MachineInstr &MI, MachineInstr *&MovMI,
                         MachineInstr *&SubregToRegMI);
@@ -327,8 +327,7 @@ bool AArch64MIPeepholeOpt::visitORR(MachineInstr &MI) {
             TII->get(AArch64::FMOVSWr), SrcMI->getOperand(0).getReg())
         .addReg(CpySrc);
     SrcMI->eraseFromParent();
-  }
-  else if (SrcMI->getOpcode() <= TargetOpcode::GENERIC_OP_END)
+  } else if (SrcMI->getOpcode() <= TargetOpcode::GENERIC_OP_END)
     return false;
 
   Register DefReg = MI.getOperand(0).getReg();
@@ -427,8 +426,8 @@ static bool splitAddSubImm(T Imm, unsigned RegSize, T &Imm0, T &Imm1) {
 }
 
 template <typename T>
-bool AArch64MIPeepholeOpt::visitADDSUB(
-    unsigned PosOpc, unsigned NegOpc, MachineInstr &MI) {
+bool AArch64MIPeepholeOpt::visitADDSUB(unsigned PosOpc, unsigned NegOpc,
+                                       MachineInstr &MI) {
   // Try below transformation.
   //
   // ADDWrr X, MOVi32imm ==> ADDWri + ADDWri
@@ -476,8 +475,8 @@ bool AArch64MIPeepholeOpt::visitADDSUB(
 }
 
 template <typename T>
-bool AArch64MIPeepholeOpt::visitADDSSUBS(
-    OpcodePair PosOpcs, OpcodePair NegOpcs, MachineInstr &MI) {
+bool AArch64MIPeepholeOpt::visitADDSSUBS(OpcodePair PosOpcs, OpcodePair NegOpcs,
+                                         MachineInstr &MI) {
   // Try the same transformation as ADDSUB but with additional requirement
   // that the condition code usages are only for Equal and Not Equal
 
@@ -562,9 +561,9 @@ bool AArch64MIPeepholeOpt::checkMovImmInstr(MachineInstr &MI,
 }
 
 template <typename T>
-bool AArch64MIPeepholeOpt::splitTwoPartImm(
-    MachineInstr &MI,
-    SplitAndOpcFunc<T> SplitAndOpc, BuildMIFunc BuildInstr) {
+bool AArch64MIPeepholeOpt::splitTwoPartImm(MachineInstr &MI,
+                                           SplitAndOpcFunc<T> SplitAndOpc,
+                                           BuildMIFunc BuildInstr) {
   unsigned RegSize = sizeof(T) * 8;
   assert((RegSize == 32 || RegSize == 64) &&
          "Invalid RegSize for legal immediate peephole optimization");
@@ -705,8 +704,9 @@ bool AArch64MIPeepholeOpt::visitINSvi64lane(MachineInstr &MI) {
   //
   //  %1:fpr64 = nofpexcept FCVTNv4i16 %0:fpr128, implicit $fpcr
   //  %6:fpr128 = IMPLICIT_DEF
-  //  %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), killed %1:fpr64, %subreg.dsub
-  //  %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed %3:fpr128, 0
+  //  %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), killed %1:fpr64,
+  //  %subreg.dsub %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed
+  //  %3:fpr128, 0
   MachineInstr *Low64MI = MRI->getUniqueVRegDef(MI.getOperand(1).getReg());
   if (Low64MI->getOpcode() != AArch64::INSERT_SUBREG)
     return false;
@@ -719,14 +719,16 @@ bool AArch64MIPeepholeOpt::visitINSvi64lane(MachineInstr &MI) {
   //
   //  %2:fpr64 = MOVID 0
   //  %4:fpr128 = IMPLICIT_DEF
-  //  %3:fpr128 = INSERT_SUBREG %4:fpr128(tied-def 0), killed %2:fpr64, %subreg.dsub
-  //  %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed %3:fpr128, 0
+  //  %3:fpr128 = INSERT_SUBREG %4:fpr128(tied-def 0), killed %2:fpr64,
+  //  %subreg.dsub %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed
+  //  %3:fpr128, 0
   // or
   //  %5:fpr128 = MOVIv2d_ns 0
   //  %6:fpr64 = COPY %5.dsub:fpr128
   //  %8:fpr128 = IMPLICIT_DEF
-  //  %7:fpr128 = INSERT_SUBREG %8:fpr128(tied-def 0), killed %6:fpr64, %subreg.dsub
-  //  %11:fpr128 = INSvi64lane %9:fpr128(tied-def 0), 1, killed %7:fpr128, 0
+  //  %7:fpr128 = INSERT_SUBREG %8:fpr128(tied-def 0), killed %6:fpr64,
+  //  %subreg.dsub %11:fpr128 = INSvi64lane %9:fpr128(tied-def 0), 1, killed
+  //  %7:fpr128, 0
   MachineInstr *High64MI = MRI->getUniqueVRegDef(MI.getOperand(3).getReg());
   if (!High64MI || High64MI->getOpcode() != AArch64::INSERT_SUBREG)
     return false;

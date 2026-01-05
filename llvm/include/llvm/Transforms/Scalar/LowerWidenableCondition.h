@@ -1,4 +1,5 @@
-//===--- LowerWidenableCondition.h - Lower the guard intrinsic ---------------===//
+//===--- LowerWidenableCondition.h - Lower the guard intrinsic
+//---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,10 +18,11 @@
 
 namespace llvm {
 
-struct LowerWidenableConditionPass : PassInfoMixin<LowerWidenableConditionPass> {
+struct LowerWidenableConditionPass
+    : PassInfoMixin<LowerWidenableConditionPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_LOWERWIDENABLECONDITION_H

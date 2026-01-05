@@ -134,9 +134,7 @@ public:
   virtual ~CrashRecoveryContextCleanup();
   virtual void recoverResources() = 0;
 
-  CrashRecoveryContext *getContext() const {
-    return context;
-  }
+  CrashRecoveryContext *getContext() const { return context; }
 
 private:
   friend class CrashRecoveryContext;
@@ -154,7 +152,7 @@ private:
 ///
 /// This class factors out creation of a cleanup handler. The latter requires
 /// knowledge of the current recovery context, which is provided by this class.
-template<typename Derived, typename T>
+template <typename Derived, typename T>
 class CrashRecoveryContextCleanupBase : public CrashRecoveryContextCleanup {
 protected:
   T *resource;
@@ -177,40 +175,41 @@ public:
 
 /// Cleanup handler that reclaims resource by calling destructor on it.
 template <typename T>
-class CrashRecoveryContextDestructorCleanup : public
-  CrashRecoveryContextCleanupBase<CrashRecoveryContextDestructorCleanup<T>, T> {
+class CrashRecoveryContextDestructorCleanup
+    : public CrashRecoveryContextCleanupBase<
+          CrashRecoveryContextDestructorCleanup<T>, T> {
 public:
   CrashRecoveryContextDestructorCleanup(CrashRecoveryContext *context,
                                         T *resource)
       : CrashRecoveryContextCleanupBase<
             CrashRecoveryContextDestructorCleanup<T>, T>(context, resource) {}
 
-  void recoverResources() override {
-    this->resource->~T();
-  }
+  void recoverResources() override { this->resource->~T(); }
 };
 
 /// Cleanup handler that reclaims resource by calling 'delete' on it.
 template <typename T>
-class CrashRecoveryContextDeleteCleanup : public
-  CrashRecoveryContextCleanupBase<CrashRecoveryContextDeleteCleanup<T>, T> {
+class CrashRecoveryContextDeleteCleanup
+    : public CrashRecoveryContextCleanupBase<
+          CrashRecoveryContextDeleteCleanup<T>, T> {
 public:
   CrashRecoveryContextDeleteCleanup(CrashRecoveryContext *context, T *resource)
-    : CrashRecoveryContextCleanupBase<
-        CrashRecoveryContextDeleteCleanup<T>, T>(context, resource) {}
+      : CrashRecoveryContextCleanupBase<CrashRecoveryContextDeleteCleanup<T>,
+                                        T>(context, resource) {}
 
   void recoverResources() override { delete this->resource; }
 };
 
 /// Cleanup handler that reclaims resource by calling its method 'Release'.
 template <typename T>
-class CrashRecoveryContextReleaseRefCleanup : public
-  CrashRecoveryContextCleanupBase<CrashRecoveryContextReleaseRefCleanup<T>, T> {
+class CrashRecoveryContextReleaseRefCleanup
+    : public CrashRecoveryContextCleanupBase<
+          CrashRecoveryContextReleaseRefCleanup<T>, T> {
 public:
   CrashRecoveryContextReleaseRefCleanup(CrashRecoveryContext *context,
                                         T *resource)
-    : CrashRecoveryContextCleanupBase<CrashRecoveryContextReleaseRefCleanup<T>,
-          T>(context, resource) {}
+      : CrashRecoveryContextCleanupBase<
+            CrashRecoveryContextReleaseRefCleanup<T>, T>(context, resource) {}
 
   void recoverResources() override { this->resource->Release(); }
 };
@@ -246,13 +245,12 @@ public:
 /// destructor of std::unique_ptr. If crash happens, destructors are not called
 /// and the resource is reclaimed by cleanup object registered in the recovery
 /// context by the constructor of CrashRecoveryContextCleanupRegistrar.
-template <typename T, typename Cleanup = CrashRecoveryContextDeleteCleanup<T> >
+template <typename T, typename Cleanup = CrashRecoveryContextDeleteCleanup<T>>
 class CrashRecoveryContextCleanupRegistrar {
   CrashRecoveryContextCleanup *cleanup;
 
 public:
-  CrashRecoveryContextCleanupRegistrar(T *x)
-    : cleanup(Cleanup::create(x)) {
+  CrashRecoveryContextCleanupRegistrar(T *x) : cleanup(Cleanup::create(x)) {
     if (cleanup)
       cleanup->getContext()->registerCleanup(cleanup);
   }

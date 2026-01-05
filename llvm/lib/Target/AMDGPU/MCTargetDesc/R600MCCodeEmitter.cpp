@@ -33,7 +33,7 @@ class R600MCCodeEmitter : public MCCodeEmitter {
 
 public:
   R600MCCodeEmitter(const MCInstrInfo &mcii, const MCRegisterInfo &mri)
-    : MRI(mri), MCII(mcii) {}
+      : MRI(mri), MCII(mcii) {}
   R600MCCodeEmitter(const R600MCCodeEmitter &) = delete;
   R600MCCodeEmitter &operator=(const R600MCCodeEmitter &) = delete;
 
@@ -60,12 +60,7 @@ private:
 
 } // end anonymous namespace
 
-enum RegElement {
-  ELEMENT_X = 0,
-  ELEMENT_Y,
-  ELEMENT_Z,
-  ELEMENT_W
-};
+enum RegElement { ELEMENT_X = 0, ELEMENT_Y, ELEMENT_Z, ELEMENT_W };
 
 enum FCInstr {
   FC_IF_PREDICATE = 0,
@@ -87,11 +82,9 @@ void R600MCCodeEmitter::encodeInstruction(const MCInst &MI,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
-  if (MI.getOpcode() == R600::RETURN ||
-    MI.getOpcode() == R600::FETCH_CLAUSE ||
-    MI.getOpcode() == R600::ALU_CLAUSE ||
-    MI.getOpcode() == R600::BUNDLE ||
-    MI.getOpcode() == R600::KILL) {
+  if (MI.getOpcode() == R600::RETURN || MI.getOpcode() == R600::FETCH_CLAUSE ||
+      MI.getOpcode() == R600::ALU_CLAUSE || MI.getOpcode() == R600::BUNDLE ||
+      MI.getOpcode() == R600::KILL) {
     return;
   }
   if (IS_VTX(Desc)) {
@@ -126,7 +119,7 @@ void R600MCCodeEmitter::encodeInstruction(const MCInst &MI,
   } else {
     uint64_t Inst = getBinaryCodeForInstr(MI, Fixups, STI);
     if ((STI.hasFeature(R600::FeatureR600ALUInst)) &&
-       ((Desc.TSFlags & R600_InstFlag::OP1) ||
+        ((Desc.TSFlags & R600_InstFlag::OP1) ||
          Desc.TSFlags & R600_InstFlag::OP2)) {
       uint64_t ISAOpCode = Inst & (0x3FFULL << 39);
       Inst &= ~(0x3FFULL << 39);
@@ -148,10 +141,10 @@ unsigned R600MCCodeEmitter::getHWReg(MCRegister Reg) const {
   return MRI.getEncodingValue(Reg) & HW_REG_MASK;
 }
 
-uint64_t R600MCCodeEmitter::getMachineOpValue(const MCInst &MI,
-                                              const MCOperand &MO,
-                                        SmallVectorImpl<MCFixup> &Fixups,
-                                        const MCSubtargetInfo &STI) const {
+uint64_t
+R600MCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
   if (MO.isReg()) {
     if (HAS_NATIVE_OPERANDS(MCII.get(MI.getOpcode()).TSFlags))
       return MRI.getEncodingValue(MO.getReg());

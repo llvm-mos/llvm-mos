@@ -41,9 +41,9 @@ static cl::opt<bool>
                      cl::desc("only allow matching call instructions if the "
                               "name and type signature match."));
 
-cl::opt<bool>
-    DisableIntrinsics("no-ir-sim-intrinsics", cl::init(false), cl::ReallyHidden,
-                      cl::desc("Don't match or outline intrinsics"));
+cl::opt<bool> DisableIntrinsics("no-ir-sim-intrinsics", cl::init(false),
+                                cl::ReallyHidden,
+                                cl::desc("Don't match or outline intrinsics"));
 } // namespace llvm
 
 IRInstructionData::IRInstructionData(Instruction &I, bool Legality,
@@ -110,20 +110,18 @@ void IRInstructionData::setBranchSuccessors(
 }
 
 ArrayRef<Value *> IRInstructionData::getBlockOperVals() {
-  assert((isa<BranchInst>(Inst) ||
-         isa<PHINode>(Inst)) && "Instruction must be branch or PHINode");
-  
+  assert((isa<BranchInst>(Inst) || isa<PHINode>(Inst)) &&
+         "Instruction must be branch or PHINode");
+
   if (BranchInst *BI = dyn_cast<BranchInst>(Inst))
     return ArrayRef<Value *>(
-      std::next(OperVals.begin(), BI->isConditional() ? 1 : 0),
-      OperVals.end()
-    );
+        std::next(OperVals.begin(), BI->isConditional() ? 1 : 0),
+        OperVals.end());
 
   if (PHINode *PN = dyn_cast<PHINode>(Inst))
     return ArrayRef<Value *>(
-      std::next(OperVals.begin(), PN->getNumIncomingValues()),
-      OperVals.end()
-    );
+        std::next(OperVals.begin(), PN->getNumIncomingValues()),
+        OperVals.end());
 
   return ArrayRef<Value *>();
 }
@@ -209,8 +207,7 @@ CmpInst::Predicate IRInstructionData::getPredicate() const {
 }
 
 StringRef IRInstructionData::getCalleeName() const {
-  assert(isa<CallInst>(Inst) &&
-         "Can only get a name from a call instruction");
+  assert(isa<CallInst>(Inst) && "Can only get a name from a call instruction");
 
   assert(CalleeName && "CalleeName has not been set");
 
@@ -374,7 +371,8 @@ unsigned IRInstructionMapper::mapToLegalUnsigned(
 IRInstructionData *
 IRInstructionMapper::allocateIRInstructionData(Instruction &I, bool Legality,
                                                IRInstructionDataList &IDL) {
-  return new (InstDataAllocator->Allocate()) IRInstructionData(I, Legality, IDL);
+  return new (InstDataAllocator->Allocate())
+      IRInstructionData(I, Legality, IDL);
 }
 
 IRInstructionData *
@@ -382,8 +380,7 @@ IRInstructionMapper::allocateIRInstructionData(IRInstructionDataList &IDL) {
   return new (InstDataAllocator->Allocate()) IRInstructionData(IDL);
 }
 
-IRInstructionDataList *
-IRInstructionMapper::allocateIRInstructionDataList() {
+IRInstructionDataList *IRInstructionMapper::allocateIRInstructionDataList() {
   return new (IDLAllocator->Allocate()) IRInstructionDataList();
 }
 
@@ -524,10 +521,9 @@ bool IRSimilarityCandidate::isSimilar(const IRSimilarityCandidate &A,
 /// \returns true if there exists a possible mapping between the source
 /// Instruction operands and the target Instruction operands, and false if not.
 static bool checkNumberingAndReplaceCommutative(
-  const DenseMap<Value *, unsigned> &SourceValueToNumberMapping,
-  DenseMap<unsigned, DenseSet<unsigned>> &CurrentSrcTgtNumberMapping,
-  ArrayRef<Value *> &SourceOperands,
-  DenseSet<unsigned> &TargetValueNumbers){
+    const DenseMap<Value *, unsigned> &SourceValueToNumberMapping,
+    DenseMap<unsigned, DenseSet<unsigned>> &CurrentSrcTgtNumberMapping,
+    ArrayRef<Value *> &SourceOperands, DenseSet<unsigned> &TargetValueNumbers) {
 
   DenseMap<unsigned, DenseSet<unsigned>>::iterator ValueMappingIt;
 
@@ -557,7 +553,7 @@ static bool checkNumberingAndReplaceCommutative(
     // If we could not find a Value, return 0.
     if (NewSet.empty())
       return false;
-    
+
     // Otherwise replace the old mapping with the newly constructed one.
     if (NewSet.size() != ValueMappingIt->second.size())
       ValueMappingIt->second.swap(NewSet);
@@ -678,9 +674,9 @@ bool IRSimilarityCandidate::compareNonCommutativeOperandMapping(
   return true;
 }
 
-bool IRSimilarityCandidate::compareCommutativeOperandMapping(
-    OperandMapping A, OperandMapping B) {
-  DenseSet<unsigned> ValueNumbersA;      
+bool IRSimilarityCandidate::compareCommutativeOperandMapping(OperandMapping A,
+                                                             OperandMapping B) {
+  DenseSet<unsigned> ValueNumbersA;
   DenseSet<unsigned> ValueNumbersB;
 
   ArrayRef<Value *>::iterator VItA = A.OperVals.begin();
@@ -688,8 +684,7 @@ bool IRSimilarityCandidate::compareCommutativeOperandMapping(
   unsigned OperandLength = A.OperVals.size();
 
   // Find the value number sets for the operands.
-  for (unsigned Idx = 0; Idx < OperandLength;
-       Idx++, VItA++, VItB++) {
+  for (unsigned Idx = 0; Idx < OperandLength; Idx++, VItA++, VItB++) {
     ValueNumbersA.insert(A.IRSC.ValueToNumber.find(*VItA)->second);
     ValueNumbersB.insert(B.IRSC.ValueToNumber.find(*VItB)->second);
   }
@@ -734,7 +729,7 @@ bool IRSimilarityCandidate::compareAssignmentMapping(
     }
     ValueNumberMappingA.erase(ValueMappingIt);
     std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(
-      std::make_pair(InstValA, DenseSet<unsigned>({InstValB})));
+        std::make_pair(InstValA, DenseSet<unsigned>({InstValB})));
   }
 
   return true;
@@ -751,7 +746,7 @@ bool IRSimilarityCandidate::checkRelativeLocations(RelativeLocMapping A,
   DenseSet<BasicBlock *> BasicBlockB;
   A.IRSC.getBasicBlocks(BasicBlockA);
   B.IRSC.getBasicBlocks(BasicBlockB);
-  
+
   // Determine if the block is contained in the region.
   bool AContained = BasicBlockA.contains(ABB);
   bool BContained = BasicBlockB.contains(BBB);
@@ -760,7 +755,7 @@ bool IRSimilarityCandidate::checkRelativeLocations(RelativeLocMapping A,
   // the region.
   if (AContained != BContained)
     return false;
-  
+
   // If both are contained, then we need to make sure that the relative
   // distance to the target blocks are the same.
   if (AContained)
@@ -823,7 +818,7 @@ bool IRSimilarityCandidate::compareStructure(
     if (!compareAssignmentMapping(InstValA, InstValB, ValueNumberMappingA,
                                   ValueNumberMappingB))
       return false;
-    
+
     if (!compareAssignmentMapping(InstValB, InstValA, ValueNumberMappingB,
                                   ValueNumberMappingA))
       return false;
@@ -961,7 +956,8 @@ void IRSimilarityIdentifier::populateMapper(
 /// \param [out] CandsForRepSubstring - The vector to store the generated
 /// IRSimilarityCandidates.
 static void createCandidatesFromSuffixTree(
-    const IRInstructionMapper& Mapper, std::vector<IRInstructionData *> &InstrList,
+    const IRInstructionMapper &Mapper,
+    std::vector<IRInstructionData *> &InstrList,
     std::vector<unsigned> &IntegerMapping, SuffixTree::RepeatedSubstring &RS,
     std::vector<IRSimilarityCandidate> &CandsForRepSubstring) {
 
@@ -1107,7 +1103,7 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
          "Canonical Relationship is non-empty");
   assert(!SourceCandLarge.NumberToCanonNum.empty() &&
          "Canonical Relationship is non-empty");
-  
+
   assert(!TargetCandLarge.CanonNumToNumber.empty() &&
          "Canonical Relationship is non-empty");
   assert(!TargetCandLarge.NumberToCanonNum.empty() &&
@@ -1124,7 +1120,7 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
     Value *CurrVal = ValueNumPair.first;
     unsigned TargetCandGVN = ValueNumPair.second;
 
-    // Find the numbering in the large candidate that surrounds the 
+    // Find the numbering in the large candidate that surrounds the
     // current candidate.
     std::optional<unsigned> OLargeTargetGVN = TargetCandLarge.getGVN(CurrVal);
     assert(OLargeTargetGVN.has_value() && "GVN not found for Value");
@@ -1134,13 +1130,13 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
         TargetCandLarge.getCanonicalNum(OLargeTargetGVN.value());
     assert(OTargetCandCanon.has_value() &&
            "Canononical Number not found for GVN");
-    
+
     // Get the GVN in the large source candidate from the canonical numbering.
     std::optional<unsigned> OLargeSourceGVN =
         SourceCandLarge.fromCanonicalNum(OTargetCandCanon.value());
     assert(OLargeSourceGVN.has_value() &&
            "GVN Number not found for Canonical Number");
-    
+
     // Get the Value from the GVN in the large source candidate.
     std::optional<Value *> OLargeSourceV =
         SourceCandLarge.fromGVN(OLargeSourceGVN.value());
@@ -1249,7 +1245,7 @@ CheckLargerCands(
   // whether or not there is a match.
   if (IncludedGroupsA.empty())
     return Result;
-  
+
   // Create a pair that contains the larger candidates.
   auto ItA = IncludedGroupAndCandA.find(*IncludedGroupsA.begin());
   auto ItB = IncludedGroupAndCandB.find(*IncludedGroupsA.begin());
@@ -1273,9 +1269,8 @@ CheckLargerCands(
 static void findCandidateStructures(
     std::vector<IRSimilarityCandidate> &CandsForRepSubstring,
     DenseMap<unsigned, SimilarityGroup> &StructuralGroups,
-    DenseMap<unsigned,  DenseSet<IRSimilarityCandidate *>> &IndexToIncludedCand,
-    DenseMap<IRSimilarityCandidate *, unsigned> &CandToOverallGroup
-    ) {
+    DenseMap<unsigned, DenseSet<IRSimilarityCandidate *>> &IndexToIncludedCand,
+    DenseMap<IRSimilarityCandidate *, unsigned> &CandToOverallGroup) {
   std::vector<IRSimilarityCandidate>::iterator CandIt, CandEndIt, InnerCandIt,
       InnerCandEndIt;
 
@@ -1382,7 +1377,7 @@ void IRSimilarityIdentifier::findCandidates(
 
   DenseMap<unsigned, SimilarityGroup> StructuralGroups;
   DenseMap<unsigned, DenseSet<IRSimilarityCandidate *>> IndexToIncludedCand;
-  DenseMap<IRSimilarityCandidate *, unsigned> CandToGroup; 
+  DenseMap<IRSimilarityCandidate *, unsigned> CandToGroup;
 
   // Iterate over the subsequences found by the Suffix Tree to create
   // IRSimilarityCandidates for each repeated subsequence and determine which
@@ -1493,9 +1488,9 @@ bool IRSimilarityIdentifierWrapperPass::runOnModule(Module &M) {
 AnalysisKey IRSimilarityAnalysis::Key;
 IRSimilarityIdentifier IRSimilarityAnalysis::run(Module &M,
                                                  ModuleAnalysisManager &) {
-  auto IRSI = IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,
-                                     MatchCallsByName, !DisableIntrinsics,
-                                     false);
+  auto IRSI =
+      IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,
+                             MatchCallsByName, !DisableIntrinsics, false);
   IRSI.findSimilarity(M);
   return IRSI;
 }

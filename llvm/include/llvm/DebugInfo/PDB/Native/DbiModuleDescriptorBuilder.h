@@ -30,7 +30,7 @@ class DebugSubsection;
 namespace msf {
 class MSFBuilder;
 struct MSFLayout;
-}
+} // namespace msf
 namespace pdb {
 
 // Represents merged or unmerged symbols. Merged symbols can be written to the

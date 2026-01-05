@@ -137,9 +137,7 @@ public:
     return true;
   }
 
-  StringRef getPassName() const override {
-    return "Free MachineFunction";
-  }
+  StringRef getPassName() const override { return "Free MachineFunction"; }
 };
 
 } // end anonymous namespace

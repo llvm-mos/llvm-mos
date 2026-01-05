@@ -59,27 +59,27 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
   unsigned access = MO.getTargetFlags();
 
   switch (access) {
-    case PPCII::MO_TPREL_LO:
-      RefKind = PPC::S_TPREL_LO;
-      break;
-    case PPCII::MO_TPREL_HA:
-      RefKind = PPC::S_TPREL_HA;
-      break;
-    case PPCII::MO_DTPREL_LO:
-      RefKind = PPC::S_DTPREL_LO;
-      break;
-    case PPCII::MO_TLSLD_LO:
-      RefKind = PPC::S_GOT_TLSLD_LO;
-      break;
-    case PPCII::MO_TOC_LO:
-      RefKind = PPC::S_TOC_LO;
-      break;
-    case PPCII::MO_TLS:
-      RefKind = PPC::S_TLS;
-      break;
-    case PPCII::MO_TLS_PCREL_FLAG:
-      RefKind = PPC::S_TLS_PCREL;
-      break;
+  case PPCII::MO_TPREL_LO:
+    RefKind = PPC::S_TPREL_LO;
+    break;
+  case PPCII::MO_TPREL_HA:
+    RefKind = PPC::S_TPREL_HA;
+    break;
+  case PPCII::MO_DTPREL_LO:
+    RefKind = PPC::S_DTPREL_LO;
+    break;
+  case PPCII::MO_TLSLD_LO:
+    RefKind = PPC::S_GOT_TLSLD_LO;
+    break;
+  case PPCII::MO_TOC_LO:
+    RefKind = PPC::S_TOC_LO;
+    break;
+  case PPCII::MO_TLS:
+    RefKind = PPC::S_TLS;
+    break;
+  case PPCII::MO_TLS_PCREL_FLAG:
+    RefKind = PPC::S_TLS_PCREL;
+    break;
   }
 
   const TargetMachine &TM = Printer.TM;
@@ -145,9 +145,8 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
         MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(32768, Ctx), Ctx);
 
   if (!MO.isJTI() && MO.getOffset())
-    Expr = MCBinaryExpr::createAdd(Expr,
-                                   MCConstantExpr::create(MO.getOffset(), Ctx),
-                                   Ctx);
+    Expr = MCBinaryExpr::createAdd(
+        Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
   // Subtract off the PIC base if required.
   if (MO.getTargetFlags() == PPCII::MO_PIC_FLAG ||
@@ -161,14 +160,14 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
 
   // Add ha16() / lo16() markers if required.
   switch (access) {
-    case PPCII::MO_LO:
-    case PPCII::MO_PIC_LO_FLAG:
-      Expr = MCSpecifierExpr::create(Expr, PPC::S_LO, Ctx);
-      break;
-    case PPCII::MO_HA:
-    case PPCII::MO_PIC_HA_FLAG:
-      Expr = MCSpecifierExpr::create(Expr, PPC::S_HA, Ctx);
-      break;
+  case PPCII::MO_LO:
+  case PPCII::MO_PIC_LO_FLAG:
+    Expr = MCSpecifierExpr::create(Expr, PPC::S_LO, Ctx);
+    break;
+  case PPCII::MO_HA:
+  case PPCII::MO_PIC_HA_FLAG:
+    Expr = MCSpecifierExpr::create(Expr, PPC::S_HA, Ctx);
+    break;
   }
 
   return MCOperand::createExpr(Expr);

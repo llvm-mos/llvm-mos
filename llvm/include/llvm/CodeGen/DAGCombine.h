@@ -19,6 +19,6 @@ enum CombineLevel {
   AfterLegalizeDAG
 };
 
-} // end llvm namespace
+} // namespace llvm
 
 #endif

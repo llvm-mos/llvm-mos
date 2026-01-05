@@ -39,15 +39,13 @@ using namespace llvm;
 using AvailableValsTy = DenseMap<BasicBlock *, Value *>;
 
 static AvailableValsTy &getAvailableVals(void *AV) {
-  return *static_cast<AvailableValsTy*>(AV);
+  return *static_cast<AvailableValsTy *>(AV);
 }
 
 SSAUpdater::SSAUpdater(SmallVectorImpl<PHINode *> *NewPHI)
-  : InsertedPHIs(NewPHI) {}
+    : InsertedPHIs(NewPHI) {}
 
-SSAUpdater::~SSAUpdater() {
-  delete static_cast<AvailableValsTy*>(AV);
-}
+SSAUpdater::~SSAUpdater() { delete static_cast<AvailableValsTy *>(AV); }
 
 void SSAUpdater::Initialize(Type *Ty, StringRef Name) {
   if (!AV)
@@ -73,16 +71,16 @@ void SSAUpdater::AddAvailableValue(BasicBlock *BB, Value *V) {
   getAvailableVals(AV)[BB] = V;
 }
 
-static bool IsEquivalentPHI(PHINode *PHI,
-                        SmallDenseMap<BasicBlock *, Value *, 8> &ValueMapping) {
+static bool
+IsEquivalentPHI(PHINode *PHI,
+                SmallDenseMap<BasicBlock *, Value *, 8> &ValueMapping) {
   unsigned PHINumValues = PHI->getNumIncomingValues();
   if (PHINumValues != ValueMapping.size())
     return false;
 
   // Scan the phi to see if it matches.
   for (unsigned i = 0, e = PHINumValues; i != e; ++i)
-    if (ValueMapping[PHI->getIncomingBlock(i)] !=
-        PHI->getIncomingValue(i)) {
+    if (ValueMapping[PHI->getIncomingBlock(i)] != PHI->getIncomingValue(i)) {
       return false;
     }
 
@@ -165,8 +163,7 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
 
   // See if the PHI node can be merged to a single value.  This can happen in
   // loop cases when we get a PHI of itself and one other value.
-  if (Value *V =
-          simplifyInstruction(InsertedPHI, BB->getDataLayout())) {
+  if (Value *V = simplifyInstruction(InsertedPHI, BB->getDataLayout())) {
     InsertedPHI->eraseFromParent();
     return V;
   }
@@ -178,7 +175,8 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
   InsertedPHI->setDebugLoc(DL);
 
   // If the client wants to know about all new instructions, tell it.
-  if (InsertedPHIs) InsertedPHIs->push_back(InsertedPHI);
+  if (InsertedPHIs)
+    InsertedPHIs->push_back(InsertedPHI);
 
   LLVM_DEBUG(dbgs() << "  Inserted PHI: " << *InsertedPHI << "\n");
   return InsertedPHI;
@@ -236,8 +234,7 @@ void SSAUpdater::RewriteUseAfterInsertions(Use &U) {
 
 namespace llvm {
 
-template<>
-class SSAUpdaterTraits<SSAUpdater> {
+template <> class SSAUpdaterTraits<SSAUpdater> {
 public:
   using BlkT = BasicBlock;
   using ValT = Value *;
@@ -254,22 +251,23 @@ public:
 
   public:
     explicit PHI_iterator(PHINode *P) // begin iterator
-      : PHI(P), idx(0) {}
+        : PHI(P), idx(0) {}
     PHI_iterator(PHINode *P, bool) // end iterator
-      : PHI(P), idx(PHI->getNumIncomingValues()) {}
+        : PHI(P), idx(PHI->getNumIncomingValues()) {}
 
-    PHI_iterator &operator++() { ++idx; return *this; }
-    bool operator==(const PHI_iterator& x) const { return idx == x.idx; }
-    bool operator!=(const PHI_iterator& x) const { return !operator==(x); }
+    PHI_iterator &operator++() {
+      ++idx;
+      return *this;
+    }
+    bool operator==(const PHI_iterator &x) const { return idx == x.idx; }
+    bool operator!=(const PHI_iterator &x) const { return !operator==(x); }
 
     Value *getIncomingValue() { return PHI->getIncomingValue(idx); }
     BasicBlock *getIncomingBlock() { return PHI->getIncomingBlock(idx); }
   };
 
   static PHI_iterator PHI_begin(PhiT *PHI) { return PHI_iterator(PHI); }
-  static PHI_iterator PHI_end(PhiT *PHI) {
-    return PHI_iterator(PHI, true);
-  }
+  static PHI_iterator PHI_end(PhiT *PHI) { return PHI_iterator(PHI, true); }
 
   /// FindPredecessorBlocks - Put the predecessors of Info->BB into the Preds
   /// vector, set Info->NumPreds, and allocate space in Info->Preds.
@@ -327,9 +325,7 @@ public:
 
   /// GetPHIValue - For the specified PHI instruction, return the value
   /// that it defines.
-  static Value *GetPHIValue(PHINode *PHI) {
-    return PHI;
-  }
+  static Value *GetPHIValue(PHINode *PHI) { return PHI; }
 };
 
 } // end namespace llvm
@@ -350,10 +346,11 @@ Value *SSAUpdater::GetValueAtEndOfBlockInternal(BasicBlock *BB) {
 // LoadAndStorePromoter Implementation
 //===----------------------------------------------------------------------===//
 
-LoadAndStorePromoter::
-LoadAndStorePromoter(ArrayRef<const Instruction *> Insts,
-                     SSAUpdater &S, StringRef BaseName) : SSA(S) {
-  if (Insts.empty()) return;
+LoadAndStorePromoter::LoadAndStorePromoter(ArrayRef<const Instruction *> Insts,
+                                           SSAUpdater &S, StringRef BaseName)
+    : SSA(S) {
+  if (Insts.empty())
+    return;
 
   const Value *SomeVal;
   if (const LoadInst *LI = dyn_cast<LoadInst>(Insts[0]))
@@ -386,7 +383,8 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
     TinyPtrVector<Instruction *> &BlockUses = UsesByBlock[BB];
 
     // If this block has already been processed, ignore this repeat use.
-    if (BlockUses.empty()) continue;
+    if (BlockUses.empty())
+      continue;
 
     // Okay, this is the first use in the block.  If this block just has a
     // single user in it, we can rewrite it trivially.
@@ -474,7 +472,8 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
     replaceLoadWithValue(ALoad, NewVal);
 
     // Avoid assertions in unreachable code.
-    if (NewVal == ALoad) NewVal = PoisonValue::get(NewVal->getType());
+    if (NewVal == ALoad)
+      NewVal = PoisonValue::get(NewVal->getType());
     ALoad->replaceAllUsesWith(NewVal);
     ReplacedLoads[ALoad] = NewVal;
   }
@@ -499,7 +498,7 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
       // Propagate down to the ultimate replacee.  The intermediately loads
       // could theoretically already have been deleted, so we don't want to
       // dereference the Value*'s.
-      DenseMap<Value*, Value*>::iterator RLI = ReplacedLoads.find(NewVal);
+      DenseMap<Value *, Value *>::iterator RLI = ReplacedLoads.find(NewVal);
       while (RLI != ReplacedLoads.end()) {
         NewVal = RLI->second;
         RLI = ReplacedLoads.find(NewVal);

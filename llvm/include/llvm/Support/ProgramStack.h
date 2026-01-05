@@ -19,8 +19,8 @@
 // and other tooling.
 #if defined(__APPLE__) && defined(__MACH__) && defined(__aarch64__) &&         \
     __has_extension(gnu_asm)
-# define LLVM_HAS_SPLIT_STACKS
-# define LLVM_HAS_SPLIT_STACKS_AARCH64
+#define LLVM_HAS_SPLIT_STACKS
+#define LLVM_HAS_SPLIT_STACKS_AARCH64
 #endif
 
 namespace llvm {

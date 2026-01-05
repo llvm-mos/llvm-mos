@@ -43,9 +43,8 @@ public:
 } // end anonymous namespace
 
 ARMELFObjectWriter::ARMELFObjectWriter(uint8_t OSABI)
-  : MCELFObjectTargetWriter(/*Is64Bit*/ false, OSABI,
-                            ELF::EM_ARM,
-                            /*HasRelocationAddend*/ false) {}
+    : MCELFObjectTargetWriter(/*Is64Bit*/ false, OSABI, ELF::EM_ARM,
+                              /*HasRelocationAddend*/ false) {}
 
 bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
                                                  unsigned Type) const {

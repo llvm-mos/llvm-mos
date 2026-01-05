@@ -154,8 +154,8 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
     return std::make_pair(nullptr, nullptr);
 
   Value *Stride;
-  std::tie(Start, Stride) = matchStridedStart(BO->getOperand(OtherIndex),
-                                              Builder);
+  std::tie(Start, Stride) =
+      matchStridedStart(BO->getOperand(OtherIndex), Builder);
   if (!Start)
     return std::make_pair(nullptr, nullptr);
 
@@ -189,11 +189,9 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
 // start value. Build and update a scalar recurrence as we unwind the recursion.
 // We also update the Stride as we unwind. Our goal is to move all of the
 // arithmetic out of the loop.
-bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
-                                                        Value *&Stride,
-                                                        PHINode *&BasePtr,
-                                                        BinaryOperator *&Inc,
-                                                        IRBuilderBase &Builder) {
+bool RISCVGatherScatterLowering::matchStridedRecurrence(
+    Value *Index, Loop *L, Value *&Stride, PHINode *&BasePtr,
+    BinaryOperator *&Inc, IRBuilderBase &Builder) {
   // Our base case is a Phi.
   if (auto *Phi = dyn_cast<PHINode>(Index)) {
     // A phi node we want to perform this function on should be from the
@@ -221,8 +219,8 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
     assert(Stride != nullptr);
 
     // Build scalar phi and increment.
-    BasePtr =
-        PHINode::Create(Start->getType(), 2, Phi->getName() + ".scalar", Phi->getIterator());
+    BasePtr = PHINode::Create(Start->getType(), 2, Phi->getName() + ".scalar",
+                              Phi->getIterator());
     Inc = BinaryOperator::CreateAdd(BasePtr, Step, Inc->getName() + ".scalar",
                                     Inc->getIterator());
     BasePtr->addIncoming(Start, Phi->getIncomingBlock(1 - IncrementingBlock));
@@ -420,10 +418,13 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
     auto *VecIndexC = dyn_cast<Constant>(VecIndex);
     if (!VecIndexC)
       return std::make_pair(nullptr, nullptr);
-    if (VecIndex->getType()->getScalarSizeInBits() > VecIntPtrTy->getScalarSizeInBits())
-      VecIndex = ConstantFoldCastInstruction(Instruction::Trunc, VecIndexC, VecIntPtrTy);
+    if (VecIndex->getType()->getScalarSizeInBits() >
+        VecIntPtrTy->getScalarSizeInBits())
+      VecIndex = ConstantFoldCastInstruction(Instruction::Trunc, VecIndexC,
+                                             VecIntPtrTy);
     else
-      VecIndex = ConstantFoldCastInstruction(Instruction::SExt, VecIndexC, VecIntPtrTy);
+      VecIndex = ConstantFoldCastInstruction(Instruction::SExt, VecIndexC,
+                                             VecIntPtrTy);
   }
 
   // Handle the non-recursive case.  This is what we see if the vectorizer

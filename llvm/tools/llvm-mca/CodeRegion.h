@@ -205,7 +205,7 @@ struct InstrumentRegions : public CodeRegions {
 
   InstrumentRegions(llvm::SourceMgr &S);
 
-  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc) override{};
+  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc) override {};
   void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc,
                    UniqueInstrument Instrument) override;
   void endRegion(llvm::StringRef Description, llvm::SMLoc Loc) override;

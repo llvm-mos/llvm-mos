@@ -28,15 +28,14 @@
 // Creates enumeration entries used for packing bits into integers. Enumeration
 // entries include bit shift amount, bit width, and bit mask.
 #ifndef AMDHSA_BITS_ENUM_ENTRY
-#define AMDHSA_BITS_ENUM_ENTRY(NAME, SHIFT, WIDTH) \
-  NAME ## _SHIFT = (SHIFT),                        \
-  NAME ## _WIDTH = (WIDTH),                        \
+#define AMDHSA_BITS_ENUM_ENTRY(NAME, SHIFT, WIDTH)                             \
+  NAME##_SHIFT = (SHIFT), NAME##_WIDTH = (WIDTH),                              \
   NAME = (((1 << (WIDTH)) - 1) << (SHIFT))
 #endif // AMDHSA_BITS_ENUM_ENTRY
 
 // Gets bits for specified bit mask from specified source.
 #ifndef AMDHSA_BITS_GET
-#define AMDHSA_BITS_GET(SRC, MSK) ((SRC & MSK) >> MSK ## _SHIFT)
+#define AMDHSA_BITS_GET(SRC, MSK) ((SRC & MSK) >> MSK##_SHIFT)
 #endif // AMDHSA_BITS_GET
 
 // Sets bits for specified bit mask in specified destination.
@@ -178,8 +177,8 @@ enum : int32_t {
 
 // Compute program resource register 3 for GFX90A+. Must match hardware
 // definition.
-#define COMPUTE_PGM_RSRC3_GFX90A(NAME, SHIFT, WIDTH) \
-  AMDHSA_BITS_ENUM_ENTRY(COMPUTE_PGM_RSRC3_GFX90A_ ## NAME, SHIFT, WIDTH)
+#define COMPUTE_PGM_RSRC3_GFX90A(NAME, SHIFT, WIDTH)                           \
+  AMDHSA_BITS_ENUM_ENTRY(COMPUTE_PGM_RSRC3_GFX90A_##NAME, SHIFT, WIDTH)
 enum : int32_t {
   COMPUTE_PGM_RSRC3_GFX90A(ACCUM_OFFSET, 0, 6),
   COMPUTE_PGM_RSRC3_GFX90A(RESERVED0, 6, 10),
@@ -237,8 +236,8 @@ enum : int32_t {
 #undef COMPUTE_PGM_RSRC3_GFX10_PLUS
 
 // Kernel code properties. Must be kept backwards compatible.
-#define KERNEL_CODE_PROPERTY(NAME, SHIFT, WIDTH) \
-  AMDHSA_BITS_ENUM_ENTRY(KERNEL_CODE_PROPERTY_ ## NAME, SHIFT, WIDTH)
+#define KERNEL_CODE_PROPERTY(NAME, SHIFT, WIDTH)                               \
+  AMDHSA_BITS_ENUM_ENTRY(KERNEL_CODE_PROPERTY_##NAME, SHIFT, WIDTH)
 enum : int32_t {
   KERNEL_CODE_PROPERTY(ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER, 0, 1),
   KERNEL_CODE_PROPERTY(ENABLE_SGPR_DISPATCH_PTR, 1, 1),
@@ -294,9 +293,8 @@ enum : uint32_t {
   RESERVED3_OFFSET = 60
 };
 
-static_assert(
-    sizeof(kernel_descriptor_t) == 64,
-    "invalid size for kernel_descriptor_t");
+static_assert(sizeof(kernel_descriptor_t) == 64,
+              "invalid size for kernel_descriptor_t");
 static_assert(offsetof(kernel_descriptor_t, group_segment_fixed_size) ==
                   GROUP_SEGMENT_FIXED_SIZE_OFFSET,
               "invalid offset for group_segment_fixed_size");

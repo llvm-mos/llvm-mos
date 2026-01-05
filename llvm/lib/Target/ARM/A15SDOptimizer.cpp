@@ -45,87 +45,86 @@ using namespace llvm;
 #define DEBUG_TYPE "a15-sd-optimizer"
 
 namespace {
-  struct A15SDOptimizer : public MachineFunctionPass {
-    static char ID;
-    A15SDOptimizer() : MachineFunctionPass(ID) {}
+struct A15SDOptimizer : public MachineFunctionPass {
+  static char ID;
+  A15SDOptimizer() : MachineFunctionPass(ID) {}
 
-    bool runOnMachineFunction(MachineFunction &Fn) override;
+  bool runOnMachineFunction(MachineFunction &Fn) override;
 
-    StringRef getPassName() const override { return "ARM A15 S->D optimizer"; }
+  StringRef getPassName() const override { return "ARM A15 S->D optimizer"; }
 
-  private:
-    const ARMBaseInstrInfo *TII;
-    const TargetRegisterInfo *TRI;
-    MachineRegisterInfo *MRI;
+private:
+  const ARMBaseInstrInfo *TII;
+  const TargetRegisterInfo *TRI;
+  MachineRegisterInfo *MRI;
 
-    bool runOnInstruction(MachineInstr *MI);
+  bool runOnInstruction(MachineInstr *MI);
 
-    //
-    // Instruction builder helpers
-    //
-    unsigned createDupLane(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator InsertBefore,
-                           const DebugLoc &DL, unsigned Reg, unsigned Lane,
-                           bool QPR = false);
+  //
+  // Instruction builder helpers
+  //
+  unsigned createDupLane(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator InsertBefore,
+                         const DebugLoc &DL, unsigned Reg, unsigned Lane,
+                         bool QPR = false);
 
-    unsigned createExtractSubreg(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator InsertBefore,
-                                 const DebugLoc &DL, unsigned DReg,
-                                 unsigned Lane, const TargetRegisterClass *TRC);
-
-    unsigned createVExt(MachineBasicBlock &MBB,
-                        MachineBasicBlock::iterator InsertBefore,
-                        const DebugLoc &DL, unsigned Ssub0, unsigned Ssub1);
-
-    unsigned createRegSequence(MachineBasicBlock &MBB,
+  unsigned createExtractSubreg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator InsertBefore,
-                               const DebugLoc &DL, unsigned Reg1,
-                               unsigned Reg2);
+                               const DebugLoc &DL, unsigned DReg, unsigned Lane,
+                               const TargetRegisterClass *TRC);
 
-    unsigned createInsertSubreg(MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator InsertBefore,
-                                const DebugLoc &DL, unsigned DReg,
-                                unsigned Lane, unsigned ToInsert);
+  unsigned createVExt(MachineBasicBlock &MBB,
+                      MachineBasicBlock::iterator InsertBefore,
+                      const DebugLoc &DL, unsigned Ssub0, unsigned Ssub1);
 
-    unsigned createImplicitDef(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator InsertBefore,
-                               const DebugLoc &DL);
+  unsigned createRegSequence(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator InsertBefore,
+                             const DebugLoc &DL, unsigned Reg1, unsigned Reg2);
 
-    //
-    // Various property checkers
-    //
-    bool usesRegClass(MachineOperand &MO, const TargetRegisterClass *TRC);
-    bool hasPartialWrite(MachineInstr *MI);
-    SmallVector<unsigned, 8> getReadDPRs(MachineInstr *MI);
-    unsigned getDPRLaneFromSPR(unsigned SReg);
+  unsigned createInsertSubreg(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator InsertBefore,
+                              const DebugLoc &DL, unsigned DReg, unsigned Lane,
+                              unsigned ToInsert);
 
-    //
-    // Methods used for getting the definitions of partial registers
-    //
+  unsigned createImplicitDef(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator InsertBefore,
+                             const DebugLoc &DL);
 
-    MachineInstr *elideCopies(MachineInstr *MI);
-    void elideCopiesAndPHIs(MachineInstr *MI,
-                            SmallVectorImpl<MachineInstr*> &Outs);
+  //
+  // Various property checkers
+  //
+  bool usesRegClass(MachineOperand &MO, const TargetRegisterClass *TRC);
+  bool hasPartialWrite(MachineInstr *MI);
+  SmallVector<unsigned, 8> getReadDPRs(MachineInstr *MI);
+  unsigned getDPRLaneFromSPR(unsigned SReg);
 
-    //
-    // Pattern optimization methods
-    //
-    unsigned optimizeAllLanesPattern(MachineInstr *MI, unsigned Reg);
-    unsigned optimizeSDPattern(MachineInstr *MI);
-    unsigned getPrefSPRLane(unsigned SReg);
+  //
+  // Methods used for getting the definitions of partial registers
+  //
 
-    //
-    // Sanitizing method - used to make sure if don't leave dead code around.
-    //
-    void eraseInstrWithNoUses(MachineInstr *MI);
+  MachineInstr *elideCopies(MachineInstr *MI);
+  void elideCopiesAndPHIs(MachineInstr *MI,
+                          SmallVectorImpl<MachineInstr *> &Outs);
 
-    //
-    // A map used to track the changes done by this pass.
-    //
-    std::map<MachineInstr*, unsigned> Replacements;
-    std::set<MachineInstr *> DeadInstr;
-  };
-  char A15SDOptimizer::ID = 0;
+  //
+  // Pattern optimization methods
+  //
+  unsigned optimizeAllLanesPattern(MachineInstr *MI, unsigned Reg);
+  unsigned optimizeSDPattern(MachineInstr *MI);
+  unsigned getPrefSPRLane(unsigned SReg);
+
+  //
+  // Sanitizing method - used to make sure if don't leave dead code around.
+  //
+  void eraseInstrWithNoUses(MachineInstr *MI);
+
+  //
+  // A map used to track the changes done by this pass.
+  //
+  std::map<MachineInstr *, unsigned> Replacements;
+  std::set<MachineInstr *> DeadInstr;
+};
+char A15SDOptimizer::ID = 0;
 } // end anonymous namespace
 
 // Returns true if this is a use of a SPR register.
@@ -156,18 +155,20 @@ unsigned A15SDOptimizer::getPrefSPRLane(unsigned SReg) {
     return getDPRLaneFromSPR(SReg);
 
   MachineInstr *MI = MRI->getVRegDef(SReg);
-  if (!MI) return ARM::ssub_0;
+  if (!MI)
+    return ARM::ssub_0;
   MachineOperand *MO = MI->findRegisterDefOperand(SReg, /*TRI=*/nullptr);
-  if (!MO) return ARM::ssub_0;
+  if (!MO)
+    return ARM::ssub_0;
   assert(MO->isReg() && "Non-register operand found!");
 
-  if (MI->isCopy() && usesRegClass(MI->getOperand(1),
-                                    &ARM::SPRRegClass)) {
+  if (MI->isCopy() && usesRegClass(MI->getOperand(1), &ARM::SPRRegClass)) {
     SReg = MI->getOperand(1).getReg();
   }
 
   if (Register::isVirtualRegister(SReg)) {
-    if (MO->getSubReg() == ARM::ssub_1) return ARM::ssub_1;
+    if (MO->getSubReg() == ARM::ssub_1)
+      return ARM::ssub_1;
     return ARM::ssub_0;
   }
   return getDPRLaneFromSPR(SReg);
@@ -228,7 +229,8 @@ void A15SDOptimizer::eraseInstrWithNoUses(MachineInstr *MI) {
         }
       }
 
-      if (!IsDead) continue;
+      if (!IsDead)
+        continue;
 
       LLVM_DEBUG(dbgs() << "Deleting instruction " << *Def << "\n");
       DeadInstr.insert(Def);
@@ -268,7 +270,7 @@ unsigned A15SDOptimizer::optimizeSDPattern(MachineInstr *MI) {
             // regclass as DPRMI? (i.e. a DPR or QPR).
             Register FullReg = SPRMI->getOperand(1).getReg();
             const TargetRegisterClass *TRC =
-              MRI->getRegClass(MI->getOperand(1).getReg());
+                MRI->getRegClass(MI->getOperand(1).getReg());
             if (TRC->hasSuperClassEq(MRI->getRegClass(FullReg))) {
               LLVM_DEBUG(dbgs() << "Subreg copy is compatible - returning ");
               LLVM_DEBUG(dbgs() << printReg(FullReg) << "\n");
@@ -284,8 +286,8 @@ unsigned A15SDOptimizer::optimizeSDPattern(MachineInstr *MI) {
     return optimizeAllLanesPattern(MI, MI->getOperand(0).getReg());
   }
 
-  if (MI->isRegSequence() && usesRegClass(MI->getOperand(1),
-                                          &ARM::SPRRegClass)) {
+  if (MI->isRegSequence() &&
+      usesRegClass(MI->getOperand(1), &ARM::SPRRegClass)) {
     // See if all bar one of the operands are IMPLICIT_DEF and insert the
     // optimizer pattern accordingly.
     unsigned NumImplicit = 0, NumTotal = 0;
@@ -326,8 +328,8 @@ bool A15SDOptimizer::hasPartialWrite(MachineInstr *MI) {
   if (MI->isCopy() && usesRegClass(MI->getOperand(1), &ARM::SPRRegClass))
     return true;
 
-  if (MI->isInsertSubreg() && usesRegClass(MI->getOperand(2),
-                                           &ARM::SPRRegClass))
+  if (MI->isInsertSubreg() &&
+      usesRegClass(MI->getOperand(2), &ARM::SPRRegClass))
     return true;
 
   if (MI->isRegSequence() && usesRegClass(MI->getOperand(1), &ARM::SPRRegClass))
@@ -352,41 +354,41 @@ MachineInstr *A15SDOptimizer::elideCopies(MachineInstr *MI) {
 // Look through full copies and PHIs to get the set of non-copy MachineInstrs
 // that can produce MI.
 void A15SDOptimizer::elideCopiesAndPHIs(MachineInstr *MI,
-                                        SmallVectorImpl<MachineInstr*> &Outs) {
-   // Looking through PHIs may create loops so we need to track what
-   // instructions we have visited before.
-   std::set<MachineInstr *> Reached;
-   SmallVector<MachineInstr *, 8> Front;
-   Front.push_back(MI);
-   while (Front.size() != 0) {
-     MI = Front.pop_back_val();
+                                        SmallVectorImpl<MachineInstr *> &Outs) {
+  // Looking through PHIs may create loops so we need to track what
+  // instructions we have visited before.
+  std::set<MachineInstr *> Reached;
+  SmallVector<MachineInstr *, 8> Front;
+  Front.push_back(MI);
+  while (Front.size() != 0) {
+    MI = Front.pop_back_val();
 
-     // If we have already explored this MachineInstr, ignore it.
-     if (!Reached.insert(MI).second)
-       continue;
-     if (MI->isPHI()) {
-       for (unsigned I = 1, E = MI->getNumOperands(); I != E; I += 2) {
-         Register Reg = MI->getOperand(I).getReg();
-         if (!Reg.isVirtual()) {
-           continue;
-         }
-         MachineInstr *NewMI = MRI->getVRegDef(Reg);
-         if (!NewMI)
-           continue;
-         Front.push_back(NewMI);
-       }
-     } else if (MI->isFullCopy()) {
-       if (!MI->getOperand(1).getReg().isVirtual())
-         continue;
-       MachineInstr *NewMI = MRI->getVRegDef(MI->getOperand(1).getReg());
-       if (!NewMI)
-         continue;
-       Front.push_back(NewMI);
-     } else {
-       LLVM_DEBUG(dbgs() << "Found partial copy" << *MI << "\n");
-       Outs.push_back(MI);
-     }
-   }
+    // If we have already explored this MachineInstr, ignore it.
+    if (!Reached.insert(MI).second)
+      continue;
+    if (MI->isPHI()) {
+      for (unsigned I = 1, E = MI->getNumOperands(); I != E; I += 2) {
+        Register Reg = MI->getOperand(I).getReg();
+        if (!Reg.isVirtual()) {
+          continue;
+        }
+        MachineInstr *NewMI = MRI->getVRegDef(Reg);
+        if (!NewMI)
+          continue;
+        Front.push_back(NewMI);
+      }
+    } else if (MI->isFullCopy()) {
+      if (!MI->getOperand(1).getReg().isVirtual())
+        continue;
+      MachineInstr *NewMI = MRI->getVRegDef(MI->getOperand(1).getReg());
+      if (!NewMI)
+        continue;
+      Front.push_back(NewMI);
+    } else {
+      LLVM_DEBUG(dbgs() << "Found partial copy" << *MI << "\n");
+      Outs.push_back(MI);
+    }
+  }
 }
 
 // Return the DPR virtual registers that are read by this machine instruction
@@ -432,11 +434,8 @@ unsigned A15SDOptimizer::createExtractSubreg(
     const DebugLoc &DL, unsigned DReg, unsigned Lane,
     const TargetRegisterClass *TRC) {
   Register Out = MRI->createVirtualRegister(TRC);
-  BuildMI(MBB,
-          InsertBefore,
-          DL,
-          TII->get(TargetOpcode::COPY), Out)
-    .addReg(DReg, 0, Lane);
+  BuildMI(MBB, InsertBefore, DL, TII->get(TargetOpcode::COPY), Out)
+      .addReg(DReg, 0, Lane);
 
   return Out;
 }
@@ -446,14 +445,11 @@ unsigned A15SDOptimizer::createRegSequence(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
     const DebugLoc &DL, unsigned Reg1, unsigned Reg2) {
   Register Out = MRI->createVirtualRegister(&ARM::QPRRegClass);
-  BuildMI(MBB,
-          InsertBefore,
-          DL,
-          TII->get(TargetOpcode::REG_SEQUENCE), Out)
-    .addReg(Reg1)
-    .addImm(ARM::dsub_0)
-    .addReg(Reg2)
-    .addImm(ARM::dsub_1);
+  BuildMI(MBB, InsertBefore, DL, TII->get(TargetOpcode::REG_SEQUENCE), Out)
+      .addReg(Reg1)
+      .addImm(ARM::dsub_0)
+      .addReg(Reg2)
+      .addImm(ARM::dsub_1);
   return Out;
 }
 
@@ -476,13 +472,10 @@ unsigned A15SDOptimizer::createInsertSubreg(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
     const DebugLoc &DL, unsigned DReg, unsigned Lane, unsigned ToInsert) {
   Register Out = MRI->createVirtualRegister(&ARM::DPR_VFP2RegClass);
-  BuildMI(MBB,
-          InsertBefore,
-          DL,
-          TII->get(TargetOpcode::INSERT_SUBREG), Out)
-    .addReg(DReg)
-    .addReg(ToInsert)
-    .addImm(Lane);
+  BuildMI(MBB, InsertBefore, DL, TII->get(TargetOpcode::INSERT_SUBREG), Out)
+      .addReg(DReg)
+      .addReg(ToInsert)
+      .addImm(Lane);
 
   return Out;
 }
@@ -492,18 +485,15 @@ A15SDOptimizer::createImplicitDef(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator InsertBefore,
                                   const DebugLoc &DL) {
   Register Out = MRI->createVirtualRegister(&ARM::DPRRegClass);
-  BuildMI(MBB,
-          InsertBefore,
-          DL,
-          TII->get(TargetOpcode::IMPLICIT_DEF), Out);
+  BuildMI(MBB, InsertBefore, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Out);
   return Out;
 }
 
 // This function inserts instructions in order to optimize interactions between
 // SPR registers and DPR/QPR registers. It does so by performing VDUPs on all
 // lanes, and the using VEXT instructions to recompose the result.
-unsigned
-A15SDOptimizer::optimizeAllLanesPattern(MachineInstr *MI, unsigned Reg) {
+unsigned A15SDOptimizer::optimizeAllLanesPattern(MachineInstr *MI,
+                                                 unsigned Reg) {
   MachineBasicBlock::iterator InsertPt(MI);
   DebugLoc DL = MI->getDebugLoc();
   MachineBasicBlock &MBB = *MI->getParent();
@@ -514,10 +504,10 @@ A15SDOptimizer::optimizeAllLanesPattern(MachineInstr *MI, unsigned Reg) {
   // Treat DPair as QPR.
   if (MRI->getRegClass(Reg)->hasSuperClassEq(&ARM::QPRRegClass) ||
       MRI->getRegClass(Reg)->hasSuperClassEq(&ARM::DPairRegClass)) {
-    unsigned DSub0 = createExtractSubreg(MBB, InsertPt, DL, Reg,
-                                         ARM::dsub_0, &ARM::DPRRegClass);
-    unsigned DSub1 = createExtractSubreg(MBB, InsertPt, DL, Reg,
-                                         ARM::dsub_1, &ARM::DPRRegClass);
+    unsigned DSub0 = createExtractSubreg(MBB, InsertPt, DL, Reg, ARM::dsub_0,
+                                         &ARM::DPRRegClass);
+    unsigned DSub1 = createExtractSubreg(MBB, InsertPt, DL, Reg, ARM::dsub_1,
+                                         &ARM::DPRRegClass);
 
     unsigned Out1 = createDupLane(MBB, InsertPt, DL, DSub0, 0);
     unsigned Out2 = createDupLane(MBB, InsertPt, DL, DSub0, 1);
@@ -541,9 +531,14 @@ A15SDOptimizer::optimizeAllLanesPattern(MachineInstr *MI, unsigned Reg) {
     unsigned PrefLane = getPrefSPRLane(Reg);
     unsigned Lane;
     switch (PrefLane) {
-      case ARM::ssub_0: Lane = 0; break;
-      case ARM::ssub_1: Lane = 1; break;
-      default: llvm_unreachable("Unknown preferred lane!");
+    case ARM::ssub_0:
+      Lane = 0;
+      break;
+    case ARM::ssub_1:
+      Lane = 1;
+      break;
+    default:
+      llvm_unreachable("Unknown preferred lane!");
     }
 
     // Treat DPair as QPR
@@ -678,6 +673,4 @@ bool A15SDOptimizer::runOnMachineFunction(MachineFunction &Fn) {
   return Modified;
 }
 
-FunctionPass *llvm::createA15SDOptimizerPass() {
-  return new A15SDOptimizer();
-}
+FunctionPass *llvm::createA15SDOptimizerPass() { return new A15SDOptimizer(); }

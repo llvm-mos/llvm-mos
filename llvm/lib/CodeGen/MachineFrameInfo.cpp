@@ -77,7 +77,7 @@ int MachineFrameInfo::CreateVariableSizedObject(Align Alignment,
   Alignment = clampStackAlignment(!StackRealignable, Alignment, StackAlignment);
   Objects.push_back(StackObject(0, Alignment, 0, false, false, Alloca, true));
   ensureMaxAlignment(Alignment);
-  return (int)Objects.size()-NumFixedObjects-1;
+  return (int)Objects.size() - NumFixedObjects - 1;
 }
 
 int MachineFrameInfo::CreateFixedObject(uint64_t Size, int64_t SPOffset,
@@ -122,8 +122,7 @@ BitVector MachineFrameInfo::getPristineRegs(const MachineFunction &MF) const {
     return BV;
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); CSR && *CSR;
-       ++CSR)
+  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); CSR && *CSR; ++CSR)
     BV.set(*CSR);
 
   // Saved CSRs are not pristine.
@@ -149,7 +148,8 @@ uint64_t MachineFrameInfo::estimateStackSize(const MachineFunction &MF) const {
     if (getStackID(i) != TargetStackID::Default)
       continue;
     int64_t FixedOff = -getObjectOffset(i);
-    if (FixedOff > Offset) Offset = FixedOff;
+    if (FixedOff > Offset)
+      Offset = FixedOff;
   }
   for (unsigned i = 0, e = getObjectIndexEnd(); i != e; ++i) {
     // Only estimate stack size of live objects on default stack.
@@ -206,8 +206,9 @@ void MachineFrameInfo::computeMaxCallFrameSize(
   }
 }
 
-void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
-  if (Objects.empty()) return;
+void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const {
+  if (Objects.empty())
+    return;
 
   const TargetFrameLowering *FI = MF.getSubtarget().getFrameLowering();
   int ValOffset = (FI ? FI->getOffsetOfLocalArea() : 0);
@@ -216,7 +217,7 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
 
   for (unsigned i = 0, e = Objects.size(); i != e; ++i) {
     const StackObject &SO = Objects[i];
-    OS << "  fi#" << (int)(i-NumFixedObjects) << ": ";
+    OS << "  fi#" << (int)(i - NumFixedObjects) << ": ";
 
     if (SO.StackID != 0)
       OS << "id=" << static_cast<unsigned>(SO.StackID) << ' ';

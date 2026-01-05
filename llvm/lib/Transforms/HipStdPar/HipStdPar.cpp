@@ -69,8 +69,7 @@
 
 using namespace llvm;
 
-template<typename T>
-static inline void eraseFromModule(T &ToErase) {
+template <typename T> static inline void eraseFromModule(T &ToErase) {
   ToErase.replaceAllUsesWith(PoisonValue::get(ToErase.getType()));
   ToErase.eraseFromParent();
 }
@@ -88,7 +87,7 @@ static bool checkIfSupported(GlobalVariable &G) {
   raw_string_ostream OS(W);
 
   OS << "Accelerator does not support the thread_local variable "
-    << G.getName();
+     << G.getName();
 
   Instruction *I = nullptr;
   SmallVector<User *> Tmp(G.users());
@@ -108,9 +107,8 @@ static bool checkIfSupported(GlobalVariable &G) {
 
   assert(I && "thread_local global should have at least one non-constant use.");
 
-  G.getContext().diagnose(
-    DiagnosticInfoUnsupported(*I->getParent()->getParent(), W,
-                              I->getDebugLoc(), DS_Error));
+  G.getContext().diagnose(DiagnosticInfoUnsupported(
+      *I->getParent()->getParent(), W, I->getDebugLoc(), DS_Error));
 
   return false;
 }
@@ -344,9 +342,10 @@ static inline void maybeHandleGlobals(Module &M) {
   }
 }
 
-template<unsigned N>
-static inline void removeUnreachableFunctions(
-  const SmallPtrSet<const Function *, N>& Reachable, Module &M) {
+template <unsigned N>
+static inline void
+removeUnreachableFunctions(const SmallPtrSet<const Function *, N> &Reachable,
+                           Module &M) {
   removeFromUsedLists(M, [&](Constant *C) {
     if (auto F = dyn_cast<Function>(C))
       return !Reachable.contains(F);
@@ -363,10 +362,10 @@ static inline void removeUnreachableFunctions(
 }
 
 static inline bool isAcceleratorExecutionRoot(const Function *F) {
-    if (!F)
-      return false;
+  if (!F)
+    return false;
 
-    return F->getCallingConv() == CallingConv::AMDGPU_KERNEL;
+  return F->getCallingConv() == CallingConv::AMDGPU_KERNEL;
 }
 
 static inline bool checkIfSupported(const Function *F, const CallBase *CB) {
@@ -382,21 +381,21 @@ static inline bool checkIfSupported(const Function *F, const CallBase *CB) {
 
   if (N == "__ASM")
     OS << "Accelerator does not support the ASM block:\n"
-      << cast<ConstantDataArray>(CB->getArgOperand(0))->getAsCString();
+       << cast<ConstantDataArray>(CB->getArgOperand(0))->getAsCString();
   else
     OS << "Accelerator does not support the " << N << " function.";
 
   auto Caller = CB->getParent()->getParent();
 
   Caller->getContext().diagnose(
-    DiagnosticInfoUnsupported(*Caller, W, CB->getDebugLoc(), DS_Error));
+      DiagnosticInfoUnsupported(*Caller, W, CB->getDebugLoc(), DS_Error));
 
   return false;
 }
 
 PreservedAnalyses
-  HipStdParAcceleratorCodeSelectionPass::run(Module &M,
-                                             ModuleAnalysisManager &MAM) {
+HipStdParAcceleratorCodeSelectionPass::run(Module &M,
+                                           ModuleAnalysisManager &MAM) {
   auto &CGA = MAM.getResult<CallGraphAnalysis>(M);
 
   SmallPtrSet<const Function *, 32> Reachable;
@@ -491,7 +490,7 @@ static constexpr std::pair<StringLiteral, StringLiteral> HiddenMap[]{
     {"__hipstdpar_hidden_munmap", "munmap"}};
 
 PreservedAnalyses
-HipStdParAllocationInterpositionPass::run(Module &M, ModuleAnalysisManager&) {
+HipStdParAllocationInterpositionPass::run(Module &M, ModuleAnalysisManager &) {
   SmallDenseMap<StringRef, StringRef> AllocReplacements(std::cbegin(ReplaceMap),
                                                         std::cend(ReplaceMap));
 
@@ -509,12 +508,11 @@ HipStdParAllocationInterpositionPass::run(Module &M, ModuleAnalysisManager&) {
       raw_string_ostream OS(W);
 
       OS << "cannot be interposed, missing: " << AllocReplacements[F.getName()]
-        << ". Tried to run the allocation interposition pass without the "
-        << "replacement functions available.";
+         << ". Tried to run the allocation interposition pass without the "
+         << "replacement functions available.";
 
-      F.getContext().diagnose(DiagnosticInfoUnsupported(F, W,
-                                                        F.getSubprogram(),
-                                                        DS_Warning));
+      F.getContext().diagnose(
+          DiagnosticInfoUnsupported(F, W, F.getSubprogram(), DS_Warning));
     }
   }
 

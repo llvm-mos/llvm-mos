@@ -101,19 +101,16 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
   // __ockl_printf_append_string_n ignores the length if the pointer is null.
   BasicBlock *Join = nullptr;
   if (Prev->getTerminator()) {
-    Join = Prev->splitBasicBlock(Builder.GetInsertPoint(),
-                                 "strlen.join");
+    Join = Prev->splitBasicBlock(Builder.GetInsertPoint(), "strlen.join");
     Prev->getTerminator()->eraseFromParent();
   } else {
-    Join = BasicBlock::Create(M->getContext(), "strlen.join",
-                              Prev->getParent());
+    Join =
+        BasicBlock::Create(M->getContext(), "strlen.join", Prev->getParent());
   }
-  BasicBlock *While =
-      BasicBlock::Create(M->getContext(), "strlen.while",
-                         Prev->getParent(), Join);
+  BasicBlock *While = BasicBlock::Create(M->getContext(), "strlen.while",
+                                         Prev->getParent(), Join);
   BasicBlock *WhileDone = BasicBlock::Create(
-      M->getContext(), "strlen.while.done",
-      Prev->getParent(), Join);
+      M->getContext(), "strlen.while.done", Prev->getParent(), Join);
 
   // Emit an early return for when the pointer is null.
   Builder.SetInsertPoint(Prev);

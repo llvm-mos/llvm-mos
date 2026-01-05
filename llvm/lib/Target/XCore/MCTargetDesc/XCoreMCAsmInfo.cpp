@@ -9,7 +9,7 @@
 #include "XCoreMCAsmInfo.h"
 using namespace llvm;
 
-void XCoreMCAsmInfo::anchor() { }
+void XCoreMCAsmInfo::anchor() {}
 
 XCoreMCAsmInfo::XCoreMCAsmInfo(const Triple &TT) {
   SupportsDebugInformation = true;
@@ -31,4 +31,3 @@ XCoreMCAsmInfo::XCoreMCAsmInfo(const Triple &TT) {
 
   UseIntegratedAssembler = false;
 }
-

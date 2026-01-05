@@ -23,13 +23,13 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-
 /// Remove all registers from the set that get clobbered by the register
 /// mask.
 /// The clobbers set will be the list of live registers clobbered
 /// by the regmask.
-void LivePhysRegs::removeRegsInMask(const MachineOperand &MO,
-    SmallVectorImpl<std::pair<MCPhysReg, const MachineOperand*>> *Clobbers) {
+void LivePhysRegs::removeRegsInMask(
+    const MachineOperand &MO,
+    SmallVectorImpl<std::pair<MCPhysReg, const MachineOperand *>> *Clobbers) {
   RegisterSet::iterator LRI = LiveRegs.begin();
   while (LRI != LiveRegs.end()) {
     if (MO.clobbersPhysReg(*LRI)) {
@@ -77,8 +77,9 @@ void LivePhysRegs::stepBackward(const MachineInstr &MI) {
 /// killed-uses, add defs. This is the not recommended way, because it depends
 /// on accurate kill flags. If possible use stepBackward() instead of this
 /// function.
-void LivePhysRegs::stepForward(const MachineInstr &MI,
-    SmallVectorImpl<std::pair<MCPhysReg, const MachineOperand*>> &Clobbers) {
+void LivePhysRegs::stepForward(
+    const MachineInstr &MI,
+    SmallVectorImpl<std::pair<MCPhysReg, const MachineOperand *>> &Clobbers) {
   // Remove killed registers from the set.
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (O->isReg()) {
@@ -133,9 +134,7 @@ void LivePhysRegs::print(raw_ostream &OS) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void LivePhysRegs::dump() const {
-  dbgs() << "  " << *this;
-}
+LLVM_DUMP_METHOD void LivePhysRegs::dump() const { dbgs() << "  " << *this; }
 #endif
 
 bool LivePhysRegs::available(const MachineRegisterInfo &MRI,

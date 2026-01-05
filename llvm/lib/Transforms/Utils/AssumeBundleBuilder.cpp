@@ -54,15 +54,15 @@ namespace {
 
 bool isUsefullToPreserve(Attribute::AttrKind Kind) {
   switch (Kind) {
-    case Attribute::NonNull:
-    case Attribute::NoUndef:
-    case Attribute::Alignment:
-    case Attribute::Dereferenceable:
-    case Attribute::DereferenceableOrNull:
-    case Attribute::Cold:
-      return true;
-    default:
-      return false;
+  case Attribute::NonNull:
+  case Attribute::NoUndef:
+  case Attribute::Alignment:
+  case Attribute::Dereferenceable:
+  case Attribute::DereferenceableOrNull:
+  case Attribute::Cold:
+    return true;
+  default:
+    return false;
   }
 }
 
@@ -107,8 +107,8 @@ struct AssumeBuilderState {
   using MapKey = std::pair<Value *, Attribute::AttrKind>;
   SmallMapVector<MapKey, uint64_t, 8> AssumedKnowledgeMap;
   Instruction *InstBeingModified = nullptr;
-  AssumptionCache* AC = nullptr;
-  DominatorTree* DT = nullptr;
+  AssumptionCache *AC = nullptr;
+  DominatorTree *DT = nullptr;
 
   AssumeBuilderState(Module *M, Instruction *I = nullptr,
                      AssumptionCache *AC = nullptr, DominatorTree *DT = nullptr)
@@ -118,7 +118,7 @@ struct AssumeBuilderState {
     if (!InstBeingModified || !RK.WasOn || !AC)
       return false;
     bool HasBeenPreserved = false;
-    Use* ToUpdate = nullptr;
+    Use *ToUpdate = nullptr;
     getKnowledgeForValue(
         RK.WasOn, {RK.AttrKind}, *AC,
         [&](RetainedKnowledge RKOther, Instruction *Assume,
@@ -420,7 +420,7 @@ struct AssumeSimplify {
             continue;
           }
           RetainedKnowledge RK =
-            getKnowledgeFromBundle(cast<AssumeInst>(*Assume), BOI);
+              getKnowledgeFromBundle(cast<AssumeInst>(*Assume), BOI);
           if (auto *Arg = dyn_cast_or_null<Argument>(RK.WasOn)) {
             bool HasSameKindAttr = Arg->hasAttribute(RK.AttrKind);
             if (HasSameKindAttr)
@@ -480,7 +480,7 @@ struct AssumeSimplify {
       CleanupToDo.insert(I);
       for (CallInst::BundleOpInfo &BOI : I->bundle_op_infos()) {
         RetainedKnowledge RK =
-          getKnowledgeFromBundle(cast<AssumeInst>(*I), BOI);
+            getKnowledgeFromBundle(cast<AssumeInst>(*I), BOI);
         if (!RK)
           continue;
         Builder.addKnowledge(RK);
@@ -576,7 +576,7 @@ PreservedAnalyses AssumeSimplifyPass::run(Function &F,
 PreservedAnalyses AssumeBuilderPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
   AssumptionCache *AC = &AM.getResult<AssumptionAnalysis>(F);
-  DominatorTree* DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
+  DominatorTree *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
   bool Changed = false;
   for (Instruction &I : instructions(F))
     Changed |= salvageKnowledge(&I, AC, DT);

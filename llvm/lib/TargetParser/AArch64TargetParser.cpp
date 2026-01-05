@@ -41,7 +41,8 @@ const AArch64::ArchInfo *AArch64::getArchForCpu(StringRef CPU) {
   return &Cpu->Arch;
 }
 
-std::optional<AArch64::ArchInfo> AArch64::ArchInfo::findBySubArch(StringRef SubArch) {
+std::optional<AArch64::ArchInfo>
+AArch64::ArchInfo::findBySubArch(StringRef SubArch) {
   for (const auto *A : AArch64::ArchInfos)
     if (A->getSubArch() == SubArch)
       return *A;
@@ -94,9 +95,8 @@ APInt AArch64::getCpuSupportsMask(ArrayRef<StringRef> Features) {
   return FeaturesMask;
 }
 
-bool AArch64::getExtensionFeatures(
-    const AArch64::ExtensionBitset &InputExts,
-    std::vector<StringRef> &Features) {
+bool AArch64::getExtensionFeatures(const AArch64::ExtensionBitset &InputExts,
+                                   std::vector<StringRef> &Features) {
   for (const auto &E : Extensions)
     /* INVALID and NONE have no feature name. */
     if (InputExts.test(E.ID) && !E.PosTargetFeature.empty())
@@ -129,7 +129,8 @@ void AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
     Values.push_back(C.Name);
 
   for (const auto &Alias : CpuAliases)
-    // The apple-latest alias is backend only, do not expose it to clang's -mcpu.
+    // The apple-latest alias is backend only, do not expose it to clang's
+    // -mcpu.
     if (Alias.AltName != "apple-latest")
       Values.push_back(Alias.AltName);
 
@@ -202,8 +203,7 @@ std::optional<AArch64::CpuInfo> AArch64::parseCpu(StringRef Name) {
 void AArch64::PrintSupportedExtensions() {
   outs() << "All available -march extensions for AArch64\n\n"
          << "    " << left_justify("Name", 20)
-         << left_justify("Architecture Feature(s)", 55)
-         << "Description\n";
+         << left_justify("Architecture Feature(s)", 55) << "Description\n";
   for (const auto &Ext : Extensions) {
     // Extensions without a feature cannot be used with -march.
     if (!Ext.UserVisibleName.empty() && !Ext.PosTargetFeature.empty()) {
@@ -216,8 +216,8 @@ void AArch64::PrintSupportedExtensions() {
   }
 }
 
-void
-AArch64::printEnabledExtensions(const std::set<StringRef> &EnabledFeatureNames) {
+void AArch64::printEnabledExtensions(
+    const std::set<StringRef> &EnabledFeatureNames) {
   outs() << "Extensions enabled for the given AArch64 target\n\n"
          << "    " << left_justify("Architecture Feature(s)", 55)
          << "Description\n";
@@ -235,8 +235,7 @@ AArch64::printEnabledExtensions(const std::set<StringRef> &EnabledFeatureNames) 
 
   for (const auto &Ext : EnabledExtensionsInfo) {
     outs() << "    "
-           << format("%-55s%s\n",
-                     Ext.ArchFeatureName.str().c_str(),
+           << format("%-55s%s\n", Ext.ArchFeatureName.str().c_str(),
                      Ext.Description.str().c_str());
   }
 }
@@ -253,7 +252,8 @@ void AArch64::ExtensionSet::enable(ArchExtKind E) {
   if (Enabled.test(E))
     return;
 
-  LLVM_DEBUG(llvm::dbgs() << "Enable " << lookupExtensionByID(E).UserVisibleName << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Enable " << lookupExtensionByID(E).UserVisibleName
+                          << "\n");
 
   Touched.set(E);
   Enabled.set(E);
@@ -312,7 +312,7 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
   if (E == AEK_SVE2SHA3)
     disable(AEK_SVESHA3);
 
-  if (E == AEK_SVE2BITPERM){
+  if (E == AEK_SVE2BITPERM) {
     disable(AEK_SVEBITPERM);
     disable(AEK_SVE2);
   }
@@ -320,7 +320,8 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
   if (!Enabled.test(E))
     return;
 
-  LLVM_DEBUG(llvm::dbgs() << "Disable " << lookupExtensionByID(E).UserVisibleName << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Disable "
+                          << lookupExtensionByID(E).UserVisibleName << "\n");
 
   Touched.set(E);
   Enabled.reset(E);

@@ -97,7 +97,7 @@ private:
   RISCVProcFamilyEnum RISCVProcFamily = Others;
   RISCVVRGatherCostModelEnum RISCVVRGatherCostModel = Quadratic;
 
-#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
 #include "RISCVGenSubtargetInfo.inc"
 
@@ -162,9 +162,11 @@ public:
   /// initializeProperties().
   RISCVProcFamilyEnum getProcFamily() const { return RISCVProcFamily; }
 
-  RISCVVRGatherCostModelEnum getVRGatherCostModel() const { return RISCVVRGatherCostModel; }
+  RISCVVRGatherCostModelEnum getVRGatherCostModel() const {
+    return RISCVVRGatherCostModel;
+  }
 
-#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }
 #include "RISCVGenSubtargetInfo.inc"
 
@@ -220,12 +222,8 @@ public:
   }
 
   bool is64Bit() const { return IsRV64; }
-  MVT getXLenVT() const {
-    return is64Bit() ? MVT::i64 : MVT::i32;
-  }
-  unsigned getXLen() const {
-    return is64Bit() ? 64 : 32;
-  }
+  MVT getXLenVT() const { return is64Bit() ? MVT::i64 : MVT::i32; }
+  unsigned getXLen() const { return is64Bit() ? 64 : 32; }
   bool useMIPSLoadStorePairs() const;
   bool useMIPSCCMovInsn() const;
   unsigned getFLen() const {
@@ -342,9 +340,9 @@ protected:
   mutable std::unique_ptr<RISCVRegisterBankInfo> RegBankInfo;
 
   // Return the known range for the bit length of RVV data registers as set
-  // at the command line. A value of 0 means nothing is known about that particular
-  // limit beyond what's implied by the architecture.
-  // NOTE: Please use getRealMinVLen and getRealMaxVLen instead!
+  // at the command line. A value of 0 means nothing is known about that
+  // particular limit beyond what's implied by the architecture. NOTE: Please
+  // use getRealMinVLen and getRealMaxVLen instead!
   unsigned getMaxRVVVectorSizeInBits() const;
   unsigned getMinRVVVectorSizeInBits() const;
 

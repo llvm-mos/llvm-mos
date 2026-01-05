@@ -69,7 +69,7 @@ class GlobalNumberState {
 public:
   GlobalNumberState() = default;
 
-  uint64_t getNumber(GlobalValue* Global) {
+  uint64_t getNumber(GlobalValue *Global) {
     ValueNumberMap::iterator MapIter;
     bool Inserted;
     std::tie(MapIter, Inserted) = GlobalNumbers.insert({Global, NextNumber});
@@ -78,13 +78,9 @@ public:
     return MapIter->second;
   }
 
-  void erase(GlobalValue *Global) {
-    GlobalNumbers.erase(Global);
-  }
+  void erase(GlobalValue *Global) { GlobalNumbers.erase(Global); }
 
-  void clear() {
-    GlobalNumbers.clear();
-  }
+  void clear() { GlobalNumbers.clear(); }
 };
 
 /// FunctionComparator - Compares two functions to determine whether or not
@@ -94,7 +90,7 @@ public:
 class FunctionComparator {
 public:
   FunctionComparator(const Function *F1, const Function *F2,
-                     GlobalNumberState* GN)
+                     GlobalNumberState *GN)
       : FnL(F1), FnR(F2), GlobalNumbers(GN) {}
 
   /// Test whether the two functions have equivalent behaviour.
@@ -383,10 +379,10 @@ private:
   /// But, we are still not able to compare operands of PHI nodes, since those
   /// could be operands from further BBs we didn't scan yet.
   /// So it's impossible to use dominance properties in general.
-  mutable DenseMap<const Value*, int> sn_mapL, sn_mapR;
+  mutable DenseMap<const Value *, int> sn_mapL, sn_mapR;
 
   // The global state we will use
-  GlobalNumberState* GlobalNumbers;
+  GlobalNumberState *GlobalNumbers;
 };
 
 } // end namespace llvm

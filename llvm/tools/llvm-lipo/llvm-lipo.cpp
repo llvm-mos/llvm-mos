@@ -632,8 +632,7 @@ createUniversalBinary(LLVMContext &LLVMCtx,
 extractSlice(LLVMContext &LLVMCtx, ArrayRef<OwningBinary<Binary>> InputBinaries,
              const StringMap<const uint32_t> &Alignments, StringRef ArchType,
              StringRef OutputFileName) {
-  assert(!ArchType.empty() &&
-         "The architecture type should be non-empty");
+  assert(!ArchType.empty() && "The architecture type should be non-empty");
   assert(InputBinaries.size() == 1 && "Incorrect number of input binaries");
   assert(!OutputFileName.empty() && "Thin expects a single output file");
 
@@ -651,9 +650,9 @@ extractSlice(LLVMContext &LLVMCtx, ArrayRef<OwningBinary<Binary>> InputBinaries,
   });
 
   if (Slices.empty())
-    reportError(
-        "fat input file " + InputBinaries.front().getBinary()->getFileName() +
-        " does not contain the specified architecture " + ArchType);
+    reportError("fat input file " +
+                InputBinaries.front().getBinary()->getFileName() +
+                " does not contain the specified architecture " + ArchType);
 
   llvm::stable_sort(Slices);
   if (Error E = writeUniversalBinary(Slices, OutputFileName))

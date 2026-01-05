@@ -44,7 +44,7 @@ public:
         return i;
     // Nope, insert it
     ImageHandleList.push_back(Symbol.str());
-    return ImageHandleList.size()-1;
+    return ImageHandleList.size() - 1;
   }
 
   /// Check if the symbol has a mapping. Having a mapping means the handle is
@@ -53,6 +53,6 @@ public:
     return llvm::is_contained(ImageHandleList, Symbol);
   }
 };
-}
+} // namespace llvm
 
 #endif

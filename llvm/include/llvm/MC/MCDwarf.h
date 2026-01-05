@@ -256,9 +256,7 @@ private:
 
 public:
   // Returns the collection of MCDwarfLineEntry for a given Compile Unit ID.
-  const MCLineDivisionMap &getMCLineEntries() const {
-    return MCLineDivisions;
-  }
+  const MCLineDivisionMap &getMCLineEntries() const { return MCLineDivisions; }
 };
 
 struct MCDwarfLineTableParams {
@@ -358,8 +356,8 @@ public:
                    std::optional<MD5::MD5Result> Checksum,
                    uint16_t DwarfVersion, std::optional<StringRef> Source) {
     HasSplitLineTable = true;
-    return cantFail(Header.tryGetFile(Directory, FileName, Checksum, Source,
-                                      DwarfVersion));
+    return cantFail(
+        Header.tryGetFile(Directory, FileName, Checksum, Source, DwarfVersion));
   }
 
   LLVM_ABI void Emit(MCStreamer &MCOS, MCDwarfLineTableParams Params,
@@ -423,21 +421,15 @@ public:
   // Report whether MD5 usage has been consistent (all-or-none).
   bool isMD5UsageConsistent() const { return Header.isMD5UsageConsistent(); }
 
-  MCSymbol *getLabel() const {
-    return Header.Label;
-  }
+  MCSymbol *getLabel() const { return Header.Label; }
 
-  void setLabel(MCSymbol *Label) {
-    Header.Label = Label;
-  }
+  void setLabel(MCSymbol *Label) { Header.Label = Label; }
 
   const SmallVectorImpl<std::string> &getMCDwarfDirs() const {
     return Header.MCDwarfDirs;
   }
 
-  SmallVectorImpl<std::string> &getMCDwarfDirs() {
-    return Header.MCDwarfDirs;
-  }
+  SmallVectorImpl<std::string> &getMCDwarfDirs() { return Header.MCDwarfDirs; }
 
   const SmallVectorImpl<MCDwarfFile> &getMCDwarfFiles() const {
     return Header.MCDwarfFiles;
@@ -447,12 +439,8 @@ public:
     return Header.MCDwarfFiles;
   }
 
-  const MCLineSection &getMCLineSections() const {
-    return MCLineSections;
-  }
-  MCLineSection &getMCLineSections() {
-    return MCLineSections;
-  }
+  const MCLineSection &getMCLineSections() const { return MCLineSections; }
+  MCLineSection &getMCLineSections() { return MCLineSections; }
 };
 
 class MCDwarfLineAddr {

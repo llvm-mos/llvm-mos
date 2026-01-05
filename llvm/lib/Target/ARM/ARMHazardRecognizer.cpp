@@ -53,7 +53,7 @@ ARMHazardRecognizerFPMLx::getHazardType(SUnit *SU, int Stalls) {
       const MCInstrDesc &LastMCID = LastMI->getDesc();
       const MachineFunction *MF = MI->getParent()->getParent();
       const ARMBaseInstrInfo &TII = *static_cast<const ARMBaseInstrInfo *>(
-                                        MF->getSubtarget().getInstrInfo());
+          MF->getSubtarget().getInstrInfo());
 
       // Skip over one non-VFP / NEON instruction.
       if (!LastMI->isBarrier() &&
@@ -125,12 +125,11 @@ static bool getBaseOffset(const MachineInstr &MI, const MachineOperand *&BaseOp,
     // t2LDRSHT, t2LDRSH_POST, t2LDRSH_PRE, t2LDRSHi8,
     // t2LDRT, t2LDR_POST, t2LDR_PRE, t2LDRi8
     BaseOp = &MI.getOperand(1);
-    Offset = (IndexMode == ARMII::IndexModePost)
-                 ? 0
-                 : (IndexMode == ARMII::IndexModePre ||
-                    IndexMode == ARMII::IndexModeUpd)
-                       ? MI.getOperand(3).getImm()
-                       : MI.getOperand(2).getImm();
+    Offset =
+        (IndexMode == ARMII::IndexModePost) ? 0
+        : (IndexMode == ARMII::IndexModePre || IndexMode == ARMII::IndexModeUpd)
+            ? MI.getOperand(3).getImm()
+            : MI.getOperand(2).getImm();
     return true;
   case ARMII::AddrModeT2_i12:
     // t2LDRBi12, t2LDRHi12
@@ -142,12 +141,11 @@ static bool getBaseOffset(const MachineInstr &MI, const MachineOperand *&BaseOp,
   case ARMII::AddrModeT2_i8s4:
     // t2LDRD_POST, t2LDRD_PRE, t2LDRDi8
     BaseOp = &MI.getOperand(2);
-    Offset = (IndexMode == ARMII::IndexModePost)
-                 ? 0
-                 : (IndexMode == ARMII::IndexModePre ||
-                    IndexMode == ARMII::IndexModeUpd)
-                       ? MI.getOperand(4).getImm()
-                       : MI.getOperand(3).getImm();
+    Offset =
+        (IndexMode == ARMII::IndexModePost) ? 0
+        : (IndexMode == ARMII::IndexModePre || IndexMode == ARMII::IndexModeUpd)
+            ? MI.getOperand(4).getImm()
+            : MI.getOperand(3).getImm();
     return true;
   case ARMII::AddrModeT1_1:
     // tLDRBi, tLDRBr (watch out!), TLDRSB

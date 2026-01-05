@@ -599,9 +599,7 @@ public:
   }
 
   /// Is this the minimal version executed in the backend pipelines.
-  bool isMinimal() const {
-    return !DT;
-  }
+  bool isMinimal() const { return !DT; }
 
   /// Return the estimated number of vector ops required for an operation on
   /// \p VT * N.
@@ -1345,8 +1343,8 @@ public:
           EltPtr, Builder.getIntN(Stride->getType()->getScalarSizeInBits(), I),
           Stride, Shape.getStride(), EltTy, Builder);
       Value *Vector = Builder.CreateAlignedLoad(
-          VecTy, GEP, getAlignForIndex(I, Stride, EltTy, MAlign),
-          IsVolatile, "col.load");
+          VecTy, GEP, getAlignForIndex(I, Stride, EltTy, MAlign), IsVolatile,
+          "col.load");
 
       Result.addVector(Vector);
     }
@@ -2434,7 +2432,7 @@ public:
     MatrixTy A = getMatrix(OpA, Shape, Builder);
     MatrixTy B = getMatrix(OpB, Shape, Builder);
 
-    SmallVector<Value*> CondV;
+    SmallVector<Value *> CondV;
     if (isa<FixedVectorType>(Cond->getType())) {
       MatrixTy C = getMatrix(Cond, Shape, Builder);
       llvm::copy(C.vectors(), std::back_inserter(CondV));
@@ -2701,9 +2699,7 @@ public:
       write(")");
     }
 
-    const std::string &getResult() {
-      return Str;
-    }
+    const std::string &getResult() { return Str; }
   };
 
   /// Generate remarks for matrix operations in a function. To generate remarks

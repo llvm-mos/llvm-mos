@@ -110,8 +110,8 @@ LLVM_ABI Expected<uint32_t> getELFRelocationType(Edge::Kind Kind) {
     return ELF::R_ARM_NONE;
   }
 
-  return make_error<JITLinkError>(formatv("Invalid aarch32 edge {0:d}: ",
-                                          Kind));
+  return make_error<JITLinkError>(
+      formatv("Invalid aarch32 edge {0:d}: ", Kind));
 }
 
 /// Get a human-readable name for the given ELF AArch32 edge kind.

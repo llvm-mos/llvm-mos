@@ -43,9 +43,15 @@ static inline void mapOptionalAs(yaml::IO &IO, const char *Key, EndianType &Val,
 namespace {
 /// Return the appropriate yaml Hex type for a given endian-aware type.
 template <typename EndianType> struct HexType;
-template <> struct HexType<support::ulittle16_t> { using type = yaml::Hex16; };
-template <> struct HexType<support::ulittle32_t> { using type = yaml::Hex32; };
-template <> struct HexType<support::ulittle64_t> { using type = yaml::Hex64; };
+template <> struct HexType<support::ulittle16_t> {
+  using type = yaml::Hex16;
+};
+template <> struct HexType<support::ulittle32_t> {
+  using type = yaml::Hex32;
+};
+template <> struct HexType<support::ulittle64_t> {
+  using type = yaml::Hex64;
+};
 } // namespace
 
 /// Yaml-map an endian-aware type as an appropriately-sized hex value.
@@ -561,7 +567,7 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
   }
   case StreamKind::RawContent:
     return std::make_unique<RawContentStream>(StreamDesc.Type,
-                                               File.getRawStream(StreamDesc));
+                                              File.getRawStream(StreamDesc));
   case StreamKind::SystemInfo: {
     auto ExpectedInfo = File.getSystemInfo();
     if (!ExpectedInfo)
@@ -570,7 +576,7 @@ Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
     if (!ExpectedCSDVersion)
       return ExpectedInfo.takeError();
     return std::make_unique<SystemInfoStream>(*ExpectedInfo,
-                                               std::move(*ExpectedCSDVersion));
+                                              std::move(*ExpectedCSDVersion));
   }
   case StreamKind::TextContent:
     return std::make_unique<TextContentStream>(

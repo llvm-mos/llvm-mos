@@ -533,6 +533,7 @@ public:
   std::shared_ptr<SymbolStringPool> getSymbolStringPool() { return SSP; }
   const std::string &getModuleName() const { return ModuleName; }
   const SymbolNameVector &getSymbols() const { return Symbols; }
+
 private:
   std::shared_ptr<SymbolStringPool> SSP;
   std::string ModuleName;
@@ -557,6 +558,7 @@ public:
   std::shared_ptr<SymbolStringPool> getSymbolStringPool() { return SSP; }
   const std::string &getModuleName() const { return ModuleName; }
   const SymbolNameVector &getSymbols() const { return Symbols; }
+
 private:
   std::shared_ptr<SymbolStringPool> SSP;
   std::string ModuleName;
@@ -809,7 +811,6 @@ public:
   ///        resolved.
   bool isComplete() const { return OutstandingSymbolsCount == 0; }
 
-
 private:
   void handleComplete(ExecutionSession &ES);
 
@@ -908,8 +909,8 @@ class JITDylib : public ThreadSafeRefCountedBase<JITDylib>,
   friend class ExecutionSession;
   friend class Platform;
   friend class MaterializationResponsibility;
-public:
 
+public:
   JITDylib(const JITDylib &) = delete;
   JITDylib &operator=(const JITDylib &) = delete;
   JITDylib(JITDylib &&) = delete;
@@ -1115,7 +1116,7 @@ public:
 
 private:
   using AsynchronousSymbolQuerySet =
-    std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
+      std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
 
   using AsynchronousSymbolQueryList =
       std::vector<std::shared_ptr<AsynchronousSymbolQuery>>;
@@ -1155,6 +1156,7 @@ private:
     const AsynchronousSymbolQueryList &pendingQueries() const {
       return PendingQueries;
     }
+
   private:
     AsynchronousSymbolQueryList PendingQueries;
   };
@@ -1352,13 +1354,13 @@ public:
   using ErrorReporter = unique_function<void(Error)>;
 
   /// Send a result to the remote.
-  using SendResultFunction = unique_function<void(shared::WrapperFunctionResult)>;
+  using SendResultFunction =
+      unique_function<void(shared::WrapperFunctionResult)>;
 
   /// An asynchronous wrapper-function callable from the executor via
   /// jit-dispatch.
   using JITDispatchHandlerFunction = unique_function<void(
-      SendResultFunction SendResult,
-      const char *ArgData, size_t ArgSize)>;
+      SendResultFunction SendResult, const char *ArgData, size_t ArgSize)>;
 
   /// A map associating tag names with asynchronous wrapper function
   /// implementations in the JIT.
@@ -1979,12 +1981,13 @@ inline MaterializationResponsibility::~MaterializationResponsibility() {
   getExecutionSession().OL_destroyMaterializationResponsibility(*this);
 }
 
-inline SymbolNameSet MaterializationResponsibility::getRequestedSymbols() const {
+inline SymbolNameSet
+MaterializationResponsibility::getRequestedSymbols() const {
   return getExecutionSession().OL_getRequestedSymbols(*this);
 }
 
-inline Error MaterializationResponsibility::notifyResolved(
-    const SymbolMap &Symbols) {
+inline Error
+MaterializationResponsibility::notifyResolved(const SymbolMap &Symbols) {
   return getExecutionSession().OL_notifyResolved(*this, Symbols);
 }
 
@@ -1993,8 +1996,8 @@ inline Error MaterializationResponsibility::notifyEmitted(
   return getExecutionSession().OL_notifyEmitted(*this, EmittedDeps);
 }
 
-inline Error MaterializationResponsibility::defineMaterializing(
-    SymbolFlagsMap SymbolFlags) {
+inline Error
+MaterializationResponsibility::defineMaterializing(SymbolFlagsMap SymbolFlags) {
   return getExecutionSession().OL_defineMaterializing(*this,
                                                       std::move(SymbolFlags));
 }

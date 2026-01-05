@@ -118,8 +118,7 @@ public:
   /// the caller. The default implementation conservatively assumes that none of
   /// the writes clears the upper portion of a super-register.
   virtual bool clearsSuperRegisters(const MCRegisterInfo &MRI,
-                                    const MCInst &Inst,
-                                    APInt &Writes) const;
+                                    const MCInst &Inst, APInt &Writes) const;
 
   /// Returns true if MI is a dependency breaking zero-idiom for the given
   /// subtarget.
@@ -129,8 +128,8 @@ public:
   /// Bits associated with explicit input operands are laid out first in the
   /// mask; implicit operands come after explicit operands.
   ///
-  /// Dependencies are broken only for operands that have their corresponding bit
-  /// set. Operands that have their bit cleared, or that don't have a
+  /// Dependencies are broken only for operands that have their corresponding
+  /// bit set. Operands that have their bit cleared, or that don't have a
   /// corresponding bit in the mask don't have their dependency broken.  Note
   /// that Mask may not be big enough to describe all operands.  The assumption
   /// for operands that don't have a correspondent bit in the mask is that those
@@ -182,9 +181,8 @@ public:
 
   /// Given a branch instruction try to get the address the branch
   /// targets. Return true on success, and the address in Target.
-  virtual bool
-  evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                 uint64_t &Target) const;
+  virtual bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                              uint64_t &Target) const;
 
   /// Given an instruction tries to get the address of a memory operand. Returns
   /// the address on success.

@@ -17,7 +17,6 @@
 #include <memory>
 #include <vector>
 
-
 namespace llvm {
 
 class WindowsResourceProcessor {
@@ -36,7 +35,7 @@ public:
   void setNullAtEnd(bool NullAtEnd) { AppendNull = NullAtEnd; }
 
   Error process(StringRef InputData,
-    std::unique_ptr<raw_fd_ostream> OutputStream);
+                std::unique_ptr<raw_fd_ostream> OutputStream);
 
 private:
   StringRef InputData;
@@ -45,6 +44,6 @@ private:
   bool IsVerbose, AppendNull;
 };
 
-}
+} // namespace llvm
 
 #endif

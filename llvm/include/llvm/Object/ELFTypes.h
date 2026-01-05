@@ -179,8 +179,7 @@ struct Elf_Shdr_Base<ELFType<Endianness, true>> {
   Elf_Xword sh_entsize;   // Size of records contained within the section
 };
 
-template <class ELFT>
-struct Elf_Shdr_Impl : Elf_Shdr_Base<ELFT> {
+template <class ELFT> struct Elf_Shdr_Impl : Elf_Shdr_Base<ELFT> {
   using Elf_Shdr_Base<ELFT>::sh_entsize;
   using Elf_Shdr_Base<ELFT>::sh_size;
 
@@ -216,8 +215,7 @@ struct Elf_Sym_Base<ELFType<Endianness, true>> {
   Elf_Xword st_size;      // Size of the symbol
 };
 
-template <class ELFT>
-struct Elf_Sym_Impl : Elf_Sym_Base<ELFT> {
+template <class ELFT> struct Elf_Sym_Impl : Elf_Sym_Base<ELFT> {
   using Elf_Sym_Base<ELFT>::st_info;
   using Elf_Sym_Base<ELFT>::st_shndx;
   using Elf_Sym_Base<ELFT>::st_other;
@@ -270,9 +268,7 @@ struct Elf_Sym_Impl : Elf_Sym_Base<ELFT> {
 
   bool isUndefined() const { return st_shndx == ELF::SHN_UNDEF; }
 
-  bool isExternal() const {
-    return getBinding() != ELF::STB_LOCAL;
-  }
+  bool isExternal() const { return getBinding() != ELF::STB_LOCAL; }
 
   Expected<StringRef> getName(StringRef StrTab) const;
 };
@@ -291,16 +287,14 @@ Expected<StringRef> Elf_Sym_Impl<ELFT>::getName(StringRef StrTab) const {
 
 /// Elf_Versym: This is the structure of entries in the SHT_GNU_versym section
 /// (.gnu.version). This structure is identical for ELF32 and ELF64.
-template <class ELFT>
-struct Elf_Versym_Impl {
+template <class ELFT> struct Elf_Versym_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Half vs_index; // Version index with flags (e.g. VERSYM_HIDDEN)
 };
 
 /// Elf_Verdef: This is the structure of entries in the SHT_GNU_verdef section
 /// (.gnu.version_d). This structure is identical for ELF32 and ELF64.
-template <class ELFT>
-struct Elf_Verdef_Impl {
+template <class ELFT> struct Elf_Verdef_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Half vd_version; // Version of this structure (e.g. VER_DEF_CURRENT)
   Elf_Half vd_flags;   // Bitwise flags (VER_DEF_*)
@@ -318,8 +312,7 @@ struct Elf_Verdef_Impl {
 
 /// Elf_Verdaux: This is the structure of auxiliary data in the SHT_GNU_verdef
 /// section (.gnu.version_d). This structure is identical for ELF32 and ELF64.
-template <class ELFT>
-struct Elf_Verdaux_Impl {
+template <class ELFT> struct Elf_Verdaux_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Word vda_name; // Version name (offset in string table)
   Elf_Word vda_next; // Offset to next Verdaux entry (in bytes)
@@ -327,8 +320,7 @@ struct Elf_Verdaux_Impl {
 
 /// Elf_Verneed: This is the structure of entries in the SHT_GNU_verneed
 /// section (.gnu.version_r). This structure is identical for ELF32 and ELF64.
-template <class ELFT>
-struct Elf_Verneed_Impl {
+template <class ELFT> struct Elf_Verneed_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Half vn_version; // Version of this structure (e.g. VER_NEED_CURRENT)
   Elf_Half vn_cnt;     // Number of associated Vernaux entries
@@ -339,8 +331,7 @@ struct Elf_Verneed_Impl {
 
 /// Elf_Vernaux: This is the structure of auxiliary data in SHT_GNU_verneed
 /// section (.gnu.version_r). This structure is identical for ELF32 and ELF64.
-template <class ELFT>
-struct Elf_Vernaux_Impl {
+template <class ELFT> struct Elf_Vernaux_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Word vna_hash;  // Hash of dependency name
   Elf_Half vna_flags; // Bitwise Flags (VER_FLAG_*)
@@ -374,8 +365,7 @@ struct Elf_Dyn_Base<ELFType<Endianness, true>> {
 };
 
 /// Elf_Dyn_Impl: This inherits from Elf_Dyn_Base, adding getters.
-template <class ELFT>
-struct Elf_Dyn_Impl : Elf_Dyn_Base<ELFT> {
+template <class ELFT> struct Elf_Dyn_Impl : Elf_Dyn_Base<ELFT> {
   using Elf_Dyn_Base<ELFT>::d_tag;
   using Elf_Dyn_Base<ELFT>::d_un;
   using intX_t = std::conditional_t<ELFT::Is64Bits, int64_t, int32_t>;
@@ -504,8 +494,7 @@ template <bool Is64> struct Elf_Crel_Impl {
   }
 };
 
-template <class ELFT>
-struct Elf_Ehdr_Impl {
+template <class ELFT> struct Elf_Ehdr_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   unsigned char e_ident[ELF::EI_NIDENT]; // ELF Identification bytes
   Elf_Half e_type;                       // Type of file (see ET_*)
@@ -558,8 +547,7 @@ struct Elf_Phdr_Impl<ELFType<Endianness, true>> {
 };
 
 // ELFT needed for endianness.
-template <class ELFT>
-struct Elf_Hash_Impl {
+template <class ELFT> struct Elf_Hash_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Word nbucket;
   Elf_Word nchain;
@@ -575,8 +563,7 @@ struct Elf_Hash_Impl {
 };
 
 // .gnu.hash section
-template <class ELFT>
-struct Elf_GnuHash_Impl {
+template <class ELFT> struct Elf_GnuHash_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Word nbuckets;
   Elf_Word symndx;
@@ -619,8 +606,7 @@ struct Elf_Chdr_Impl<ELFType<Endianness, true>> {
 };
 
 /// Note header
-template <class ELFT>
-struct Elf_Nhdr_Impl {
+template <class ELFT> struct Elf_Nhdr_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
   Elf_Word n_namesz;
   Elf_Word n_descsz;
@@ -640,8 +626,7 @@ struct Elf_Nhdr_Impl {
 ///
 /// Wraps a note header, providing methods for accessing the name and
 /// descriptor safely.
-template <class ELFT>
-class Elf_Note_Impl {
+template <class ELFT> class Elf_Note_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
   const Elf_Nhdr_Impl<ELFT> &Nhdr;
@@ -766,24 +751,23 @@ template <class ELFT> struct Elf_CGProfile_Impl {
 };
 
 // MIPS .reginfo section
-template <class ELFT>
-struct Elf_Mips_RegInfo;
+template <class ELFT> struct Elf_Mips_RegInfo;
 
 template <llvm::endianness Endianness>
 struct Elf_Mips_RegInfo<ELFType<Endianness, false>> {
   LLVM_ELF_IMPORT_TYPES(Endianness, false)
-  Elf_Word ri_gprmask;     // bit-mask of used general registers
-  Elf_Word ri_cprmask[4];  // bit-mask of used co-processor registers
-  Elf_Addr ri_gp_value;    // gp register value
+  Elf_Word ri_gprmask;    // bit-mask of used general registers
+  Elf_Word ri_cprmask[4]; // bit-mask of used co-processor registers
+  Elf_Addr ri_gp_value;   // gp register value
 };
 
 template <llvm::endianness Endianness>
 struct Elf_Mips_RegInfo<ELFType<Endianness, true>> {
   LLVM_ELF_IMPORT_TYPES(Endianness, true)
-  Elf_Word ri_gprmask;     // bit-mask of used general registers
-  Elf_Word ri_pad;         // unused padding field
-  Elf_Word ri_cprmask[4];  // bit-mask of used co-processor registers
-  Elf_Addr ri_gp_value;    // gp register value
+  Elf_Word ri_gprmask;    // bit-mask of used general registers
+  Elf_Word ri_pad;        // unused padding field
+  Elf_Word ri_cprmask[4]; // bit-mask of used co-processor registers
+  Elf_Addr ri_gp_value;   // gp register value
 };
 
 // .MIPS.options section

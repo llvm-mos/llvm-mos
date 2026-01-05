@@ -104,7 +104,7 @@ struct PPCVSXSwapRemoval : public MachineFunctionPass {
 
   // A mapping is maintained between machine instructions and
   // their swap entries.  The key is the address of the MI.
-  DenseMap<MachineInstr*, int> SwapMap;
+  DenseMap<MachineInstr *, int> SwapMap;
 
   // Equivalence classes are used to gather webs of related computation.
   // Swap entries are represented by their VSEId fields.
@@ -270,7 +270,7 @@ bool PPCVSXSwapRemoval::gatherVectorInstructions() {
       PPCVSXSwapEntry SwapEntry{};
       int VecIdx = addSwapEntry(&MI, SwapEntry);
 
-      switch(MI.getOpcode()) {
+      switch (MI.getOpcode()) {
       default:
         // Unless noted otherwise, an instruction is considered
         // safe for the optimization.  There are a large number of
@@ -293,10 +293,10 @@ bool PPCVSXSwapRemoval::gatherVectorInstructions() {
         // XXPERMDI as mentioning a physical register.
         int immed = MI.getOperand(3).getImm();
         if (immed == 2) {
-          unsigned trueReg1 = lookThruCopyLike(MI.getOperand(1).getReg(),
-                                               VecIdx);
-          unsigned trueReg2 = lookThruCopyLike(MI.getOperand(2).getReg(),
-                                               VecIdx);
+          unsigned trueReg1 =
+              lookThruCopyLike(MI.getOperand(1).getReg(), VecIdx);
+          unsigned trueReg2 =
+              lookThruCopyLike(MI.getOperand(2).getReg(), VecIdx);
           if (trueReg1 == trueReg2)
             SwapVector[VecIdx].IsSwap = 1;
           else {
@@ -305,23 +305,23 @@ bool PPCVSXSwapRemoval::gatherVectorInstructions() {
             SwapVector[VecIdx].IsSwappable = 1;
             SwapVector[VecIdx].SpecialHandling = SHValues::SH_XXPERMDI;
           }
-        // This is a doubleword splat if it is of the form
-        // XXPERMDI t, s, s, 0 or XXPERMDI t, s, s, 3.  As above we
-        // must look through chains of copy-likes to find the source
-        // register.  We turn off the marking for mention of a physical
-        // register, because splatting it is safe; the optimization
-        // will not swap the value in the physical register.  Whether
-        // or not the two input registers are identical, we can handle
-        // these by adjusting the form of the XXPERMDI.
+          // This is a doubleword splat if it is of the form
+          // XXPERMDI t, s, s, 0 or XXPERMDI t, s, s, 3.  As above we
+          // must look through chains of copy-likes to find the source
+          // register.  We turn off the marking for mention of a physical
+          // register, because splatting it is safe; the optimization
+          // will not swap the value in the physical register.  Whether
+          // or not the two input registers are identical, we can handle
+          // these by adjusting the form of the XXPERMDI.
         } else if (immed == 0 || immed == 3) {
 
           SwapVector[VecIdx].IsSwappable = 1;
           SwapVector[VecIdx].SpecialHandling = SHValues::SH_XXPERMDI;
 
-          unsigned trueReg1 = lookThruCopyLike(MI.getOperand(1).getReg(),
-                                               VecIdx);
-          unsigned trueReg2 = lookThruCopyLike(MI.getOperand(2).getReg(),
-                                               VecIdx);
+          unsigned trueReg1 =
+              lookThruCopyLike(MI.getOperand(1).getReg(), VecIdx);
+          unsigned trueReg2 =
+              lookThruCopyLike(MI.getOperand(2).getReg(), VecIdx);
           if (trueReg1 == trueReg2)
             SwapVector[VecIdx].MentionsPhysVR = 0;
 
@@ -535,7 +535,7 @@ bool PPCVSXSwapRemoval::gatherVectorInstructions() {
 // Add an entry to the swap vector and swap map, and make a
 // singleton equivalence class for the entry.
 int PPCVSXSwapRemoval::addSwapEntry(MachineInstr *MI,
-                                  PPCVSXSwapEntry& SwapEntry) {
+                                    PPCVSXSwapEntry &SwapEntry) {
   SwapEntry.VSEMI = MI;
   SwapEntry.VSEId = SwapVector.size();
   SwapVector.push_back(SwapEntry);
@@ -553,8 +553,7 @@ int PPCVSXSwapRemoval::addSwapEntry(MachineInstr *MI,
 // physical register is encountered, we stop the search and
 // flag the swap entry indicated by VecIdx (the original
 // XXPERMDI) as mentioning a physical register.
-unsigned PPCVSXSwapRemoval::lookThruCopyLike(unsigned SrcReg,
-                                             unsigned VecIdx) {
+unsigned PPCVSXSwapRemoval::lookThruCopyLike(unsigned SrcReg, unsigned VecIdx) {
   MachineInstr *MI = MRI->getVRegDef(SrcReg);
   if (!MI->isCopyLike())
     return SrcReg;
@@ -615,12 +614,11 @@ void PPCVSXSwapRemoval::formWebs() {
       if (!MO.isUse())
         continue;
 
-      MachineInstr* DefMI = MRI->getVRegDef(Reg);
+      MachineInstr *DefMI = MRI->getVRegDef(Reg);
       assert(SwapMap.contains(DefMI) &&
              "Inconsistency: def of vector reg not found in swap map!");
       int DefIdx = SwapMap[DefMI];
-      (void)EC->unionSets(SwapVector[DefIdx].VSEId,
-                          SwapVector[EntryIdx].VSEId);
+      (void)EC->unionSets(SwapVector[DefIdx].VSEId, SwapVector[EntryIdx].VSEId);
 
       LLVM_DEBUG(dbgs() << format("Unioning %d with %d\n",
                                   SwapVector[DefIdx].VSEId,
@@ -715,8 +713,8 @@ void PPCVSXSwapRemoval::recordUnoptimizableWebs() {
         }
       }
 
-    // Reject webs that contain swapping stores that are fed by something
-    // other than a swap instruction.
+      // Reject webs that contain swapping stores that are fed by something
+      // other than a swap instruction.
     } else if (SwapVector[EntryIdx].IsStore && SwapVector[EntryIdx].IsSwap) {
       MachineInstr *MI = SwapVector[EntryIdx].VSEMI;
       Register UseReg = MI->getOperand(0).getReg();
@@ -825,9 +823,9 @@ void PPCVSXSwapRemoval::insertSwap(MachineInstr *MI,
                                    unsigned DstReg, unsigned SrcReg) {
   BuildMI(*MI->getParent(), InsertPoint, MI->getDebugLoc(),
           TII->get(PPC::XXPERMDI), DstReg)
-    .addReg(SrcReg)
-    .addReg(SrcReg)
-    .addImm(2);
+      .addReg(SrcReg)
+      .addReg(SrcReg)
+      .addImm(2);
 }
 
 // The identified swap entry requires special handling to allow its
@@ -853,10 +851,16 @@ void PPCVSXSwapRemoval::handleSpecialSwappables(int EntryIdx) {
     switch (MI->getOpcode()) {
     default:
       llvm_unreachable("Unexpected splat opcode");
-    case PPC::VSPLTB: NElts = 16; break;
-    case PPC::VSPLTH: NElts = 8;  break;
+    case PPC::VSPLTB:
+      NElts = 16;
+      break;
+    case PPC::VSPLTH:
+      NElts = 8;
+      break;
     case PPC::VSPLTW:
-    case PPC::XXSPLTW: NElts = 4;  break;
+    case PPC::XXSPLTW:
+      NElts = 4;
+      break;
     }
 
     unsigned EltNo;
@@ -939,7 +943,7 @@ void PPCVSXSwapRemoval::handleSpecialSwappables(int EntryIdx) {
 
       BuildMI(*MI->getParent(), InsertPoint, MI->getDebugLoc(),
               TII->get(PPC::COPY), VSRCTmp1)
-        .addReg(NewVReg);
+          .addReg(NewVReg);
       LLVM_DEBUG(std::prev(InsertPoint)->dump());
 
       insertSwap(MI, InsertPoint, VSRCTmp2, VSRCTmp1);
@@ -947,7 +951,7 @@ void PPCVSXSwapRemoval::handleSpecialSwappables(int EntryIdx) {
 
       BuildMI(*MI->getParent(), InsertPoint, MI->getDebugLoc(),
               TII->get(PPC::COPY), DstReg)
-        .addReg(VSRCTmp2);
+          .addReg(VSRCTmp2);
       LLVM_DEBUG(std::prev(InsertPoint)->dump());
 
     } else {
@@ -1014,7 +1018,7 @@ LLVM_DUMP_METHOD void PPCVSXSwapRemoval::dumpSwapVector() {
 
     if (SwapVector[EntryIdx].IsSwappable) {
       dbgs() << "swappable ";
-      switch(SwapVector[EntryIdx].SpecialHandling) {
+      switch (SwapVector[EntryIdx].SpecialHandling) {
       default:
         dbgs() << "special:**unknown**";
         break;
@@ -1060,11 +1064,12 @@ LLVM_DUMP_METHOD void PPCVSXSwapRemoval::dumpSwapVector() {
 }
 #endif
 
-INITIALIZE_PASS_BEGIN(PPCVSXSwapRemoval, DEBUG_TYPE,
-                      "PowerPC VSX Swap Removal", false, false)
-INITIALIZE_PASS_END(PPCVSXSwapRemoval, DEBUG_TYPE,
-                    "PowerPC VSX Swap Removal", false, false)
+INITIALIZE_PASS_BEGIN(PPCVSXSwapRemoval, DEBUG_TYPE, "PowerPC VSX Swap Removal",
+                      false, false)
+INITIALIZE_PASS_END(PPCVSXSwapRemoval, DEBUG_TYPE, "PowerPC VSX Swap Removal",
+                    false, false)
 
 char PPCVSXSwapRemoval::ID = 0;
-FunctionPass*
-llvm::createPPCVSXSwapRemovalPass() { return new PPCVSXSwapRemoval(); }
+FunctionPass *llvm::createPPCVSXSwapRemovalPass() {
+  return new PPCVSXSwapRemoval();
+}

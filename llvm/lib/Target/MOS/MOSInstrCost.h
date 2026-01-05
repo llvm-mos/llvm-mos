@@ -20,36 +20,30 @@ namespace llvm {
 
 class MOSInstrCost {
 public:
-  enum class Mode {
-    PreferBytes,
-    PreferCycles,
-    Average
-  };
+  enum class Mode { PreferBytes, PreferCycles, Average };
 
   MOSInstrCost() : Bytes(0), Cycles(0) {}
 
   MOSInstrCost(int32_t Bytes, int32_t Cycles)
-    : MOSInstrCost(Bytes, Cycles, 256) {}
+      : MOSInstrCost(Bytes, Cycles, 256) {}
 
-  friend MOSInstrCost operator+(MOSInstrCost Left,
-                                const MOSInstrCost& Right) {
-    return MOSInstrCost(Left.Bytes + Right.Bytes,
-                        Left.Cycles + Right.Cycles, 1);
+  friend MOSInstrCost operator+(MOSInstrCost Left, const MOSInstrCost &Right) {
+    return MOSInstrCost(Left.Bytes + Right.Bytes, Left.Cycles + Right.Cycles,
+                        1);
   }
 
-  MOSInstrCost& operator+=(const MOSInstrCost& Right) {
+  MOSInstrCost &operator+=(const MOSInstrCost &Right) {
     this->Bytes += Right.Bytes;
     this->Cycles += Right.Cycles;
     return *this;
   }
 
-  friend MOSInstrCost operator-(MOSInstrCost Left,
-                                const MOSInstrCost& Right) {
-    return MOSInstrCost(Left.Bytes - Right.Bytes,
-                        Left.Cycles - Right.Cycles, 1);
+  friend MOSInstrCost operator-(MOSInstrCost Left, const MOSInstrCost &Right) {
+    return MOSInstrCost(Left.Bytes - Right.Bytes, Left.Cycles - Right.Cycles,
+                        1);
   }
 
-  MOSInstrCost& operator-=(const MOSInstrCost& Right) {
+  MOSInstrCost &operator-=(const MOSInstrCost &Right) {
     this->Bytes -= Right.Bytes;
     this->Cycles -= Right.Cycles;
     return *this;
@@ -69,7 +63,7 @@ public:
 
 private:
   MOSInstrCost(int32_t Bytes, int32_t Cycles, int Multiplier)
-    : Bytes(Bytes * Multiplier), Cycles(Cycles * Multiplier) {}
+      : Bytes(Bytes * Multiplier), Cycles(Cycles * Multiplier) {}
 
   int32_t Bytes, Cycles;
 };

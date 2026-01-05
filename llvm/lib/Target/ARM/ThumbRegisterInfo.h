@@ -19,8 +19,8 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 namespace llvm {
-  class ARMSubtarget;
-  class ARMBaseInstrInfo;
+class ARMSubtarget;
+class ARMBaseInstrInfo;
 
 struct ThumbRegisterInfo : public ARMBaseRegisterInfo {
 private:
@@ -53,11 +53,11 @@ public:
                          const ARMBaseInstrInfo &TII) const;
   void resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                          int64_t Offset) const override;
-  bool eliminateFrameIndex(MachineBasicBlock::iterator II,
-                           int SPAdj, unsigned FIOperandNum,
+  bool eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
+                           unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
   bool useFPForScavengingIndex(const MachineFunction &MF) const override;
 };
-}
+} // namespace llvm
 
 #endif

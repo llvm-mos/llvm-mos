@@ -139,8 +139,8 @@ private:
     return false;
   }
 
-  bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
-                             Type *Ty, unsigned AS,
+  bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
+                             unsigned AS,
                              Instruction *I = nullptr) const override;
 
   // isTruncateFree - Return true if it's free to truncate a value of
@@ -157,13 +157,13 @@ private:
   unsigned EmitSubregExt(MachineInstr &MI, MachineBasicBlock *BB, unsigned Reg,
                          bool isSigned) const;
 
-  MachineBasicBlock * EmitInstrWithCustomInserterMemcpy(MachineInstr &MI,
-                                                        MachineBasicBlock *BB)
-                                                        const;
+  MachineBasicBlock *
+  EmitInstrWithCustomInserterMemcpy(MachineInstr &MI,
+                                    MachineBasicBlock *BB) const;
   MachineBasicBlock *
   EmitInstrWithCustomInserterLDimm64(MachineInstr &MI,
                                      MachineBasicBlock *BB) const;
 };
-}
+} // namespace llvm
 
 #endif

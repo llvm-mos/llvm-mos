@@ -25,8 +25,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(Kernel::Metadata)
 namespace llvm {
 namespace yaml {
 
-template <>
-struct ScalarEnumerationTraits<AccessQualifier> {
+template <> struct ScalarEnumerationTraits<AccessQualifier> {
   static void enumeration(IO &YIO, AccessQualifier &EN) {
     YIO.enumCase(EN, "Default", AccessQualifier::Default);
     YIO.enumCase(EN, "ReadOnly", AccessQualifier::ReadOnly);
@@ -35,8 +34,7 @@ struct ScalarEnumerationTraits<AccessQualifier> {
   }
 };
 
-template <>
-struct ScalarEnumerationTraits<AddressSpaceQualifier> {
+template <> struct ScalarEnumerationTraits<AddressSpaceQualifier> {
   static void enumeration(IO &YIO, AddressSpaceQualifier &EN) {
     YIO.enumCase(EN, "Private", AddressSpaceQualifier::Private);
     YIO.enumCase(EN, "Global", AddressSpaceQualifier::Global);
@@ -47,8 +45,7 @@ struct ScalarEnumerationTraits<AddressSpaceQualifier> {
   }
 };
 
-template <>
-struct ScalarEnumerationTraits<ValueKind> {
+template <> struct ScalarEnumerationTraits<ValueKind> {
   static void enumeration(IO &YIO, ValueKind &EN) {
     YIO.enumCase(EN, "ByValue", ValueKind::ByValue);
     YIO.enumCase(EN, "GlobalBuffer", ValueKind::GlobalBuffer);
@@ -67,12 +64,11 @@ struct ScalarEnumerationTraits<ValueKind> {
     YIO.enumCase(EN, "HiddenCompletionAction",
                  ValueKind::HiddenCompletionAction);
     YIO.enumCase(EN, "HiddenMultiGridSyncArg",
-		 ValueKind::HiddenMultiGridSyncArg);
+                 ValueKind::HiddenMultiGridSyncArg);
   }
 };
 
-template <>
-struct ScalarEnumerationTraits<ValueType> {
+template <> struct ScalarEnumerationTraits<ValueType> {
   static void enumeration(IO &YIO, ValueType &EN) {
     YIO.enumCase(EN, "Struct", ValueType::Struct);
     YIO.enumCase(EN, "I8", ValueType::I8);
@@ -89,22 +85,20 @@ struct ScalarEnumerationTraits<ValueType> {
   }
 };
 
-template <>
-struct MappingTraits<Kernel::Attrs::Metadata> {
+template <> struct MappingTraits<Kernel::Attrs::Metadata> {
   static void mapping(IO &YIO, Kernel::Attrs::Metadata &MD) {
     YIO.mapOptional(Kernel::Attrs::Key::ReqdWorkGroupSize,
                     MD.mReqdWorkGroupSize, std::vector<uint32_t>());
     YIO.mapOptional(Kernel::Attrs::Key::WorkGroupSizeHint,
                     MD.mWorkGroupSizeHint, std::vector<uint32_t>());
-    YIO.mapOptional(Kernel::Attrs::Key::VecTypeHint,
-                    MD.mVecTypeHint, std::string());
+    YIO.mapOptional(Kernel::Attrs::Key::VecTypeHint, MD.mVecTypeHint,
+                    std::string());
     YIO.mapOptional(Kernel::Attrs::Key::RuntimeHandle, MD.mRuntimeHandle,
                     std::string());
   }
 };
 
-template <>
-struct MappingTraits<Kernel::Arg::Metadata> {
+template <> struct MappingTraits<Kernel::Arg::Metadata> {
   static void mapping(IO &YIO, Kernel::Arg::Metadata &MD) {
     YIO.mapOptional(Kernel::Arg::Key::Name, MD.mName, std::string());
     YIO.mapOptional(Kernel::Arg::Key::TypeName, MD.mTypeName, std::string());
@@ -131,8 +125,7 @@ struct MappingTraits<Kernel::Arg::Metadata> {
   }
 };
 
-template <>
-struct MappingTraits<Kernel::CodeProps::Metadata> {
+template <> struct MappingTraits<Kernel::CodeProps::Metadata> {
   static void mapping(IO &YIO, Kernel::CodeProps::Metadata &MD) {
     YIO.mapRequired(Kernel::CodeProps::Key::KernargSegmentSize,
                     MD.mKernargSegmentSize);
@@ -142,18 +135,17 @@ struct MappingTraits<Kernel::CodeProps::Metadata> {
                     MD.mPrivateSegmentFixedSize);
     YIO.mapRequired(Kernel::CodeProps::Key::KernargSegmentAlign,
                     MD.mKernargSegmentAlign);
-    YIO.mapRequired(Kernel::CodeProps::Key::WavefrontSize,
-                    MD.mWavefrontSize);
-    YIO.mapOptional(Kernel::CodeProps::Key::NumSGPRs,
-                    MD.mNumSGPRs, uint16_t(0));
-    YIO.mapOptional(Kernel::CodeProps::Key::NumVGPRs,
-                    MD.mNumVGPRs, uint16_t(0));
+    YIO.mapRequired(Kernel::CodeProps::Key::WavefrontSize, MD.mWavefrontSize);
+    YIO.mapOptional(Kernel::CodeProps::Key::NumSGPRs, MD.mNumSGPRs,
+                    uint16_t(0));
+    YIO.mapOptional(Kernel::CodeProps::Key::NumVGPRs, MD.mNumVGPRs,
+                    uint16_t(0));
     YIO.mapOptional(Kernel::CodeProps::Key::MaxFlatWorkGroupSize,
                     MD.mMaxFlatWorkGroupSize, uint32_t(0));
     YIO.mapOptional(Kernel::CodeProps::Key::IsDynamicCallStack,
                     MD.mIsDynamicCallStack, false);
-    YIO.mapOptional(Kernel::CodeProps::Key::IsXNACKEnabled,
-                    MD.mIsXNACKEnabled, false);
+    YIO.mapOptional(Kernel::CodeProps::Key::IsXNACKEnabled, MD.mIsXNACKEnabled,
+                    false);
     YIO.mapOptional(Kernel::CodeProps::Key::NumSpilledSGPRs,
                     MD.mNumSpilledSGPRs, uint16_t(0));
     YIO.mapOptional(Kernel::CodeProps::Key::NumSpilledVGPRs,
@@ -161,8 +153,7 @@ struct MappingTraits<Kernel::CodeProps::Metadata> {
   }
 };
 
-template <>
-struct MappingTraits<Kernel::DebugProps::Metadata> {
+template <> struct MappingTraits<Kernel::DebugProps::Metadata> {
   static void mapping(IO &YIO, Kernel::DebugProps::Metadata &MD) {
     YIO.mapOptional(Kernel::DebugProps::Key::DebuggerABIVersion,
                     MD.mDebuggerABIVersion, std::vector<uint32_t>());
@@ -177,8 +168,7 @@ struct MappingTraits<Kernel::DebugProps::Metadata> {
   }
 };
 
-template <>
-struct MappingTraits<Kernel::Metadata> {
+template <> struct MappingTraits<Kernel::Metadata> {
   static void mapping(IO &YIO, Kernel::Metadata &MD) {
     YIO.mapRequired(Kernel::Key::Name, MD.mName);
     YIO.mapRequired(Kernel::Key::SymbolName, MD.mSymbolName);
@@ -196,8 +186,7 @@ struct MappingTraits<Kernel::Metadata> {
   }
 };
 
-template <>
-struct MappingTraits<HSAMD::Metadata> {
+template <> struct MappingTraits<HSAMD::Metadata> {
   static void mapping(IO &YIO, HSAMD::Metadata &MD) {
     YIO.mapRequired(Key::Version, MD.mVersion);
     YIO.mapOptional(Key::Printf, MD.mPrintf, std::vector<std::string>());

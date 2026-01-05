@@ -134,10 +134,10 @@ struct Benchmark {
 
   // Read functions.
   static Expected<Benchmark> readYaml(const LLVMState &State,
-                                                 MemoryBufferRef Buffer);
+                                      MemoryBufferRef Buffer);
 
-  static Expected<std::vector<Benchmark>>
-  readYamls(const LLVMState &State, MemoryBufferRef Buffer);
+  static Expected<std::vector<Benchmark>> readYamls(const LLVMState &State,
+                                                    MemoryBufferRef Buffer);
 
   // Given a set of serialized instruction benchmarks, returns the set of
   // triples and CPUs that appear in the list of benchmarks.

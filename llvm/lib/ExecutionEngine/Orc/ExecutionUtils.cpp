@@ -27,10 +27,9 @@ namespace llvm {
 namespace orc {
 
 CtorDtorIterator::CtorDtorIterator(const GlobalVariable *GV, bool End)
-  : InitList(
-      GV ? dyn_cast_or_null<ConstantArray>(GV->getInitializer()) : nullptr),
-    I((InitList && End) ? InitList->getNumOperands() : 0) {
-}
+    : InitList(GV ? dyn_cast_or_null<ConstantArray>(GV->getInitializer())
+                  : nullptr),
+      I((InitList && End) ? InitList->getNumOperands() : 0) {}
 
 bool CtorDtorIterator::operator==(const CtorDtorIterator &Other) const {
   assert(InitList == Other.InitList && "Incomparable iterators.");
@@ -41,7 +40,7 @@ bool CtorDtorIterator::operator!=(const CtorDtorIterator &Other) const {
   return !(*this == Other);
 }
 
-CtorDtorIterator& CtorDtorIterator::operator++() {
+CtorDtorIterator &CtorDtorIterator::operator++() {
   ++I;
   return *this;
 }
@@ -118,9 +117,8 @@ void CtorDtorRunner::add(iterator_range<CtorDtorIterator> CtorDtors) {
   if (CtorDtors.empty())
     return;
 
-  MangleAndInterner Mangle(
-      JD.getExecutionSession(),
-      (*CtorDtors.begin()).Func->getDataLayout());
+  MangleAndInterner Mangle(JD.getExecutionSession(),
+                           (*CtorDtors.begin()).Func->getDataLayout());
 
   for (auto CtorDtor : CtorDtors) {
     assert(CtorDtor.Func && CtorDtor.Func->hasName() &&
@@ -168,7 +166,7 @@ Error CtorDtorRunner::run() {
 }
 
 void LocalCXXRuntimeOverridesBase::runDestructors() {
-  auto& CXXDestructorDataPairs = DSOHandleOverride;
+  auto &CXXDestructorDataPairs = DSOHandleOverride;
   for (auto &P : CXXDestructorDataPairs)
     P.first(P.second);
   CXXDestructorDataPairs.clear();
@@ -177,14 +175,14 @@ void LocalCXXRuntimeOverridesBase::runDestructors() {
 int LocalCXXRuntimeOverridesBase::CXAAtExitOverride(DestructorPtr Destructor,
                                                     void *Arg,
                                                     void *DSOHandle) {
-  auto& CXXDestructorDataPairs =
-    *reinterpret_cast<CXXDestructorDataPairList*>(DSOHandle);
+  auto &CXXDestructorDataPairs =
+      *reinterpret_cast<CXXDestructorDataPairList *>(DSOHandle);
   CXXDestructorDataPairs.push_back(std::make_pair(Destructor, Arg));
   return 0;
 }
 
 Error LocalCXXRuntimeOverrides::enable(JITDylib &JD,
-                                        MangleAndInterner &Mangle) {
+                                       MangleAndInterner &Mangle) {
   SymbolMap RuntimeInterposes;
   RuntimeInterposes[Mangle("__dso_handle")] = {
       ExecutorAddr::fromPtr(&DSOHandleOverride), JITSymbolFlags::Exported};

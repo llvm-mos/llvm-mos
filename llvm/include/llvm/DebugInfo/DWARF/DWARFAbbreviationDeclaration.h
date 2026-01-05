@@ -109,9 +109,7 @@ public:
     return AttributeSpecs[idx].Form;
   }
 
-  size_t getNumAttributes() const {
-    return AttributeSpecs.size();
-  }
+  size_t getNumAttributes() const { return AttributeSpecs.size(); }
 
   dwarf::Attribute getAttrByIndex(uint32_t idx) const {
     assert(idx < AttributeSpecs.size());

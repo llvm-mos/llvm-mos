@@ -274,8 +274,7 @@ TerminatorInfo SystemZLongBranch::describeTerminator(MachineInstr &MI) {
       llvm_unreachable("Unrecognized branch instruction");
     }
     Terminator.Branch = &MI;
-    Terminator.TargetBlock =
-      TII->getBranchInfo(MI).getMBBTarget()->getNumber();
+    Terminator.TargetBlock = TII->getBranchInfo(MI).getMBBTarget()->getNumber();
   }
   return Terminator;
 }

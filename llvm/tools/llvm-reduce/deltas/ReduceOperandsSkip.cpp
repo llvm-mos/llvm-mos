@@ -221,7 +221,8 @@ void llvm::reduceOperandsSkipDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
 
     for (std::pair<Use *, Value *> P : Replacements) {
       if (PHINode *Phi = dyn_cast<PHINode>(P.first->getUser()))
-        Phi->setIncomingValueForBlock(Phi->getIncomingBlock(*P.first), P.second);
+        Phi->setIncomingValueForBlock(Phi->getIncomingBlock(*P.first),
+                                      P.second);
       else
         P.first->set(P.second);
     }

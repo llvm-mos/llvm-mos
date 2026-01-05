@@ -56,23 +56,27 @@ static llvm::Error parse(DataExtractor &Data, uint64_t BaseAddr,
   uint64_t Offset = 0;
   if (!Data.isValidOffset(Offset))
     return createStringError(std::errc::io_error,
-        "0x%8.8" PRIx64 ": missing LineTable MinDelta", Offset);
+                             "0x%8.8" PRIx64 ": missing LineTable MinDelta",
+                             Offset);
   int64_t MinDelta = Data.getSLEB128(&Offset);
   if (!Data.isValidOffset(Offset))
     return createStringError(std::errc::io_error,
-        "0x%8.8" PRIx64 ": missing LineTable MaxDelta", Offset);
+                             "0x%8.8" PRIx64 ": missing LineTable MaxDelta",
+                             Offset);
   int64_t MaxDelta = Data.getSLEB128(&Offset);
   int64_t LineRange = MaxDelta - MinDelta + 1;
   if (!Data.isValidOffset(Offset))
     return createStringError(std::errc::io_error,
-        "0x%8.8" PRIx64 ": missing LineTable FirstLine", Offset);
+                             "0x%8.8" PRIx64 ": missing LineTable FirstLine",
+                             Offset);
   const uint32_t FirstLine = (uint32_t)Data.getULEB128(&Offset);
   LineEntry Row(BaseAddr, 1, FirstLine);
   bool Done = false;
   while (!Done) {
     if (!Data.isValidOffset(Offset))
       return createStringError(std::errc::io_error,
-          "0x%8.8" PRIx64 ": EOF found before EndSequence", Offset);
+                               "0x%8.8" PRIx64 ": EOF found before EndSequence",
+                               Offset);
     uint8_t Op = Data.getU8(&Offset);
     switch (Op) {
     case EndSequence:
@@ -80,16 +84,16 @@ static llvm::Error parse(DataExtractor &Data, uint64_t BaseAddr,
       break;
     case SetFile:
       if (!Data.isValidOffset(Offset))
-        return createStringError(std::errc::io_error,
-            "0x%8.8" PRIx64 ": EOF found before SetFile value",
-            Offset);
+        return createStringError(
+            std::errc::io_error,
+            "0x%8.8" PRIx64 ": EOF found before SetFile value", Offset);
       Row.File = (uint32_t)Data.getULEB128(&Offset);
       break;
     case AdvancePC:
       if (!Data.isValidOffset(Offset))
-        return createStringError(std::errc::io_error,
-            "0x%8.8" PRIx64 ": EOF found before AdvancePC value",
-            Offset);
+        return createStringError(
+            std::errc::io_error,
+            "0x%8.8" PRIx64 ": EOF found before AdvancePC value", Offset);
       Row.Addr += Data.getULEB128(&Offset);
       // If the function callback returns false, we stop parsing.
       if (Callback(Row) == false)
@@ -97,23 +101,23 @@ static llvm::Error parse(DataExtractor &Data, uint64_t BaseAddr,
       break;
     case AdvanceLine:
       if (!Data.isValidOffset(Offset))
-        return createStringError(std::errc::io_error,
-            "0x%8.8" PRIx64 ": EOF found before AdvanceLine value",
-            Offset);
+        return createStringError(
+            std::errc::io_error,
+            "0x%8.8" PRIx64 ": EOF found before AdvanceLine value", Offset);
       Row.Line += Data.getSLEB128(&Offset);
       break;
     default: {
-        // A byte that contains both address and line increment.
-        uint8_t AdjustedOp = Op - FirstSpecial;
-        int64_t LineDelta = MinDelta + (AdjustedOp % LineRange);
-        uint64_t AddrDelta = (AdjustedOp / LineRange);
-        Row.Line += LineDelta;
-        Row.Addr += AddrDelta;
-        // If the function callback returns false, we stop parsing.
-        if (Callback(Row) == false)
-          return Error::success();
-        break;
-      }
+      // A byte that contains both address and line increment.
+      uint8_t AdjustedOp = Op - FirstSpecial;
+      int64_t LineDelta = MinDelta + (AdjustedOp % LineRange);
+      uint64_t AddrDelta = (AdjustedOp / LineRange);
+      Row.Line += LineDelta;
+      Row.Addr += AddrDelta;
+      // If the function callback returns false, we stop parsing.
+      if (Callback(Row) == false)
+        return Error::success();
+      break;
+    }
     }
   }
   return Error::success();
@@ -200,10 +204,11 @@ llvm::Error LineTable::encode(FileWriter &Out, uint64_t BaseAddr) const {
 
   for (const auto &Curr : Lines) {
     if (Curr.Addr < BaseAddr)
-      return createStringError(std::errc::invalid_argument,
-                               "LineEntry has address 0x%" PRIx64 " which is "
-                               "less than the function start address 0x%"
-                               PRIx64, Curr.Addr, BaseAddr);
+      return createStringError(
+          std::errc::invalid_argument,
+          "LineEntry has address 0x%" PRIx64 " which is "
+          "less than the function start address 0x%" PRIx64,
+          Curr.Addr, BaseAddr);
     if (Curr.Addr < Prev.Addr)
       return createStringError(std::errc::invalid_argument,
                                "LineEntry in LineTable not in ascending order");
@@ -263,15 +268,16 @@ llvm::Expected<LineTable> LineTable::decode(DataExtractor &Data,
 // We will need to determine if we need to cache the line table by calling
 // LineTable::parseAllEntries(...) or just call this function each time.
 // There is a CPU vs memory tradeoff we will need to determined.
-Expected<LineEntry> LineTable::lookup(DataExtractor &Data, uint64_t BaseAddr, uint64_t Addr) {
+Expected<LineEntry> LineTable::lookup(DataExtractor &Data, uint64_t BaseAddr,
+                                      uint64_t Addr) {
   LineEntry Result;
-  llvm::Error Err = parse(Data, BaseAddr,
-                          [Addr, &Result](const LineEntry &Row) -> bool {
-    if (Addr < Row.Addr)
-      return false; // Stop parsing, result contains the line table row!
-    Result = Row;
-    return true; // Keep parsing till we find the right row.
-  });
+  llvm::Error Err =
+      parse(Data, BaseAddr, [Addr, &Result](const LineEntry &Row) -> bool {
+        if (Addr < Row.Addr)
+          return false; // Stop parsing, result contains the line table row!
+        Result = Row;
+        return true; // Keep parsing till we find the right row.
+      });
   if (Err)
     return std::move(Err);
   if (Result.isValid())

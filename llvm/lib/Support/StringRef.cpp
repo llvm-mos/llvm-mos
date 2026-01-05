@@ -85,8 +85,7 @@ int StringRef::compare_numeric(StringRef RHS) const {
 }
 
 // Compute the edit distance between the two given strings.
-unsigned StringRef::edit_distance(llvm::StringRef Other,
-                                  bool AllowReplacements,
+unsigned StringRef::edit_distance(llvm::StringRef Other, bool AllowReplacements,
                                   unsigned MaxEditDistance) const {
   return llvm::ComputeEditDistance(ArrayRef(data(), size()),
                                    ArrayRef(Other.data(), Other.size()),
@@ -117,7 +116,6 @@ std::string StringRef::upper() const {
 //===----------------------------------------------------------------------===//
 // String Searching
 //===----------------------------------------------------------------------===//
-
 
 /// find - Search for the first string \arg Str in the string.
 ///
@@ -168,8 +166,8 @@ size_t StringRef::find(StringRef Str, size_t From) const {
   // Build the bad char heuristic table, with uint8_t to reduce cache thrashing.
   uint8_t BadCharSkip[256];
   std::memset(BadCharSkip, N, 256);
-  for (unsigned i = 0; i != N-1; ++i)
-    BadCharSkip[(uint8_t)Str[i]] = N-1-i;
+  for (unsigned i = 0; i != N - 1; ++i)
+    BadCharSkip[(uint8_t)Str[i]] = N - 1 - i;
 
   do {
     uint8_t Last = Start[N - 1];
@@ -305,9 +303,8 @@ StringRef::size_type StringRef::find_last_not_of(StringRef Chars,
   return npos;
 }
 
-void StringRef::split(SmallVectorImpl<StringRef> &A,
-                      StringRef Separator, int MaxSplit,
-                      bool KeepEmpty) const {
+void StringRef::split(SmallVectorImpl<StringRef> &A, StringRef Separator,
+                      int MaxSplit, bool KeepEmpty) const {
   StringRef S = *this;
 
   // Count down from MaxSplit. When MaxSplit is -1, this will just split
@@ -408,7 +405,8 @@ bool llvm::consumeUnsignedInteger(StringRef &Str, unsigned Radix,
     Radix = getAutoSenseRadix(Str);
 
   // Empty strings (after the radix autosense) are invalid.
-  if (Str.empty()) return true;
+  if (Str.empty())
+    return true;
 
   // Parse all the bytes of the string given this radix.  Watch for overflow.
   StringRef Str2 = Str;
@@ -509,7 +507,8 @@ bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
   assert(Radix > 1 && Radix <= 36);
 
   // Empty strings (after the radix autosense) are invalid.
-  if (Str.empty()) return true;
+  if (Str.empty())
+    return true;
 
   // Skip leading zeroes.  This can be a significant improvement if
   // it means we don't need > 64 bits.
@@ -524,7 +523,8 @@ bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
 
   // (Over-)estimate the required number of bits.
   unsigned Log2Radix = 0;
-  while ((1U << Log2Radix) < Radix) Log2Radix++;
+  while ((1U << Log2Radix) < Radix)
+    Log2Radix++;
   bool IsPowerOf2Radix = ((1U << Log2Radix) == Radix);
 
   unsigned BitWidth = Log2Radix * Str.size();
@@ -545,11 +545,11 @@ bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
   while (!Str.empty()) {
     unsigned CharVal;
     if (Str[0] >= '0' && Str[0] <= '9')
-      CharVal = Str[0]-'0';
+      CharVal = Str[0] - '0';
     else if (Str[0] >= 'a' && Str[0] <= 'z')
-      CharVal = Str[0]-'a'+10;
+      CharVal = Str[0] - 'a' + 10;
     else if (Str[0] >= 'A' && Str[0] <= 'Z')
-      CharVal = Str[0]-'A'+10;
+      CharVal = Str[0] - 'A' + 10;
     else
       break;
 
@@ -610,8 +610,7 @@ bool StringRef::getAsDouble(double &Result, bool AllowInexact) const {
 hash_code llvm::hash_value(StringRef S) { return hash_combine_range(S); }
 
 unsigned DenseMapInfo<StringRef, void>::getHashValue(StringRef Val) {
-  assert(Val.data() != getEmptyKey().data() &&
-         "Cannot hash the empty key!");
+  assert(Val.data() != getEmptyKey().data() && "Cannot hash the empty key!");
   assert(Val.data() != getTombstoneKey().data() &&
          "Cannot hash the tombstone key!");
   return (unsigned)(hash_value(Val));

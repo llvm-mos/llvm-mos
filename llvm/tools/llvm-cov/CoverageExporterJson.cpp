@@ -72,13 +72,14 @@ using namespace llvm;
 
 namespace {
 
-// The JSON library accepts int64_t, but profiling counts are stored as uint64_t.
-// Therefore we need to explicitly convert from unsigned to signed, since a naive
-// cast is implementation-defined behavior when the unsigned value cannot be
-// represented as a signed value. We choose to clamp the values to preserve the
-// invariant that counts are always >= 0.
+// The JSON library accepts int64_t, but profiling counts are stored as
+// uint64_t. Therefore we need to explicitly convert from unsigned to signed,
+// since a naive cast is implementation-defined behavior when the unsigned value
+// cannot be represented as a signed value. We choose to clamp the values to
+// preserve the invariant that counts are always >= 0.
 int64_t clamp_uint64_to_int64(uint64_t u) {
-  return std::min(u, static_cast<uint64_t>(std::numeric_limits<int64_t>::max()));
+  return std::min(u,
+                  static_cast<uint64_t>(std::numeric_limits<int64_t>::max()));
 }
 
 json::Array renderSegment(const coverage::CoverageSegment &Segment) {
@@ -88,10 +89,10 @@ json::Array renderSegment(const coverage::CoverageSegment &Segment) {
 }
 
 json::Array renderRegion(const coverage::CountedRegion &Region) {
-  return json::Array({Region.LineStart, Region.ColumnStart, Region.LineEnd,
-                      Region.ColumnEnd, clamp_uint64_to_int64(Region.ExecutionCount),
-                      Region.FileID, Region.ExpandedFileID,
-                      int64_t(Region.Kind)});
+  return json::Array(
+      {Region.LineStart, Region.ColumnStart, Region.LineEnd, Region.ColumnEnd,
+       clamp_uint64_to_int64(Region.ExecutionCount), Region.FileID,
+       Region.ExpandedFileID, int64_t(Region.Kind)});
 }
 
 json::Array renderBranch(const coverage::CountedRegion &Region) {

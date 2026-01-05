@@ -158,7 +158,7 @@ void TpiStream::buildHashMap() {
 
 std::vector<TypeIndex> TpiStream::findRecordsByName(StringRef Name) const {
   if (!supportsTypeLookup())
-    const_cast<TpiStream*>(this)->buildHashMap();
+    const_cast<TpiStream *>(this)->buildHashMap();
 
   uint32_t Bucket = hashStringV1(Name) % Header->NumHashBuckets;
   if (Bucket > HashMap.size())
@@ -178,7 +178,7 @@ bool TpiStream::supportsTypeLookup() const { return !HashMap.empty(); }
 Expected<TypeIndex>
 TpiStream::findFullDeclForForwardRef(TypeIndex ForwardRefTI) const {
   if (!supportsTypeLookup())
-    const_cast<TpiStream*>(this)->buildHashMap();
+    const_cast<TpiStream *>(this)->buildHashMap();
 
   CVType F = Types->getType(ForwardRefTI);
   if (!isUdtForwardRef(F))

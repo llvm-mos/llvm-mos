@@ -24,8 +24,7 @@ namespace {
 class COFFDumper {
   const object::COFFObjectFile &Obj;
   COFFYAML::Object YAMLObj;
-  template <typename T>
-  void dumpOptionalHeader(T OptionalHeader);
+  template <typename T> void dumpOptionalHeader(T OptionalHeader);
   void dumpHeader();
   void dumpSections(unsigned numSections);
   void dumpSymbols(unsigned numSymbols);
@@ -35,7 +34,7 @@ public:
   COFFYAML::Object &getYAMLObj();
 };
 
-}
+} // namespace
 
 COFFDumper::COFFDumper(const object::COFFObjectFile &Obj) : Obj(Obj) {
   if (const object::pe32_header *PE32Header = Obj.getPE32Header())
@@ -186,11 +185,11 @@ void COFFDumper::dumpSections(unsigned NumSections) {
     if (NewYAMLSection.Name == ".debug$S")
       NewYAMLSection.DebugS = CodeViewYAML::fromDebugS(sectionData, SC);
     else if (NewYAMLSection.Name == ".debug$T")
-      NewYAMLSection.DebugT = CodeViewYAML::fromDebugT(sectionData,
-                                                       NewYAMLSection.Name);
+      NewYAMLSection.DebugT =
+          CodeViewYAML::fromDebugT(sectionData, NewYAMLSection.Name);
     else if (NewYAMLSection.Name == ".debug$P")
-      NewYAMLSection.DebugP = CodeViewYAML::fromDebugT(sectionData,
-                                                       NewYAMLSection.Name);
+      NewYAMLSection.DebugP =
+          CodeViewYAML::fromDebugT(sectionData, NewYAMLSection.Name);
     else if (NewYAMLSection.Name == ".debug$H")
       NewYAMLSection.DebugH = CodeViewYAML::fromDebugH(sectionData);
 
@@ -201,10 +200,10 @@ void COFFDumper::dumpSections(unsigned NumSections) {
       object::symbol_iterator Sym = Reloc.getSymbol();
       Expected<StringRef> SymbolNameOrErr = Sym->getName();
       if (!SymbolNameOrErr) {
-       std::string Buf;
-       raw_string_ostream OS(Buf);
-       logAllUnhandledErrors(SymbolNameOrErr.takeError(), OS);
-       report_fatal_error(Twine(OS.str()));
+        std::string Buf;
+        raw_string_ostream OS(Buf);
+        logAllUnhandledErrors(SymbolNameOrErr.takeError(), OS);
+        report_fatal_error(Twine(OS.str()));
       }
       if (SymbolUnique.lookup(*SymbolNameOrErr))
         Rel.SymbolName = *SymbolNameOrErr;
@@ -352,9 +351,7 @@ void COFFDumper::dumpSymbols(unsigned NumSymbols) {
   }
 }
 
-COFFYAML::Object &COFFDumper::getYAMLObj() {
-  return YAMLObj;
-}
+COFFYAML::Object &COFFDumper::getYAMLObj() { return YAMLObj; }
 
 std::error_code coff2yaml(raw_ostream &Out, const object::COFFObjectFile &Obj) {
   COFFDumper Dumper(Obj);

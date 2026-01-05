@@ -33,10 +33,10 @@ class MCTargetOptions;
 class MCValue;
 
 struct ELFRelocationEntry {
-  uint64_t Offset; // Where is the relocation.
+  uint64_t Offset;           // Where is the relocation.
   const MCSymbolELF *Symbol; // The symbol to relocate with.
-  unsigned Type;   // The type of the relocation.
-  uint64_t Addend; // The addend to use.
+  unsigned Type;             // The type of the relocation.
+  uint64_t Addend;           // The addend to use.
 
   ELFRelocationEntry(uint64_t Offset, const MCSymbolELF *Symbol, unsigned Type,
                      uint64_t Addend)
@@ -71,17 +71,17 @@ public:
 
   static uint8_t getOSABI(Triple::OSType OSType) {
     switch (OSType) {
-      case Triple::HermitCore:
-        return ELF::ELFOSABI_STANDALONE;
-      case Triple::PS4:
-      case Triple::FreeBSD:
-        return ELF::ELFOSABI_FREEBSD;
-      case Triple::Solaris:
-        return ELF::ELFOSABI_SOLARIS;
-      case Triple::OpenBSD:
-        return ELF::ELFOSABI_OPENBSD;
-      default:
-        return ELF::ELFOSABI_NONE;
+    case Triple::HermitCore:
+      return ELF::ELFOSABI_STANDALONE;
+    case Triple::PS4:
+    case Triple::FreeBSD:
+      return ELF::ELFOSABI_FREEBSD;
+    case Triple::Solaris:
+      return ELF::ELFOSABI_SOLARIS;
+    case Triple::OpenBSD:
+      return ELF::ELFOSABI_OPENBSD;
+    default:
+      return ELF::ELFOSABI_NONE;
     }
   }
 

@@ -53,7 +53,7 @@ public:
                        DenseMap<Value *, Value *> &SimplifiedValues,
                        ScalarEvolution &SE, const Loop *L)
       : SimplifiedValues(SimplifiedValues), SE(SE), L(L) {
-      IterationNumber = SE.getConstant(APInt(64, Iteration));
+    IterationNumber = SE.getConstant(APInt(64, Iteration));
   }
 
   // Allow access to the initial visit method.
@@ -91,5 +91,5 @@ private:
   LLVM_ABI bool visitCmpInst(CmpInst &I);
   LLVM_ABI bool visitPHINode(PHINode &PN);
 };
-}
+} // namespace llvm
 #endif

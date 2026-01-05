@@ -69,11 +69,11 @@ private:
   mutable std::set<changeset_ty> FailedTestsCache;
 
   // FIXME: Gross.
-  std::map<change_ty, std::vector<change_ty> > Predecessors;
-  std::map<change_ty, std::vector<change_ty> > Successors;
+  std::map<change_ty, std::vector<change_ty>> Predecessors;
+  std::map<change_ty, std::vector<change_ty>> Successors;
 
-  std::map<change_ty, std::set<change_ty> > PredClosure;
-  std::map<change_ty, std::set<change_ty> > SuccClosure;
+  std::map<change_ty, std::set<change_ty>> PredClosure;
+  std::map<change_ty, std::set<change_ty>> SuccClosure;
 
 private:
   pred_iterator_ty pred_begin(change_ty Node) {
@@ -158,7 +158,7 @@ class DeltaActiveSetHelper : public DeltaAlgorithm {
 protected:
   /// UpdatedSearchState - Callback used when the search state changes.
   void UpdatedSearchState(const changeset_ty &Changes,
-                                  const changesetlist_ty &Sets) override {
+                          const changesetlist_ty &Sets) override {
     DDAI.UpdatedSearchState(Changes, Sets, Required);
   }
 
@@ -199,8 +199,8 @@ DAGDeltaAlgorithmImpl::DAGDeltaAlgorithmImpl(
     Worklist.pop_back();
 
     std::set<change_ty> &ChangeSuccs = SuccClosure[Change];
-    for (pred_iterator_ty it = pred_begin(Change),
-           ie = pred_end(Change); it != ie; ++it) {
+    for (pred_iterator_ty it = pred_begin(Change), ie = pred_end(Change);
+         it != ie; ++it) {
       auto &SC = SuccClosure[*it];
       SC.insert(Change);
       SC.insert(ChangeSuccs.begin(), ChangeSuccs.end());
@@ -297,8 +297,7 @@ bool DAGDeltaAlgorithmImpl::GetTestResult(const changeset_ty &Changes,
   return Result;
 }
 
-DAGDeltaAlgorithm::changeset_ty
-DAGDeltaAlgorithmImpl::Run() {
+DAGDeltaAlgorithm::changeset_ty DAGDeltaAlgorithmImpl::Run() {
   // The current set of changes we are minimizing, starting at the roots.
   changeset_ty CurrentSet(Roots.begin(), Roots.end());
 
@@ -342,8 +341,7 @@ DAGDeltaAlgorithmImpl::Run() {
   return Required;
 }
 
-void DAGDeltaAlgorithm::anchor() {
-}
+void DAGDeltaAlgorithm::anchor() {}
 
 DAGDeltaAlgorithm::changeset_ty
 DAGDeltaAlgorithm::Run(const changeset_ty &Changes,

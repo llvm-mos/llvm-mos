@@ -153,8 +153,8 @@ void NVPTXAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
   // Special: Do not mangle symbol operand of CALL_PROTOTYPE
   if (MI->getOpcode() == NVPTX::CALL_PROTOTYPE) {
     const MachineOperand &MO = MI->getOperand(0);
-    OutMI.addOperand(GetSymbolRef(
-      OutContext.getOrCreateSymbol(Twine(MO.getSymbolName()))));
+    OutMI.addOperand(
+        GetSymbolRef(OutContext.getOrCreateSymbol(Twine(MO.getSymbolName()))));
     return;
   }
 
@@ -383,9 +383,7 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
   OutStreamer->emitRawText(O.str());
 }
 
-void NVPTXAsmPrinter::emitFunctionBodyEnd() {
-  VRegMapping.clear();
-}
+void NVPTXAsmPrinter::emitFunctionBodyEnd() { VRegMapping.clear(); }
 
 const MCSymbol *NVPTXAsmPrinter::getFunctionFrameSymbol(int) const {
   SmallString<128> Str;
@@ -493,8 +491,7 @@ std::string NVPTXAsmPrinter::getVirtualRegisterName(unsigned Reg) const {
   return Name;
 }
 
-void NVPTXAsmPrinter::emitVirtualRegister(unsigned int vr,
-                                          raw_ostream &O) {
+void NVPTXAsmPrinter::emitVirtualRegister(unsigned int vr, raw_ostream &O) {
   O << getVirtualRegisterName(vr);
 }
 
@@ -753,7 +750,7 @@ void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
 
   bool HasFullDebugInfo = false;
   for (DICompileUnit *CU : M.debug_compile_units()) {
-    switch(CU->getEmissionKind()) {
+    switch (CU->getEmissionKind()) {
     case DICompileUnit::NoDebug:
     case DICompileUnit::DebugDirectivesOnly:
       break;
@@ -1129,7 +1126,8 @@ void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
     }
     // Generate a per-byte mask() operator for the symbol, which looks like:
     //   .global .u8 addr[] = {0xFF(foo), 0xFF00(foo), 0xFF0000(foo), ...};
-    // See https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#initializers
+    // See
+    // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#initializers
     std::string symText;
     llvm::raw_string_ostream oss(symText);
     printSymbol(nSym, oss);
@@ -1204,8 +1202,8 @@ void NVPTXAsmPrinter::emitPTXAddressSpace(unsigned int AddressSpace,
   }
 }
 
-std::string
-NVPTXAsmPrinter::getPTXFundamentalTypeStr(Type *Ty, bool useB4PTR) const {
+std::string NVPTXAsmPrinter::getPTXFundamentalTypeStr(Type *Ty,
+                                                      bool useB4PTR) const {
   switch (Ty->getTypeID()) {
   case Type::IntegerTyID: {
     unsigned NumBits = cast<IntegerType>(Ty)->getBitWidth();
@@ -1731,9 +1729,9 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
   llvm_unreachable("unsupported constant type in printAggregateConstant()");
 }
 
-/// lowerConstantForGV - Return an MCExpr for the given Constant.  This is mostly
-/// a copy from AsmPrinter::lowerConstant, except customized to only handle
-/// expressions that are representable in PTX and create
+/// lowerConstantForGV - Return an MCExpr for the given Constant.  This is
+/// mostly a copy from AsmPrinter::lowerConstant, except customized to only
+/// handle expressions that are representable in PTX and create
 /// NVPTXGenericMCSymbolRefExpr nodes for addrspacecast instructions.
 const MCExpr *
 NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV,
@@ -1778,8 +1776,8 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV,
     APInt OffsetAI(DL.getPointerTypeSizeInBits(CE->getType()), 0);
     cast<GEPOperator>(CE)->accumulateConstantOffset(DL, OffsetAI);
 
-    const MCExpr *Base = lowerConstantForGV(CE->getOperand(0),
-                                            ProcessingGeneric);
+    const MCExpr *Base =
+        lowerConstantForGV(CE->getOperand(0), ProcessingGeneric);
     if (!OffsetAI)
       return Base;
 
@@ -1830,18 +1828,23 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV,
     // the high bits so we are sure to get a proper truncation if the input is
     // a constant expr.
     unsigned InBits = DL.getTypeAllocSizeInBits(Op->getType());
-    const MCExpr *MaskExpr = MCConstantExpr::create(~0ULL >> (64-InBits), Ctx);
+    const MCExpr *MaskExpr =
+        MCConstantExpr::create(~0ULL >> (64 - InBits), Ctx);
     return MCBinaryExpr::createAnd(OpExpr, MaskExpr, Ctx);
   }
 
   // The MC library also has a right-shift operator, but it isn't consistently
   // signed or unsigned between different targets.
   case Instruction::Add: {
-    const MCExpr *LHS = lowerConstantForGV(CE->getOperand(0), ProcessingGeneric);
-    const MCExpr *RHS = lowerConstantForGV(CE->getOperand(1), ProcessingGeneric);
+    const MCExpr *LHS =
+        lowerConstantForGV(CE->getOperand(0), ProcessingGeneric);
+    const MCExpr *RHS =
+        lowerConstantForGV(CE->getOperand(1), ProcessingGeneric);
     switch (CE->getOpcode()) {
-    default: llvm_unreachable("Unknown binary operator constant cast expr");
-    case Instruction::Add: return MCBinaryExpr::createAdd(LHS, RHS, Ctx);
+    default:
+      llvm_unreachable("Unknown binary operator constant cast expr");
+    case Instruction::Add:
+      return MCBinaryExpr::createAdd(LHS, RHS, Ctx);
     }
   }
   }
@@ -1858,7 +1861,7 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV,
   raw_string_ostream OS(S);
   OS << "Unsupported expression in static initializer: ";
   CE->printAsOperand(OS, /*PrintType=*/false,
-                 !MF ? nullptr : MF->getFunction().getParent());
+                     !MF ? nullptr : MF->getFunction().getParent());
   report_fatal_error(Twine(OS.str()));
 }
 

@@ -27,10 +27,10 @@ using namespace llvm;
 namespace {
 
 class COFFAsmParser : public MCAsmParserExtension {
-  template<bool (COFFAsmParser::*HandlerMethod)(StringRef, SMLoc)>
+  template <bool (COFFAsmParser::*HandlerMethod)(StringRef, SMLoc)>
   void addDirectiveHandler(StringRef Directive) {
-    MCAsmParser::ExtensionDirectiveHandler Handler = std::make_pair(
-        this, HandleDirective<COFFAsmParser, HandlerMethod>);
+    MCAsmParser::ExtensionDirectiveHandler Handler =
+        std::make_pair(this, HandleDirective<COFFAsmParser, HandlerMethod>);
     getParser().addDirectiveHandler(Directive, Handler);
   }
 
@@ -286,9 +286,9 @@ bool COFFAsmParser::parseSectionFlags(StringRef SectionName,
 ///  ::= { ".weak", ... } [ identifier ( , identifier )* ]
 bool COFFAsmParser::parseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
   MCSymbolAttr Attr = StringSwitch<MCSymbolAttr>(Directive)
-    .Case(".weak", MCSA_Weak)
-    .Case(".weak_anti_dep", MCSA_WeakAntiDep)
-    .Default(MCSA_Invalid);
+                          .Case(".weak", MCSA_Weak)
+                          .Case(".weak_anti_dep", MCSA_WeakAntiDep)
+                          .Default(MCSA_Invalid);
   assert(Attr != MCSA_Invalid && "unexpected symbol attribute directive!");
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     while (true) {
@@ -373,8 +373,7 @@ bool COFFAsmParser::parseSectionArguments(StringRef, SMLoc) {
     return TokError("expected identifier in directive");
 
   unsigned Flags = COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                   COFF::IMAGE_SCN_MEM_READ |
-                   COFF::IMAGE_SCN_MEM_WRITE;
+                   COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE;
 
   if (getLexer().is(AsmToken::Comma)) {
     Lex();
@@ -616,14 +615,14 @@ bool COFFAsmParser::parseCOMDATType(COFF::COMDATType &Type) {
   StringRef TypeId = getTok().getIdentifier();
 
   Type = StringSwitch<COFF::COMDATType>(TypeId)
-    .Case("one_only", COFF::IMAGE_COMDAT_SELECT_NODUPLICATES)
-    .Case("discard", COFF::IMAGE_COMDAT_SELECT_ANY)
-    .Case("same_size", COFF::IMAGE_COMDAT_SELECT_SAME_SIZE)
-    .Case("same_contents", COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH)
-    .Case("associative", COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE)
-    .Case("largest", COFF::IMAGE_COMDAT_SELECT_LARGEST)
-    .Case("newest", COFF::IMAGE_COMDAT_SELECT_NEWEST)
-    .Default((COFF::COMDATType)0);
+             .Case("one_only", COFF::IMAGE_COMDAT_SELECT_NODUPLICATES)
+             .Case("discard", COFF::IMAGE_COMDAT_SELECT_ANY)
+             .Case("same_size", COFF::IMAGE_COMDAT_SELECT_SAME_SIZE)
+             .Case("same_contents", COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH)
+             .Case("associative", COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE)
+             .Case("largest", COFF::IMAGE_COMDAT_SELECT_LARGEST)
+             .Case("newest", COFF::IMAGE_COMDAT_SELECT_NEWEST)
+             .Default((COFF::COMDATType)0);
 
   if (Type == 0)
     return TokError(Twine("unrecognized COMDAT type '" + TypeId + "'"));
@@ -798,8 +797,6 @@ bool COFFAsmParser::parseAtUnwindOrAtExcept(bool &unwind, bool &except) {
 
 namespace llvm {
 
-MCAsmParserExtension *createCOFFAsmParser() {
-  return new COFFAsmParser;
-}
+MCAsmParserExtension *createCOFFAsmParser() { return new COFFAsmParser; }
 
 } // end namespace llvm

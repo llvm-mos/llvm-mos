@@ -153,7 +153,7 @@ private:
   enum CFGToSink { Return, DirectSink, SinkOrSelfLoop, EndOfCFGToLink };
 
 public:
-  InsertCFGStrategy(uint64_t MNC = 8) : MaxNumCases(MNC){};
+  InsertCFGStrategy(uint64_t MNC = 8) : MaxNumCases(MNC) {};
   uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
                      uint64_t CurrentWeight) override {
     return 5;

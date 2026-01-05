@@ -42,16 +42,16 @@ private:
   enum Lowering { TouchAndSub, Sub, Probe };
 
   /// Deterministic-order map from DynAlloca instruction to desired lowering.
-  typedef MapVector<MachineInstr*, Lowering> LoweringMap;
+  typedef MapVector<MachineInstr *, Lowering> LoweringMap;
 
   /// Compute which lowering to use for each DynAlloca instruction.
-  void computeLowerings(MachineFunction &MF, LoweringMap& Lowerings);
+  void computeLowerings(MachineFunction &MF, LoweringMap &Lowerings);
 
   /// Get the appropriate lowering based on current offset and amount.
   Lowering getLowering(int64_t CurrentOffset, int64_t AllocaAmount);
 
   /// Lower a DynAlloca instruction.
-  void lower(MachineInstr* MI, Lowering L);
+  void lower(MachineInstr *MI, Lowering L);
 
   MachineRegisterInfo *MRI = nullptr;
   const X86Subtarget *STI = nullptr;
@@ -105,8 +105,7 @@ static int64_t getDynAllocaAmount(MachineInstr *MI, MachineRegisterInfo *MRI) {
 }
 
 X86DynAllocaExpander::Lowering
-X86DynAllocaExpander::getLowering(int64_t CurrentOffset,
-                                  int64_t AllocaAmount) {
+X86DynAllocaExpander::getLowering(int64_t CurrentOffset, int64_t AllocaAmount) {
   // For a non-constant amount or a large amount, we have to probe.
   if (AllocaAmount < 0 || AllocaAmount > StackProbeSize)
     return Probe;
@@ -153,13 +152,14 @@ void X86DynAllocaExpander::computeLowerings(MachineFunction &MF,
   // pointer depends on register spills, which have not been computed yet.
 
   // Compute the reverse post-order.
-  ReversePostOrderTraversal<MachineFunction*> RPO(&MF);
+  ReversePostOrderTraversal<MachineFunction *> RPO(&MF);
 
   for (MachineBasicBlock *MBB : RPO) {
     int64_t Offset = -1;
     for (MachineBasicBlock *Pred : MBB->predecessors())
       Offset = std::max(Offset, OutOffset[Pred]);
-    if (Offset == -1) Offset = INT32_MAX;
+    if (Offset == -1)
+      Offset = INT32_MAX;
 
     for (MachineInstr &MI : *MBB) {
       if (MI.getOpcode() == X86::DYN_ALLOCA_32 ||

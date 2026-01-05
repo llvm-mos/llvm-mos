@@ -90,9 +90,7 @@ public:
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
   bool enableInterleavedAccessVectorization() const override;
 
-  enum PPCRegisterClass {
-    GPRRC, FPRRC, VRRC, VSXRC
-  };
+  enum PPCRegisterClass { GPRRC, FPRRC, VRRC, VSXRC };
   unsigned getNumberOfRegisters(unsigned ClassID) const override;
   unsigned getRegisterClassForType(bool Vector,
                                    Type *Ty = nullptr) const override;

@@ -37,6 +37,6 @@ private:
   LinePrinter &Printer;
   bool DumpedAnything = false;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 #endif

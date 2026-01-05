@@ -38,13 +38,13 @@ MCAsmBackend *createMSP430MCAsmBackend(const Target &T,
                                        const MCRegisterInfo &MRI,
                                        const MCTargetOptions &Options);
 
-MCTargetStreamer *
-createMSP430ObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
+MCTargetStreamer *createMSP430ObjectTargetStreamer(MCStreamer &S,
+                                                   const MCSubtargetInfo &STI);
 
 std::unique_ptr<MCObjectTargetWriter>
 createMSP430ELFObjectWriter(uint8_t OSABI);
 
-} // End llvm namespace
+} // namespace llvm
 
 // Defines symbolic names for MSP430 registers.
 // This defines a mapping from register name to register number.

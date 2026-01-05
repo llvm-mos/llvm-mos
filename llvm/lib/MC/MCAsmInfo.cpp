@@ -76,16 +76,14 @@ void MCAsmInfo::addInitialFrameState(const MCCFIInstruction &Inst) {
 }
 
 const MCExpr *
-MCAsmInfo::getExprForPersonalitySymbol(const MCSymbol *Sym,
-                                       unsigned Encoding,
+MCAsmInfo::getExprForPersonalitySymbol(const MCSymbol *Sym, unsigned Encoding,
                                        MCStreamer &Streamer) const {
   return getExprForFDESymbol(Sym, Encoding, Streamer);
 }
 
-const MCExpr *
-MCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
-                               unsigned Encoding,
-                               MCStreamer &Streamer) const {
+const MCExpr *MCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
+                                             unsigned Encoding,
+                                             MCStreamer &Streamer) const {
   if (!(Encoding & dwarf::DW_EH_PE_pcrel))
     return MCSymbolRefExpr::create(Sym, Streamer.getContext());
 
@@ -121,7 +119,7 @@ bool MCAsmInfo::isValidUnquotedName(StringRef Name) const {
 bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
   // FIXME: Does .section .bss/.data/.text work everywhere??
   return SectionName == ".text" || SectionName == ".data" ||
-        (SectionName == ".bss" && !usesELFSectionDirectiveForBSS());
+         (SectionName == ".bss" && !usesELFSectionDirectiveForBSS());
 }
 
 void MCAsmInfo::initializeAtSpecifiers(ArrayRef<AtSpecifier> Descs) {

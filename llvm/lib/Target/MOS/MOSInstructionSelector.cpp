@@ -1319,8 +1319,7 @@ bool MOSInstructionSelector::selectAddr(MachineInstr &MI) {
   if (Op.isCImm())
     Op.ChangeToImmediate(Op.getCImm()->getSExtValue());
 
-  MachineInstrBuilder Instr = buildLdImm(Builder, MI.getOperand(0))
-                                  .add(Op);
+  MachineInstrBuilder Instr = buildLdImm(Builder, MI.getOperand(0)).add(Op);
   if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
     return false;
   MI.eraseFromParent();
@@ -1708,9 +1707,10 @@ bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
   if (LoConst && HiConst) {
     uint64_t Val =
         HiConst->Value.getZExtValue() << 8 | LoConst->Value.getZExtValue();
-    auto Instr = STI.hasSPC700()
-        ? Builder.buildInstr(MOS::LDImm16SPC700, {Dst}, {Val})
-        : Builder.buildInstr(MOS::LDImm16, {Dst, &MOS::GPRRegClass}, {Val});
+    auto Instr =
+        STI.hasSPC700()
+            ? Builder.buildInstr(MOS::LDImm16SPC700, {Dst}, {Val})
+            : Builder.buildInstr(MOS::LDImm16, {Dst, &MOS::GPRRegClass}, {Val});
     if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
       return false;
     MI.eraseFromParent();

@@ -65,7 +65,7 @@ int DisassembleOneInput(const uint8_t *Data, size_t Size) {
     Size -= Consumed;
     p += Consumed;
 
-    InstructionsProcessed ++;
+    InstructionsProcessed++;
     if (InsnLimit != 0 && InstructionsProcessed < InsnLimit)
       break;
   } while (Consumed != 0);

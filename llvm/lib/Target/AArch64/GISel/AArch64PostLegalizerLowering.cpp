@@ -71,7 +71,7 @@ struct ShuffleVectorPseudo {
   SmallVector<SrcOp, 2> SrcOps; ///< Source registers.
   ShuffleVectorPseudo(unsigned Opc, Register Dst,
                       std::initializer_list<SrcOp> SrcOps)
-      : Opc(Opc), Dst(Dst), SrcOps(SrcOps){};
+      : Opc(Opc), Dst(Dst), SrcOps(SrcOps) {};
   ShuffleVectorPseudo() = default;
 };
 

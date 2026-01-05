@@ -52,12 +52,10 @@ namespace stats {
 STATISTIC(EmittedFragments, "Number of emitted assembler fragments - total");
 STATISTIC(EmittedRelaxableFragments,
           "Number of emitted assembler fragments - relaxable");
-STATISTIC(EmittedDataFragments,
-          "Number of emitted assembler fragments - data");
+STATISTIC(EmittedDataFragments, "Number of emitted assembler fragments - data");
 STATISTIC(EmittedAlignFragments,
           "Number of emitted assembler fragments - align");
-STATISTIC(EmittedFillFragments,
-          "Number of emitted assembler fragments - fill");
+STATISTIC(EmittedFillFragments, "Number of emitted assembler fragments - fill");
 STATISTIC(EmittedNopsFragments, "Number of emitted assembler fragments - nops");
 STATISTIC(EmittedOrgFragments, "Number of emitted assembler fragments - org");
 STATISTIC(Fixups, "Number of fixups");
@@ -391,7 +389,7 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   // This variable (and its dummy usage) is to participate in the assert at
   // the end of the function.
   uint64_t Start = OS.tell();
-  (void) Start;
+  (void)Start;
 
   ++stats::EmittedFragments;
 
@@ -549,7 +547,6 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
 
     break;
   }
-
   }
 
   assert(OS.tell() - Start == FragmentSize &&
@@ -666,8 +663,9 @@ void MCAssembler::layout() {
   flushPendingErrors();
 
   DEBUG_WITH_TYPE("mc-dump", {
-      errs() << "assembler backend - final-layout\n--\n";
-      dump(); });
+    errs() << "assembler backend - final-layout\n--\n";
+    dump();
+  });
 
   // Allow the object writer a chance to perform post-layout binding (for
   // example, to set the index fields in the symbol data).
@@ -1055,7 +1053,7 @@ void MCAssembler::flushPendingErrors() const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MCAssembler::dump() const{
+LLVM_DUMP_METHOD void MCAssembler::dump() const {
   raw_ostream &OS = errs();
   DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>> FragToSyms;
   // Scan symbols and build a map of fragments to their corresponding symbols.

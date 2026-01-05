@@ -87,10 +87,11 @@ static cl::opt<int> MaxParametersForSplit(
     "hotcoldsplit-max-params", cl::init(4), cl::Hidden,
     cl::desc("Maximum number of parameters for a split function"));
 
-static cl::opt<int> ColdBranchProbDenom(
-    "hotcoldsplit-cold-probability-denom", cl::init(100), cl::Hidden,
-    cl::desc("Divisor of cold branch probability."
-             "BranchProbability = 1/ColdBranchProbDenom"));
+static cl::opt<int>
+    ColdBranchProbDenom("hotcoldsplit-cold-probability-denom", cl::init(100),
+                        cl::Hidden,
+                        cl::desc("Divisor of cold branch probability."
+                                 "BranchProbability = 1/ColdBranchProbDenom"));
 
 namespace {
 // Same as blockEndsInUnreachable in CodeGen/BranchFolding.cpp. Do not modify
@@ -108,8 +109,7 @@ bool blockEndsInUnreachable(const BasicBlock &BB) {
   return !(isa<ReturnInst>(I) || isa<IndirectBrInst>(I));
 }
 
-void analyzeProfMetadata(BasicBlock *BB,
-                         BranchProbability ColdProbThresh,
+void analyzeProfMetadata(BasicBlock *BB, BranchProbability ColdProbThresh,
                          SmallPtrSetImpl<BasicBlock *> &AnnotatedColdBlocks) {
   // TODO: Handle branches with > 2 successors.
   BranchInst *CondBr = dyn_cast<BranchInst>(BB->getTerminator());
@@ -237,7 +237,8 @@ bool HotColdSplitting::isBasicBlockCold(
     if (PSI->isColdBlock(BB, BFI))
       return true;
   } else {
-    // Find cold blocks of successors of BB during a reverse postorder traversal.
+    // Find cold blocks of successors of BB during a reverse postorder
+    // traversal.
     analyzeProfMetadata(BB, ColdProbThresh, AnnotatedColdBlocks);
 
     // A statically cold BB would be known before it is visited
@@ -802,8 +803,8 @@ bool HotColdSplitting::run(Module &M) {
   return Changed;
 }
 
-PreservedAnalyses
-HotColdSplittingPass::run(Module &M, ModuleAnalysisManager &AM) {
+PreservedAnalyses HotColdSplittingPass::run(Module &M,
+                                            ModuleAnalysisManager &AM) {
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
   auto LookupAC = [&FAM](Function &F) -> AssumptionCache * {

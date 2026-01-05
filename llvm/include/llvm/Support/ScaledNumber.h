@@ -527,9 +527,7 @@ public:
     return ScaledNumber(DigitsLimits::max(), ScaledNumbers::MaxScale);
   }
   static ScaledNumber get(uint64_t N) { return adjustToWidth(N, 0); }
-  static ScaledNumber getInverse(uint64_t N) {
-    return get(N).invert();
-  }
+  static ScaledNumber getInverse(uint64_t N) { return get(N).invert(); }
   static ScaledNumber getFraction(DigitsType N, DigitsType D) {
     return getQuotient(N, D);
   }
@@ -724,10 +722,10 @@ private:
                                     const ScaledNumber<DigitsT> &R) {          \
     return ScaledNumber<DigitsT>(L) base R;                                    \
   }
-SCALED_NUMBER_BOP(+, += )
-SCALED_NUMBER_BOP(-, -= )
-SCALED_NUMBER_BOP(*, *= )
-SCALED_NUMBER_BOP(/, /= )
+SCALED_NUMBER_BOP(+, +=)
+SCALED_NUMBER_BOP(-, -=)
+SCALED_NUMBER_BOP(*, *=)
+SCALED_NUMBER_BOP(/, /=)
 #undef SCALED_NUMBER_BOP
 
 template <class DigitsT>
@@ -761,12 +759,12 @@ raw_ostream &operator<<(raw_ostream &OS, const ScaledNumber<DigitsT> &X) {
   SCALED_NUMBER_COMPARE_TO_TYPE(op, uint32_t, uint64_t)                        \
   SCALED_NUMBER_COMPARE_TO_TYPE(op, int64_t, int64_t)                          \
   SCALED_NUMBER_COMPARE_TO_TYPE(op, int32_t, int64_t)
-SCALED_NUMBER_COMPARE_TO(< )
-SCALED_NUMBER_COMPARE_TO(> )
-SCALED_NUMBER_COMPARE_TO(== )
-SCALED_NUMBER_COMPARE_TO(!= )
-SCALED_NUMBER_COMPARE_TO(<= )
-SCALED_NUMBER_COMPARE_TO(>= )
+SCALED_NUMBER_COMPARE_TO(<)
+SCALED_NUMBER_COMPARE_TO(>)
+SCALED_NUMBER_COMPARE_TO(==)
+SCALED_NUMBER_COMPARE_TO(!=)
+SCALED_NUMBER_COMPARE_TO(<=)
+SCALED_NUMBER_COMPARE_TO(>=)
 #undef SCALED_NUMBER_COMPARE_TO
 #undef SCALED_NUMBER_COMPARE_TO_TYPE
 
@@ -801,8 +799,8 @@ IntT ScaledNumber<DigitsT>::toInt() const {
 }
 
 template <class DigitsT>
-ScaledNumber<DigitsT> &ScaledNumber<DigitsT>::
-operator*=(const ScaledNumber &X) {
+ScaledNumber<DigitsT> &
+ScaledNumber<DigitsT>::operator*=(const ScaledNumber &X) {
   if (isZero())
     return *this;
   if (X.isZero())
@@ -818,8 +816,8 @@ operator*=(const ScaledNumber &X) {
   return *this <<= Scales;
 }
 template <class DigitsT>
-ScaledNumber<DigitsT> &ScaledNumber<DigitsT>::
-operator/=(const ScaledNumber &X) {
+ScaledNumber<DigitsT> &
+ScaledNumber<DigitsT>::operator/=(const ScaledNumber &X) {
   if (isZero())
     return *this;
   if (X.isZero())
@@ -889,7 +887,6 @@ template <class DigitsT> void ScaledNumber<DigitsT>::shiftRight(int32_t Shift) {
 
   Digits >>= Shift;
 }
-
 
 } // end namespace llvm
 

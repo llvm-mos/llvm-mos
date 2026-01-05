@@ -53,7 +53,7 @@ public:
     AU.addPreserved<DominatorTreeWrapperPass>();
   }
 };
-}
+} // namespace
 char UnreachableBlockElimLegacyPass::ID = 0;
 INITIALIZE_PASS(UnreachableBlockElimLegacyPass, "unreachableblockelim",
                 "Remove unreachable blocks from the CFG", false, false)
@@ -141,19 +141,21 @@ bool UnreachableMachineBlockElim::run(MachineFunction &F) {
 
   // Mark all reachable blocks.
   for (MachineBasicBlock *BB : depth_first_ext(&F, Reachable))
-    (void)BB/* Mark all reachable blocks */;
+    (void)BB /* Mark all reachable blocks */;
 
   // Loop over all dead blocks, remembering them and deleting all instructions
   // in them.
-  std::vector<MachineBasicBlock*> DeadBlocks;
+  std::vector<MachineBasicBlock *> DeadBlocks;
   for (MachineBasicBlock &BB : F) {
     // Test for deadness.
     if (!Reachable.count(&BB)) {
       DeadBlocks.push_back(&BB);
 
       // Update dominator and loop info.
-      if (MLI) MLI->removeBlock(&BB);
-      if (MDT && MDT->getNode(&BB)) MDT->eraseNode(&BB);
+      if (MLI)
+        MLI->removeBlock(&BB);
+      if (MDT && MDT->getNode(&BB))
+        MDT->eraseNode(&BB);
 
       while (!BB.succ_empty()) {
         (*BB.succ_begin())->removePHIsIncomingValuesForPredecessor(BB);

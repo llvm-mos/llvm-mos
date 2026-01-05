@@ -39,6 +39,6 @@ void widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond);
 /// path and that the branch remains widenable after transform.
 void setWidenableBranchCond(BranchInst *WidenableBR, Value *Cond);
 
-} // llvm
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_GUARDUTILS_H

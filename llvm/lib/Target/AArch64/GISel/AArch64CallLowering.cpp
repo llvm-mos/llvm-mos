@@ -58,7 +58,7 @@ using namespace AArch64GISelUtils;
 extern cl::opt<bool> EnableSVEGISel;
 
 AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
-  : CallLowering(&TLI) {}
+    : CallLowering(&TLI) {}
 
 static void applyStackPassedSmallTypeDAGHack(EVT OrigVT, MVT &ValVT,
                                              MVT &LocVT) {
@@ -584,7 +584,8 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
     return true;
   const auto &ST = MF.getSubtarget<AArch64Subtarget>();
   if (!ST.hasNEON() || !ST.hasFPARMv8()) {
-    LLVM_DEBUG(dbgs() << "Falling back to SDAG because we don't support no-NEON\n");
+    LLVM_DEBUG(
+        dbgs() << "Falling back to SDAG because we don't support no-NEON\n");
     return true;
   }
 
@@ -641,8 +642,8 @@ void AArch64CallLowering::saveVarArgRegisters(
           CCValAssign::getReg(i + MF.getFunction().getNumOperands(), MVT::i64,
                               GPRArgRegs[i], MVT::i64, CCValAssign::Full));
       auto MPO = IsWin64CC ? MachinePointerInfo::getFixedStack(
-                               MF, GPRIdx, (i - FirstVariadicGPR) * 8)
-                         : MachinePointerInfo::getStack(MF, i * 8);
+                                 MF, GPRIdx, (i - FirstVariadicGPR) * 8)
+                           : MachinePointerInfo::getStack(MF, i * 8);
       MIRBuilder.buildStore(Val, FIN, MPO, inferAlignFromPtrInfo(MF, MPO));
 
       FIN = MIRBuilder.buildPtrAdd(MRI.createGenericVirtualRegister(p0),
@@ -752,7 +753,8 @@ bool AArch64CallLowering::lowerFormalArguments(
     MIRBuilder.setInstr(*MBB.begin());
 
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
-  CCAssignFn *AssignFn = TLI.CCAssignFnForCall(F.getCallingConv(), IsWin64 && F.isVarArg());
+  CCAssignFn *AssignFn =
+      TLI.CCAssignFnForCall(F.getCallingConv(), IsWin64 && F.isVarArg());
 
   AArch64IncomingValueAssigner Assigner(AssignFn, AssignFn);
   FormalArgHandler Handler(MIRBuilder, MRI);
@@ -777,7 +779,8 @@ bool AArch64CallLowering::lowerFormalArguments(
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   uint64_t StackSize = Assigner.StackSize;
   if (F.isVarArg()) {
-    if ((!Subtarget.isTargetDarwin() && !Subtarget.isWindowsArm64EC()) || IsWin64) {
+    if ((!Subtarget.isTargetDarwin() && !Subtarget.isWindowsArm64EC()) ||
+        IsWin64) {
       // The AAPCS variadic function ABI is identical to the non-variadic
       // one. As a result there may be more arguments in registers and we should
       // save them for future reference.
@@ -968,8 +971,7 @@ bool AArch64CallLowering::areCalleeOutgoingArgsTailCallable(
 
 bool AArch64CallLowering::isEligibleForTailCallOptimization(
     MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info,
-    SmallVectorImpl<ArgInfo> &InArgs,
-    SmallVectorImpl<ArgInfo> &OutArgs) const {
+    SmallVectorImpl<ArgInfo> &InArgs, SmallVectorImpl<ArgInfo> &OutArgs) const {
 
   // Must pass all target-independent checks in order to tail call optimize.
   if (!Info.IsTailCall)
@@ -1063,8 +1065,7 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
   if (!areCalleeOutgoingArgsTailCallable(Info, MF, OutArgs))
     return false;
 
-  LLVM_DEBUG(
-      dbgs() << "... Call is eligible for tail call optimization.\n");
+  LLVM_DEBUG(dbgs() << "... Call is eligible for tail call optimization.\n");
   return true;
 }
 
@@ -1492,7 +1493,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Finally we can copy the returned value back into its virtual-register. In
   // symmetry with the arguments, the physical register must be an
   // implicit-define of the call instruction.
-  if (Info.CanLowerReturn  && !Info.OrigRet.Ty->isVoidTy()) {
+  if (Info.CanLowerReturn && !Info.OrigRet.Ty->isVoidTy()) {
     CCAssignFn *RetAssignFn = TLI.CCAssignFnForReturn(Info.CallConv);
     CallReturnHandler Handler(MIRBuilder, MRI, MIB);
     bool UsingReturnedArg =

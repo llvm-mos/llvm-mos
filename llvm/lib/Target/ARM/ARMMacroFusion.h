@@ -23,6 +23,6 @@ namespace llvm {
 /// to ARMTargetMachine::createMachineScheduler() to have an effect.
 std::unique_ptr<ScheduleDAGMutation> createARMMacroFusionDAGMutation();
 
-} // llvm
+} // namespace llvm
 
 #endif

@@ -42,17 +42,13 @@ class StringRef;
 /// Flavour of dwarf regnumbers
 ///
 namespace DWARFFlavour {
-  enum {
-    X86_64 = 0, X86_32_DarwinEH = 1, X86_32_Generic = 2
-  };
+enum { X86_64 = 0, X86_32_DarwinEH = 1, X86_32_Generic = 2 };
 }
 
 ///  Native X86 register numbers
 ///
 namespace N86 {
-  enum {
-    EAX = 0, ECX = 1, EDX = 2, EBX = 3, ESP = 4, EBP = 5, ESI = 6, EDI = 7
-  };
+enum { EAX = 0, ECX = 1, EDX = 2, EBX = 3, ESP = 4, EBP = 5, ESI = 6, EDI = 7 };
 }
 
 namespace X86_MC {
@@ -61,7 +57,6 @@ std::string ParseX86Triple(const Triple &TT);
 unsigned getDwarfRegFlavour(const Triple &TT, bool isEH);
 
 void initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI);
-
 
 /// Returns true if this instruction has a LOCK prefix.
 bool hasLockPrefix(const MCInst &MI);
@@ -98,10 +93,9 @@ void emitInstruction(MCObjectStreamer &, const MCInst &Inst,
 
 void emitPrefix(MCCodeEmitter &MCE, const MCInst &MI, SmallVectorImpl<char> &CB,
                 const MCSubtargetInfo &STI);
-}
+} // namespace X86_MC
 
-MCCodeEmitter *createX86MCCodeEmitter(const MCInstrInfo &MCII,
-                                      MCContext &Ctx);
+MCCodeEmitter *createX86MCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx);
 
 MCAsmBackend *createX86_32AsmBackend(const Target &T,
                                      const MCSubtargetInfo &STI,
@@ -153,8 +147,7 @@ createX86WinCOFFObjectWriter(bool Is64Bit);
 /// \returns the sub or super register of a specific X86 register.
 MCRegister getX86SubSuperRegister(MCRegister Reg, unsigned Size,
                                   bool High = false);
-} // End llvm namespace
-
+} // namespace llvm
 
 // Defines symbolic names for X86 registers.  This defines a mapping from
 // register name to register number.

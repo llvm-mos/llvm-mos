@@ -72,4 +72,3 @@ public:
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_HOTCOLDSPLITTING_H
-

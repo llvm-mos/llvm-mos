@@ -22,6 +22,7 @@
 // and Embedded Architectures and Compilers", 8 (4),
 // <10.1145/2086696.2086706>. <hal-00647369>
 //
+#include "llvm/CodeGen/RDFLiveness.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -33,7 +34,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/RDFGraph.h"
-#include "llvm/CodeGen/RDFLiveness.h"
 #include "llvm/CodeGen/RDFRegisters.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
@@ -847,8 +847,8 @@ void Liveness::computeLiveIns() {
         for (NodeAddr<PhiUseNode *> T : DFG.getRelatedRefs(PA, PUA))
           SeenUses.insert(T.Id);
       } // for U : phi uses
-    }   // for P : Phis
-  }     // for B : Blocks
+    } // for P : Phis
+  } // for B : Blocks
 
   if (Trace) {
     dbgs() << "Phi live-on-exit map:\n";

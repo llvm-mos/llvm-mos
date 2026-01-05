@@ -40,9 +40,10 @@ struct CFStack {
   unsigned CurrentEntries = 0;
   unsigned CurrentSubEntries = 0;
 
-  CFStack(const R600Subtarget *st, CallingConv::ID cc) : ST(st),
-      // We need to reserve a stack entry for CALL_FS in vertex shaders.
-      MaxStackSize(cc == CallingConv::AMDGPU_VS ? 1 : 0) {}
+  CFStack(const R600Subtarget *st, CallingConv::ID cc)
+      : ST(st),
+        // We need to reserve a stack entry for CALL_FS in vertex shaders.
+        MaxStackSize(cc == CallingConv::AMDGPU_VS ? 1 : 0) {}
 
   unsigned getLoopDepth();
   bool branchStackContains(CFStack::StackItem);
@@ -55,9 +56,7 @@ struct CFStack {
   void popLoop();
 };
 
-unsigned CFStack::getLoopDepth() {
-  return LoopStack.size();
-}
+unsigned CFStack::getLoopDepth() { return LoopStack.size(); }
 
 bool CFStack::branchStackContains(CFStack::StackItem Item) {
   return llvm::is_contained(BranchStack, Item);
@@ -71,8 +70,9 @@ bool CFStack::requiresWorkAroundForInst(unsigned Opcode) {
   if (!ST->hasCFAluBug())
     return false;
 
-  switch(Opcode) {
-  default: return false;
+  switch (Opcode) {
+  default:
+    return false;
   case R600::CF_ALU_PUSH_BEFORE:
   case R600::CF_ALU_ELSE_AFTER:
   case R600::CF_ALU_BREAK:
@@ -85,9 +85,9 @@ bool CFStack::requiresWorkAroundForInst(unsigned Opcode) {
       // (CurrentSubEntries % 4 == 3 || CurrentSubEntries % 4 == 0)
       //
       // We have to be conservative, because we don't know for certain that
-      // our stack allocation algorithm for Evergreen/NI is correct.  Applying this
-      // work-around when CurrentSubEntries > 3 allows us to over-allocate stack
-      // resources without any problems.
+      // our stack allocation algorithm for Evergreen/NI is correct.  Applying
+      // this work-around when CurrentSubEntries > 3 allows us to over-allocate
+      // stack resources without any problems.
       return CurrentSubEntries > 3;
     }
     assert(ST->getWavefrontSize() == 32);
@@ -101,7 +101,7 @@ bool CFStack::requiresWorkAroundForInst(unsigned Opcode) {
 }
 
 unsigned CFStack::getSubEntrySize(CFStack::StackItem Item) {
-  switch(Item) {
+  switch (Item) {
   default:
     return 0;
   case CFStack::FIRST_NON_WQM_PUSH:
@@ -134,15 +134,15 @@ void CFStack::updateMaxStackSize() {
 
 void CFStack::pushBranch(unsigned Opcode, bool isWQM) {
   CFStack::StackItem Item = CFStack::ENTRY;
-  switch(Opcode) {
+  switch (Opcode) {
   case R600::CF_PUSH_EG:
   case R600::CF_ALU_PUSH_BEFORE:
     if (!isWQM) {
       if (!ST->hasCaymanISA() &&
           !branchStackContains(CFStack::FIRST_NON_WQM_PUSH))
-        Item = CFStack::FIRST_NON_WQM_PUSH;  // May not be required on Evergreen/NI
-                                             // See comment in
-                                             // CFStack::getSubEntrySize()
+        Item = CFStack::FIRST_NON_WQM_PUSH; // May not be required on
+                                            // Evergreen/NI See comment in
+                                            // CFStack::getSubEntrySize()
       else if (CurrentEntries > 0 &&
                ST->getGeneration() > AMDGPUSubtarget::EVERGREEN &&
                !ST->hasCaymanISA() &&
@@ -173,7 +173,7 @@ void CFStack::popBranch() {
   if (Top == CFStack::ENTRY)
     CurrentEntries--;
   else
-    CurrentSubEntries-= getSubEntrySize(Top);
+    CurrentSubEntries -= getSubEntrySize(Top);
   BranchStack.pop_back();
 }
 
@@ -257,7 +257,7 @@ private:
       Opcode = isEg ? R600::CF_END_EG : R600::CF_END_R600;
       break;
     }
-    assert (Opcode && "No opcode selected");
+    assert(Opcode && "No opcode selected");
     return TII->get(Opcode);
   }
 
@@ -275,7 +275,8 @@ private:
         if (R600::R600_Reg128RegClass.contains(Reg))
           DstMI = Reg;
         else
-          DstMI = TRI->getMatchingSuperReg(Reg,
+          DstMI = TRI->getMatchingSuperReg(
+              Reg,
               R600RegisterInfo::getSubRegFromChannel(TRI->getHWRegChan(Reg)),
               &R600::R600_Reg128RegClass);
       }
@@ -284,7 +285,8 @@ private:
         if (R600::R600_Reg128RegClass.contains(Reg))
           SrcMI = Reg;
         else
-          SrcMI = TRI->getMatchingSuperReg(Reg,
+          SrcMI = TRI->getMatchingSuperReg(
+              Reg,
               R600RegisterInfo::getSubRegFromChannel(TRI->getHWRegChan(Reg)),
               &R600::R600_Reg128RegClass);
       }
@@ -296,9 +298,8 @@ private:
     return false;
   }
 
-  ClauseFile
-  MakeFetchClause(MachineBasicBlock &MBB, MachineBasicBlock::iterator &I)
-      const {
+  ClauseFile MakeFetchClause(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator &I) const {
     MachineBasicBlock::iterator ClauseHead = I;
     std::vector<MachineInstr *> ClauseContent;
     unsigned AluInstCount = 0;
@@ -314,26 +315,23 @@ private:
         break;
       if (!isCompatibleWithClause(*I, DstRegs))
         break;
-      AluInstCount ++;
+      AluInstCount++;
       ClauseContent.push_back(&*I);
     }
     MachineInstr *MIb = BuildMI(MBB, ClauseHead, MBB.findDebugLoc(ClauseHead),
-        getHWInstrDesc(IsTex?CF_TC:CF_VC))
-        .addImm(0) // ADDR
-        .addImm(AluInstCount - 1); // COUNT
+                                getHWInstrDesc(IsTex ? CF_TC : CF_VC))
+                            .addImm(0)                 // ADDR
+                            .addImm(AluInstCount - 1); // COUNT
     return ClauseFile(MIb, std::move(ClauseContent));
   }
 
   void getLiteral(MachineInstr &MI, std::vector<MachineOperand *> &Lits) const {
     static const unsigned LiteralRegs[] = {
-      R600::ALU_LITERAL_X,
-      R600::ALU_LITERAL_Y,
-      R600::ALU_LITERAL_Z,
-      R600::ALU_LITERAL_W
-    };
+        R600::ALU_LITERAL_X, R600::ALU_LITERAL_Y, R600::ALU_LITERAL_Z,
+        R600::ALU_LITERAL_W};
     const SmallVector<std::pair<MachineOperand *, int64_t>, 3> Srcs =
         TII->getSrcs(MI);
-    for (const auto &Src:Srcs) {
+    for (const auto &Src : Srcs) {
       if (Src.first->getReg() != R600::ALU_LITERAL_X)
         continue;
       int64_t Imm = Src.second;
@@ -359,24 +357,23 @@ private:
     }
   }
 
-  MachineBasicBlock::iterator insertLiterals(
-      MachineBasicBlock::iterator InsertPos,
-      const std::vector<unsigned> &Literals) const {
+  MachineBasicBlock::iterator
+  insertLiterals(MachineBasicBlock::iterator InsertPos,
+                 const std::vector<unsigned> &Literals) const {
     MachineBasicBlock *MBB = InsertPos->getParent();
-    for (unsigned i = 0, e = Literals.size(); i < e; i+=2) {
+    for (unsigned i = 0, e = Literals.size(); i < e; i += 2) {
       unsigned LiteralPair0 = Literals[i];
-      unsigned LiteralPair1 = (i + 1 < e)?Literals[i + 1]:0;
-      InsertPos = BuildMI(MBB, InsertPos->getDebugLoc(),
-          TII->get(R600::LITERALS))
-          .addImm(LiteralPair0)
-          .addImm(LiteralPair1);
+      unsigned LiteralPair1 = (i + 1 < e) ? Literals[i + 1] : 0;
+      InsertPos =
+          BuildMI(MBB, InsertPos->getDebugLoc(), TII->get(R600::LITERALS))
+              .addImm(LiteralPair0)
+              .addImm(LiteralPair1);
     }
     return InsertPos;
   }
 
-  ClauseFile
-  MakeALUClause(MachineBasicBlock &MBB, MachineBasicBlock::iterator &I)
-      const {
+  ClauseFile MakeALUClause(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator &I) const {
     MachineInstr &ClauseHead = *I;
     std::vector<MachineInstr *> ClauseContent;
     I++;
@@ -387,7 +384,7 @@ private:
       }
       if (!I->isBundle() && !TII->isALUInstr(I->getOpcode()))
         break;
-      std::vector<MachineOperand *>Literals;
+      std::vector<MachineOperand *> Literals;
       if (I->isBundle()) {
         MachineInstr &DeleteMI = *I;
         MachineBasicBlock::instr_iterator BI = I.getInstrIterator();
@@ -408,13 +405,13 @@ private:
         I++;
       }
       for (unsigned i = 0, e = Literals.size(); i < e; i += 2) {
-        MachineInstrBuilder MILit = BuildMI(MBB, I, I->getDebugLoc(),
-            TII->get(R600::LITERALS));
+        MachineInstrBuilder MILit =
+            BuildMI(MBB, I, I->getDebugLoc(), TII->get(R600::LITERALS));
         if (Literals[i]->isImm()) {
-            MILit.addImm(Literals[i]->getImm());
+          MILit.addImm(Literals[i]->getImm());
         } else {
-            MILit.addGlobalAddress(Literals[i]->getGlobal(),
-                                   Literals[i]->getOffset());
+          MILit.addGlobalAddress(Literals[i]->getGlobal(),
+                                 Literals[i]->getOffset());
         }
         if (i + 1 < e) {
           if (Literals[i + 1]->isImm()) {
@@ -480,14 +477,14 @@ public:
 
     CFStack CFStack(ST, MF.getFunction().getCallingConv());
     for (MachineFunction::iterator MB = MF.begin(), ME = MF.end(); MB != ME;
-        ++MB) {
+         ++MB) {
       MachineBasicBlock &MBB = *MB;
       unsigned CfCount = 0;
       std::vector<std::pair<unsigned, std::set<MachineInstr *>>> LoopStack;
-      std::vector<MachineInstr * > IfThenElseStack;
+      std::vector<MachineInstr *> IfThenElseStack;
       if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_VS) {
         BuildMI(MBB, MBB.begin(), MBB.findDebugLoc(MBB.begin()),
-            getHWInstrDesc(CF_CALL_FS));
+                getHWInstrDesc(CF_CALL_FS));
         CfCount++;
       }
       std::vector<ClauseFile> FetchClauses, AluClauses;
@@ -495,7 +492,7 @@ public:
       std::vector<MachineInstr *> ToPopAfter;
 
       for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
-          I != E;) {
+           I != E;) {
         if (TII->usesTextureCache(*I) || TII->usesVertexCache(*I)) {
           LLVM_DEBUG(dbgs() << CfCount << ":"; I->dump(););
           FetchClauses.push_back(MakeFetchClause(MBB, I));
@@ -535,10 +532,10 @@ public:
         case R600::WHILELOOP: {
           CFStack.pushLoop();
           MachineInstr *MIb = BuildMI(MBB, MI, MBB.findDebugLoc(MI),
-              getHWInstrDesc(CF_WHILE_LOOP))
-              .addImm(1);
-          std::pair<unsigned, std::set<MachineInstr *>> Pair(CfCount,
-              std::set<MachineInstr *>());
+                                      getHWInstrDesc(CF_WHILE_LOOP))
+                                  .addImm(1);
+          std::pair<unsigned, std::set<MachineInstr *>> Pair(
+              CfCount, std::set<MachineInstr *>());
           Pair.second.insert(MIb);
           LoopStack.push_back(std::move(Pair));
           MI->eraseFromParent();
@@ -559,10 +556,10 @@ public:
         }
         case R600::IF_PREDICATE_SET: {
           LastAlu.push_back(nullptr);
-          MachineInstr *MIb = BuildMI(MBB, MI, MBB.findDebugLoc(MI),
-              getHWInstrDesc(CF_JUMP))
-              .addImm(0)
-              .addImm(0);
+          MachineInstr *MIb =
+              BuildMI(MBB, MI, MBB.findDebugLoc(MI), getHWInstrDesc(CF_JUMP))
+                  .addImm(0)
+                  .addImm(0);
           IfThenElseStack.push_back(MIb);
           LLVM_DEBUG(dbgs() << CfCount << ":"; MIb->dump(););
           MI->eraseFromParent();
@@ -570,13 +567,13 @@ public:
           break;
         }
         case R600::ELSE: {
-          MachineInstr * JumpInst = IfThenElseStack.back();
+          MachineInstr *JumpInst = IfThenElseStack.back();
           IfThenElseStack.pop_back();
           CounterPropagateAddr(*JumpInst, CfCount);
-          MachineInstr *MIb = BuildMI(MBB, MI, MBB.findDebugLoc(MI),
-              getHWInstrDesc(CF_ELSE))
-              .addImm(0)
-              .addImm(0);
+          MachineInstr *MIb =
+              BuildMI(MBB, MI, MBB.findDebugLoc(MI), getHWInstrDesc(CF_ELSE))
+                  .addImm(0)
+                  .addImm(0);
           LLVM_DEBUG(dbgs() << CfCount << ":"; MIb->dump(););
           IfThenElseStack.push_back(MIb);
           MI->eraseFromParent();
@@ -588,10 +585,10 @@ public:
           if (LastAlu.back()) {
             ToPopAfter.push_back(LastAlu.back());
           } else {
-            MachineInstr *MIb = BuildMI(MBB, MI, MBB.findDebugLoc(MI),
-                getHWInstrDesc(CF_POP))
-                .addImm(CfCount + 1)
-                .addImm(1);
+            MachineInstr *MIb =
+                BuildMI(MBB, MI, MBB.findDebugLoc(MI), getHWInstrDesc(CF_POP))
+                    .addImm(CfCount + 1)
+                    .addImm(1);
             (void)MIb;
             LLVM_DEBUG(dbgs() << CfCount << ":"; MIb->dump(););
             CfCount++;
@@ -606,18 +603,18 @@ public:
           break;
         }
         case R600::BREAK: {
-          CfCount ++;
+          CfCount++;
           MachineInstr *MIb = BuildMI(MBB, MI, MBB.findDebugLoc(MI),
-              getHWInstrDesc(CF_LOOP_BREAK))
-              .addImm(0);
+                                      getHWInstrDesc(CF_LOOP_BREAK))
+                                  .addImm(0);
           LoopStack.back().second.insert(MIb);
           MI->eraseFromParent();
           break;
         }
         case R600::CONTINUE: {
           MachineInstr *MIb = BuildMI(MBB, MI, MBB.findDebugLoc(MI),
-              getHWInstrDesc(CF_LOOP_CONTINUE))
-              .addImm(0);
+                                      getHWInstrDesc(CF_LOOP_CONTINUE))
+                                  .addImm(0);
           LoopStack.back().second.insert(MIb);
           MI->eraseFromParent();
           CfCount++;
@@ -648,7 +645,7 @@ public:
       }
       for (MachineInstr *Alu : ToPopAfter) {
         BuildMI(MBB, Alu, MBB.findDebugLoc((MachineBasicBlock::iterator)Alu),
-            TII->get(R600::CF_ALU_POP_AFTER))
+                TII->get(R600::CF_ALU_POP_AFTER))
             .addImm(Alu->getOperand(0).getImm())
             .addImm(Alu->getOperand(1).getImm())
             .addImm(Alu->getOperand(2).getImm())
@@ -674,7 +671,7 @@ public:
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(R600ControlFlowFinalizer, DEBUG_TYPE,
-                     "R600 Control Flow Finalizer", false, false)
+                      "R600 Control Flow Finalizer", false, false)
 INITIALIZE_PASS_END(R600ControlFlowFinalizer, DEBUG_TYPE,
                     "R600 Control Flow Finalizer", false, false)
 

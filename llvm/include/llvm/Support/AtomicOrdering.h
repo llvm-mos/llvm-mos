@@ -92,13 +92,13 @@ inline bool isStrongerThan(AtomicOrdering AO, AtomicOrdering Other) {
   static const bool lookup[8][8] = {
       //               NA     UN     RX     CO     AC     RE     AR     SC
       /* NotAtomic */ {false, false, false, false, false, false, false, false},
-      /* Unordered */ { true, false, false, false, false, false, false, false},
-      /* relaxed   */ { true,  true, false, false, false, false, false, false},
-      /* consume   */ { true,  true,  true, false, false, false, false, false},
-      /* acquire   */ { true,  true,  true,  true, false, false, false, false},
-      /* release   */ { true,  true,  true, false, false, false, false, false},
-      /* acq_rel   */ { true,  true,  true,  true,  true,  true, false, false},
-      /* seq_cst   */ { true,  true,  true,  true,  true,  true,  true, false},
+      /* Unordered */ {true, false, false, false, false, false, false, false},
+      /* relaxed   */ {true, true, false, false, false, false, false, false},
+      /* consume   */ {true, true, true, false, false, false, false, false},
+      /* acquire   */ {true, true, true, true, false, false, false, false},
+      /* release   */ {true, true, true, false, false, false, false, false},
+      /* acq_rel   */ {true, true, true, true, true, true, false, false},
+      /* seq_cst   */ {true, true, true, true, true, true, true, false},
   };
   return lookup[static_cast<size_t>(AO)][static_cast<size_t>(Other)];
 }
@@ -106,14 +106,14 @@ inline bool isStrongerThan(AtomicOrdering AO, AtomicOrdering Other) {
 inline bool isAtLeastOrStrongerThan(AtomicOrdering AO, AtomicOrdering Other) {
   static const bool lookup[8][8] = {
       //               NA     UN     RX     CO     AC     RE     AR     SC
-      /* NotAtomic */ { true, false, false, false, false, false, false, false},
-      /* Unordered */ { true,  true, false, false, false, false, false, false},
-      /* relaxed   */ { true,  true,  true, false, false, false, false, false},
-      /* consume   */ { true,  true,  true,  true, false, false, false, false},
-      /* acquire   */ { true,  true,  true,  true,  true, false, false, false},
-      /* release   */ { true,  true,  true, false, false,  true, false, false},
-      /* acq_rel   */ { true,  true,  true,  true,  true,  true,  true, false},
-      /* seq_cst   */ { true,  true,  true,  true,  true,  true,  true,  true},
+      /* NotAtomic */ {true, false, false, false, false, false, false, false},
+      /* Unordered */ {true, true, false, false, false, false, false, false},
+      /* relaxed   */ {true, true, true, false, false, false, false, false},
+      /* consume   */ {true, true, true, true, false, false, false, false},
+      /* acquire   */ {true, true, true, true, true, false, false, false},
+      /* release   */ {true, true, true, false, false, true, false, false},
+      /* acq_rel   */ {true, true, true, true, true, true, true, false},
+      /* seq_cst   */ {true, true, true, true, true, true, true, true},
   };
   return lookup[static_cast<size_t>(AO)][static_cast<size_t>(Other)];
 }

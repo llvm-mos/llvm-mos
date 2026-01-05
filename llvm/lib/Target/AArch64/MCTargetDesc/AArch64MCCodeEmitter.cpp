@@ -186,9 +186,9 @@ public:
   unsigned fixMulHigh(const MCInst &MI, unsigned EncodedValue,
                       const MCSubtargetInfo &STI) const;
 
-  template<int hasRs, int hasRt2> unsigned
-  fixLoadStoreExclusive(const MCInst &MI, unsigned EncodedValue,
-                        const MCSubtargetInfo &STI) const;
+  template <int hasRs, int hasRt2>
+  unsigned fixLoadStoreExclusive(const MCInst &MI, unsigned EncodedValue,
+                                 const MCSubtargetInfo &STI) const;
 
   unsigned fixOneOperandFPComparison(const MCInst &MI, unsigned EncodedValue,
                                      const MCSubtargetInfo &STI) const;
@@ -240,7 +240,8 @@ AArch64MCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   return static_cast<unsigned>(MO.getImm());
 }
 
-template<unsigned FixupKind> uint32_t
+template <unsigned FixupKind>
+uint32_t
 AArch64MCCodeEmitter::getLdStUImm12OpValue(const MCInst &MI, unsigned OpIdx,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
@@ -649,10 +650,9 @@ AArch64MCCodeEmitter::encodeMatrixIndexGPR32(const MCInst &MI, unsigned OpIdx,
   return RegOpnd - BaseReg;
 }
 
-uint32_t
-AArch64MCCodeEmitter::getImm8OptLsl(const MCInst &MI, unsigned OpIdx,
-                                    SmallVectorImpl<MCFixup> &Fixups,
-                                    const MCSubtargetInfo &STI) const {
+uint32_t AArch64MCCodeEmitter::getImm8OptLsl(const MCInst &MI, unsigned OpIdx,
+                                             SmallVectorImpl<MCFixup> &Fixups,
+                                             const MCSubtargetInfo &STI) const {
   // Test shift
   auto ShiftOpnd = MI.getOperand(OpIdx + 1).getImm();
   assert(AArch64_AM::getShiftType(ShiftOpnd) == AArch64_AM::LSL &&
@@ -669,8 +669,8 @@ AArch64MCCodeEmitter::getImm8OptLsl(const MCInst &MI, unsigned OpIdx,
 
 uint32_t
 AArch64MCCodeEmitter::getSVEIncDecImm(const MCInst &MI, unsigned OpIdx,
-                                           SmallVectorImpl<MCFixup> &Fixups,
-                                           const MCSubtargetInfo &STI) const {
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpIdx);
   assert(MO.isImm() && "Expected an immediate value!");
   // Normalize 1-16 range to 0-15.
@@ -748,22 +748,22 @@ void AArch64MCCodeEmitter::encodeInstruction(const MCInst &MI,
   ++MCNumEmitted; // Keep track of the # of mi's emitted.
 }
 
-unsigned
-AArch64MCCodeEmitter::fixMulHigh(const MCInst &MI,
-                                 unsigned EncodedValue,
-                                 const MCSubtargetInfo &STI) const {
+unsigned AArch64MCCodeEmitter::fixMulHigh(const MCInst &MI,
+                                          unsigned EncodedValue,
+                                          const MCSubtargetInfo &STI) const {
   // The Ra field of SMULH and UMULH is unused: it should be assembled as 31
   // (i.e. all bits 1) but is ignored by the processor.
   EncodedValue |= 0x1f << 10;
   return EncodedValue;
 }
 
-template<int hasRs, int hasRt2> unsigned
-AArch64MCCodeEmitter::fixLoadStoreExclusive(const MCInst &MI,
-                                            unsigned EncodedValue,
-                                            const MCSubtargetInfo &STI) const {
-  if (!hasRs) EncodedValue |= 0x001F0000;
-  if (!hasRt2) EncodedValue |= 0x00007C00;
+template <int hasRs, int hasRt2>
+unsigned AArch64MCCodeEmitter::fixLoadStoreExclusive(
+    const MCInst &MI, unsigned EncodedValue, const MCSubtargetInfo &STI) const {
+  if (!hasRs)
+    EncodedValue |= 0x001F0000;
+  if (!hasRt2)
+    EncodedValue |= 0x00007C00;
 
   return EncodedValue;
 }

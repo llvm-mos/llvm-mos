@@ -14,9 +14,7 @@
 
 using namespace llvm;
 
-DWARFAbbreviationDeclarationSet::DWARFAbbreviationDeclarationSet() {
-  clear();
-}
+DWARFAbbreviationDeclarationSet::DWARFAbbreviationDeclarationSet() { clear(); }
 
 void DWARFAbbreviationDeclarationSet::clear() {
   Offset = 0;

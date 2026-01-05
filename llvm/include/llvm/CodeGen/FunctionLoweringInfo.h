@@ -85,7 +85,7 @@ public:
   /// in lazy style - on demand. It is used to get the Value corresponding
   /// to the live in virtual register and is called from the
   /// TargetLowerinInfo::isSDNodeSourceOfDivergence.
-  DenseMap<Register, const Value*> VirtReg2Value;
+  DenseMap<Register, const Value *> VirtReg2Value;
 
   /// This method is called from TargetLowerinInfo::isSDNodeSourceOfDivergence
   /// to get the Value corresponding to the live-in virtual register.
@@ -123,20 +123,20 @@ public:
   /// relocate that value.  This information is required when visiting
   /// gc.relocates which may appear in following blocks.
   using StatepointSpillMapTy =
-    DenseMap<const Value *, StatepointRelocationRecord>;
+      DenseMap<const Value *, StatepointRelocationRecord>;
   DenseMap<const Instruction *, StatepointSpillMapTy> StatepointRelocationMaps;
 
   /// StaticAllocaMap - Keep track of frame indices for fixed sized allocas in
   /// the entry block.  This allows the allocas to be efficiently referenced
   /// anywhere in the function.
-  DenseMap<const AllocaInst*, int> StaticAllocaMap;
+  DenseMap<const AllocaInst *, int> StaticAllocaMap;
 
   /// ByValArgFrameIndexMap - Keep track of frame indices for byval arguments.
-  DenseMap<const Argument*, int> ByValArgFrameIndexMap;
+  DenseMap<const Argument *, int> ByValArgFrameIndexMap;
 
   /// ArgDbgValues - A list of DBG_VALUE instructions created during isel for
   /// function arguments that are inserted after scheduling is completed.
-  SmallVector<MachineInstr*, 8> ArgDbgValues;
+  SmallVector<MachineInstr *, 8> ArgDbgValues;
 
   /// Bitvector with a bit set if corresponding argument is described in
   /// ArgDbgValues. Using arg numbers according to Argument numbering.
@@ -179,7 +179,7 @@ public:
   /// be updated after processing the current basic block.
   /// TODO: This isn't per-function state, it's per-basic-block state. But
   /// there's no other convenient place for it to live right now.
-  std::vector<std::pair<MachineInstr*, Register>> PHINodesToUpdate;
+  std::vector<std::pair<MachineInstr *, Register>> PHINodesToUpdate;
   unsigned OrigNumPHINodesToUpdate;
 
   /// If the current MBB is a landing pad, the exception pointer and exception
@@ -206,9 +206,7 @@ public:
 
   /// isExportedInst - Return true if the specified value is an instruction
   /// exported from its block.
-  bool isExportedInst(const Value *V) const {
-    return ValueMap.count(V);
-  }
+  bool isExportedInst(const Value *V) const { return ValueMap.count(V); }
 
   MachineBasicBlock *getMBB(const BasicBlock *BB) const {
     assert(BB->getNumber() < MBBMap.size() && "uninitialized MBBMap?");
@@ -259,13 +257,13 @@ public:
 
   /// ComputePHILiveOutRegInfo - Compute LiveOutInfo for a PHI's destination
   /// register based on the LiveOutInfo of its operands.
-  void ComputePHILiveOutRegInfo(const PHINode*);
+  void ComputePHILiveOutRegInfo(const PHINode *);
 
   /// InvalidatePHILiveOutRegInfo - Invalidates a PHI's LiveOutInfo, to be
   /// called when a block is visited before all of its predecessors.
   void InvalidatePHILiveOutRegInfo(const PHINode *PN) {
     // PHIs with no uses have no ValueMap entry.
-    DenseMap<const Value*, Register>::const_iterator It = ValueMap.find(PN);
+    DenseMap<const Value *, Register>::const_iterator It = ValueMap.find(PN);
     if (It == ValueMap.end())
       return;
 

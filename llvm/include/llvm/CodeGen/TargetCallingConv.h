@@ -24,249 +24,247 @@
 namespace llvm {
 namespace ISD {
 
-  struct ArgFlagsTy {
-  private:
-    unsigned IsZExt : 1;     ///< Zero extended
-    unsigned IsSExt : 1;     ///< Sign extended
-    unsigned IsNoExt : 1;    ///< No extension
-    unsigned IsInReg : 1;    ///< Passed in register
-    unsigned IsSRet : 1;     ///< Hidden struct-ret ptr
-    unsigned IsByVal : 1;    ///< Struct passed by value
-    unsigned IsByRef : 1;    ///< Passed in memory
-    unsigned IsNest : 1;     ///< Nested fn static chain
-    unsigned IsReturned : 1; ///< Always returned
-    unsigned IsSplit : 1;
-    unsigned IsInAlloca : 1;   ///< Passed with inalloca
-    unsigned IsPreallocated : 1; ///< ByVal without the copy
-    unsigned IsSplitEnd : 1;   ///< Last part of a split
-    unsigned IsSwiftSelf : 1;  ///< Swift self parameter
-    unsigned IsSwiftAsync : 1;  ///< Swift async context parameter
-    unsigned IsSwiftError : 1; ///< Swift error parameter
-    unsigned IsCFGuardTarget : 1; ///< Control Flow Guard target
-    unsigned IsHva : 1;        ///< HVA field for
-    unsigned IsHvaStart : 1;   ///< HVA structure start
-    unsigned IsSecArgPass : 1; ///< Second argument
-    unsigned MemAlign : 6; ///< Log 2 of alignment when arg is passed in memory
-                           ///< (including byval/byref). The max alignment is
-                           ///< verified in IR verification.
-    unsigned OrigAlign : 5;    ///< Log 2 of original alignment
-    unsigned IsInConsecutiveRegsLast : 1;
-    unsigned IsInConsecutiveRegs : 1;
-    unsigned IsCopyElisionCandidate : 1; ///< Argument copy elision candidate
-    unsigned IsPointer : 1;
-    /// Whether this is part of a variable argument list (non-fixed).
-    unsigned IsVarArg : 1;
+struct ArgFlagsTy {
+private:
+  unsigned IsZExt : 1;     ///< Zero extended
+  unsigned IsSExt : 1;     ///< Sign extended
+  unsigned IsNoExt : 1;    ///< No extension
+  unsigned IsInReg : 1;    ///< Passed in register
+  unsigned IsSRet : 1;     ///< Hidden struct-ret ptr
+  unsigned IsByVal : 1;    ///< Struct passed by value
+  unsigned IsByRef : 1;    ///< Passed in memory
+  unsigned IsNest : 1;     ///< Nested fn static chain
+  unsigned IsReturned : 1; ///< Always returned
+  unsigned IsSplit : 1;
+  unsigned IsInAlloca : 1;      ///< Passed with inalloca
+  unsigned IsPreallocated : 1;  ///< ByVal without the copy
+  unsigned IsSplitEnd : 1;      ///< Last part of a split
+  unsigned IsSwiftSelf : 1;     ///< Swift self parameter
+  unsigned IsSwiftAsync : 1;    ///< Swift async context parameter
+  unsigned IsSwiftError : 1;    ///< Swift error parameter
+  unsigned IsCFGuardTarget : 1; ///< Control Flow Guard target
+  unsigned IsHva : 1;           ///< HVA field for
+  unsigned IsHvaStart : 1;      ///< HVA structure start
+  unsigned IsSecArgPass : 1;    ///< Second argument
+  unsigned MemAlign : 6;  ///< Log 2 of alignment when arg is passed in memory
+                          ///< (including byval/byref). The max alignment is
+                          ///< verified in IR verification.
+  unsigned OrigAlign : 5; ///< Log 2 of original alignment
+  unsigned IsInConsecutiveRegsLast : 1;
+  unsigned IsInConsecutiveRegs : 1;
+  unsigned IsCopyElisionCandidate : 1; ///< Argument copy elision candidate
+  unsigned IsPointer : 1;
+  /// Whether this is part of a variable argument list (non-fixed).
+  unsigned IsVarArg : 1;
 
-    unsigned ByValOrByRefSize = 0; ///< Byval or byref struct size
+  unsigned ByValOrByRefSize = 0; ///< Byval or byref struct size
 
-    unsigned PointerAddrSpace = 0; ///< Address space of pointer argument
+  unsigned PointerAddrSpace = 0; ///< Address space of pointer argument
 
-  public:
-    ArgFlagsTy()
-        : IsZExt(0), IsSExt(0), IsNoExt(0), IsInReg(0), IsSRet(0), IsByVal(0),
-          IsByRef(0), IsNest(0), IsReturned(0), IsSplit(0), IsInAlloca(0),
-          IsPreallocated(0), IsSplitEnd(0), IsSwiftSelf(0), IsSwiftAsync(0),
-          IsSwiftError(0), IsCFGuardTarget(0), IsHva(0), IsHvaStart(0),
-          IsSecArgPass(0), MemAlign(0), OrigAlign(0),
-          IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
-          IsCopyElisionCandidate(0), IsPointer(0), IsVarArg(0) {
-      static_assert(sizeof(*this) == 4 * sizeof(unsigned), "flags are too big");
-    }
+public:
+  ArgFlagsTy()
+      : IsZExt(0), IsSExt(0), IsNoExt(0), IsInReg(0), IsSRet(0), IsByVal(0),
+        IsByRef(0), IsNest(0), IsReturned(0), IsSplit(0), IsInAlloca(0),
+        IsPreallocated(0), IsSplitEnd(0), IsSwiftSelf(0), IsSwiftAsync(0),
+        IsSwiftError(0), IsCFGuardTarget(0), IsHva(0), IsHvaStart(0),
+        IsSecArgPass(0), MemAlign(0), OrigAlign(0), IsInConsecutiveRegsLast(0),
+        IsInConsecutiveRegs(0), IsCopyElisionCandidate(0), IsPointer(0),
+        IsVarArg(0) {
+    static_assert(sizeof(*this) == 4 * sizeof(unsigned), "flags are too big");
+  }
 
-    bool isZExt() const { return IsZExt; }
-    void setZExt() { IsZExt = 1; }
+  bool isZExt() const { return IsZExt; }
+  void setZExt() { IsZExt = 1; }
 
-    bool isSExt() const { return IsSExt; }
-    void setSExt() { IsSExt = 1; }
+  bool isSExt() const { return IsSExt; }
+  void setSExt() { IsSExt = 1; }
 
-    bool isNoExt() const { return IsNoExt; }
-    void setNoExt() { IsNoExt = 1; }
+  bool isNoExt() const { return IsNoExt; }
+  void setNoExt() { IsNoExt = 1; }
 
-    bool isInReg() const { return IsInReg; }
-    void setInReg() { IsInReg = 1; }
+  bool isInReg() const { return IsInReg; }
+  void setInReg() { IsInReg = 1; }
 
-    bool isSRet() const { return IsSRet; }
-    void setSRet() { IsSRet = 1; }
+  bool isSRet() const { return IsSRet; }
+  void setSRet() { IsSRet = 1; }
 
-    bool isByVal() const { return IsByVal; }
-    void setByVal() { IsByVal = 1; }
+  bool isByVal() const { return IsByVal; }
+  void setByVal() { IsByVal = 1; }
 
-    bool isByRef() const { return IsByRef; }
-    void setByRef() { IsByRef = 1; }
+  bool isByRef() const { return IsByRef; }
+  void setByRef() { IsByRef = 1; }
 
-    bool isInAlloca() const { return IsInAlloca; }
-    void setInAlloca() { IsInAlloca = 1; }
+  bool isInAlloca() const { return IsInAlloca; }
+  void setInAlloca() { IsInAlloca = 1; }
 
-    bool isPreallocated() const { return IsPreallocated; }
-    void setPreallocated() { IsPreallocated = 1; }
+  bool isPreallocated() const { return IsPreallocated; }
+  void setPreallocated() { IsPreallocated = 1; }
 
-    bool isSwiftSelf() const { return IsSwiftSelf; }
-    void setSwiftSelf() { IsSwiftSelf = 1; }
+  bool isSwiftSelf() const { return IsSwiftSelf; }
+  void setSwiftSelf() { IsSwiftSelf = 1; }
 
-    bool isSwiftAsync() const { return IsSwiftAsync; }
-    void setSwiftAsync() { IsSwiftAsync = 1; }
+  bool isSwiftAsync() const { return IsSwiftAsync; }
+  void setSwiftAsync() { IsSwiftAsync = 1; }
 
-    bool isSwiftError() const { return IsSwiftError; }
-    void setSwiftError() { IsSwiftError = 1; }
+  bool isSwiftError() const { return IsSwiftError; }
+  void setSwiftError() { IsSwiftError = 1; }
 
-    bool isCFGuardTarget() const { return IsCFGuardTarget; }
-    void setCFGuardTarget() { IsCFGuardTarget = 1; }
+  bool isCFGuardTarget() const { return IsCFGuardTarget; }
+  void setCFGuardTarget() { IsCFGuardTarget = 1; }
 
-    bool isHva() const { return IsHva; }
-    void setHva() { IsHva = 1; }
+  bool isHva() const { return IsHva; }
+  void setHva() { IsHva = 1; }
 
-    bool isHvaStart() const { return IsHvaStart; }
-    void setHvaStart() { IsHvaStart = 1; }
+  bool isHvaStart() const { return IsHvaStart; }
+  void setHvaStart() { IsHvaStart = 1; }
 
-    bool isSecArgPass() const { return IsSecArgPass; }
-    void setSecArgPass() { IsSecArgPass = 1; }
+  bool isSecArgPass() const { return IsSecArgPass; }
+  void setSecArgPass() { IsSecArgPass = 1; }
 
-    bool isNest() const { return IsNest; }
-    void setNest() { IsNest = 1; }
+  bool isNest() const { return IsNest; }
+  void setNest() { IsNest = 1; }
 
-    bool isReturned() const { return IsReturned; }
-    void setReturned(bool V = true) { IsReturned = V; }
+  bool isReturned() const { return IsReturned; }
+  void setReturned(bool V = true) { IsReturned = V; }
 
-    bool isInConsecutiveRegs()  const { return IsInConsecutiveRegs; }
-    void setInConsecutiveRegs(bool Flag = true) { IsInConsecutiveRegs = Flag; }
+  bool isInConsecutiveRegs() const { return IsInConsecutiveRegs; }
+  void setInConsecutiveRegs(bool Flag = true) { IsInConsecutiveRegs = Flag; }
 
-    bool isInConsecutiveRegsLast() const { return IsInConsecutiveRegsLast; }
-    void setInConsecutiveRegsLast(bool Flag = true) {
-      IsInConsecutiveRegsLast = Flag;
-    }
+  bool isInConsecutiveRegsLast() const { return IsInConsecutiveRegsLast; }
+  void setInConsecutiveRegsLast(bool Flag = true) {
+    IsInConsecutiveRegsLast = Flag;
+  }
 
-    bool isSplit()   const { return IsSplit; }
-    void setSplit()  { IsSplit = 1; }
+  bool isSplit() const { return IsSplit; }
+  void setSplit() { IsSplit = 1; }
 
-    bool isSplitEnd()   const { return IsSplitEnd; }
-    void setSplitEnd()  { IsSplitEnd = 1; }
+  bool isSplitEnd() const { return IsSplitEnd; }
+  void setSplitEnd() { IsSplitEnd = 1; }
 
-    bool isCopyElisionCandidate()  const { return IsCopyElisionCandidate; }
-    void setCopyElisionCandidate() { IsCopyElisionCandidate = 1; }
+  bool isCopyElisionCandidate() const { return IsCopyElisionCandidate; }
+  void setCopyElisionCandidate() { IsCopyElisionCandidate = 1; }
 
-    bool isPointer()  const { return IsPointer; }
-    void setPointer() { IsPointer = 1; }
+  bool isPointer() const { return IsPointer; }
+  void setPointer() { IsPointer = 1; }
 
-    bool isVarArg() const { return IsVarArg; }
-    void setVarArg() { IsVarArg = 1; }
+  bool isVarArg() const { return IsVarArg; }
+  void setVarArg() { IsVarArg = 1; }
 
-    Align getNonZeroMemAlign() const {
-      return decodeMaybeAlign(MemAlign).valueOrOne();
-    }
+  Align getNonZeroMemAlign() const {
+    return decodeMaybeAlign(MemAlign).valueOrOne();
+  }
 
-    void setMemAlign(Align A) {
-      MemAlign = encode(A);
-      assert(getNonZeroMemAlign() == A && "bitfield overflow");
-    }
+  void setMemAlign(Align A) {
+    MemAlign = encode(A);
+    assert(getNonZeroMemAlign() == A && "bitfield overflow");
+  }
 
-    Align getNonZeroByValAlign() const {
-      assert(isByVal());
-      MaybeAlign A = decodeMaybeAlign(MemAlign);
-      assert(A && "ByValAlign must be defined");
-      return *A;
-    }
+  Align getNonZeroByValAlign() const {
+    assert(isByVal());
+    MaybeAlign A = decodeMaybeAlign(MemAlign);
+    assert(A && "ByValAlign must be defined");
+    return *A;
+  }
 
-    Align getNonZeroOrigAlign() const {
-      return decodeMaybeAlign(OrigAlign).valueOrOne();
-    }
+  Align getNonZeroOrigAlign() const {
+    return decodeMaybeAlign(OrigAlign).valueOrOne();
+  }
 
-    void setOrigAlign(Align A) {
-      OrigAlign = encode(A);
-      assert(getNonZeroOrigAlign() == A && "bitfield overflow");
-    }
+  void setOrigAlign(Align A) {
+    OrigAlign = encode(A);
+    assert(getNonZeroOrigAlign() == A && "bitfield overflow");
+  }
 
-    unsigned getByValSize() const {
-      assert(isByVal() && !isByRef());
-      return ByValOrByRefSize;
-    }
-    void setByValSize(unsigned S) {
-      assert(isByVal() && !isByRef());
-      ByValOrByRefSize = S;
-    }
+  unsigned getByValSize() const {
+    assert(isByVal() && !isByRef());
+    return ByValOrByRefSize;
+  }
+  void setByValSize(unsigned S) {
+    assert(isByVal() && !isByRef());
+    ByValOrByRefSize = S;
+  }
 
-    unsigned getByRefSize() const {
-      assert(!isByVal() && isByRef());
-      return ByValOrByRefSize;
-    }
-    void setByRefSize(unsigned S) {
-      assert(!isByVal() && isByRef());
-      ByValOrByRefSize = S;
-    }
+  unsigned getByRefSize() const {
+    assert(!isByVal() && isByRef());
+    return ByValOrByRefSize;
+  }
+  void setByRefSize(unsigned S) {
+    assert(!isByVal() && isByRef());
+    ByValOrByRefSize = S;
+  }
 
-    unsigned getPointerAddrSpace() const { return PointerAddrSpace; }
-    void setPointerAddrSpace(unsigned AS) { PointerAddrSpace = AS; }
+  unsigned getPointerAddrSpace() const { return PointerAddrSpace; }
+  void setPointerAddrSpace(unsigned AS) { PointerAddrSpace = AS; }
 };
 
-  /// InputArg - This struct carries flags and type information about a
-  /// single incoming (formal) argument or incoming (from the perspective
-  /// of the caller) return value virtual register.
-  ///
-  struct InputArg {
-    ArgFlagsTy Flags;
-    /// Legalized type of this argument part.
-    MVT VT = MVT::Other;
-    /// Usually the non-legalized type of the argument, which is the EVT
-    /// corresponding to the OrigTy IR type. However, for post-legalization
-    /// libcalls, this will be a legalized type.
-    EVT ArgVT;
-    /// Original IR type of the argument. For aggregates, this is the type of
-    /// an individual aggregate element, not the whole aggregate.
-    Type *OrigTy;
-    bool Used;
+/// InputArg - This struct carries flags and type information about a
+/// single incoming (formal) argument or incoming (from the perspective
+/// of the caller) return value virtual register.
+///
+struct InputArg {
+  ArgFlagsTy Flags;
+  /// Legalized type of this argument part.
+  MVT VT = MVT::Other;
+  /// Usually the non-legalized type of the argument, which is the EVT
+  /// corresponding to the OrigTy IR type. However, for post-legalization
+  /// libcalls, this will be a legalized type.
+  EVT ArgVT;
+  /// Original IR type of the argument. For aggregates, this is the type of
+  /// an individual aggregate element, not the whole aggregate.
+  Type *OrigTy;
+  bool Used;
 
-    /// Index original Function's argument.
-    unsigned OrigArgIndex;
-    /// Sentinel value for implicit machine-level input arguments.
-    static const unsigned NoArgIndex = UINT_MAX;
+  /// Index original Function's argument.
+  unsigned OrigArgIndex;
+  /// Sentinel value for implicit machine-level input arguments.
+  static const unsigned NoArgIndex = UINT_MAX;
 
-    /// Offset in bytes of current input value relative to the beginning of
-    /// original argument. E.g. if argument was splitted into four 32 bit
-    /// registers, we got 4 InputArgs with PartOffsets 0, 4, 8 and 12.
-    unsigned PartOffset;
+  /// Offset in bytes of current input value relative to the beginning of
+  /// original argument. E.g. if argument was splitted into four 32 bit
+  /// registers, we got 4 InputArgs with PartOffsets 0, 4, 8 and 12.
+  unsigned PartOffset;
 
-    InputArg(ArgFlagsTy Flags, MVT VT, EVT ArgVT, Type *OrigTy, bool Used,
-             unsigned OrigArgIndex, unsigned PartOffset)
-        : Flags(Flags), VT(VT), ArgVT(ArgVT), OrigTy(OrigTy), Used(Used),
-          OrigArgIndex(OrigArgIndex), PartOffset(PartOffset) {}
+  InputArg(ArgFlagsTy Flags, MVT VT, EVT ArgVT, Type *OrigTy, bool Used,
+           unsigned OrigArgIndex, unsigned PartOffset)
+      : Flags(Flags), VT(VT), ArgVT(ArgVT), OrigTy(OrigTy), Used(Used),
+        OrigArgIndex(OrigArgIndex), PartOffset(PartOffset) {}
 
-    bool isOrigArg() const {
-      return OrigArgIndex != NoArgIndex;
-    }
+  bool isOrigArg() const { return OrigArgIndex != NoArgIndex; }
 
-    unsigned getOrigArgIndex() const {
-      assert(OrigArgIndex != NoArgIndex && "Implicit machine-level argument");
-      return OrigArgIndex;
-    }
-  };
+  unsigned getOrigArgIndex() const {
+    assert(OrigArgIndex != NoArgIndex && "Implicit machine-level argument");
+    return OrigArgIndex;
+  }
+};
 
-  /// OutputArg - This struct carries flags and a value for a
-  /// single outgoing (actual) argument or outgoing (from the perspective
-  /// of the caller) return value virtual register.
-  ///
-  struct OutputArg {
-    ArgFlagsTy Flags;
-    // Legalized type of this argument part.
-    MVT VT;
-    /// Non-legalized type of the argument. This is the EVT corresponding to
-    /// the OrigTy IR type.
-    EVT ArgVT;
-    /// Original IR type of the argument. For aggregates, this is the type of
-    /// an individual aggregate element, not the whole aggregate.
-    Type *OrigTy;
+/// OutputArg - This struct carries flags and a value for a
+/// single outgoing (actual) argument or outgoing (from the perspective
+/// of the caller) return value virtual register.
+///
+struct OutputArg {
+  ArgFlagsTy Flags;
+  // Legalized type of this argument part.
+  MVT VT;
+  /// Non-legalized type of the argument. This is the EVT corresponding to
+  /// the OrigTy IR type.
+  EVT ArgVT;
+  /// Original IR type of the argument. For aggregates, this is the type of
+  /// an individual aggregate element, not the whole aggregate.
+  Type *OrigTy;
 
-    /// Index original Function's argument.
-    unsigned OrigArgIndex;
+  /// Index original Function's argument.
+  unsigned OrigArgIndex;
 
-    /// Offset in bytes of current output value relative to the beginning of
-    /// original argument. E.g. if argument was splitted into four 32 bit
-    /// registers, we got 4 OutputArgs with PartOffsets 0, 4, 8 and 12.
-    unsigned PartOffset;
+  /// Offset in bytes of current output value relative to the beginning of
+  /// original argument. E.g. if argument was splitted into four 32 bit
+  /// registers, we got 4 OutputArgs with PartOffsets 0, 4, 8 and 12.
+  unsigned PartOffset;
 
-    OutputArg(ArgFlagsTy Flags, MVT VT, EVT ArgVT, Type *OrigTy,
-              unsigned OrigArgIndex, unsigned PartOffset)
-        : Flags(Flags), VT(VT), ArgVT(ArgVT), OrigTy(OrigTy),
-          OrigArgIndex(OrigArgIndex), PartOffset(PartOffset) {}
-  };
+  OutputArg(ArgFlagsTy Flags, MVT VT, EVT ArgVT, Type *OrigTy,
+            unsigned OrigArgIndex, unsigned PartOffset)
+      : Flags(Flags), VT(VT), ArgVT(ArgVT), OrigTy(OrigTy),
+        OrigArgIndex(OrigArgIndex), PartOffset(PartOffset) {}
+};
 
 } // end namespace ISD
 } // end namespace llvm

@@ -1,4 +1,5 @@
-//===-- AArch64WinCOFFStreamer.cpp - ARM Target WinCOFF Streamer ----*- C++ -*-===//
+//===-- AArch64WinCOFFStreamer.cpp - ARM Target WinCOFF Streamer ----*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -103,7 +104,7 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveFPLRX(int Offset) {
 void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveReg(unsigned Reg,
                                                           int Offset) {
   assert(Offset >= 0 && Offset <= 504 &&
-        "Offset for save reg should be >= 0 && <= 504");
+         "Offset for save reg should be >= 0 && <= 504");
   emitARM64WinUnwindCode(Win64EH::UOP_SaveReg, Reg, Offset);
 }
 
@@ -130,7 +131,7 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveLRPair(unsigned Reg,
 void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveFReg(unsigned Reg,
                                                            int Offset) {
   assert(Offset >= 0 && Offset <= 504 &&
-        "Offset for save reg should be >= 0 && <= 504");
+         "Offset for save reg should be >= 0 && <= 504");
   emitARM64WinUnwindCode(Win64EH::UOP_SaveFReg, Reg, Offset);
 }
 

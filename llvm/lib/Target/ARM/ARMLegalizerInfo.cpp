@@ -67,9 +67,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
         .minScalar(0, s32);
 
   getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
-    .legalFor({{s32, s32}})
-    .minScalar(0, s32)
-    .clampScalar(1, s32, s32);
+      .legalFor({{s32, s32}})
+      .minScalar(0, s32)
+      .clampScalar(1, s32, s32);
 
   bool HasHWDivide = (!ST.isThumb() && ST.hasDivideInARMMode()) ||
                      (ST.isThumb() && ST.hasDivideInThumbMode());
@@ -125,9 +125,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({p0});
 
   auto &PhiBuilder =
-      getActionDefinitionsBuilder(G_PHI)
-          .legalFor({s32, p0})
-          .minScalar(0, s32);
+      getActionDefinitionsBuilder(G_PHI).legalFor({s32, p0}).minScalar(0, s32);
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, s32}})
@@ -140,8 +138,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
         {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FCONSTANT, G_FNEG})
         .legalFor({s32, s64});
 
-    LoadStoreBuilder
-        .legalForTypesWithMemDesc({{s64, p0, s64, 32}})
+    LoadStoreBuilder.legalForTypesWithMemDesc({{s64, p0, s64, 32}})
         .maxScalar(0, s32);
     PhiBuilder.legalFor({s64});
 

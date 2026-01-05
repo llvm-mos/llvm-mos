@@ -16,8 +16,8 @@ namespace llvm {
 
 namespace Hexagon {
 
-    const unsigned int StartPacket = 0x1;
-    const unsigned int EndPacket = 0x2;
+const unsigned int StartPacket = 0x1;
+const unsigned int EndPacket = 0x2;
 
 } // end namespace Hexagon
 
@@ -27,14 +27,14 @@ class HexagonMachineFunctionInfo : public MachineFunctionInfo {
   // returning the value of the returned struct in a register. This field
   // holds the virtual register into which the sret argument is passed.
   unsigned SRetReturnReg = 0;
-  Register StackAlignBaseReg = 0;    // Aligned-stack base register
+  Register StackAlignBaseReg = 0; // Aligned-stack base register
   int VarArgsFrameIndex;
   int RegSavedAreaStartFrameIndex;
   int FirstNamedArgFrameIndex;
   int LastNamedArgFrameIndex;
   bool HasClobberLR = false;
   bool HasEHReturn = false;
-  std::map<const MachineInstr*, unsigned> PacketInfo;
+  std::map<const MachineInstr *, unsigned> PacketInfo;
   virtual void anchor();
 
 public:
@@ -54,7 +54,9 @@ public:
   void setVarArgsFrameIndex(int v) { VarArgsFrameIndex = v; }
   int getVarArgsFrameIndex() { return VarArgsFrameIndex; }
 
-  void setRegSavedAreaStartFrameIndex(int v) { RegSavedAreaStartFrameIndex = v;}
+  void setRegSavedAreaStartFrameIndex(int v) {
+    RegSavedAreaStartFrameIndex = v;
+  }
   int getRegSavedAreaStartFrameIndex() { return RegSavedAreaStartFrameIndex; }
 
   void setFirstNamedArgFrameIndex(int v) { FirstNamedArgFrameIndex = v; }
@@ -63,21 +65,19 @@ public:
   void setLastNamedArgFrameIndex(int v) { LastNamedArgFrameIndex = v; }
   int getLastNamedArgFrameIndex() { return LastNamedArgFrameIndex; }
 
-  void setStartPacket(MachineInstr* MI) {
+  void setStartPacket(MachineInstr *MI) {
     PacketInfo[MI] |= Hexagon::StartPacket;
   }
-  void setEndPacket(MachineInstr* MI)   {
-    PacketInfo[MI] |= Hexagon::EndPacket;
-  }
-  bool isStartPacket(const MachineInstr* MI) const {
+  void setEndPacket(MachineInstr *MI) { PacketInfo[MI] |= Hexagon::EndPacket; }
+  bool isStartPacket(const MachineInstr *MI) const {
     auto It = PacketInfo.find(MI);
     return It != PacketInfo.end() && (It->second & Hexagon::StartPacket);
   }
-  bool isEndPacket(const MachineInstr* MI) const {
+  bool isEndPacket(const MachineInstr *MI) const {
     auto It = PacketInfo.find(MI);
     return It != PacketInfo.end() && (It->second & Hexagon::EndPacket);
   }
-  void setHasClobberLR(bool v) { HasClobberLR = v;  }
+  void setHasClobberLR(bool v) { HasClobberLR = v; }
   bool hasClobberLR() const { return HasClobberLR; }
 
   bool hasEHReturn() const { return HasEHReturn; };

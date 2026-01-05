@@ -88,8 +88,8 @@ public:
 
 private:
   LowerAtomicPass Impl;
-  };
-}
+};
+} // namespace
 
 char LowerAtomicLegacyPass::ID = 0;
 INITIALIZE_PASS(LowerAtomicLegacyPass, "loweratomic",

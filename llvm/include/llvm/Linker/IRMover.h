@@ -96,6 +96,6 @@ private:
   NamedMDNodesT NamedMDNodes; ///< Cache for IRMover::linkNamedMDNodes().
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

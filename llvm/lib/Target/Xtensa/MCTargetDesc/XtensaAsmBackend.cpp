@@ -41,7 +41,8 @@ public:
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
-  std::unique_ptr<MCObjectTargetWriter> createObjectTargetWriter() const override {
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
     return createXtensaObjectWriter(OSABI, IsLittleEndian);
   }
 };

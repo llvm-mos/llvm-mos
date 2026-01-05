@@ -475,8 +475,8 @@ unsigned WebAssemblyFastISel::zeroExtendToI32(unsigned Reg, const Value *V,
       .addImm(~(~uint64_t(0) << MVT(From).getSizeInBits()));
 
   Register Result = createResultReg(&WebAssembly::I32RegClass);
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-          TII.get(WebAssembly::AND_I32), Result)
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(WebAssembly::AND_I32),
+          Result)
       .addReg(Reg)
       .addReg(Imm);
 
@@ -505,8 +505,8 @@ unsigned WebAssemblyFastISel::signExtendToI32(unsigned Reg, const Value *V,
       .addImm(32 - MVT(From).getSizeInBits());
 
   Register Left = createResultReg(&WebAssembly::I32RegClass);
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-          TII.get(WebAssembly::SHL_I32), Left)
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(WebAssembly::SHL_I32),
+          Left)
       .addReg(Reg)
       .addReg(Imm);
 
@@ -594,8 +594,8 @@ unsigned WebAssemblyFastISel::notValue(unsigned Reg) {
   assert(MRI.getRegClass(Reg) == &WebAssembly::I32RegClass);
 
   Register NotReg = createResultReg(&WebAssembly::I32RegClass);
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-          TII.get(WebAssembly::EQZ_I32), NotReg)
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(WebAssembly::EQZ_I32),
+          NotReg)
       .addReg(Reg);
   return NotReg;
 }
@@ -1202,8 +1202,8 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
     return true;
   }
 
-  Register Reg = fastEmit_ISD_BITCAST_r(VT.getSimpleVT(), RetVT.getSimpleVT(),
-                                        In);
+  Register Reg =
+      fastEmit_ISD_BITCAST_r(VT.getSimpleVT(), RetVT.getSimpleVT(), In);
   if (!Reg)
     return false;
   MachineBasicBlock::iterator Iter = FuncInfo.InsertPt;
@@ -1265,8 +1265,8 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   materializeLoadStoreOperands(Addr);
 
   Register ResultReg = createResultReg(RC);
-  auto MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc),
-                     ResultReg);
+  auto MIB =
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), ResultReg);
 
   addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(Load));
 
@@ -1414,8 +1414,7 @@ bool WebAssemblyFastISel::selectRet(const Instruction *I) {
   if (Reg == 0)
     return false;
 
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-          TII.get(WebAssembly::RETURN))
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(WebAssembly::RETURN))
       .addReg(Reg);
   return true;
 }

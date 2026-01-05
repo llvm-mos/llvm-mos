@@ -260,14 +260,14 @@ public:
   static char ID; // Pass identification, replacement for typeid
 };
 
-template<> struct simplify_type<AssumptionCache::ResultElem> {
+template <> struct simplify_type<AssumptionCache::ResultElem> {
   using SimpleType = Value *;
 
   static SimpleType getSimplifiedValue(AssumptionCache::ResultElem &Val) {
     return Val;
   }
 };
-template<> struct simplify_type<const AssumptionCache::ResultElem> {
+template <> struct simplify_type<const AssumptionCache::ResultElem> {
   using SimpleType = /*const*/ Value *;
 
   static SimpleType getSimplifiedValue(const AssumptionCache::ResultElem &Val) {

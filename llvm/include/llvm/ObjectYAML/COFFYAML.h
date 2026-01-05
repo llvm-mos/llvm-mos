@@ -139,43 +139,35 @@ struct ScalarEnumerationTraits<COFFYAML::WeakExternalCharacteristics> {
   static void enumeration(IO &IO, COFFYAML::WeakExternalCharacteristics &Value);
 };
 
-template <>
-struct ScalarEnumerationTraits<COFFYAML::AuxSymbolType> {
+template <> struct ScalarEnumerationTraits<COFFYAML::AuxSymbolType> {
   static void enumeration(IO &IO, COFFYAML::AuxSymbolType &Value);
 };
 
-template <>
-struct ScalarEnumerationTraits<COFFYAML::COMDATType> {
+template <> struct ScalarEnumerationTraits<COFFYAML::COMDATType> {
   static void enumeration(IO &IO, COFFYAML::COMDATType &Value);
 };
 
-template <>
-struct ScalarEnumerationTraits<COFF::MachineTypes> {
+template <> struct ScalarEnumerationTraits<COFF::MachineTypes> {
   static void enumeration(IO &IO, COFF::MachineTypes &Value);
 };
 
-template <>
-struct ScalarEnumerationTraits<COFF::SymbolBaseType> {
+template <> struct ScalarEnumerationTraits<COFF::SymbolBaseType> {
   static void enumeration(IO &IO, COFF::SymbolBaseType &Value);
 };
 
-template <>
-struct ScalarEnumerationTraits<COFF::SymbolStorageClass> {
+template <> struct ScalarEnumerationTraits<COFF::SymbolStorageClass> {
   static void enumeration(IO &IO, COFF::SymbolStorageClass &Value);
 };
 
-template <>
-struct ScalarEnumerationTraits<COFF::SymbolComplexType> {
+template <> struct ScalarEnumerationTraits<COFF::SymbolComplexType> {
   static void enumeration(IO &IO, COFF::SymbolComplexType &Value);
 };
 
-template <>
-struct ScalarEnumerationTraits<COFF::RelocationTypeI386> {
+template <> struct ScalarEnumerationTraits<COFF::RelocationTypeI386> {
   static void enumeration(IO &IO, COFF::RelocationTypeI386 &Value);
 };
 
-template <>
-struct ScalarEnumerationTraits<COFF::RelocationTypeAMD64> {
+template <> struct ScalarEnumerationTraits<COFF::RelocationTypeAMD64> {
   static void enumeration(IO &IO, COFF::RelocationTypeAMD64 &Value);
 };
 
@@ -183,53 +175,43 @@ template <> struct ScalarEnumerationTraits<COFF::RelocationTypesMips> {
   static void enumeration(IO &IO, COFF::RelocationTypesMips &Value);
 };
 
-template <>
-struct ScalarEnumerationTraits<COFF::RelocationTypesARM> {
+template <> struct ScalarEnumerationTraits<COFF::RelocationTypesARM> {
   static void enumeration(IO &IO, COFF::RelocationTypesARM &Value);
 };
 
-template <>
-struct ScalarEnumerationTraits<COFF::RelocationTypesARM64> {
+template <> struct ScalarEnumerationTraits<COFF::RelocationTypesARM64> {
   static void enumeration(IO &IO, COFF::RelocationTypesARM64 &Value);
 };
 
-template <>
-struct ScalarEnumerationTraits<COFF::WindowsSubsystem> {
+template <> struct ScalarEnumerationTraits<COFF::WindowsSubsystem> {
   static void enumeration(IO &IO, COFF::WindowsSubsystem &Value);
 };
 
-template <>
-struct ScalarBitSetTraits<COFF::Characteristics> {
+template <> struct ScalarBitSetTraits<COFF::Characteristics> {
   static void bitset(IO &IO, COFF::Characteristics &Value);
 };
 
-template <>
-struct ScalarBitSetTraits<COFF::SectionCharacteristics> {
+template <> struct ScalarBitSetTraits<COFF::SectionCharacteristics> {
   static void bitset(IO &IO, COFF::SectionCharacteristics &Value);
 };
 
-template <>
-struct ScalarBitSetTraits<COFF::DLLCharacteristics> {
+template <> struct ScalarBitSetTraits<COFF::DLLCharacteristics> {
   static void bitset(IO &IO, COFF::DLLCharacteristics &Value);
 };
 
-template <>
-struct MappingTraits<COFFYAML::Relocation> {
+template <> struct MappingTraits<COFFYAML::Relocation> {
   static void mapping(IO &IO, COFFYAML::Relocation &Rel);
 };
 
-template <>
-struct MappingTraits<COFFYAML::PEHeader> {
+template <> struct MappingTraits<COFFYAML::PEHeader> {
   static void mapping(IO &IO, COFFYAML::PEHeader &PH);
 };
 
-template <>
-struct MappingTraits<COFF::DataDirectory> {
+template <> struct MappingTraits<COFF::DataDirectory> {
   static void mapping(IO &IO, COFF::DataDirectory &DD);
 };
 
-template <>
-struct MappingTraits<COFF::header> {
+template <> struct MappingTraits<COFF::header> {
   static void mapping(IO &IO, COFF::header &H);
 };
 
@@ -265,8 +247,7 @@ template <> struct MappingTraits<object::coff_load_config_code_integrity> {
   static void mapping(IO &IO, object::coff_load_config_code_integrity &ACT);
 };
 
-template <>
-struct MappingTraits<COFFYAML::Symbol> {
+template <> struct MappingTraits<COFFYAML::Symbol> {
   static void mapping(IO &IO, COFFYAML::Symbol &S);
 };
 
@@ -274,13 +255,11 @@ template <> struct MappingTraits<COFFYAML::SectionDataEntry> {
   static void mapping(IO &IO, COFFYAML::SectionDataEntry &Sec);
 };
 
-template <>
-struct MappingTraits<COFFYAML::Section> {
+template <> struct MappingTraits<COFFYAML::Section> {
   static void mapping(IO &IO, COFFYAML::Section &Sec);
 };
 
-template <>
-struct MappingTraits<COFFYAML::Object> {
+template <> struct MappingTraits<COFFYAML::Object> {
   static void mapping(IO &IO, COFFYAML::Object &Obj);
 };
 

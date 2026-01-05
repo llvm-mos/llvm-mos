@@ -944,7 +944,8 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
 
     unsigned Opc;
     switch (SrcAddrSpace) {
-    default: report_fatal_error("Bad address space in addrspacecast");
+    default:
+      report_fatal_error("Bad address space in addrspacecast");
     case ADDRESS_SPACE_GLOBAL:
       Opc = TM.is64Bit() ? NVPTX::cvta_global_64 : NVPTX::cvta_global;
       break;
@@ -975,7 +976,8 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
       report_fatal_error("Cannot cast between two non-generic address spaces");
     unsigned Opc;
     switch (DstAddrSpace) {
-    default: report_fatal_error("Bad address space in addrspacecast");
+    default:
+      report_fatal_error("Bad address space in addrspacecast");
     case ADDRESS_SPACE_GLOBAL:
       Opc = TM.is64Bit() ? NVPTX::cvta_to_global_64 : NVPTX::cvta_to_global;
       break;
@@ -1653,7 +1655,6 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
     return false;
   }
 
-
   unsigned Opc;
   // For the BFE operations we form here from "and" and "srl", always use the
   // unsigned variants.
@@ -1674,9 +1675,7 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
     return false;
   }
 
-  SDValue Ops[] = {
-    Val, Start, Len
-  };
+  SDValue Ops[] = {Val, Start, Len};
 
   ReplaceNode(N, CurDAG->getMachineNode(Opc, DL, N->getVTList(), Ops));
   return true;
@@ -1794,7 +1793,8 @@ void NVPTXDAGToDAGISel::SelectV2I64toI128(SDNode *N) {
   NewOps[2] = SDValue(Mov, 0);
   if (N->getNumOperands() == 5)
     NewOps[3] = N->getOperand(4);
-  SDValue NewValue = CurDAG->getNode(ISD::CopyToReg, DL, SmallVector<EVT>(N->values()), NewOps);
+  SDValue NewValue = CurDAG->getNode(ISD::CopyToReg, DL,
+                                     SmallVector<EVT>(N->values()), NewOps);
 
   ReplaceNode(N, NewValue.getNode());
 }

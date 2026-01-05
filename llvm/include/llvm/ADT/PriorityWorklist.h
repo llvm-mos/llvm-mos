@@ -56,28 +56,22 @@ class PriorityWorklist {
 public:
   using value_type = T;
   using key_type = T;
-  using reference = T&;
-  using const_reference = const T&;
+  using reference = T &;
+  using const_reference = const T &;
   using size_type = typename MapT::size_type;
 
   /// Construct an empty PriorityWorklist
   PriorityWorklist() = default;
 
   /// Determine if the PriorityWorklist is empty or not.
-  bool empty() const {
-    return V.empty();
-  }
+  bool empty() const { return V.empty(); }
 
   /// Returns the number of elements in the worklist.
-  size_type size() const {
-    return M.size();
-  }
+  size_type size() const { return M.size(); }
 
   /// Count the number of elements of a given key in the PriorityWorklist.
   /// \returns 0 if the element is not in the PriorityWorklist, 1 if it is.
-  size_type count(const key_type &key) const {
-    return M.count(key);
-  }
+  size_type count(const key_type &key) const { return M.count(key); }
 
   /// Return the last element of the PriorityWorklist.
   const T &back() const {
@@ -158,8 +152,9 @@ public:
 
   /// Erase an item from the worklist.
   ///
-  /// Note that this is constant time due to the nature of the worklist implementation.
-  bool erase(const T& X) {
+  /// Note that this is constant time due to the nature of the worklist
+  /// implementation.
+  bool erase(const T &X) {
     auto I = M.find(X);
     if (I == M.end())
       return false;
@@ -189,8 +184,7 @@ public:
   /// algorithm like remove_if impossible to use.
   ///
   /// \returns true if any element is removed.
-  template <typename UnaryPredicate>
-  bool erase_if(UnaryPredicate P) {
+  template <typename UnaryPredicate> bool erase_if(UnaryPredicate P) {
     typename VectorT::iterator E = remove_if(V, [&](const T &Arg) {
       if (Arg == T())
         // Skip null values in the PriorityWorklist.

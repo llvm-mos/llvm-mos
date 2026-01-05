@@ -84,6 +84,6 @@ private:
   std::unique_ptr<msf::MappedBlockStream> Stream;
 };
 } // namespace pdb
-}
+} // namespace llvm
 
 #endif

@@ -61,7 +61,8 @@ bool MOSLateOptimization::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-static bool definesNZ(const MachineInstr &MI, Register Val, const MOSSubtarget &STI) {
+static bool definesNZ(const MachineInstr &MI, Register Val,
+                      const MOSSubtarget &STI) {
   if (MI.getOpcode() == MOS::CL)
     return false;
   if (STI.hasSPC700() && MI.getOpcode() == MOS::PL)

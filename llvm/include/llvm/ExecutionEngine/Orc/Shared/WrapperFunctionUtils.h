@@ -606,7 +606,7 @@ public:
   using MethodT = RetT (ClassT::*)(ArgTs...);
   MethodWrapperHandler(MethodT M) : M(M) {}
   RetT operator()(ExecutorAddr ObjAddr, ArgTs &...Args) {
-    return (ObjAddr.toPtr<ClassT*>()->*M)(std::forward<ArgTs>(Args)...);
+    return (ObjAddr.toPtr<ClassT *>()->*M)(std::forward<ArgTs>(Args)...);
   }
 
 private:

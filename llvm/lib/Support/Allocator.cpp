@@ -28,9 +28,7 @@ void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t BytesAllocated,
 
 } // namespace detail
 
-void PrintRecyclerStats(size_t Size,
-                        size_t Align,
-                        size_t FreeListSize) {
+void PrintRecyclerStats(size_t Size, size_t Align, size_t FreeListSize) {
   errs() << "Recycler element size: " << Size << '\n'
          << "Recycler element alignment: " << Align << '\n'
          << "Number of elements free for recycling: " << FreeListSize << '\n';

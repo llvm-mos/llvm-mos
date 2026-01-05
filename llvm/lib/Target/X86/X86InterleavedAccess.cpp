@@ -450,7 +450,7 @@ static void setGroupSize(MVT VT, SmallVectorImpl<int> &SizeInfo) {
   for (int i = 0, FirstGroupElement = 0; i < 3; i++) {
     int GroupSize = std::ceil((VF - FirstGroupElement) / 3.0);
     SizeInfo.push_back(GroupSize);
-    FirstGroupElement = ((GroupSize)*3 + FirstGroupElement) % VF;
+    FirstGroupElement = ((GroupSize) * 3 + FirstGroupElement) % VF;
   }
 }
 

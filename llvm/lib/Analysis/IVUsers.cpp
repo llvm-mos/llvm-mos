@@ -67,7 +67,7 @@ static bool isInteresting(const SCEV *S, const Instruction *I, const Loop *L,
     // the step value is not interesting, since we don't yet know how to
     // do effective SCEV expansions for addrecs with interesting steps.
     return isInteresting(AR->getStart(), I, L, SE, LI) &&
-          !isInteresting(AR->getStepRecurrence(*SE), I, L, SE, LI);
+           !isInteresting(AR->getStepRecurrence(*SE), I, L, SE, LI);
   }
 
   // An add is interesting if exactly one of its operands is interesting.
@@ -139,11 +139,11 @@ bool IVUsers::AddUsersImpl(Instruction *I, bool AllowNonNative) {
   // Add this IV user to the Processed set before returning false to ensure that
   // all IV users are members of the set. See IVUsers::isIVUserOrOperand.
   if (!Processed.insert(I).second)
-    return true;    // Instruction already handled.
+    return true; // Instruction already handled.
 
   Type *Ty = I->getType();
   if (!SE->isSCEVable(Ty))
-    return false;   // Void and FP expressions cannot be reduced.
+    return false; // Void and FP expressions cannot be reduced.
 
   // IVUsers is used by LSR which assumes that all SCEV expressions are safe to
   // pass to SCEVExpander. Expressions are not safe to expand if they represent
@@ -372,9 +372,7 @@ const SCEV *IVUsers::getStride(const IVStrideUse &IU, const Loop *L) const {
   return nullptr;
 }
 
-void IVStrideUse::transformToPostInc(const Loop *L) {
-  PostIncLoops.insert(L);
-}
+void IVStrideUse::transformToPostInc(const Loop *L) { PostIncLoops.insert(L); }
 
 void IVStrideUse::deleted() {
   // Remove this user from the list.

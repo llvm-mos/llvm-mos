@@ -88,11 +88,12 @@ class AMDGPUExternalAAWrapper : public ExternalAAWrapperPass {
 public:
   static char ID;
 
-  AMDGPUExternalAAWrapper() : ExternalAAWrapperPass(
-    [](Pass &P, Function &, AAResults &AAR) {
-      if (auto *WrapperPass = P.getAnalysisIfAvailable<AMDGPUAAWrapperPass>())
-        AAR.addAAResult(WrapperPass->getResult());
-    }) {}
+  AMDGPUExternalAAWrapper()
+      : ExternalAAWrapperPass([](Pass &P, Function &, AAResults &AAR) {
+          if (auto *WrapperPass =
+                  P.getAnalysisIfAvailable<AMDGPUAAWrapperPass>())
+            AAR.addAAResult(WrapperPass->getResult());
+        }) {}
 };
 
 } // end namespace llvm

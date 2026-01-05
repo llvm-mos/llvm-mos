@@ -54,8 +54,7 @@ static cl::opt<bool> WarnIncomplete(
     cl::desc("Warn on input symbols missing from output symbol list"),
     cl::cat(CXXMapCategory));
 
-static void warn(Twine Message, Twine Whence = "",
-                 std::string Hint = "") {
+static void warn(Twine Message, Twine Whence = "", std::string Hint = "") {
   WithColor::warning();
   std::string WhenceStr = Whence.str();
   if (!WhenceStr.empty())
@@ -87,8 +86,7 @@ static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
 
 static void remapSymbols(MemoryBuffer &OldSymbolFile,
                          MemoryBuffer &NewSymbolFile,
-                         MemoryBuffer &RemappingFile,
-                         raw_ostream &Out) {
+                         MemoryBuffer &RemappingFile, raw_ostream &Out) {
   // Load the remapping file and prepare to canonicalize symbols.
   SymbolRemappingReader Reader;
   if (Error E = Reader.read(RemappingFile))

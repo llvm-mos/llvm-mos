@@ -86,13 +86,13 @@ Expected<FileAnalysis> FileAnalysis::Create(StringRef Filename) {
     return make_error<UnsupportedDisassembly>("Failed to cast object");
 
   switch (Analysis.Object->getArch()) {
-    case Triple::x86:
-    case Triple::x86_64:
-    case Triple::aarch64:
-    case Triple::aarch64_be:
-      break;
-    default:
-      return make_error<UnsupportedDisassembly>("Unsupported architecture.");
+  case Triple::x86:
+  case Triple::x86_64:
+  case Triple::aarch64:
+  case Triple::aarch64_be:
+    break;
+  default:
+    return make_error<UnsupportedDisassembly>("Unsupported architecture.");
   }
 
   Analysis.ObjectTriple = Analysis.Object->makeTriple();
@@ -308,7 +308,8 @@ FileAnalysis::validateCFIProtection(const GraphResult &Graph) const {
   return CFIProtectionStatus::PROTECTED;
 }
 
-uint64_t FileAnalysis::indirectCFOperandClobber(const GraphResult &Graph) const {
+uint64_t
+FileAnalysis::indirectCFOperandClobber(const GraphResult &Graph) const {
   assert(Graph.OrphanedNodes.empty() && "Orphaned nodes should be empty.");
 
   // Get the set of registers we must check to ensure they're not clobbered.
@@ -352,7 +353,8 @@ uint64_t FileAnalysis::indirectCFOperandClobber(const GraphResult &Graph) const 
           CurRegisterNumbers.erase(RI);
           // Add the registers this load reads to those we check for clobbers.
           for (unsigned i = InstrDesc.getNumDefs(),
-                        e = InstrDesc.getNumOperands(); i != e; i++) {
+                        e = InstrDesc.getNumOperands();
+               i != e; i++) {
             const auto &Operand = NodeInstr.Instruction.getOperand(i);
             if (Operand.isReg())
               CurRegisterNumbers.insert(Operand.getReg());

@@ -91,11 +91,9 @@ std::string llvm::pdb::formatChunkKind(DebugSubsectionKind Kind,
                   "DEBUG_S_MERGED_ASSEMBLYINPUT");
       RETURN_CASE(DebugSubsectionKind, CoffSymbolRVA,
                   "DEBUG_S_COFF_SYMBOL_RVA");
-      RETURN_CASE(DebugSubsectionKind, XfgHashType,
-                  "DEBUG_S_XFGHASH_TYPE");
+      RETURN_CASE(DebugSubsectionKind, XfgHashType, "DEBUG_S_XFGHASH_TYPE");
       RETURN_CASE(DebugSubsectionKind, XfgHashVirtual,
                   "DEBUG_S_XFGHASH_VIRTUAL");
-
     }
   }
   return formatUnknownEnum(Kind);

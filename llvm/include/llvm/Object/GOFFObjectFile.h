@@ -58,7 +58,9 @@ public:
 
   Triple::ArchType getArch() const override { return Triple::systemz; }
 
-  Expected<SubtargetFeatures> getFeatures() const override { return SubtargetFeatures(); }
+  Expected<SubtargetFeatures> getFeatures() const override {
+    return SubtargetFeatures();
+  }
 
   bool isRelocatableObject() const override { return true; }
 
@@ -66,9 +68,7 @@ public:
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;
 
-  bool is64Bit() const override {
-    return true;
-  }
+  bool is64Bit() const override { return true; }
 
   bool isSectionNoLoad(DataRefImpl Sec) const;
   bool isSectionReadOnlyData(DataRefImpl Sec) const;

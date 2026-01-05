@@ -25,9 +25,9 @@ static struct RegisterInterp {
   RegisterInterp() { Interpreter::Register(); }
 } InterpRegistrator;
 
-}
+} // namespace
 
-extern "C" void LLVMLinkInInterpreter() { }
+extern "C" void LLVMLinkInInterpreter() {}
 
 /// Create a new interpreter object.
 ///
@@ -36,9 +36,8 @@ ExecutionEngine *Interpreter::create(std::unique_ptr<Module> M,
   // Tell this Module to materialize everything and release the GVMaterializer.
   if (Error Err = M->materializeAll()) {
     std::string Msg;
-    handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
-      Msg = EIB.message();
-    });
+    handleAllErrors(std::move(Err),
+                    [&](ErrorInfoBase &EIB) { Msg = EIB.message(); });
     if (ErrStr)
       *ErrStr = Msg;
     // We got an error, just return 0
@@ -63,11 +62,9 @@ Interpreter::Interpreter(std::unique_ptr<Module> M)
   IL = new IntrinsicLowering(getDataLayout());
 }
 
-Interpreter::~Interpreter() {
-  delete IL;
-}
+Interpreter::~Interpreter() { delete IL; }
 
-void Interpreter::runAtExitHandlers () {
+void Interpreter::runAtExitHandlers() {
   while (!AtExitHandlers.empty()) {
     callFunction(AtExitHandlers.back(), {});
     AtExitHandlers.pop_back();
@@ -79,7 +76,7 @@ void Interpreter::runAtExitHandlers () {
 ///
 GenericValue Interpreter::runFunction(Function *F,
                                       ArrayRef<GenericValue> ArgValues) {
-  assert (F && "Function *F was null at entry to run()");
+  assert(F && "Function *F was null at entry to run()");
 
   // Try extra hard not to pass extra args to a function that isn't
   // expecting them.  C programmers frequently bend the rules and

@@ -281,7 +281,7 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
       std::vector<FunctionInfo> FinalizedFuncs;
       FinalizedFuncs.reserve(Funcs.size());
       FinalizedFuncs.emplace_back(std::move(Funcs.front()));
-      for (size_t Idx=1; Idx < NumBefore; ++Idx) {
+      for (size_t Idx = 1; Idx < NumBefore; ++Idx) {
         FunctionInfo &Prev = FinalizedFuncs.back();
         FunctionInfo &Curr = Funcs[Idx];
         // Empty ranges won't intersect, but we still need to
@@ -318,13 +318,14 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
             Out.Report("Overlapping function ranges", [&](raw_ostream &OS) {
               // print warnings about overlaps
               OS << "warning: function ranges overlap:\n"
-                << Prev << "\n"
-                << Curr << "\n";
+                 << Prev << "\n"
+                 << Curr << "\n";
             });
             FinalizedFuncs.emplace_back(std::move(Curr));
           }
         } else {
-          if (Prev.Range.size() == 0 && Curr.Range.contains(Prev.Range.start())) {
+          if (Prev.Range.size() == 0 &&
+              Curr.Range.contains(Prev.Range.start())) {
             // Symbols on macOS don't have address ranges, so if the range
             // doesn't match and the size is zero, then we replace the empty
             // symbol function info with the current one.
@@ -337,13 +338,13 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
       std::swap(Funcs, FinalizedFuncs);
     }
     // If our last function info entry doesn't have a size and if we have valid
-    // text ranges, we should set the size of the last entry since any search for
-    // a high address might match our last entry. By fixing up this size, we can
-    // help ensure we don't cause lookups to always return the last symbol that
-    // has no size when doing lookups.
+    // text ranges, we should set the size of the last entry since any search
+    // for a high address might match our last entry. By fixing up this size, we
+    // can help ensure we don't cause lookups to always return the last symbol
+    // that has no size when doing lookups.
     if (!Funcs.empty() && Funcs.back().Range.size() == 0 && ValidTextRanges) {
-      if (auto Range =
-              ValidTextRanges->getRangeThatContains(Funcs.back().Range.start())) {
+      if (auto Range = ValidTextRanges->getRangeThatContains(
+              Funcs.back().Range.start())) {
         Funcs.back().Range = {Funcs.back().Range.start(), Range->end()};
       }
     }
@@ -455,10 +456,14 @@ std::optional<uint64_t> GsymCreator::getBaseAddress() const {
 
 uint64_t GsymCreator::getMaxAddressOffset() const {
   switch (getAddressOffsetSize()) {
-    case 1: return UINT8_MAX;
-    case 2: return UINT16_MAX;
-    case 4: return UINT32_MAX;
-    case 8: return UINT64_MAX;
+  case 1:
+    return UINT8_MAX;
+  case 2:
+    return UINT16_MAX;
+  case 4:
+    return UINT32_MAX;
+  case 8:
+    return UINT64_MAX;
   }
   llvm_unreachable("invalid address offset");
 }
@@ -500,11 +505,12 @@ uint64_t GsymCreator::calculateHeaderAndTableSize() const {
 void GsymCreator::fixupInlineInfo(const GsymCreator &SrcGC, InlineInfo &II) {
   II.Name = copyString(SrcGC, II.Name);
   II.CallFile = copyFile(SrcGC, II.CallFile);
-  for (auto &ChildII: II.Children)
+  for (auto &ChildII : II.Children)
     fixupInlineInfo(SrcGC, ChildII);
 }
 
-uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx) {
+uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC,
+                                       size_t FuncIdx) {
   // To copy a function info we need to copy any files and strings over into
   // this GsymCreator and then copy the function info and update the string
   // table offsets to match the new offsets.
@@ -521,7 +527,7 @@ uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx)
     // from SrcGC and must be converted to file indexes from this GsymCreator.
     LineTable &DstLT = DstFI.OptLineTable.value();
     const size_t NumLines = DstLT.size();
-    for (size_t I=0; I<NumLines; ++I) {
+    for (size_t I = 0; I < NumLines; ++I) {
       LineEntry &LE = DstLT.get(I);
       LE.File = copyFile(SrcGC, LE.File);
     }
@@ -601,10 +607,11 @@ GsymCreator::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
     const uint64_t HeaderAndTableSize = GC->calculateHeaderAndTableSize();
     if (HeaderAndTableSize + SegmentFuncInfosSize >= SegmentSize) {
       if (SegmentFuncInfosSize == 0)
-        return createStringError(std::errc::invalid_argument,
-                                 "a segment size of %" PRIu64 " is to small to "
-                                 "fit any function infos, specify a larger value",
-                                 SegmentSize);
+        return createStringError(
+            std::errc::invalid_argument,
+            "a segment size of %" PRIu64 " is to small to "
+            "fit any function infos, specify a larger value",
+            SegmentSize);
 
       break;
     }

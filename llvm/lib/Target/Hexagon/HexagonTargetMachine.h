@@ -40,7 +40,7 @@ public:
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   HexagonTargetObjectFile *getObjFileLowering() const override {
-    return static_cast<HexagonTargetObjectFile*>(TLOF.get());
+    return static_cast<HexagonTargetObjectFile *>(TLOF.get());
   }
 
   MachineFunctionInfo *

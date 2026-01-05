@@ -37,22 +37,19 @@
 
 using namespace llvm;
 
-static StringRef GetImageSizeFunc =         "llvm.OpenCL.image.get.size";
-static StringRef GetImageFormatFunc =       "llvm.OpenCL.image.get.format";
-static StringRef GetImageResourceIDFunc =   "llvm.OpenCL.image.get.resource.id";
+static StringRef GetImageSizeFunc = "llvm.OpenCL.image.get.size";
+static StringRef GetImageFormatFunc = "llvm.OpenCL.image.get.format";
+static StringRef GetImageResourceIDFunc = "llvm.OpenCL.image.get.resource.id";
 static StringRef GetSamplerResourceIDFunc =
     "llvm.OpenCL.sampler.get.resource.id";
 
-static StringRef ImageSizeArgMDType =   "__llvm_image_size";
+static StringRef ImageSizeArgMDType = "__llvm_image_size";
 static StringRef ImageFormatArgMDType = "__llvm_image_format";
 
 static StringRef KernelsMDNodeName = "opencl.kernels";
 static StringRef KernelArgMDNodeNames[] = {
-  "kernel_arg_addr_space",
-  "kernel_arg_access_qual",
-  "kernel_arg_type",
-  "kernel_arg_base_type",
-  "kernel_arg_type_qual"};
+    "kernel_arg_addr_space", "kernel_arg_access_qual", "kernel_arg_type",
+    "kernel_arg_base_type", "kernel_arg_type_qual"};
 static const unsigned NumKernelArgMDNodes = 5;
 
 namespace {
@@ -64,18 +61,15 @@ struct KernelArgMD {
 
 } // end anonymous namespace
 
-static inline bool
-IsImageType(StringRef TypeString) {
+static inline bool IsImageType(StringRef TypeString) {
   return TypeString == "image2d_t" || TypeString == "image3d_t";
 }
 
-static inline bool
-IsSamplerType(StringRef TypeString) {
+static inline bool IsSamplerType(StringRef TypeString) {
   return TypeString == "sampler_t";
 }
 
-static Function *
-GetFunctionFromMDNode(MDNode *Node) {
+static Function *GetFunctionFromMDNode(MDNode *Node) {
   if (!Node)
     return nullptr;
 
@@ -106,20 +100,17 @@ GetFunctionFromMDNode(MDNode *Node) {
   return F;
 }
 
-static StringRef
-AccessQualFromMD(MDNode *KernelMDNode, unsigned ArgIdx) {
+static StringRef AccessQualFromMD(MDNode *KernelMDNode, unsigned ArgIdx) {
   MDNode *ArgAQNode = cast<MDNode>(KernelMDNode->getOperand(2));
   return cast<MDString>(ArgAQNode->getOperand(ArgIdx + 1))->getString();
 }
 
-static StringRef
-ArgTypeFromMD(MDNode *KernelMDNode, unsigned ArgIdx) {
+static StringRef ArgTypeFromMD(MDNode *KernelMDNode, unsigned ArgIdx) {
   MDNode *ArgTypeNode = cast<MDNode>(KernelMDNode->getOperand(3));
   return cast<MDString>(ArgTypeNode->getOperand(ArgIdx + 1))->getString();
 }
 
-static MDVector
-GetArgMD(MDNode *KernelMDNode, unsigned OpIdx) {
+static MDVector GetArgMD(MDNode *KernelMDNode, unsigned OpIdx) {
   MDVector Res;
   for (unsigned i = 0; i < NumKernelArgMDNodes; ++i) {
     MDNode *Node = cast<MDNode>(KernelMDNode->getOperand(i + 1));
@@ -128,8 +119,7 @@ GetArgMD(MDNode *KernelMDNode, unsigned OpIdx) {
   return Res;
 }
 
-static void
-PushArgMD(KernelArgMD &MD, const MDVector &V) {
+static void PushArgMD(KernelArgMD &MD, const MDVector &V) {
   assert(V.size() == NumKernelArgMDNodes);
   for (unsigned i = 0; i < NumKernelArgMDNodes; ++i) {
     MD.ArgVector[i].push_back(V[i]);
@@ -148,8 +138,7 @@ class R600OpenCLImageTypeLoweringPass : public ModulePass {
   SmallVector<Instruction *, 4> InstsToErase;
 
   bool replaceImageUses(Argument &ImageArg, uint32_t ResourceID,
-                        Argument &ImageSizeArg,
-                        Argument &ImageFormatArg) {
+                        Argument &ImageSizeArg, Argument &ImageFormatArg) {
     bool Modified = false;
 
     for (auto &Use : ImageArg.uses()) {
@@ -238,7 +227,7 @@ class R600OpenCLImageTypeLoweringPass : public ModulePass {
         Argument &FormatArg = *(++ArgI);
         Modified |= replaceImageUses(Arg, ResourceID, SizeArg, FormatArg);
 
-      // Handle sampler type.
+        // Handle sampler type.
       } else if (IsSamplerType(Type)) {
         uint32_t ResourceID = NumSamplerArgs++;
         Modified |= replaceSamplerUses(Arg, ResourceID);
@@ -250,8 +239,8 @@ class R600OpenCLImageTypeLoweringPass : public ModulePass {
     return Modified;
   }
 
-  std::tuple<Function *, MDNode *>
-  addImplicitArgs(Function *F, MDNode *KernelMDNode) {
+  std::tuple<Function *, MDNode *> addImplicitArgs(Function *F,
+                                                   MDNode *KernelMDNode) {
     bool Modified = false;
 
     FunctionType *FT = F->getFunctionType();
@@ -291,7 +280,7 @@ class R600OpenCLImageTypeLoweringPass : public ModulePass {
     auto *NewF = Function::Create(NewFT, F->getLinkage(), F->getName());
     ValueToValueMapTy VMap;
     auto *NewFArgIt = NewF->arg_begin();
-    for (auto &Arg: F->args()) {
+    for (auto &Arg : F->args()) {
       auto ArgName = Arg.getName();
       NewFArgIt->setName(ArgName);
       VMap[&Arg] = &(*NewFArgIt++);
@@ -300,7 +289,7 @@ class R600OpenCLImageTypeLoweringPass : public ModulePass {
         (NewFArgIt++)->setName(Twine("__format_") + ArgName);
       }
     }
-    SmallVector<ReturnInst*, 8> Returns;
+    SmallVector<ReturnInst *, 8> Returns;
     CloneFunctionInto(NewF, F, VMap, CloneFunctionChangeType::LocalChangesOnly,
                       Returns);
 

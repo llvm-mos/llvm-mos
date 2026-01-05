@@ -282,7 +282,7 @@ void WebAssemblyDebugValueManager::sink(MachineInstr *Insert) {
   // destination BB contains the same location. See
   // https://llvm.org/docs/HowToUpdateDebugInfo.html#when-to-preserve-an-instruction-location.
   if (Def->getParent() != MBB && !hasSameDebugLoc(MBB, Def->getDebugLoc()))
-      Def->setDebugLoc(DebugLoc());
+    Def->setDebugLoc(DebugLoc());
   MBB->splice(Insert, Def->getParent(), Def);
 
   if (DbgValues.empty())

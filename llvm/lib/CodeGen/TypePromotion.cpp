@@ -173,8 +173,8 @@ class TypePromotionImpl {
   bool TryToPromote(Value *V, unsigned PromotedWidth, const LoopInfo &LI);
 
 public:
-  bool run(Function &F, const TargetMachine *TM,
-           const TargetTransformInfo &TTI, const LoopInfo &LI);
+  bool run(Function &F, const TargetMachine *TM, const TargetTransformInfo &TTI,
+           const LoopInfo &LI);
 };
 
 class TypePromotionLegacy : public FunctionPass {
@@ -781,7 +781,7 @@ bool TypePromotionImpl::isLegalToPromote(Value *V) {
 }
 
 bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
-                                 const LoopInfo &LI) {
+                                     const LoopInfo &LI) {
   Type *OrigTy = V->getType();
   TypeSize = OrigTy->getPrimitiveSizeInBits().getFixedValue();
   SafeToPromote.clear();

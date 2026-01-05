@@ -94,7 +94,7 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
 }
 
 static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
-  SmallVector<Instruction*, 128> Worklist;
+  SmallVector<Instruction *, 128> Worklist;
   bool Changed = false;
   for (Instruction &I : instructions(F)) {
     // If the instruction has side effects and no non-dbg uses,

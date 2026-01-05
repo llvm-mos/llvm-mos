@@ -20,11 +20,11 @@
 namespace llvm {
 
 class AMDGPUTargetObjectFile : public TargetLoweringObjectFileELF {
-  public:
-    MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
+public:
+  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
+                                    const TargetMachine &TM) const override;
+  MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;
-    MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
-                                        const TargetMachine &TM) const override;
 };
 
 } // end namespace llvm

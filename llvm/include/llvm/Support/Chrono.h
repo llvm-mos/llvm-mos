@@ -61,18 +61,16 @@ inline std::time_t toTimeT(UtcTime<> TP) {
 }
 
 /// Convert a std::time_t to a TimePoint
-inline TimePoint<std::chrono::seconds>
-toTimePoint(std::time_t T) {
+inline TimePoint<std::chrono::seconds> toTimePoint(std::time_t T) {
   using namespace std::chrono;
   return time_point_cast<seconds>(system_clock::from_time_t(T));
 }
 
 /// Convert a std::time_t + nanoseconds to a TimePoint
-inline TimePoint<>
-toTimePoint(std::time_t T, uint32_t nsec) {
+inline TimePoint<> toTimePoint(std::time_t T, uint32_t nsec) {
   using namespace std::chrono;
-  return time_point_cast<nanoseconds>(system_clock::from_time_t(T))
-    + nanoseconds(nsec);
+  return time_point_cast<nanoseconds>(system_clock::from_time_t(T)) +
+         nanoseconds(nsec);
 }
 
 } // namespace sys
@@ -88,8 +86,7 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, sys::UtcTime<> TP);
 ///   - %N is nanos: 000000000 - 999999999
 ///
 /// If no options are given, the default format is "%Y-%m-%d %H:%M:%S.%N".
-template <>
-struct format_provider<sys::TimePoint<>> {
+template <> struct format_provider<sys::TimePoint<>> {
   LLVM_ABI static void format(const sys::TimePoint<> &TP, llvm::raw_ostream &OS,
                               StringRef Style);
 };
@@ -100,7 +97,9 @@ template <> struct format_provider<sys::UtcTime<std::chrono::seconds>> {
 };
 
 namespace detail {
-template <typename Period> struct unit { static const char value[]; };
+template <typename Period> struct unit {
+  static const char value[];
+};
 template <typename Period> const char unit<Period>::value[] = "";
 
 template <> struct unit<std::ratio<3600>> {
@@ -161,7 +160,7 @@ private:
   }
 
   static std::pair<InternalRep, StringRef> consumeUnit(StringRef &Style,
-                                                        const Dur &D) {
+                                                       const Dur &D) {
     using namespace std::chrono;
     if (Style.consume_front("ns"))
       return {getAs<std::nano>(D), "ns"};

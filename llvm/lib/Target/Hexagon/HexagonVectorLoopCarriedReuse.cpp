@@ -58,143 +58,127 @@ static cl::opt<int> HexagonVLCRIterationLim(
 
 namespace {
 
-  // See info about DepChain in the comments at the top of this file.
-  using ChainOfDependences = SmallVector<Instruction *, 4>;
+// See info about DepChain in the comments at the top of this file.
+using ChainOfDependences = SmallVector<Instruction *, 4>;
 
-  class DepChain {
-    ChainOfDependences Chain;
+class DepChain {
+  ChainOfDependences Chain;
 
-  public:
-    bool isIdentical(DepChain &Other) const {
-      if (Other.size() != size())
+public:
+  bool isIdentical(DepChain &Other) const {
+    if (Other.size() != size())
+      return false;
+    ChainOfDependences &OtherChain = Other.getChain();
+    for (int i = 0; i < size(); ++i) {
+      if (Chain[i] != OtherChain[i])
         return false;
-      ChainOfDependences &OtherChain = Other.getChain();
-      for (int i = 0; i < size(); ++i) {
-        if (Chain[i] != OtherChain[i])
-          return false;
-      }
-      return true;
     }
-
-    ChainOfDependences &getChain() {
-      return Chain;
-    }
-
-    int size() const {
-      return Chain.size();
-    }
-
-    void clear() {
-      Chain.clear();
-    }
-
-    void push_back(Instruction *I) {
-      Chain.push_back(I);
-    }
-
-    int iterations() const {
-      return size() - 1;
-    }
-
-    Instruction *front() const {
-      return Chain.front();
-    }
-
-    Instruction *back() const {
-      return Chain.back();
-    }
-
-    Instruction *&operator[](const int index) {
-      return Chain[index];
-    }
-
-   friend raw_ostream &operator<< (raw_ostream &OS, const DepChain &D);
-  };
-
-  [[maybe_unused]]
-  raw_ostream &operator<<(raw_ostream &OS, const DepChain &D) {
-    const ChainOfDependences &CD = D.Chain;
-    int ChainSize = CD.size();
-    OS << "**DepChain Start::**\n";
-    for (int i = 0; i < ChainSize -1; ++i) {
-      OS << *(CD[i]) << " -->\n";
-    }
-    OS << *CD[ChainSize-1] << "\n";
-    return OS;
+    return true;
   }
 
-  struct ReuseValue {
-    Instruction *Inst2Replace = nullptr;
+  ChainOfDependences &getChain() { return Chain; }
 
-    // In the new PHI node that we'll construct this is the value that'll be
-    // used over the backedge. This is the value that gets reused from a
-    // previous iteration.
-    Instruction *BackedgeInst = nullptr;
-    std::map<Instruction *, DepChain *> DepChains;
-    int Iterations = -1;
+  int size() const { return Chain.size(); }
 
-    ReuseValue() = default;
+  void clear() { Chain.clear(); }
 
-    void reset() {
-      Inst2Replace = nullptr;
-      BackedgeInst = nullptr;
-      DepChains.clear();
-      Iterations = -1;
-    }
-    bool isDefined() { return Inst2Replace != nullptr; }
-  };
+  void push_back(Instruction *I) { Chain.push_back(I); }
 
-  [[maybe_unused]]
-  raw_ostream &operator<<(raw_ostream &OS, const ReuseValue &RU) {
-    OS << "** ReuseValue ***\n";
-    OS << "Instruction to Replace: " << *(RU.Inst2Replace) << "\n";
-    OS << "Backedge Instruction: " << *(RU.BackedgeInst) << "\n";
-    return OS;
+  int iterations() const { return size() - 1; }
+
+  Instruction *front() const { return Chain.front(); }
+
+  Instruction *back() const { return Chain.back(); }
+
+  Instruction *&operator[](const int index) { return Chain[index]; }
+
+  friend raw_ostream &operator<<(raw_ostream &OS, const DepChain &D);
+};
+
+[[maybe_unused]]
+raw_ostream &operator<<(raw_ostream &OS, const DepChain &D) {
+  const ChainOfDependences &CD = D.Chain;
+  int ChainSize = CD.size();
+  OS << "**DepChain Start::**\n";
+  for (int i = 0; i < ChainSize - 1; ++i) {
+    OS << *(CD[i]) << " -->\n";
+  }
+  OS << *CD[ChainSize - 1] << "\n";
+  return OS;
+}
+
+struct ReuseValue {
+  Instruction *Inst2Replace = nullptr;
+
+  // In the new PHI node that we'll construct this is the value that'll be
+  // used over the backedge. This is the value that gets reused from a
+  // previous iteration.
+  Instruction *BackedgeInst = nullptr;
+  std::map<Instruction *, DepChain *> DepChains;
+  int Iterations = -1;
+
+  ReuseValue() = default;
+
+  void reset() {
+    Inst2Replace = nullptr;
+    BackedgeInst = nullptr;
+    DepChains.clear();
+    Iterations = -1;
+  }
+  bool isDefined() { return Inst2Replace != nullptr; }
+};
+
+[[maybe_unused]]
+raw_ostream &operator<<(raw_ostream &OS, const ReuseValue &RU) {
+  OS << "** ReuseValue ***\n";
+  OS << "Instruction to Replace: " << *(RU.Inst2Replace) << "\n";
+  OS << "Backedge Instruction: " << *(RU.BackedgeInst) << "\n";
+  return OS;
+}
+
+class HexagonVectorLoopCarriedReuseLegacyPass : public LoopPass {
+public:
+  static char ID;
+
+  explicit HexagonVectorLoopCarriedReuseLegacyPass() : LoopPass(ID) {}
+
+  StringRef getPassName() const override {
+    return "Hexagon-specific loop carried reuse for HVX vectors";
   }
 
-  class HexagonVectorLoopCarriedReuseLegacyPass : public LoopPass {
-  public:
-    static char ID;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequiredID(LoopSimplifyID);
+    AU.addRequiredID(LCSSAID);
+    AU.addPreservedID(LCSSAID);
+    AU.setPreservesCFG();
+  }
 
-    explicit HexagonVectorLoopCarriedReuseLegacyPass() : LoopPass(ID) {}
+  bool runOnLoop(Loop *L, LPPassManager &LPM) override;
+};
 
-    StringRef getPassName() const override {
-      return "Hexagon-specific loop carried reuse for HVX vectors";
-    }
+class HexagonVectorLoopCarriedReuse {
+public:
+  HexagonVectorLoopCarriedReuse(Loop *L) : CurLoop(L) {};
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequiredID(LoopSimplifyID);
-      AU.addRequiredID(LCSSAID);
-      AU.addPreservedID(LCSSAID);
-      AU.setPreservesCFG();
-    }
+  bool run();
 
-    bool runOnLoop(Loop *L, LPPassManager &LPM) override;
-  };
+private:
+  SetVector<DepChain *> Dependences;
+  std::set<Instruction *> ReplacedInsts;
+  Loop *CurLoop;
+  ReuseValue ReuseCandidate;
 
-  class HexagonVectorLoopCarriedReuse {
-  public:
-    HexagonVectorLoopCarriedReuse(Loop *L) : CurLoop(L){};
-
-    bool run();
-
-  private:
-    SetVector<DepChain *> Dependences;
-    std::set<Instruction *> ReplacedInsts;
-    Loop *CurLoop;
-    ReuseValue ReuseCandidate;
-
-    bool doVLCR();
-    void findLoopCarriedDeps();
-    void findValueToReuse();
-    void findDepChainFromPHI(Instruction *I, DepChain &D);
-    void reuseValue();
-    Value *findValueInBlock(Value *Op, BasicBlock *BB);
-    DepChain *getDepChainBtwn(Instruction *I1, Instruction *I2, int Iters);
-    bool isEquivalentOperation(Instruction *I1, Instruction *I2);
-    bool canReplace(Instruction *I);
-    bool isCallInstCommutative(CallInst *C);
-  };
+  bool doVLCR();
+  void findLoopCarriedDeps();
+  void findValueToReuse();
+  void findDepChainFromPHI(Instruction *I, DepChain &D);
+  void reuseValue();
+  Value *findValueInBlock(Value *Op, BasicBlock *BB);
+  DepChain *getDepChainBtwn(Instruction *I1, Instruction *I2, int Iters);
+  bool isEquivalentOperation(Instruction *I1, Instruction *I2);
+  bool canReplace(Instruction *I);
+  bool isCallInstCommutative(CallInst *C);
+};
 
 } // end anonymous namespace
 
@@ -246,65 +230,65 @@ bool HexagonVectorLoopCarriedReuse::run() {
 
 bool HexagonVectorLoopCarriedReuse::isCallInstCommutative(CallInst *C) {
   switch (C->getCalledFunction()->getIntrinsicID()) {
-    case Intrinsic::hexagon_V6_vaddb:
-    case Intrinsic::hexagon_V6_vaddb_128B:
-    case Intrinsic::hexagon_V6_vaddh:
-    case Intrinsic::hexagon_V6_vaddh_128B:
-    case Intrinsic::hexagon_V6_vaddw:
-    case Intrinsic::hexagon_V6_vaddw_128B:
-    case Intrinsic::hexagon_V6_vaddubh:
-    case Intrinsic::hexagon_V6_vaddubh_128B:
-    case Intrinsic::hexagon_V6_vadduhw:
-    case Intrinsic::hexagon_V6_vadduhw_128B:
-    case Intrinsic::hexagon_V6_vaddhw:
-    case Intrinsic::hexagon_V6_vaddhw_128B:
-    case Intrinsic::hexagon_V6_vmaxb:
-    case Intrinsic::hexagon_V6_vmaxb_128B:
-    case Intrinsic::hexagon_V6_vmaxh:
-    case Intrinsic::hexagon_V6_vmaxh_128B:
-    case Intrinsic::hexagon_V6_vmaxw:
-    case Intrinsic::hexagon_V6_vmaxw_128B:
-    case Intrinsic::hexagon_V6_vmaxub:
-    case Intrinsic::hexagon_V6_vmaxub_128B:
-    case Intrinsic::hexagon_V6_vmaxuh:
-    case Intrinsic::hexagon_V6_vmaxuh_128B:
-    case Intrinsic::hexagon_V6_vminub:
-    case Intrinsic::hexagon_V6_vminub_128B:
-    case Intrinsic::hexagon_V6_vminuh:
-    case Intrinsic::hexagon_V6_vminuh_128B:
-    case Intrinsic::hexagon_V6_vminb:
-    case Intrinsic::hexagon_V6_vminb_128B:
-    case Intrinsic::hexagon_V6_vminh:
-    case Intrinsic::hexagon_V6_vminh_128B:
-    case Intrinsic::hexagon_V6_vminw:
-    case Intrinsic::hexagon_V6_vminw_128B:
-    case Intrinsic::hexagon_V6_vmpyub:
-    case Intrinsic::hexagon_V6_vmpyub_128B:
-    case Intrinsic::hexagon_V6_vmpyuh:
-    case Intrinsic::hexagon_V6_vmpyuh_128B:
-    case Intrinsic::hexagon_V6_vavgub:
-    case Intrinsic::hexagon_V6_vavgub_128B:
-    case Intrinsic::hexagon_V6_vavgh:
-    case Intrinsic::hexagon_V6_vavgh_128B:
-    case Intrinsic::hexagon_V6_vavguh:
-    case Intrinsic::hexagon_V6_vavguh_128B:
-    case Intrinsic::hexagon_V6_vavgw:
-    case Intrinsic::hexagon_V6_vavgw_128B:
-    case Intrinsic::hexagon_V6_vavgb:
-    case Intrinsic::hexagon_V6_vavgb_128B:
-    case Intrinsic::hexagon_V6_vavguw:
-    case Intrinsic::hexagon_V6_vavguw_128B:
-    case Intrinsic::hexagon_V6_vabsdiffh:
-    case Intrinsic::hexagon_V6_vabsdiffh_128B:
-    case Intrinsic::hexagon_V6_vabsdiffub:
-    case Intrinsic::hexagon_V6_vabsdiffub_128B:
-    case Intrinsic::hexagon_V6_vabsdiffuh:
-    case Intrinsic::hexagon_V6_vabsdiffuh_128B:
-    case Intrinsic::hexagon_V6_vabsdiffw:
-    case Intrinsic::hexagon_V6_vabsdiffw_128B:
-      return true;
-    default:
-      return false;
+  case Intrinsic::hexagon_V6_vaddb:
+  case Intrinsic::hexagon_V6_vaddb_128B:
+  case Intrinsic::hexagon_V6_vaddh:
+  case Intrinsic::hexagon_V6_vaddh_128B:
+  case Intrinsic::hexagon_V6_vaddw:
+  case Intrinsic::hexagon_V6_vaddw_128B:
+  case Intrinsic::hexagon_V6_vaddubh:
+  case Intrinsic::hexagon_V6_vaddubh_128B:
+  case Intrinsic::hexagon_V6_vadduhw:
+  case Intrinsic::hexagon_V6_vadduhw_128B:
+  case Intrinsic::hexagon_V6_vaddhw:
+  case Intrinsic::hexagon_V6_vaddhw_128B:
+  case Intrinsic::hexagon_V6_vmaxb:
+  case Intrinsic::hexagon_V6_vmaxb_128B:
+  case Intrinsic::hexagon_V6_vmaxh:
+  case Intrinsic::hexagon_V6_vmaxh_128B:
+  case Intrinsic::hexagon_V6_vmaxw:
+  case Intrinsic::hexagon_V6_vmaxw_128B:
+  case Intrinsic::hexagon_V6_vmaxub:
+  case Intrinsic::hexagon_V6_vmaxub_128B:
+  case Intrinsic::hexagon_V6_vmaxuh:
+  case Intrinsic::hexagon_V6_vmaxuh_128B:
+  case Intrinsic::hexagon_V6_vminub:
+  case Intrinsic::hexagon_V6_vminub_128B:
+  case Intrinsic::hexagon_V6_vminuh:
+  case Intrinsic::hexagon_V6_vminuh_128B:
+  case Intrinsic::hexagon_V6_vminb:
+  case Intrinsic::hexagon_V6_vminb_128B:
+  case Intrinsic::hexagon_V6_vminh:
+  case Intrinsic::hexagon_V6_vminh_128B:
+  case Intrinsic::hexagon_V6_vminw:
+  case Intrinsic::hexagon_V6_vminw_128B:
+  case Intrinsic::hexagon_V6_vmpyub:
+  case Intrinsic::hexagon_V6_vmpyub_128B:
+  case Intrinsic::hexagon_V6_vmpyuh:
+  case Intrinsic::hexagon_V6_vmpyuh_128B:
+  case Intrinsic::hexagon_V6_vavgub:
+  case Intrinsic::hexagon_V6_vavgub_128B:
+  case Intrinsic::hexagon_V6_vavgh:
+  case Intrinsic::hexagon_V6_vavgh_128B:
+  case Intrinsic::hexagon_V6_vavguh:
+  case Intrinsic::hexagon_V6_vavguh_128B:
+  case Intrinsic::hexagon_V6_vavgw:
+  case Intrinsic::hexagon_V6_vavgw_128B:
+  case Intrinsic::hexagon_V6_vavgb:
+  case Intrinsic::hexagon_V6_vavgb_128B:
+  case Intrinsic::hexagon_V6_vavguw:
+  case Intrinsic::hexagon_V6_vavguw_128B:
+  case Intrinsic::hexagon_V6_vabsdiffh:
+  case Intrinsic::hexagon_V6_vabsdiffh_128B:
+  case Intrinsic::hexagon_V6_vabsdiffub:
+  case Intrinsic::hexagon_V6_vabsdiffub_128B:
+  case Intrinsic::hexagon_V6_vabsdiffuh:
+  case Intrinsic::hexagon_V6_vabsdiffuh_128B:
+  case Intrinsic::hexagon_V6_vabsdiffw:
+  case Intrinsic::hexagon_V6_vabsdiffw_128B:
+    return true;
+  default:
+    return false;
   }
 }
 
@@ -330,7 +314,8 @@ bool HexagonVectorLoopCarriedReuse::isEquivalentOperation(Instruction *I1,
     for (unsigned i = 0; i < NumOperands; ++i) {
       ConstantInt *C1 = dyn_cast<ConstantInt>(I1->getOperand(i));
       ConstantInt *C2 = dyn_cast<ConstantInt>(I2->getOperand(i));
-      if(!C1) continue;
+      if (!C1)
+        continue;
       assert(C2);
       if (C1->getSExtValue() != C2->getSExtValue())
         return false;
@@ -417,10 +402,10 @@ void HexagonVectorLoopCarriedReuse::findValueToReuse() {
         // has DepChain with current operand of the PNUser, break the matcher
         // loop. Keep doing this for Every PNUser operand. If PNUser operand
         // does not have DepChain with any of the BEUser operand, break the
-        // outer matcher loop, mark the BEUser as null and reset the ReuseCandidate.
-        // This ensures that DepChain exist for all the PNUser operand with
-        // BEUser operand. This also ensures that DepChains are independent of
-        // the positions in PNUser and BEUser.
+        // outer matcher loop, mark the BEUser as null and reset the
+        // ReuseCandidate. This ensures that DepChain exist for all the PNUser
+        // operand with BEUser operand. This also ensures that DepChains are
+        // independent of the positions in PNUser and BEUser.
         std::map<Instruction *, DepChain *> DepChains;
         CallInst *C1 = dyn_cast<CallInst>(I);
         if ((I && I->isCommutative()) || (C1 && isCallInstCommutative(C1))) {
@@ -542,7 +527,7 @@ void HexagonVectorLoopCarriedReuse::reuseValue() {
   IRB.SetInsertPoint(BB, BB->getFirstNonPHIIt());
   Value *BEVal = BEInst;
   PHINode *NewPhi;
-  for (int i = Iterations-1; i >=0 ; --i) {
+  for (int i = Iterations - 1; i >= 0; --i) {
     Instruction *InstInPreheader = InstsInPreheader[i];
     NewPhi = IRB.CreatePHI(InstInPreheader->getType(), 2);
     NewPhi->addIncoming(InstInPreheader, LoopPH);
@@ -611,8 +596,8 @@ void HexagonVectorLoopCarriedReuse::findDepChainFromPHI(Instruction *I,
     assert(BEInst && "There should be a value over the backedge");
 
     Value *PreHdrVal =
-      PN->getIncomingValueForBlock(CurLoop->getLoopPreheader());
-    if(!PreHdrVal || !isa<Instruction>(PreHdrVal)) {
+        PN->getIncomingValueForBlock(CurLoop->getLoopPreheader());
+    if (!PreHdrVal || !isa<Instruction>(PreHdrVal)) {
       D.clear();
       return;
     }

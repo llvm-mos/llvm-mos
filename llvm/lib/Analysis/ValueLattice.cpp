@@ -11,10 +11,9 @@
 #include "llvm/IR/Instructions.h"
 
 namespace llvm {
-Constant *
-ValueLatticeElement::getCompare(CmpInst::Predicate Pred, Type *Ty,
-                                const ValueLatticeElement &Other,
-                                const DataLayout &DL) const {
+Constant *ValueLatticeElement::getCompare(CmpInst::Predicate Pred, Type *Ty,
+                                          const ValueLatticeElement &Other,
+                                          const DataLayout &DL) const {
   // Not yet resolved.
   if (isUnknown() || Other.isUnknown())
     return nullptr;

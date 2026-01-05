@@ -21,28 +21,28 @@ using namespace llvm;
 #define DEBUG_TYPE "mips-isel"
 
 namespace {
-  class MipsModuleDAGToDAGISel : public MachineFunctionPass {
-  public:
-    static char ID;
+class MipsModuleDAGToDAGISel : public MachineFunctionPass {
+public:
+  static char ID;
 
-    MipsModuleDAGToDAGISel() : MachineFunctionPass(ID) {}
+  MipsModuleDAGToDAGISel() : MachineFunctionPass(ID) {}
 
-    // Pass Name
-    StringRef getPassName() const override {
-      return "MIPS DAG->DAG Pattern Instruction Selection";
-    }
+  // Pass Name
+  StringRef getPassName() const override {
+    return "MIPS DAG->DAG Pattern Instruction Selection";
+  }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<TargetPassConfig>();
-      AU.addPreserved<StackProtector>();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetPassConfig>();
+    AU.addPreserved<StackProtector>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
-  };
+  bool runOnMachineFunction(MachineFunction &MF) override;
+};
 
-  char MipsModuleDAGToDAGISel::ID = 0;
-}
+char MipsModuleDAGToDAGISel::ID = 0;
+} // namespace
 
 bool MipsModuleDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(errs() << "In MipsModuleDAGToDAGISel::runMachineFunction\n");

@@ -106,19 +106,19 @@ using namespace llvm;
 #define DEBUG_TYPE "global-merge"
 
 // FIXME: This is only useful as a last-resort way to disable the pass.
-static cl::opt<bool>
-EnableGlobalMerge("enable-global-merge", cl::Hidden,
-                  cl::desc("Enable the global merge pass"),
-                  cl::init(true));
+static cl::opt<bool> EnableGlobalMerge("enable-global-merge", cl::Hidden,
+                                       cl::desc("Enable the global merge pass"),
+                                       cl::init(true));
 
 static cl::opt<unsigned>
-GlobalMergeMaxOffset("global-merge-max-offset", cl::Hidden,
-                     cl::desc("Set maximum offset for global merge pass"),
-                     cl::init(0));
+    GlobalMergeMaxOffset("global-merge-max-offset", cl::Hidden,
+                         cl::desc("Set maximum offset for global merge pass"),
+                         cl::init(0));
 
-static cl::opt<bool> GlobalMergeGroupByUse(
-    "global-merge-group-by-use", cl::Hidden,
-    cl::desc("Improve global merge pass to look at uses"), cl::init(true));
+static cl::opt<bool>
+    GlobalMergeGroupByUse("global-merge-group-by-use", cl::Hidden,
+                          cl::desc("Improve global merge pass to look at uses"),
+                          cl::init(true));
 
 static cl::opt<bool> GlobalMergeAllConst(
     "global-merge-all-const", cl::Hidden,
@@ -131,15 +131,15 @@ static cl::opt<bool> GlobalMergeIgnoreSingleUse(
     cl::init(true));
 
 static cl::opt<bool>
-EnableGlobalMergeOnConst("global-merge-on-const", cl::Hidden,
-                         cl::desc("Enable global merge pass on constants"),
-                         cl::init(false));
+    EnableGlobalMergeOnConst("global-merge-on-const", cl::Hidden,
+                             cl::desc("Enable global merge pass on constants"),
+                             cl::init(false));
 
 // FIXME: this could be a transitional option, and we probably need to remove
 // it if only we are sure this optimization could always benefit all targets.
-static cl::opt<cl::boolOrDefault>
-EnableGlobalMergeOnExternal("global-merge-on-external", cl::Hidden,
-     cl::desc("Enable global merge pass on external linkage"));
+static cl::opt<cl::boolOrDefault> EnableGlobalMergeOnExternal(
+    "global-merge-on-external", cl::Hidden,
+    cl::desc("Enable global merge pass on external linkage"));
 
 static cl::opt<unsigned>
     GlobalMergeMinDataSize("global-merge-min-data-size",
@@ -494,8 +494,8 @@ bool GlobalMergeImpl::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
   while (i != -1) {
     ssize_t j = 0;
     uint64_t MergedSize = 0;
-    std::vector<Type*> Tys;
-    std::vector<Constant*> Inits;
+    std::vector<Type *> Tys;
+    std::vector<Constant *> Inits;
     std::vector<unsigned> StructIdxs;
 
     bool HasExternal = false;
@@ -551,10 +551,9 @@ bool GlobalMergeImpl::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
     // of the first variable merged as the suffix of global symbol
     // name.  This avoids a link-time naming conflict for the
     // _MergedGlobals symbols.
-    Twine MergedName =
-        (IsMachO && HasExternal)
-            ? "_MergedGlobals_" + FirstExternalName
-            : "_MergedGlobals";
+    Twine MergedName = (IsMachO && HasExternal)
+                           ? "_MergedGlobals_" + FirstExternalName
+                           : "_MergedGlobals";
     auto MergedLinkage = IsMachO ? Linkage : GlobalValue::PrivateLinkage;
     auto *MergedGV = new GlobalVariable(
         M, MergedTy, isConst, MergedLinkage, MergedInit, MergedName, nullptr,
@@ -617,14 +616,15 @@ bool GlobalMergeImpl::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
 void GlobalMergeImpl::collectUsedGlobalVariables(Module &M, StringRef Name) {
   // Extract global variables from llvm.used array
   const GlobalVariable *GV = M.getGlobalVariable(Name);
-  if (!GV || !GV->hasInitializer()) return;
+  if (!GV || !GV->hasInitializer())
+    return;
 
   // Should be an array of 'i8*'.
   const ConstantArray *InitList = cast<ConstantArray>(GV->getInitializer());
 
   for (unsigned i = 0, e = InitList->getNumOperands(); i != e; ++i)
-    if (const GlobalVariable *G =
-        dyn_cast<GlobalVariable>(InitList->getOperand(i)->stripPointerCasts()))
+    if (const GlobalVariable *G = dyn_cast<GlobalVariable>(
+            InitList->getOperand(i)->stripPointerCasts()))
       MustKeepGlobalVariables.insert(G);
 }
 
@@ -646,7 +646,8 @@ void GlobalMergeImpl::setMustKeepGlobalVariables(Module &M) {
         if (const GlobalVariable *GV =
                 dyn_cast<GlobalVariable>(U->stripPointerCasts()))
           MustKeepGlobalVariables.insert(GV);
-        else if (const ConstantArray *CA = dyn_cast<ConstantArray>(U->stripPointerCasts())) {
+        else if (const ConstantArray *CA =
+                     dyn_cast<ConstantArray>(U->stripPointerCasts())) {
           for (const Use &Elt : CA->operands()) {
             if (const GlobalVariable *GV =
                     dyn_cast<GlobalVariable>(Elt->stripPointerCasts()))
@@ -683,10 +684,10 @@ bool GlobalMergeImpl::run(Module &M) {
   setMustKeepGlobalVariables(M);
 
   LLVM_DEBUG({
-      dbgs() << "Number of GV that must be kept:  " <<
-                MustKeepGlobalVariables.size() << "\n";
-      for (const GlobalVariable *KeptGV : MustKeepGlobalVariables)
-        dbgs() << "Kept: " << *KeptGV << "\n";
+    dbgs() << "Number of GV that must be kept:  "
+           << MustKeepGlobalVariables.size() << "\n";
+    for (const GlobalVariable *KeptGV : MustKeepGlobalVariables)
+      dbgs() << "Kept: " << *KeptGV << "\n";
   });
   // Grab all non-const globals.
   for (auto &GV : M.globals()) {
@@ -733,8 +734,7 @@ bool GlobalMergeImpl::run(Module &M) {
     TypeSize AllocSize = DL.getTypeAllocSize(Ty);
     bool CanMerge = AllocSize < Opt.MaxOffset && AllocSize >= Opt.MinSize;
     if (CanMerge) {
-      if (TM &&
-          TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSS())
+      if (TM && TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSS())
         BSSGlobals[{AddressSpace, Section}].push_back(&GV);
       else if (GV.isConstant())
         ConstGlobals[{AddressSpace, Section}].push_back(&GV);
@@ -766,8 +766,9 @@ Pass *llvm::createGlobalMergePass(const TargetMachine *TM, unsigned Offset,
                                   bool MergeExternalByDefault,
                                   bool MergeConstantByDefault,
                                   bool MergeConstAggressiveByDefault) {
-  bool MergeExternal = (EnableGlobalMergeOnExternal == cl::BOU_UNSET) ?
-    MergeExternalByDefault : (EnableGlobalMergeOnExternal == cl::BOU_TRUE);
+  bool MergeExternal = (EnableGlobalMergeOnExternal == cl::BOU_UNSET)
+                           ? MergeExternalByDefault
+                           : (EnableGlobalMergeOnExternal == cl::BOU_TRUE);
   bool MergeConstant = EnableGlobalMergeOnConst || MergeConstantByDefault;
   bool MergeConstAggressive = GlobalMergeAllConst.getNumOccurrences() > 0
                                   ? GlobalMergeAllConst

@@ -172,7 +172,11 @@ public:
 
   /// Three-way bool to track a cached value. Unknown is possible if this node
   /// has an unexpanded parameter pack below it that may affect this cache.
-  enum class Cache : uint8_t { Yes, No, Unknown, };
+  enum class Cache : uint8_t {
+    Yes,
+    No,
+    Unknown,
+  };
 
   /// Operator precedence for expression nodes. Used to determine required
   /// parens in expression emission.
@@ -229,13 +233,13 @@ public:
              FunctionCache_) {}
 
   /// Visit the most-derived object corresponding to this object.
-  template<typename Fn> void visit(Fn F) const;
+  template <typename Fn> void visit(Fn F) const;
 
   // The following function is provided by all derived classes:
   //
   // Call F with arguments that, when passed to the constructor of this node,
   // would construct an equivalent node.
-  //template<typename Fn> void match(Fn F) const;
+  // template<typename Fn> void match(Fn F) const;
 
   bool hasRHSComponent(OutputBuffer &OB) const {
     if (RHSComponentCache != Cache::Unknown)
@@ -370,7 +374,7 @@ struct NodeArrayNode : Node {
   NodeArray Array;
   NodeArrayNode(NodeArray Array_) : Node(KNodeArrayNode), Array(Array_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Array); }
+  template <typename Fn> void match(Fn F) const { F(Array); }
 
   void printLeft(OutputBuffer &OB) const override { Array.printWithComma(OB); }
 };
@@ -383,7 +387,7 @@ public:
   DotSuffix(const Node *Prefix_, std::string_view Suffix_)
       : Node(KDotSuffix), Prefix(Prefix_), Suffix(Suffix_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Prefix, Suffix); }
+  template <typename Fn> void match(Fn F) const { F(Prefix, Suffix); }
 
   void printLeft(OutputBuffer &OB) const override {
     Prefix->print(OB);
@@ -457,7 +461,7 @@ public:
   Qualifiers getQuals() const { return Quals; }
   const Node *getChild() const { return Child; }
 
-  template<typename Fn> void match(Fn F) const { F(Child, Quals); }
+  template <typename Fn> void match(Fn F) const { F(Child, Quals); }
 
   bool hasRHSComponentSlow(OutputBuffer &OB) const override {
     return Child->hasRHSComponent(OB);
@@ -484,7 +488,7 @@ public:
   ConversionOperatorType(const Node *Ty_)
       : Node(KConversionOperatorType), Ty(Ty_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Ty); }
+  template <typename Fn> void match(Fn F) const { F(Ty); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "operator ";
@@ -500,7 +504,7 @@ public:
   PostfixQualifiedType(const Node *Ty_, std::string_view Postfix_)
       : Node(KPostfixQualifiedType), Ty(Ty_), Postfix(Postfix_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Ty, Postfix); }
+  template <typename Fn> void match(Fn F) const { F(Ty, Postfix); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB.printLeft(*Ty);
@@ -514,7 +518,7 @@ class NameType final : public Node {
 public:
   NameType(std::string_view Name_) : Node(KNameType), Name(Name_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Name); }
+  template <typename Fn> void match(Fn F) const { F(Name); }
 
   std::string_view getName() const { return Name; }
   std::string_view getBaseName() const override { return Name; }
@@ -545,11 +549,12 @@ public:
 class ElaboratedTypeSpefType : public Node {
   std::string_view Kind;
   Node *Child;
+
 public:
   ElaboratedTypeSpefType(std::string_view Kind_, Node *Child_)
       : Node(KElaboratedTypeSpefType), Kind(Kind_), Child(Child_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Kind, Child); }
+  template <typename Fn> void match(Fn F) const { F(Kind, Child); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += Kind;
@@ -561,11 +566,12 @@ public:
 class TransformedType : public Node {
   std::string_view Transform;
   Node *BaseType;
+
 public:
   TransformedType(std::string_view Transform_, Node *BaseType_)
       : Node(KTransformedType), Transform(Transform_), BaseType(BaseType_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Transform, BaseType); }
+  template <typename Fn> void match(Fn F) const { F(Transform, BaseType); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += Transform;
@@ -584,7 +590,7 @@ struct AbiTagAttr : Node {
              Base_->getFunctionCache()),
         Base(Base_), Tag(Tag_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Base, Tag); }
+  template <typename Fn> void match(Fn F) const { F(Base, Tag); }
 
   std::string_view getBaseName() const override { return Base->getBaseName(); }
 
@@ -598,11 +604,12 @@ struct AbiTagAttr : Node {
 
 class EnableIfAttr : public Node {
   NodeArray Conditions;
+
 public:
   EnableIfAttr(NodeArray Conditions_)
       : Node(KEnableIfAttr), Conditions(Conditions_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Conditions); }
+  template <typename Fn> void match(Fn F) const { F(Conditions); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += " [enable_if:";
@@ -619,7 +626,7 @@ public:
   ObjCProtoName(const Node *Ty_, std::string_view Protocol_)
       : Node(KObjCProtoName), Ty(Ty_), Protocol(Protocol_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Ty, Protocol); }
+  template <typename Fn> void match(Fn F) const { F(Ty, Protocol); }
 
   bool isObjCObject() const {
     return Ty->getKind() == KNameType &&
@@ -646,7 +653,7 @@ public:
 
   const Node *getPointee() const { return Pointee; }
 
-  template<typename Fn> void match(Fn F) const { F(Pointee); }
+  template <typename Fn> void match(Fn F) const { F(Pointee); }
 
   bool hasRHSComponentSlow(OutputBuffer &OB) const override {
     return Pointee->hasRHSComponent(OB);
@@ -728,7 +735,7 @@ public:
       : Node(KReferenceType, Pointee_->getRHSComponentCache()),
         Pointee(Pointee_), RK(RK_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Pointee, RK); }
+  template <typename Fn> void match(Fn F) const { F(Pointee, RK); }
 
   bool hasRHSComponentSlow(OutputBuffer &OB) const override {
     return Pointee->hasRHSComponent(OB);
@@ -771,7 +778,7 @@ public:
       : Node(KPointerToMemberType, MemberType_->getRHSComponentCache()),
         ClassType(ClassType_), MemberType(MemberType_) {}
 
-  template<typename Fn> void match(Fn F) const { F(ClassType, MemberType); }
+  template <typename Fn> void match(Fn F) const { F(ClassType, MemberType); }
 
   bool hasRHSComponentSlow(OutputBuffer &OB) const override {
     return MemberType->hasRHSComponent(OB);
@@ -805,7 +812,7 @@ public:
              /*ArrayCache=*/Cache::Yes),
         Base(Base_), Dimension(Dimension_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Base, Dimension); }
+  template <typename Fn> void match(Fn F) const { F(Base, Dimension); }
 
   bool hasRHSComponentSlow(OutputBuffer &) const override { return true; }
   bool hasArraySlow(OutputBuffer &) const override { return true; }
@@ -848,7 +855,7 @@ public:
         Ret(Ret_), Params(Params_), CVQuals(CVQuals_), RefQual(RefQual_),
         ExceptionSpec(ExceptionSpec_) {}
 
-  template<typename Fn> void match(Fn F) const {
+  template <typename Fn> void match(Fn F) const {
     F(Ret, Params, CVQuals, RefQual, ExceptionSpec);
   }
 
@@ -894,10 +901,11 @@ public:
 
 class NoexceptSpec : public Node {
   const Node *E;
+
 public:
   NoexceptSpec(const Node *E_) : Node(KNoexceptSpec), E(E_) {}
 
-  template<typename Fn> void match(Fn F) const { F(E); }
+  template <typename Fn> void match(Fn F) const { F(E); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "noexcept";
@@ -909,11 +917,12 @@ public:
 
 class DynamicExceptionSpec : public Node {
   NodeArray Types;
+
 public:
   DynamicExceptionSpec(NodeArray Types_)
       : Node(KDynamicExceptionSpec), Types(Types_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Types); }
+  template <typename Fn> void match(Fn F) const { F(Types); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "throw";
@@ -968,7 +977,7 @@ public:
         Ret(Ret_), Name(Name_), Params(Params_), Attrs(Attrs_),
         Requires(Requires_), CVQuals(CVQuals_), RefQual(RefQual_) {}
 
-  template<typename Fn> void match(Fn F) const {
+  template <typename Fn> void match(Fn F) const {
     F(Ret, Name, Params, Attrs, Requires, CVQuals, RefQual);
   }
 
@@ -1031,7 +1040,7 @@ public:
   LiteralOperator(const Node *OpName_)
       : Node(KLiteralOperator), OpName(OpName_) {}
 
-  template<typename Fn> void match(Fn F) const { F(OpName); }
+  template <typename Fn> void match(Fn F) const { F(OpName); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "operator\"\" ";
@@ -1047,7 +1056,7 @@ public:
   SpecialName(std::string_view Special_, const Node *Child_)
       : Node(KSpecialName), Special(Special_), Child(Child_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Special, Child); }
+  template <typename Fn> void match(Fn F) const { F(Special, Child); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += Special;
@@ -1061,10 +1070,10 @@ class CtorVtableSpecialName final : public Node {
 
 public:
   CtorVtableSpecialName(const Node *FirstType_, const Node *SecondType_)
-      : Node(KCtorVtableSpecialName),
-        FirstType(FirstType_), SecondType(SecondType_) {}
+      : Node(KCtorVtableSpecialName), FirstType(FirstType_),
+        SecondType(SecondType_) {}
 
-  template<typename Fn> void match(Fn F) const { F(FirstType, SecondType); }
+  template <typename Fn> void match(Fn F) const { F(FirstType, SecondType); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "construction vtable for ";
@@ -1081,7 +1090,7 @@ struct NestedName : Node {
   NestedName(Node *Qual_, Node *Name_)
       : Node(KNestedName), Qual(Qual_), Name(Name_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Qual, Name); }
+  template <typename Fn> void match(Fn F) const { F(Qual, Name); }
 
   std::string_view getBaseName() const override { return Name->getBaseName(); }
 
@@ -1099,7 +1108,7 @@ struct MemberLikeFriendName : Node {
   MemberLikeFriendName(Node *Qual_, Node *Name_)
       : Node(KMemberLikeFriendName), Qual(Qual_), Name(Name_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Qual, Name); }
+  template <typename Fn> void match(Fn F) const { F(Qual, Name); }
 
   std::string_view getBaseName() const override { return Name->getBaseName(); }
 
@@ -1157,7 +1166,7 @@ struct LocalName : Node {
   LocalName(Node *Encoding_, Node *Entity_)
       : Node(KLocalName), Encoding(Encoding_), Entity(Entity_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Encoding, Entity); }
+  template <typename Fn> void match(Fn F) const { F(Encoding, Entity); }
 
   void printLeft(OutputBuffer &OB) const override {
     Encoding->print(OB);
@@ -1175,7 +1184,7 @@ public:
   QualifiedName(const Node *Qualifier_, const Node *Name_)
       : Node(KQualifiedName), Qualifier(Qualifier_), Name(Name_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Qualifier, Name); }
+  template <typename Fn> void match(Fn F) const { F(Qualifier, Name); }
 
   std::string_view getBaseName() const override { return Name->getBaseName(); }
 
@@ -1197,7 +1206,7 @@ public:
   const Node *getBaseType() const { return BaseType; }
   const Node *getDimension() const { return Dimension; }
 
-  template<typename Fn> void match(Fn F) const { F(BaseType, Dimension); }
+  template <typename Fn> void match(Fn F) const { F(BaseType, Dimension); }
 
   void printLeft(OutputBuffer &OB) const override {
     BaseType->print(OB);
@@ -1215,7 +1224,7 @@ public:
   PixelVectorType(const Node *Dimension_)
       : Node(KPixelVectorType), Dimension(Dimension_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Dimension); }
+  template <typename Fn> void match(Fn F) const { F(Dimension); }
 
   void printLeft(OutputBuffer &OB) const override {
     // FIXME: This should demangle as "vector pixel".
@@ -1232,7 +1241,7 @@ public:
   BinaryFPType(const Node *Dimension_)
       : Node(KBinaryFPType), Dimension(Dimension_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Dimension); }
+  template <typename Fn> void match(Fn F) const { F(Dimension); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "_Float";
@@ -1256,7 +1265,7 @@ public:
   SyntheticTemplateParamName(TemplateParamKind Kind_, unsigned Index_)
       : Node(KSyntheticTemplateParamName), Kind(Kind_), Index(Index_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Kind, Index); }
+  template <typename Fn> void match(Fn F) const { F(Kind, Index); }
 
   void printLeft(OutputBuffer &OB) const override {
     switch (Kind) {
@@ -1301,7 +1310,7 @@ public:
   TypeTemplateParamDecl(Node *Name_)
       : Node(KTypeTemplateParamDecl, Cache::Yes), Name(Name_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Name); }
+  template <typename Fn> void match(Fn F) const { F(Name); }
 
   void printLeft(OutputBuffer &OB) const override { OB += "typename "; }
 
@@ -1318,7 +1327,7 @@ public:
       : Node(KConstrainedTypeTemplateParamDecl, Cache::Yes),
         Constraint(Constraint_), Name(Name_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Constraint, Name); }
+  template <typename Fn> void match(Fn F) const { F(Constraint, Name); }
 
   void printLeft(OutputBuffer &OB) const override {
     Constraint->print(OB);
@@ -1337,7 +1346,7 @@ public:
   NonTypeTemplateParamDecl(Node *Name_, Node *Type_)
       : Node(KNonTypeTemplateParamDecl, Cache::Yes), Name(Name_), Type(Type_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Name, Type); }
+  template <typename Fn> void match(Fn F) const { F(Name, Type); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB.printLeft(*Type);
@@ -1389,7 +1398,7 @@ public:
   TemplateParamPackDecl(Node *Param_)
       : Node(KTemplateParamPackDecl, Cache::Yes), Param(Param_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Param); }
+  template <typename Fn> void match(Fn F) const { F(Param); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB.printLeft(*Param);
@@ -1434,7 +1443,7 @@ public:
       RHSComponentCache = Cache::No;
   }
 
-  template<typename Fn> void match(Fn F) const { F(Data); }
+  template <typename Fn> void match(Fn F) const { F(Data); }
 
   bool hasRHSComponentSlow(OutputBuffer &OB) const override {
     initializePackExpansion(OB);
@@ -1478,11 +1487,12 @@ public:
 /// <encoding>.
 class TemplateArgumentPack final : public Node {
   NodeArray Elements;
+
 public:
   TemplateArgumentPack(NodeArray Elements_)
       : Node(KTemplateArgumentPack), Elements(Elements_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Elements); }
+  template <typename Fn> void match(Fn F) const { F(Elements); }
 
   NodeArray getElements() const { return Elements; }
 
@@ -1500,7 +1510,7 @@ public:
   ParameterPackExpansion(const Node *Child_)
       : Node(KParameterPackExpansion), Child(Child_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Child); }
+  template <typename Fn> void match(Fn F) const { F(Child); }
 
   const Node *getChild() const { return Child; }
 
@@ -1545,7 +1555,7 @@ public:
   TemplateArgs(NodeArray Params_, Node *Requires_)
       : Node(KTemplateArgs), Params(Params_), Requires(Requires_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Params, Requires); }
+  template <typename Fn> void match(Fn F) const { F(Params, Requires); }
 
   NodeArray getParams() { return Params; }
 
@@ -1594,7 +1604,7 @@ struct ForwardTemplateReference : Node {
   // We don't provide a matcher for these, because the value of the node is
   // not determined by its construction parameters, and it generally needs
   // special handling.
-  template<typename Fn> void match(Fn F) const = delete;
+  template <typename Fn> void match(Fn F) const = delete;
 
   bool hasRHSComponentSlow(OutputBuffer &OB) const override {
     if (Printing)
@@ -1643,7 +1653,7 @@ struct NameWithTemplateArgs : Node {
   NameWithTemplateArgs(Node *Name_, Node *TemplateArgs_)
       : Node(KNameWithTemplateArgs), Name(Name_), TemplateArgs(TemplateArgs_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Name, TemplateArgs); }
+  template <typename Fn> void match(Fn F) const { F(Name, TemplateArgs); }
 
   std::string_view getBaseName() const override { return Name->getBaseName(); }
 
@@ -1657,10 +1667,10 @@ class GlobalQualifiedName final : public Node {
   Node *Child;
 
 public:
-  GlobalQualifiedName(Node* Child_)
+  GlobalQualifiedName(Node *Child_)
       : Node(KGlobalQualifiedName), Child(Child_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Child); }
+  template <typename Fn> void match(Fn F) const { F(Child); }
 
   std::string_view getBaseName() const override { return Child->getBaseName(); }
 
@@ -1686,12 +1696,13 @@ protected:
 
   ExpandedSpecialSubstitution(SpecialSubKind SSK_, Kind K_)
       : Node(K_), SSK(SSK_) {}
+
 public:
   ExpandedSpecialSubstitution(SpecialSubKind SSK_)
       : ExpandedSpecialSubstitution(SSK_, KExpandedSpecialSubstitution) {}
   inline ExpandedSpecialSubstitution(SpecialSubstitution const *);
 
-  template<typename Fn> void match(Fn F) const { F(SSK); }
+  template <typename Fn> void match(Fn F) const { F(SSK); }
 
 protected:
   bool isInstantiation() const {
@@ -1733,7 +1744,7 @@ public:
   SpecialSubstitution(SpecialSubKind SSK_)
       : ExpandedSpecialSubstitution(SSK_, KSpecialSubstitution) {}
 
-  template<typename Fn> void match(Fn F) const { F(SSK); }
+  template <typename Fn> void match(Fn F) const { F(SSK); }
 
   std::string_view getBaseName() const override {
     std::string_view SV = ExpandedSpecialSubstitution::getBaseName();
@@ -1764,7 +1775,9 @@ public:
       : Node(KCtorDtorName), Basename(Basename_), IsDtor(IsDtor_),
         Variant(Variant_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Basename, IsDtor, Variant); }
+  template <typename Fn> void match(Fn F) const {
+    F(Basename, IsDtor, Variant);
+  }
 
   void printLeft(OutputBuffer &OB) const override {
     if (IsDtor)
@@ -1779,7 +1792,7 @@ class DtorName : public Node {
 public:
   DtorName(const Node *Base_) : Node(KDtorName), Base(Base_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Base); }
+  template <typename Fn> void match(Fn F) const { F(Base); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "~";
@@ -1794,7 +1807,7 @@ public:
   UnnamedTypeName(std::string_view Count_)
       : Node(KUnnamedTypeName), Count(Count_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Count); }
+  template <typename Fn> void match(Fn F) const { F(Count); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "'unnamed";
@@ -1818,7 +1831,7 @@ public:
         Requires1(Requires1_), Params(Params_), Requires2(Requires2_),
         Count(Count_) {}
 
-  template<typename Fn> void match(Fn F) const {
+  template <typename Fn> void match(Fn F) const {
     F(TemplateParams, Requires1, Params, Requires2, Count);
   }
 
@@ -1854,11 +1867,12 @@ public:
 
 class StructuredBindingName : public Node {
   NodeArray Bindings;
+
 public:
   StructuredBindingName(NodeArray Bindings_)
       : Node(KStructuredBindingName), Bindings(Bindings_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Bindings); }
+  template <typename Fn> void match(Fn F) const { F(Bindings); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB.printOpen('[');
@@ -2001,7 +2015,7 @@ public:
       : Node(KSubobjectExpr), Type(Type_), SubExpr(SubExpr_), Offset(Offset_),
         UnionSelectors(UnionSelectors_), OnePastTheEnd(OnePastTheEnd_) {}
 
-  template<typename Fn> void match(Fn F) const {
+  template <typename Fn> void match(Fn F) const {
     F(Type, SubExpr, Offset, UnionSelectors, OnePastTheEnd);
   }
 
@@ -2081,7 +2095,7 @@ public:
   SizeofParamPackExpr(const Node *Pack_)
       : Node(KSizeofParamPackExpr), Pack(Pack_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Pack); }
+  template <typename Fn> void match(Fn F) const { F(Pack); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "sizeof...";
@@ -2131,7 +2145,7 @@ public:
       : Node(KNewExpr, Prec_), ExprList(ExprList_), Type(Type_),
         InitList(InitList_), IsGlobal(IsGlobal_), IsArray(IsArray_) {}
 
-  template<typename Fn> void match(Fn F) const {
+  template <typename Fn> void match(Fn F) const {
     F(ExprList, Type, InitList, IsGlobal, IsArray, getPrecedence());
   }
 
@@ -2206,7 +2220,7 @@ public:
   FunctionParam(std::string_view Number_)
       : Node(KFunctionParam), Number(Number_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Number); }
+  template <typename Fn> void match(Fn F) const { F(Number); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "fp";
@@ -2264,11 +2278,12 @@ public:
 class InitListExpr : public Node {
   const Node *Ty;
   NodeArray Inits;
+
 public:
   InitListExpr(const Node *Ty_, NodeArray Inits_)
       : Node(KInitListExpr), Ty(Ty_), Inits(Inits_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Ty, Inits); }
+  template <typename Fn> void match(Fn F) const { F(Ty, Inits); }
 
   void printLeft(OutputBuffer &OB) const override {
     if (Ty) {
@@ -2286,11 +2301,12 @@ class BracedExpr : public Node {
   const Node *Elem;
   const Node *Init;
   bool IsArray;
+
 public:
   BracedExpr(const Node *Elem_, const Node *Init_, bool IsArray_)
       : Node(KBracedExpr), Elem(Elem_), Init(Init_), IsArray(IsArray_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Elem, Init, IsArray); }
+  template <typename Fn> void match(Fn F) const { F(Elem, Init, IsArray); }
 
   void printLeft(OutputBuffer &OB) const override {
     if (IsArray) {
@@ -2311,11 +2327,12 @@ class BracedRangeExpr : public Node {
   const Node *First;
   const Node *Last;
   const Node *Init;
+
 public:
   BracedRangeExpr(const Node *First_, const Node *Last_, const Node *Init_)
       : Node(KBracedRangeExpr), First(First_), Last(Last_), Init(Init_) {}
 
-  template<typename Fn> void match(Fn F) const { F(First, Last, Init); }
+  template <typename Fn> void match(Fn F) const { F(First, Last, Init); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += '[';
@@ -2340,7 +2357,7 @@ public:
       : Node(KFoldExpr), Pack(Pack_), Init(Init_), OperatorName(OperatorName_),
         IsLeftFold(IsLeftFold_) {}
 
-  template<typename Fn> void match(Fn F) const {
+  template <typename Fn> void match(Fn F) const {
     F(IsLeftFold, OperatorName, Pack, Init);
   }
 
@@ -2382,7 +2399,7 @@ class ThrowExpr : public Node {
 public:
   ThrowExpr(const Node *Op_) : Node(KThrowExpr), Op(Op_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Op); }
+  template <typename Fn> void match(Fn F) const { F(Op); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "throw ";
@@ -2396,7 +2413,7 @@ class BoolExpr : public Node {
 public:
   BoolExpr(bool Value_) : Node(KBoolExpr), Value(Value_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Value); }
+  template <typename Fn> void match(Fn F) const { F(Value); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += Value ? std::string_view("true") : std::string_view("false");
@@ -2409,7 +2426,7 @@ class StringLiteral : public Node {
 public:
   StringLiteral(const Node *Type_) : Node(KStringLiteral), Type(Type_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Type); }
+  template <typename Fn> void match(Fn F) const { F(Type); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "\"<";
@@ -2424,7 +2441,7 @@ class LambdaExpr : public Node {
 public:
   LambdaExpr(const Node *Type_) : Node(KLambdaExpr), Type(Type_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Type); }
+  template <typename Fn> void match(Fn F) const { F(Type); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "[]";
@@ -2443,7 +2460,7 @@ public:
   EnumLiteral(const Node *Ty_, std::string_view Integer_)
       : Node(KEnumLiteral), Ty(Ty_), Integer(Integer_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Ty, Integer); }
+  template <typename Fn> void match(Fn F) const { F(Ty, Integer); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB.printOpen();
@@ -2465,7 +2482,7 @@ public:
   IntegerLiteral(std::string_view Type_, std::string_view Value_)
       : Node(KIntegerLiteral), Type(Type_), Value(Value_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Type, Value); }
+  template <typename Fn> void match(Fn F) const { F(Type, Value); }
 
   void printLeft(OutputBuffer &OB) const override {
     if (Type.size() > 3) {
@@ -2489,12 +2506,13 @@ public:
 class RequiresExpr : public Node {
   NodeArray Parameters;
   NodeArray Requirements;
+
 public:
   RequiresExpr(NodeArray Parameters_, NodeArray Requirements_)
       : Node(KRequiresExpr), Parameters(Parameters_),
         Requirements(Requirements_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Parameters, Requirements); }
+  template <typename Fn> void match(Fn F) const { F(Parameters, Requirements); }
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "requires";
@@ -2518,6 +2536,7 @@ class ExprRequirement : public Node {
   const Node *Expr;
   bool IsNoexcept;
   const Node *TypeConstraint;
+
 public:
   ExprRequirement(const Node *Expr_, bool IsNoexcept_,
                   const Node *TypeConstraint_)
@@ -2547,9 +2566,9 @@ public:
 
 class TypeRequirement : public Node {
   const Node *Type;
+
 public:
-  TypeRequirement(const Node *Type_)
-      : Node(KTypeRequirement), Type(Type_) {}
+  TypeRequirement(const Node *Type_) : Node(KTypeRequirement), Type(Type_) {}
 
   template <typename Fn> void match(Fn F) const { F(Type); }
 
@@ -2562,6 +2581,7 @@ public:
 
 class NestedRequirement : public Node {
   const Node *Constraint;
+
 public:
   NestedRequirement(const Node *Constraint_)
       : Node(KNestedRequirement), Constraint(Constraint_) {}
@@ -2587,7 +2607,7 @@ constexpr Node::Kind getFloatLiteralKind(double *) {
 constexpr Node::Kind getFloatLiteralKind(long double *) {
   return Node::KLongDoubleLiteral;
 }
-}
+} // namespace float_literal_impl
 
 template <class Float> class FloatLiteralImpl : public Node {
   const std::string_view Contents;
@@ -2599,7 +2619,7 @@ public:
   FloatLiteralImpl(std::string_view Contents_)
       : Node(KindForClass), Contents(Contents_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Contents); }
+  template <typename Fn> void match(Fn F) const { F(Contents); }
 
   void printLeft(OutputBuffer &OB) const override {
     const size_t N = FloatData<Float>::mangled_size;
@@ -2635,8 +2655,7 @@ using LongDoubleLiteral = FloatLiteralImpl<long double>;
 
 /// Visit the node. Calls \c F(P), where \c P is the node cast to the
 /// appropriate derived class.
-template<typename Fn>
-void Node::visit(Fn F) const {
+template <typename Fn> void Node::visit(Fn F) const {
   switch (K) {
 #define NODE(X)                                                                \
   case K##X:                                                                   \
@@ -2647,7 +2666,7 @@ void Node::visit(Fn F) const {
 }
 
 /// Determine the kind of a node from its type.
-template<typename NodeT> struct NodeKind;
+template <typename NodeT> struct NodeKind;
 #define NODE(X)                                                                \
   template <> struct NodeKind<X> {                                             \
     static constexpr Node::Kind Kind = Node::K##X;                             \
@@ -2842,7 +2861,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     ASTAllocator.reset();
   }
 
-  template <class T, class... Args> Node *make(Args &&... args) {
+  template <class T, class... Args> Node *make(Args &&...args) {
     return ASTAllocator.template makeNode<T>(std::forward<Args>(args)...);
   }
 
@@ -2996,11 +3015,11 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
 
       Unnameable = NamedCast,
     };
-    char Enc[2];      // Encoding
-    OIKind Kind;      // Kind of operator
-    bool Flag : 1;    // Entry-specific flag
+    char Enc[2];         // Encoding
+    OIKind Kind;         // Kind of operator
+    bool Flag : 1;       // Entry-specific flag
     Node::Prec Prec : 7; // Precedence
-    const char *Name; // Spelling
+    const char *Name;    // Spelling
 
   public:
     constexpr OperatorInfo(const char (&E)[3], OIKind K, bool F, Node::Prec P,
@@ -3096,7 +3115,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseName(NameState *State) {
 
 // <local-name> := Z <function encoding> E <entity name> [<discriminator>]
 //              := Z <function encoding> E s [<discriminator>]
-//              := Z <function encoding> Ed [ <parameter number> ] _ <entity name>
+//              := Z <function encoding> Ed [ <parameter number> ] _ <entity
+//              name>
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseLocalName(NameState *State) {
   if (!consumeIf('Z'))
@@ -3449,8 +3469,8 @@ const typename AbstractManglingParser<
     {"ti", OperatorInfo::OfIdOp, /*Type*/ true, Node::Prec::Postfix, "typeid "},
 };
 template <typename Derived, typename Alloc>
-const size_t AbstractManglingParser<Derived, Alloc>::NumOps = sizeof(Ops) /
-                                                              sizeof(Ops[0]);
+const size_t AbstractManglingParser<Derived, Alloc>::NumOps =
+    sizeof(Ops) / sizeof(Ops[0]);
 
 // If the next 2 chars are an operator encoding, consume them and return their
 // OperatorInfo.  Otherwise return nullptr.
@@ -3496,7 +3516,8 @@ AbstractManglingParser<Derived, Alloc>::parseOperatorName(NameState *State) {
       Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return nullptr;
-      if (State) State->CtorDtorConversion = true;
+      if (State)
+        State->CtorDtorConversion = true;
       return make<ConversionOperatorType>(Ty);
     }
 
@@ -3562,7 +3583,8 @@ AbstractManglingParser<Derived, Alloc>::parseCtorDtorName(Node *&SoFar,
       return nullptr;
     int Variant = look() - '0';
     ++First;
-    if (State) State->CtorDtorConversion = true;
+    if (State)
+      State->CtorDtorConversion = true;
     if (IsInherited) {
       if (getDerived().parseName(State) == nullptr)
         return nullptr;
@@ -3574,7 +3596,8 @@ AbstractManglingParser<Derived, Alloc>::parseCtorDtorName(Node *&SoFar,
                         look(1) == '4' || look(1) == '5')) {
     int Variant = look(1) - '0';
     First += 2;
-    if (State) State->CtorDtorConversion = true;
+    if (State)
+      State->CtorDtorConversion = true;
     return make<CtorDtorName>(SoFar, /*IsDtor=*/true, Variant);
   }
 
@@ -3753,13 +3776,21 @@ Node *AbstractManglingParser<Derived, Alloc>::parseUnresolvedType() {
   return getDerived().parseSubstitution();
 }
 
-// <base-unresolved-name> ::= <simple-id>                                # unresolved name
-//          extension     ::= <operator-name>                            # unresolved operator-function-id
-//          extension     ::= <operator-name> <template-args>            # unresolved operator template-id
-//                        ::= on <operator-name>                         # unresolved operator-function-id
-//                        ::= on <operator-name> <template-args>         # unresolved operator template-id
-//                        ::= dn <destructor-name>                       # destructor or pseudo-destructor;
-//                                                                         # e.g. ~X or ~X<N-1>
+// <base-unresolved-name> ::= <simple-id>                                #
+// unresolved name
+//          extension     ::= <operator-name>                            #
+//          unresolved operator-function-id extension     ::= <operator-name>
+//          <template-args>            # unresolved operator template-id
+//                        ::= on <operator-name>                         #
+//                        unresolved operator-function-id
+//                        ::= on <operator-name> <template-args>         #
+//                        unresolved operator template-id
+//                        ::= dn <destructor-name>                       #
+//                        destructor or pseudo-destructor;
+//                                                                         #
+//                                                                         e.g.
+//                                                                         ~X or
+//                                                                         ~X<N-1>
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseBaseUnresolvedName() {
   if (std::isdigit(look()))
@@ -3783,23 +3814,38 @@ Node *AbstractManglingParser<Derived, Alloc>::parseBaseUnresolvedName() {
 }
 
 // <unresolved-name>
-//  extension        ::= srN <unresolved-type> [<template-args>] <unresolved-qualifier-level>* E <base-unresolved-name>
-//                   ::= [gs] <base-unresolved-name>                     # x or (with "gs") ::x
-//                   ::= [gs] sr <unresolved-qualifier-level>+ E <base-unresolved-name>
-//                                                                       # A::x, N::y, A<T>::z; "gs" means leading "::"
+//  extension        ::= srN <unresolved-type> [<template-args>]
+//  <unresolved-qualifier-level>* E <base-unresolved-name>
+//                   ::= [gs] <base-unresolved-name>                     # x or
+//                   (with "gs") ::x
+//                   ::= [gs] sr <unresolved-qualifier-level>+ E
+//                   <base-unresolved-name>
+//                                                                       # A::x,
+//                                                                       N::y,
+//                                                                       A<T>::z;
+//                                                                       "gs"
+//                                                                       means
+//                                                                       leading
+//                                                                       "::"
 // [gs] has been parsed by caller.
-//                   ::= sr <unresolved-type> <base-unresolved-name>     # T::x / decltype(p)::x
-//  extension        ::= sr <unresolved-type> <template-args> <base-unresolved-name>
-//                                                                       # T::N::x /decltype(p)::N::x
-//  (ignored)        ::= srN <unresolved-type>  <unresolved-qualifier-level>+ E <base-unresolved-name>
+//                   ::= sr <unresolved-type> <base-unresolved-name>     # T::x
+//                   / decltype(p)::x
+//  extension        ::= sr <unresolved-type> <template-args>
+//  <base-unresolved-name>
+//                                                                       #
+//                                                                       T::N::x
+//                                                                       /decltype(p)::N::x
+//  (ignored)        ::= srN <unresolved-type>  <unresolved-qualifier-level>+ E
+//  <base-unresolved-name>
 //
 // <unresolved-qualifier-level> ::= <simple-id>
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseUnresolvedName(bool Global) {
   Node *SoFar = nullptr;
 
-  // srN <unresolved-type> [<template-args>] <unresolved-qualifier-level>* E <base-unresolved-name>
-  // srN <unresolved-type>                   <unresolved-qualifier-level>+ E <base-unresolved-name>
+  // srN <unresolved-type> [<template-args>] <unresolved-qualifier-level>* E
+  // <base-unresolved-name> srN <unresolved-type> <unresolved-qualifier-level>+
+  // E <base-unresolved-name>
   if (consumeIf("srN")) {
     SoFar = getDerived().parseUnresolvedType();
     if (SoFar == nullptr)
@@ -3932,11 +3978,15 @@ std::string_view AbstractManglingParser<Alloc, Derived>::parseBareSourceName() {
   return R;
 }
 
-// <function-type> ::= [<CV-qualifiers>] [<exception-spec>] [Dx] F [Y] <bare-function-type> [<ref-qualifier>] E
+// <function-type> ::= [<CV-qualifiers>] [<exception-spec>] [Dx] F [Y]
+// <bare-function-type> [<ref-qualifier>] E
 //
-// <exception-spec> ::= Do                # non-throwing exception-specification (e.g., noexcept, throw())
-//                  ::= DO <expression> E # computed (instantiation-dependent) noexcept
-//                  ::= Dw <type>+ E      # dynamic exception specification with instantiation-dependent types
+// <exception-spec> ::= Do                # non-throwing exception-specification
+// (e.g., noexcept, throw())
+//                  ::= DO <expression> E # computed (instantiation-dependent)
+//                  noexcept
+//                  ::= Dw <type>+ E      # dynamic exception specification with
+//                  instantiation-dependent types
 //
 // <ref-qualifier> ::= R                   # & ref-qualifier
 // <ref-qualifier> ::= O                   # && ref-qualifier
@@ -3965,7 +4015,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseFunctionType() {
       Names.push_back(T);
     }
     ExceptionSpec =
-      make<DynamicExceptionSpec>(popTrailingNodeArray(SpecsBegin));
+        make<DynamicExceptionSpec>(popTrailingNodeArray(SpecsBegin));
     if (!ExceptionSpec)
       return nullptr;
   }
@@ -4001,12 +4051,13 @@ Node *AbstractManglingParser<Derived, Alloc>::parseFunctionType() {
   }
 
   NodeArray Params = popTrailingNodeArray(ParamsBegin);
-  return make<FunctionType>(ReturnType, Params, CVQuals,
-                            ReferenceQualifier, ExceptionSpec);
+  return make<FunctionType>(ReturnType, Params, CVQuals, ReferenceQualifier,
+                            ExceptionSpec);
 }
 
 // extension:
-// <vector-type>           ::= Dv <positive dimension number> _ <extended element type>
+// <vector-type>           ::= Dv <positive dimension number> _ <extended
+// element type>
 //                         ::= Dv [<dimension expression>] _ <element type>
 // <extended element type> ::= <element type>
 //                         ::= p # AltiVec vector pixel
@@ -4045,7 +4096,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseVectorType() {
   return make<VectorType>(ElemType, /*Dimension=*/nullptr);
 }
 
-// <decltype>  ::= Dt <expression> E  # decltype of an id-expression or class member access (C++0x)
+// <decltype>  ::= Dt <expression> E  # decltype of an id-expression or class
+// member access (C++0x)
 //             ::= DT <expression> E  # decltype of an expression (C++0x)
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseDecltype() {
@@ -4105,10 +4157,14 @@ Node *AbstractManglingParser<Derived, Alloc>::parsePointerToMemberType() {
   return make<PointerToMemberType>(ClassType, MemberType);
 }
 
-// <class-enum-type> ::= <name>     # non-dependent type name, dependent type name, or dependent typename-specifier
-//                   ::= Ts <name>  # dependent elaborated type specifier using 'struct' or 'class'
-//                   ::= Tu <name>  # dependent elaborated type specifier using 'union'
-//                   ::= Te <name>  # dependent elaborated type specifier using 'enum'
+// <class-enum-type> ::= <name>     # non-dependent type name, dependent type
+// name, or dependent typename-specifier
+//                   ::= Ts <name>  # dependent elaborated type specifier using
+//                   'struct' or 'class'
+//                   ::= Tu <name>  # dependent elaborated type specifier using
+//                   'union'
+//                   ::= Te <name>  # dependent elaborated type specifier using
+//                   'enum'
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseClassEnumType() {
   std::string_view ElabSpef;
@@ -4131,7 +4187,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseClassEnumType() {
 
 // <qualified-type>     ::= <qualifiers> <type>
 // <qualifiers> ::= <extended-qualifier>* <CV-qualifiers>
-// <extended-qualifier> ::= U <source-name> [<template-args>] # vendor extended type qualifier
+// <extended-qualifier> ::= U <source-name> [<template-args>] # vendor extended
+// type qualifier
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseQualifiedType() {
   if (consumeIf('U')) {
@@ -4139,7 +4196,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseQualifiedType() {
     if (Qual.empty())
       return nullptr;
 
-    // extension            ::= U <objc-name> <objc-type>  # objc-type<identifier>
+    // extension            ::= U <objc-name> <objc-type>  #
+    // objc-type<identifier>
     if (starts_with(Qual, "objcproto")) {
       constexpr size_t Len = sizeof("objcproto") - 1;
       std::string_view ProtoSourceName(Qual.data() + Len, Qual.size() - Len);
@@ -4197,8 +4255,9 @@ Node *AbstractManglingParser<Derived, Alloc>::parseQualifiedType() {
 // extension   ::= U <objc-name> <objc-type>  # objc-type<identifier>
 // extension   ::= <vector-type> # <vector-type> starts with Dv
 //
-// <objc-name> ::= <k0 number> objcproto <k1 number> <identifier>  # k0 = 9 + <number of digits in k1> + k1
-// <objc-type> ::= <source-name>  # PU<11+>objcproto 11objc_object<source-name> 11objc_object -> id<source-name>
+// <objc-name> ::= <k0 number> objcproto <k1 number> <identifier>  # k0 = 9 +
+// <number of digits in k1> + k1 <objc-type> ::= <source-name>  #
+// PU<11+>objcproto 11objc_object<source-name> 11objc_object -> id<source-name>
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseType() {
   Node *Result = nullptr;
@@ -4209,9 +4268,12 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
   case 'V':
   case 'K': {
     unsigned AfterQuals = 0;
-    if (look(AfterQuals) == 'r') ++AfterQuals;
-    if (look(AfterQuals) == 'V') ++AfterQuals;
-    if (look(AfterQuals) == 'K') ++AfterQuals;
+    if (look(AfterQuals) == 'r')
+      ++AfterQuals;
+    if (look(AfterQuals) == 'V')
+      ++AfterQuals;
+    if (look(AfterQuals) == 'K')
+      ++AfterQuals;
 
     if (look(AfterQuals) == 'F' ||
         (look(AfterQuals) == 'D' &&
@@ -4345,7 +4407,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
     case 'f':
       First += 2;
       return make<NameType>("decimal32");
-    //                ::= Dh   # IEEE 754r half-precision floating point (16 bits)
+    //                ::= Dh   # IEEE 754r half-precision floating point (16
+    //                bits)
     case 'h':
       First += 2;
       return make<NameType>("half");
@@ -4457,10 +4520,14 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
       }
       return nullptr;
     }
-    //                ::= DB <number> _                             # C23 signed _BitInt(N)
-    //                ::= DB <instantiation-dependent expression> _ # C23 signed _BitInt(N)
-    //                ::= DU <number> _                             # C23 unsigned _BitInt(N)
-    //                ::= DU <instantiation-dependent expression> _ # C23 unsigned _BitInt(N)
+    //                ::= DB <number> _                             # C23 signed
+    //                _BitInt(N)
+    //                ::= DB <instantiation-dependent expression> _ # C23 signed
+    //                _BitInt(N)
+    //                ::= DU <number> _                             # C23
+    //                unsigned _BitInt(N)
+    //                ::= DU <instantiation-dependent expression> _ # C23
+    //                unsigned _BitInt(N)
     case 'B':
     case 'U': {
       bool Signed = look(1) == 'B';
@@ -4726,10 +4793,14 @@ Qualifiers AbstractManglingParser<Alloc, Derived>::parseCVQualifiers() {
   return CVR;
 }
 
-// <function-param> ::= fp <top-level CV-Qualifiers> _                                     # L == 0, first parameter
-//                  ::= fp <top-level CV-Qualifiers> <parameter-2 non-negative number> _   # L == 0, second and later parameters
-//                  ::= fL <L-1 non-negative number> p <top-level CV-Qualifiers> _         # L > 0, first parameter
-//                  ::= fL <L-1 non-negative number> p <top-level CV-Qualifiers> <parameter-2 non-negative number> _   # L > 0, second and later parameters
+// <function-param> ::= fp <top-level CV-Qualifiers> _ # L == 0, first parameter
+//                  ::= fp <top-level CV-Qualifiers> <parameter-2 non-negative
+//                  number> _   # L == 0, second and later parameters
+//                  ::= fL <L-1 non-negative number> p <top-level CV-Qualifiers>
+//                  _         # L > 0, first parameter
+//                  ::= fL <L-1 non-negative number> p <top-level CV-Qualifiers>
+//                  <parameter-2 non-negative number> _   # L > 0, second and
+//                  later parameters
 //                  ::= fpT      # 'this' expression (not part of standard?)
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseFunctionParam() {
@@ -4756,8 +4827,9 @@ Node *AbstractManglingParser<Derived, Alloc>::parseFunctionParam() {
   return nullptr;
 }
 
-// cv <type> <expression>                               # conversion with one argument
-// cv <type> _ <expression>* E                          # conversion with a different number of arguments
+// cv <type> <expression>                               # conversion with one
+// argument cv <type> _ <expression>* E                          # conversion
+// with a different number of arguments
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseConversionExpr() {
   if (!consumeIf("cv"))
@@ -4789,13 +4861,20 @@ Node *AbstractManglingParser<Derived, Alloc>::parseConversionExpr() {
   return make<ConversionExpr>(Ty, makeNodeArray(E, E + 1));
 }
 
-// <expr-primary> ::= L <type> <value number> E                          # integer literal
-//                ::= L <type> <value float> E                           # floating literal
-//                ::= L <string type> E                                  # string literal
-//                ::= L <nullptr type> E                                 # nullptr literal (i.e., "LDnE")
-//                ::= L <lambda type> E                                  # lambda expression
-// FIXME:         ::= L <type> <real-part float> _ <imag-part float> E   # complex floating point literal (C 2000)
-//                ::= L <mangled-name> E                                 # external name
+// <expr-primary> ::= L <type> <value number> E                          #
+// integer literal
+//                ::= L <type> <value float> E                           #
+//                floating literal
+//                ::= L <string type> E                                  #
+//                string literal
+//                ::= L <nullptr type> E                                 #
+//                nullptr literal (i.e., "LDnE")
+//                ::= L <lambda type> E                                  #
+//                lambda expression
+// FIXME:         ::= L <type> <real-part float> _ <imag-part float> E   #
+// complex floating point literal (C 2000)
+//                ::= L <mangled-name> E                                 #
+//                external name
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseExprPrimary() {
   if (!consumeIf('L'))
@@ -4913,9 +4992,12 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExprPrimary() {
 }
 
 // <braced-expression> ::= <expression>
-//                     ::= di <field source-name> <braced-expression>    # .name = expr
-//                     ::= dx <index expression> <braced-expression>     # [expr] = expr
-//                     ::= dX <range begin expression> <range end expression> <braced-expression>
+//                     ::= di <field source-name> <braced-expression>    # .name
+//                     = expr
+//                     ::= dx <index expression> <braced-expression>     #
+//                     [expr] = expr
+//                     ::= dX <range begin expression> <range end expression>
+//                     <braced-expression>
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseBracedExpr() {
   if (look() == 'd') {
@@ -4990,9 +5072,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseFoldExpr() {
   const auto *Op = parseOperatorEncoding();
   if (!Op)
     return nullptr;
-  if (!(Op->getKind() == OperatorInfo::Binary
-        || (Op->getKind() == OperatorInfo::Member
-            && Op->getName().back() == '*')))
+  if (!(Op->getKind() == OperatorInfo::Binary ||
+        (Op->getKind() == OperatorInfo::Member && Op->getName().back() == '*')))
     return nullptr;
 
   Node *Pack = getDerived().parseExpr();
@@ -5031,8 +5112,8 @@ AbstractManglingParser<Derived, Alloc>::parsePointerToMemberConversionExpr(
   return make<PointerToMemberConversionExpr>(Ty, Expr, Offset, Prec);
 }
 
-// <expression> ::= so <referent type> <expr> [<offset number>] <union-selector>* [p] E
-// <union-selector> ::= _ [<number>]
+// <expression> ::= so <referent type> <expr> [<offset number>]
+// <union-selector>* [p] E <union-selector> ::= _ [<number>]
 //
 // Not yet in the spec: https://github.com/itanium-cxx-abi/cxx-abi/issues/47
 template <typename Derived, typename Alloc>
@@ -5130,44 +5211,88 @@ Node *AbstractManglingParser<Derived, Alloc>::parseRequiresExpr() {
 
 // <expression> ::= <unary operator-name> <expression>
 //              ::= <binary operator-name> <expression> <expression>
-//              ::= <ternary operator-name> <expression> <expression> <expression>
+//              ::= <ternary operator-name> <expression> <expression>
+//              <expression>
 //              ::= cl <expression>+ E                                   # call
-//              ::= cp <base-unresolved-name> <expression>* E            # (name) (expr-list), call that would use argument-dependent lookup but for the parentheses
-//              ::= cv <type> <expression>                               # conversion with one argument
-//              ::= cv <type> _ <expression>* E                          # conversion with a different number of arguments
-//              ::= [gs] nw <expression>* _ <type> E                     # new (expr-list) type
-//              ::= [gs] nw <expression>* _ <type> <initializer>         # new (expr-list) type (init)
-//              ::= [gs] na <expression>* _ <type> E                     # new[] (expr-list) type
-//              ::= [gs] na <expression>* _ <type> <initializer>         # new[] (expr-list) type (init)
-//              ::= [gs] dl <expression>                                 # delete expression
-//              ::= [gs] da <expression>                                 # delete[] expression
-//              ::= pp_ <expression>                                     # prefix ++
-//              ::= mm_ <expression>                                     # prefix --
-//              ::= ti <type>                                            # typeid (type)
-//              ::= te <expression>                                      # typeid (expression)
-//              ::= dc <type> <expression>                               # dynamic_cast<type> (expression)
-//              ::= sc <type> <expression>                               # static_cast<type> (expression)
-//              ::= cc <type> <expression>                               # const_cast<type> (expression)
-//              ::= rc <type> <expression>                               # reinterpret_cast<type> (expression)
-//              ::= st <type>                                            # sizeof (a type)
-//              ::= sz <expression>                                      # sizeof (an expression)
-//              ::= at <type>                                            # alignof (a type)
-//              ::= az <expression>                                      # alignof (an expression)
-//              ::= nx <expression>                                      # noexcept (expression)
+//              ::= cp <base-unresolved-name> <expression>* E            #
+//              (name) (expr-list), call that would use argument-dependent
+//              lookup but for the parentheses
+//              ::= cv <type> <expression>                               #
+//              conversion with one argument
+//              ::= cv <type> _ <expression>* E                          #
+//              conversion with a different number of arguments
+//              ::= [gs] nw <expression>* _ <type> E                     # new
+//              (expr-list) type
+//              ::= [gs] nw <expression>* _ <type> <initializer>         # new
+//              (expr-list) type (init)
+//              ::= [gs] na <expression>* _ <type> E                     # new[]
+//              (expr-list) type
+//              ::= [gs] na <expression>* _ <type> <initializer>         # new[]
+//              (expr-list) type (init)
+//              ::= [gs] dl <expression>                                 #
+//              delete expression
+//              ::= [gs] da <expression>                                 #
+//              delete[] expression
+//              ::= pp_ <expression>                                     #
+//              prefix ++
+//              ::= mm_ <expression>                                     #
+//              prefix --
+//              ::= ti <type>                                            #
+//              typeid (type)
+//              ::= te <expression>                                      #
+//              typeid (expression)
+//              ::= dc <type> <expression>                               #
+//              dynamic_cast<type> (expression)
+//              ::= sc <type> <expression>                               #
+//              static_cast<type> (expression)
+//              ::= cc <type> <expression>                               #
+//              const_cast<type> (expression)
+//              ::= rc <type> <expression>                               #
+//              reinterpret_cast<type> (expression)
+//              ::= st <type>                                            #
+//              sizeof (a type)
+//              ::= sz <expression>                                      #
+//              sizeof (an expression)
+//              ::= at <type>                                            #
+//              alignof (a type)
+//              ::= az <expression>                                      #
+//              alignof (an expression)
+//              ::= nx <expression>                                      #
+//              noexcept (expression)
 //              ::= <template-param>
 //              ::= <function-param>
-//              ::= dt <expression> <unresolved-name>                    # expr.name
-//              ::= pt <expression> <unresolved-name>                    # expr->name
-//              ::= ds <expression> <expression>                         # expr.*expr
-//              ::= sZ <template-param>                                  # size of a parameter pack
-//              ::= sZ <function-param>                                  # size of a function parameter pack
-//              ::= sP <template-arg>* E                                 # sizeof...(T), size of a captured template parameter pack from an alias template
-//              ::= sp <expression>                                      # pack expansion
-//              ::= tw <expression>                                      # throw expression
-//              ::= tr                                                   # throw with no operand (rethrow)
-//              ::= <unresolved-name>                                    # f(p), N::f(p), ::f(p),
-//                                                                       # freestanding dependent name (e.g., T::x),
-//                                                                       # objectless nonstatic member reference
+//              ::= dt <expression> <unresolved-name>                    #
+//              expr.name
+//              ::= pt <expression> <unresolved-name>                    #
+//              expr->name
+//              ::= ds <expression> <expression>                         #
+//              expr.*expr
+//              ::= sZ <template-param>                                  # size
+//              of a parameter pack
+//              ::= sZ <function-param>                                  # size
+//              of a function parameter pack
+//              ::= sP <template-arg>* E                                 #
+//              sizeof...(T), size of a captured template parameter pack from an
+//              alias template
+//              ::= sp <expression>                                      # pack
+//              expansion
+//              ::= tw <expression>                                      # throw
+//              expression
+//              ::= tr                                                   # throw
+//              with no operand (rethrow)
+//              ::= <unresolved-name>                                    # f(p),
+//              N::f(p), ::f(p),
+//                                                                       #
+//                                                                       freestanding
+//                                                                       dependent
+//                                                                       name
+//                                                                       (e.g.,
+//                                                                       T::x),
+//                                                                       #
+//                                                                       objectless
+//                                                                       nonstatic
+//                                                                       member
+//                                                                       reference
 //              ::= fL <binary-operator-name> <expression> <expression>
 //              ::= fR <binary-operator-name> <expression> <expression>
 //              ::= fl <binary-operator-name> <expression>
@@ -5588,7 +5713,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSpecialName() {
       Node *Name = getDerived().parseName();
       if (Name == nullptr)
         return nullptr;
-      return make<SpecialName>("thread-local initialization routine for ", Name);
+      return make<SpecialName>("thread-local initialization routine for ",
+                               Name);
     }
     // T <call-offset> <base encoding>
     default: {
@@ -5738,28 +5864,21 @@ Node *AbstractManglingParser<Derived, Alloc>::parseEncoding(bool ParseParams) {
                                 NameInfo.ReferenceQualifier);
 }
 
-template <class Float>
-struct FloatData;
+template <class Float> struct FloatData;
 
-template <>
-struct FloatData<float>
-{
-    static const size_t mangled_size = 8;
-    static const size_t max_demangled_size = 24;
-    static constexpr const char* spec = "%af";
+template <> struct FloatData<float> {
+  static const size_t mangled_size = 8;
+  static const size_t max_demangled_size = 24;
+  static constexpr const char *spec = "%af";
 };
 
-template <>
-struct FloatData<double>
-{
-    static const size_t mangled_size = 16;
-    static const size_t max_demangled_size = 32;
-    static constexpr const char* spec = "%a";
+template <> struct FloatData<double> {
+  static const size_t mangled_size = 16;
+  static const size_t max_demangled_size = 32;
+  static constexpr const char *spec = "%a";
 };
 
-template <>
-struct FloatData<long double>
-{
+template <> struct FloatData<long double> {
 #if __LDBL_MANT_DIG__ == 113 || __LDBL_MANT_DIG__ == 106
   static const size_t mangled_size = 32;
 #elif __LDBL_MANT_DIG__ == 53 || defined(_MSC_VER)
@@ -5771,13 +5890,13 @@ struct FloatData<long double>
 #else
 #error Unknown size for __LDBL_MANT_DIG__
 #endif
-    // `-0x1.ffffffffffffffffffffffffffffp+16383` + 'L' + '\0' == 42 bytes.
-    // 28 'f's * 4 bits == 112 bits, which is the number of mantissa bits.
-    // Negatives are one character longer than positives.
-    // `0x1.` and `p` are constant, and exponents `+16383` and `-16382` are the
-    // same length. 1 sign bit, 112 mantissa bits, and 15 exponent bits == 128.
-    static const size_t max_demangled_size = 42;
-    static constexpr const char *spec = "%LaL";
+  // `-0x1.ffffffffffffffffffffffffffffp+16383` + 'L' + '\0' == 42 bytes.
+  // 28 'f's * 4 bits == 112 bits, which is the number of mantissa bits.
+  // Negatives are one character longer than positives.
+  // `0x1.` and `p` are constant, and exponents `+16383` and `-16382` are the
+  // same length. 1 sign bit, 112 mantissa bits, and 15 exponent bits == 128.
+  static const size_t max_demangled_size = 42;
+  static constexpr const char *spec = "%LaL";
 };
 
 template <typename Alloc, typename Derived>
@@ -5799,8 +5918,7 @@ Node *AbstractManglingParser<Alloc, Derived>::parseFloatingLiteral() {
 // <seq-id> ::= <0-9A-Z>+
 template <typename Alloc, typename Derived>
 bool AbstractManglingParser<Alloc, Derived>::parseSeqId(size_t *Out) {
-  if (!(look() >= '0' && look() <= '9') &&
-      !(look() >= 'A' && look() <= 'Z'))
+  if (!(look() >= '0' && look() <= '9') && !(look() >= 'A' && look() <= 'Z'))
     return true;
 
   size_t Id = 0;
@@ -5962,7 +6080,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseTemplateParam() {
 }
 
 // <template-param-decl> ::= Ty                          # type parameter
-//                       ::= Tk <concept name> [<template-args>] # constrained type parameter
+//                       ::= Tk <concept name> [<template-args>] # constrained
+//                       type parameter
 //                       ::= Tn <type>                   # non-type parameter
 //                       ::= Tt <template-param-decl>* E # template parameter
 //                       ::= Tp <template-param-decl>    # parameter pack
@@ -6131,7 +6250,7 @@ AbstractManglingParser<Derived, Alloc>::parseTemplateArgs(bool TagTemplates) {
       }
       if (Arg->getKind() == Node::KTemplateArgumentPack) {
         TableEntry = make<ParameterPack>(
-            static_cast<TemplateArgumentPack*>(TableEntry)->getElements());
+            static_cast<TemplateArgumentPack *>(TableEntry)->getElements());
         if (!TableEntry)
           return nullptr;
       }

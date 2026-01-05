@@ -72,7 +72,7 @@ bool StringMatcher::EmitStringMatcherForChar(
   }
 
   // Bucket the matches by the character we are comparing.
-  std::map<char, std::vector<const StringPair*>> MatchesByLetter;
+  std::map<char, std::vector<const StringPair *>> MatchesByLetter;
 
   for (const StringPair *Match : Matches)
     MatchesByLetter[Match->first[CharNo]].push_back(Match);
@@ -81,14 +81,14 @@ bool StringMatcher::EmitStringMatcherForChar(
   // across the whole set and match all of them at once.
   if (MatchesByLetter.size() == 1) {
     unsigned FirstNonCommonLetter = FindFirstNonCommonLetter(Matches);
-    unsigned NumChars = FirstNonCommonLetter-CharNo;
+    unsigned NumChars = FirstNonCommonLetter - CharNo;
 
     // Emit code to break out if the prefix doesn't match.
     if (NumChars == 1) {
       // Do the comparison with if (Str[1] != 'f')
       // FIXME: Need to escape general characters.
       OS << Indent << "if (" << StrVariableName << "[" << CharNo << "] != '"
-      << Matches[0]->first[CharNo] << "')\n";
+         << Matches[0]->first[CharNo] << "')\n";
       OS << Indent << "  break;\n";
     } else {
       // Do the comparison with if memcmp(Str.data()+1, "foo", 3).
@@ -128,26 +128,27 @@ bool StringMatcher::EmitStringMatcherForChar(
 ///
 void StringMatcher::Emit(unsigned Indent, bool IgnoreDuplicates) const {
   // If nothing to match, just fall through.
-  if (Matches.empty()) return;
+  if (Matches.empty())
+    return;
 
   // First level categorization: group strings by length.
-  std::map<unsigned, std::vector<const StringPair*>> MatchesByLength;
+  std::map<unsigned, std::vector<const StringPair *>> MatchesByLength;
 
   for (const StringPair &Match : Matches)
     MatchesByLength[Match.first.size()].push_back(&Match);
 
   // Output a switch statement on length and categorize the elements within each
   // bin.
-  OS.indent(Indent*2+2) << "switch (" << StrVariableName << ".size()) {\n";
-  OS.indent(Indent*2+2) << "default: break;\n";
+  OS.indent(Indent * 2 + 2) << "switch (" << StrVariableName << ".size()) {\n";
+  OS.indent(Indent * 2 + 2) << "default: break;\n";
 
   for (const auto &[Length, Matches] : MatchesByLength) {
     OS.indent(Indent * 2 + 2)
         << "case " << Length << ":\t // " << Matches.size() << " string"
         << (Matches.size() == 1 ? "" : "s") << " to match.\n";
     if (EmitStringMatcherForChar(Matches, 0, Indent, IgnoreDuplicates))
-      OS.indent(Indent*2+4) << "break;\n";
+      OS.indent(Indent * 2 + 4) << "break;\n";
   }
 
-  OS.indent(Indent*2+2) << "}\n";
+  OS.indent(Indent * 2 + 2) << "}\n";
 }

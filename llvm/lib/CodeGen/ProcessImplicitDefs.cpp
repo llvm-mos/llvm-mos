@@ -72,9 +72,7 @@ void ProcessImplicitDefsLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool ProcessImplicitDefs::canTurnIntoImplicitDef(MachineInstr *MI) {
-  if (!MI->isCopyLike() &&
-      !MI->isInsertSubreg() &&
-      !MI->isRegSequence() &&
+  if (!MI->isCopyLike() && !MI->isInsertSubreg() && !MI->isRegSequence() &&
       !MI->isPHI())
     return false;
   for (const MachineOperand &MO : MI->all_uses())
@@ -181,7 +179,8 @@ bool ProcessImplicitDefs::run(MachineFunction &MF) {
     Changed = true;
 
     // Drain the WorkList to recursively process any new implicit defs.
-    do processImplicitDef(WorkList.pop_back_val());
+    do
+      processImplicitDef(WorkList.pop_back_val());
     while (!WorkList.empty());
   }
   return Changed;

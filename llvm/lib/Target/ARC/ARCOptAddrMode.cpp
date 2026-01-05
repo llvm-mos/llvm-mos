@@ -423,7 +423,8 @@ bool ARCOptAddrMode::canHoistLoadStoreTo(MachineInstr *Ldst, MachineInstr *To) {
   return true;
 }
 
-// bool ARCOptAddrMode::canSinkLoadStoreTo(MachineInstr *Ldst, MachineInstr *To) {
+// bool ARCOptAddrMode::canSinkLoadStoreTo(MachineInstr *Ldst, MachineInstr *To)
+// {
 //   // Can only sink load/store within same BB
 //   if (Ldst->getParent() != To->getParent())
 //     return false;

@@ -131,7 +131,7 @@ public:
    */
 
   struct CachingOptions {
-    std::string Path;                    // Path to the cache, empty to disable.
+    std::string Path; // Path to the cache, empty to disable.
     CachePruningPolicy Policy;
   };
 
@@ -143,7 +143,7 @@ public:
   /// negative value to disable pruning. A value of 0 will force pruning to
   /// occur.
   void setCachePruningInterval(int Interval) {
-    if(Interval < 0)
+    if (Interval < 0)
       CacheOptions.Policy.Interval.reset();
     else
       CacheOptions.Policy.Interval = std::chrono::seconds(Interval);
@@ -357,5 +357,5 @@ private:
   /// manager.
   bool DebugPassManager = false;
 };
-}
+} // namespace llvm
 #endif

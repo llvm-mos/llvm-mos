@@ -31,8 +31,9 @@ using namespace Hexagon;
 
 #define DEBUG_TYPE "hexagon-asm-backend"
 
-static cl::opt<bool> DisableFixup
-  ("mno-fixup", cl::desc("Disable fixing up resolved relocations for Hexagon"));
+static cl::opt<bool> DisableFixup(
+    "mno-fixup",
+    cl::desc("Disable fixing up resolved relocations for Hexagon"));
 
 namespace {
 
@@ -41,9 +42,9 @@ class HexagonAsmBackend : public MCAsmBackend {
   StringRef CPU;
   mutable uint64_t relaxedCnt;
   mutable MCInst RelaxedMCB;
-  std::unique_ptr <MCInstrInfo> MCII;
-  std::unique_ptr <MCInst *> RelaxTarget;
-  MCInst * Extender;
+  std::unique_ptr<MCInstrInfo> MCII;
+  std::unique_ptr<MCInst *> RelaxTarget;
+  MCInst *Extender;
   unsigned MaxPacketSize;
 
   void ReplaceInstruction(MCCodeEmitter &E, MCFragment &RF, MCInst &HMB) const {
@@ -76,7 +77,7 @@ public:
 
   MCInst *takeExtender() const {
     assert(Extender != nullptr);
-    MCInst * Result = Extender;
+    MCInst *Result = Extender;
     const_cast<HexagonAsmBackend *>(this)->Extender = nullptr;
     return Result;
   }
@@ -199,125 +200,125 @@ public:
   }
 
   bool shouldForceRelocation(const MCFixup &Fixup) {
-    switch(Fixup.getKind()) {
-      default:
-        llvm_unreachable("Unknown Fixup Kind!");
+    switch (Fixup.getKind()) {
+    default:
+      llvm_unreachable("Unknown Fixup Kind!");
 
-      case fixup_Hexagon_LO16:
-      case fixup_Hexagon_HI16:
-      case fixup_Hexagon_16:
-      case fixup_Hexagon_8:
-      case fixup_Hexagon_GPREL16_0:
-      case fixup_Hexagon_GPREL16_1:
-      case fixup_Hexagon_GPREL16_2:
-      case fixup_Hexagon_GPREL16_3:
-      case fixup_Hexagon_HL16:
-      case fixup_Hexagon_32_6_X:
-      case fixup_Hexagon_16_X:
-      case fixup_Hexagon_12_X:
-      case fixup_Hexagon_11_X:
-      case fixup_Hexagon_10_X:
-      case fixup_Hexagon_9_X:
-      case fixup_Hexagon_8_X:
-      case fixup_Hexagon_7_X:
-      case fixup_Hexagon_6_X:
-      case fixup_Hexagon_COPY:
-      case fixup_Hexagon_GLOB_DAT:
-      case fixup_Hexagon_JMP_SLOT:
-      case fixup_Hexagon_RELATIVE:
-      case fixup_Hexagon_PLT_B22_PCREL:
-      case fixup_Hexagon_GOTREL_LO16:
-      case fixup_Hexagon_GOTREL_HI16:
-      case fixup_Hexagon_GOTREL_32:
-      case fixup_Hexagon_GOT_LO16:
-      case fixup_Hexagon_GOT_HI16:
-      case fixup_Hexagon_GOT_32:
-      case fixup_Hexagon_GOT_16:
-      case fixup_Hexagon_DTPMOD_32:
-      case fixup_Hexagon_DTPREL_LO16:
-      case fixup_Hexagon_DTPREL_HI16:
-      case fixup_Hexagon_DTPREL_32:
-      case fixup_Hexagon_DTPREL_16:
-      case fixup_Hexagon_GD_PLT_B22_PCREL:
-      case fixup_Hexagon_LD_PLT_B22_PCREL:
-      case fixup_Hexagon_GD_GOT_LO16:
-      case fixup_Hexagon_GD_GOT_HI16:
-      case fixup_Hexagon_GD_GOT_32:
-      case fixup_Hexagon_GD_GOT_16:
-      case fixup_Hexagon_LD_GOT_LO16:
-      case fixup_Hexagon_LD_GOT_HI16:
-      case fixup_Hexagon_LD_GOT_32:
-      case fixup_Hexagon_LD_GOT_16:
-      case fixup_Hexagon_IE_LO16:
-      case fixup_Hexagon_IE_HI16:
-      case fixup_Hexagon_IE_32:
-      case fixup_Hexagon_IE_16:
-      case fixup_Hexagon_IE_GOT_LO16:
-      case fixup_Hexagon_IE_GOT_HI16:
-      case fixup_Hexagon_IE_GOT_32:
-      case fixup_Hexagon_IE_GOT_16:
-      case fixup_Hexagon_TPREL_LO16:
-      case fixup_Hexagon_TPREL_HI16:
-      case fixup_Hexagon_TPREL_32:
-      case fixup_Hexagon_TPREL_16:
-      case fixup_Hexagon_GOTREL_32_6_X:
-      case fixup_Hexagon_GOTREL_16_X:
-      case fixup_Hexagon_GOTREL_11_X:
-      case fixup_Hexagon_GOT_32_6_X:
-      case fixup_Hexagon_GOT_16_X:
-      case fixup_Hexagon_GOT_11_X:
-      case fixup_Hexagon_DTPREL_32_6_X:
-      case fixup_Hexagon_DTPREL_16_X:
-      case fixup_Hexagon_DTPREL_11_X:
-      case fixup_Hexagon_GD_GOT_32_6_X:
-      case fixup_Hexagon_GD_GOT_16_X:
-      case fixup_Hexagon_GD_GOT_11_X:
-      case fixup_Hexagon_LD_GOT_32_6_X:
-      case fixup_Hexagon_LD_GOT_16_X:
-      case fixup_Hexagon_LD_GOT_11_X:
-      case fixup_Hexagon_IE_32_6_X:
-      case fixup_Hexagon_IE_16_X:
-      case fixup_Hexagon_IE_GOT_32_6_X:
-      case fixup_Hexagon_IE_GOT_16_X:
-      case fixup_Hexagon_IE_GOT_11_X:
-      case fixup_Hexagon_TPREL_32_6_X:
-      case fixup_Hexagon_TPREL_16_X:
-      case fixup_Hexagon_TPREL_11_X:
-      case fixup_Hexagon_32_PCREL:
-      case fixup_Hexagon_6_PCREL_X:
-      case fixup_Hexagon_23_REG:
-      case fixup_Hexagon_27_REG:
-      case fixup_Hexagon_GD_PLT_B22_PCREL_X:
-      case fixup_Hexagon_GD_PLT_B32_PCREL_X:
-      case fixup_Hexagon_LD_PLT_B22_PCREL_X:
-      case fixup_Hexagon_LD_PLT_B32_PCREL_X:
-        // These relocations should always have a relocation recorded
+    case fixup_Hexagon_LO16:
+    case fixup_Hexagon_HI16:
+    case fixup_Hexagon_16:
+    case fixup_Hexagon_8:
+    case fixup_Hexagon_GPREL16_0:
+    case fixup_Hexagon_GPREL16_1:
+    case fixup_Hexagon_GPREL16_2:
+    case fixup_Hexagon_GPREL16_3:
+    case fixup_Hexagon_HL16:
+    case fixup_Hexagon_32_6_X:
+    case fixup_Hexagon_16_X:
+    case fixup_Hexagon_12_X:
+    case fixup_Hexagon_11_X:
+    case fixup_Hexagon_10_X:
+    case fixup_Hexagon_9_X:
+    case fixup_Hexagon_8_X:
+    case fixup_Hexagon_7_X:
+    case fixup_Hexagon_6_X:
+    case fixup_Hexagon_COPY:
+    case fixup_Hexagon_GLOB_DAT:
+    case fixup_Hexagon_JMP_SLOT:
+    case fixup_Hexagon_RELATIVE:
+    case fixup_Hexagon_PLT_B22_PCREL:
+    case fixup_Hexagon_GOTREL_LO16:
+    case fixup_Hexagon_GOTREL_HI16:
+    case fixup_Hexagon_GOTREL_32:
+    case fixup_Hexagon_GOT_LO16:
+    case fixup_Hexagon_GOT_HI16:
+    case fixup_Hexagon_GOT_32:
+    case fixup_Hexagon_GOT_16:
+    case fixup_Hexagon_DTPMOD_32:
+    case fixup_Hexagon_DTPREL_LO16:
+    case fixup_Hexagon_DTPREL_HI16:
+    case fixup_Hexagon_DTPREL_32:
+    case fixup_Hexagon_DTPREL_16:
+    case fixup_Hexagon_GD_PLT_B22_PCREL:
+    case fixup_Hexagon_LD_PLT_B22_PCREL:
+    case fixup_Hexagon_GD_GOT_LO16:
+    case fixup_Hexagon_GD_GOT_HI16:
+    case fixup_Hexagon_GD_GOT_32:
+    case fixup_Hexagon_GD_GOT_16:
+    case fixup_Hexagon_LD_GOT_LO16:
+    case fixup_Hexagon_LD_GOT_HI16:
+    case fixup_Hexagon_LD_GOT_32:
+    case fixup_Hexagon_LD_GOT_16:
+    case fixup_Hexagon_IE_LO16:
+    case fixup_Hexagon_IE_HI16:
+    case fixup_Hexagon_IE_32:
+    case fixup_Hexagon_IE_16:
+    case fixup_Hexagon_IE_GOT_LO16:
+    case fixup_Hexagon_IE_GOT_HI16:
+    case fixup_Hexagon_IE_GOT_32:
+    case fixup_Hexagon_IE_GOT_16:
+    case fixup_Hexagon_TPREL_LO16:
+    case fixup_Hexagon_TPREL_HI16:
+    case fixup_Hexagon_TPREL_32:
+    case fixup_Hexagon_TPREL_16:
+    case fixup_Hexagon_GOTREL_32_6_X:
+    case fixup_Hexagon_GOTREL_16_X:
+    case fixup_Hexagon_GOTREL_11_X:
+    case fixup_Hexagon_GOT_32_6_X:
+    case fixup_Hexagon_GOT_16_X:
+    case fixup_Hexagon_GOT_11_X:
+    case fixup_Hexagon_DTPREL_32_6_X:
+    case fixup_Hexagon_DTPREL_16_X:
+    case fixup_Hexagon_DTPREL_11_X:
+    case fixup_Hexagon_GD_GOT_32_6_X:
+    case fixup_Hexagon_GD_GOT_16_X:
+    case fixup_Hexagon_GD_GOT_11_X:
+    case fixup_Hexagon_LD_GOT_32_6_X:
+    case fixup_Hexagon_LD_GOT_16_X:
+    case fixup_Hexagon_LD_GOT_11_X:
+    case fixup_Hexagon_IE_32_6_X:
+    case fixup_Hexagon_IE_16_X:
+    case fixup_Hexagon_IE_GOT_32_6_X:
+    case fixup_Hexagon_IE_GOT_16_X:
+    case fixup_Hexagon_IE_GOT_11_X:
+    case fixup_Hexagon_TPREL_32_6_X:
+    case fixup_Hexagon_TPREL_16_X:
+    case fixup_Hexagon_TPREL_11_X:
+    case fixup_Hexagon_32_PCREL:
+    case fixup_Hexagon_6_PCREL_X:
+    case fixup_Hexagon_23_REG:
+    case fixup_Hexagon_27_REG:
+    case fixup_Hexagon_GD_PLT_B22_PCREL_X:
+    case fixup_Hexagon_GD_PLT_B32_PCREL_X:
+    case fixup_Hexagon_LD_PLT_B22_PCREL_X:
+    case fixup_Hexagon_LD_PLT_B32_PCREL_X:
+      // These relocations should always have a relocation recorded
+      return true;
+
+    case fixup_Hexagon_B22_PCREL:
+      // IsResolved = false;
+      break;
+
+    case fixup_Hexagon_B13_PCREL:
+    case fixup_Hexagon_B13_PCREL_X:
+    case fixup_Hexagon_B32_PCREL_X:
+    case fixup_Hexagon_B22_PCREL_X:
+    case fixup_Hexagon_B15_PCREL:
+    case fixup_Hexagon_B15_PCREL_X:
+    case fixup_Hexagon_B9_PCREL:
+    case fixup_Hexagon_B9_PCREL_X:
+    case fixup_Hexagon_B7_PCREL:
+    case fixup_Hexagon_B7_PCREL_X:
+      if (DisableFixup)
         return true;
+      break;
 
-      case fixup_Hexagon_B22_PCREL:
-        //IsResolved = false;
-        break;
-
-      case fixup_Hexagon_B13_PCREL:
-      case fixup_Hexagon_B13_PCREL_X:
-      case fixup_Hexagon_B32_PCREL_X:
-      case fixup_Hexagon_B22_PCREL_X:
-      case fixup_Hexagon_B15_PCREL:
-      case fixup_Hexagon_B15_PCREL_X:
-      case fixup_Hexagon_B9_PCREL:
-      case fixup_Hexagon_B9_PCREL_X:
-      case fixup_Hexagon_B7_PCREL:
-      case fixup_Hexagon_B7_PCREL_X:
-        if (DisableFixup)
-          return true;
-        break;
-
-      case FK_Data_1:
-      case FK_Data_2:
-      case FK_Data_4:
-      case fixup_Hexagon_32:
-        // Leave these relocations alone as they are used for EH.
-        return false;
+    case FK_Data_1:
+    case FK_Data_2:
+    case FK_Data_4:
+    case fixup_Hexagon_32:
+      // Leave these relocations alone as they are used for EH.
+      return false;
     }
     return false;
   }
@@ -326,78 +327,73 @@ public:
   static unsigned getFixupKindNumBytes(unsigned Kind) {
     switch (Kind) {
     default:
-        return 0;
+      return 0;
 
-      case FK_Data_1:
-        return 1;
-      case FK_Data_2:
-        return 2;
-      case FK_Data_4: // this later gets mapped to R_HEX_32 or R_HEX_32_PCREL
-      case fixup_Hexagon_32:
-      case fixup_Hexagon_B32_PCREL_X:
-      case fixup_Hexagon_B22_PCREL:
-      case fixup_Hexagon_B22_PCREL_X:
-      case fixup_Hexagon_B15_PCREL:
-      case fixup_Hexagon_B15_PCREL_X:
-      case fixup_Hexagon_B13_PCREL:
-      case fixup_Hexagon_B13_PCREL_X:
-      case fixup_Hexagon_B9_PCREL:
-      case fixup_Hexagon_B9_PCREL_X:
-      case fixup_Hexagon_B7_PCREL:
-      case fixup_Hexagon_B7_PCREL_X:
-      case fixup_Hexagon_GD_PLT_B32_PCREL_X:
-      case fixup_Hexagon_LD_PLT_B32_PCREL_X:
-        return 4;
+    case FK_Data_1:
+      return 1;
+    case FK_Data_2:
+      return 2;
+    case FK_Data_4: // this later gets mapped to R_HEX_32 or R_HEX_32_PCREL
+    case fixup_Hexagon_32:
+    case fixup_Hexagon_B32_PCREL_X:
+    case fixup_Hexagon_B22_PCREL:
+    case fixup_Hexagon_B22_PCREL_X:
+    case fixup_Hexagon_B15_PCREL:
+    case fixup_Hexagon_B15_PCREL_X:
+    case fixup_Hexagon_B13_PCREL:
+    case fixup_Hexagon_B13_PCREL_X:
+    case fixup_Hexagon_B9_PCREL:
+    case fixup_Hexagon_B9_PCREL_X:
+    case fixup_Hexagon_B7_PCREL:
+    case fixup_Hexagon_B7_PCREL_X:
+    case fixup_Hexagon_GD_PLT_B32_PCREL_X:
+    case fixup_Hexagon_LD_PLT_B32_PCREL_X:
+      return 4;
     }
   }
 
   // Make up for left shift when encoding the operand.
   static uint64_t adjustFixupValue(MCFixupKind Kind, uint64_t Value) {
-    switch((unsigned)Kind) {
-      default:
-        break;
+    switch ((unsigned)Kind) {
+    default:
+      break;
 
-      case fixup_Hexagon_B7_PCREL:
-      case fixup_Hexagon_B9_PCREL:
-      case fixup_Hexagon_B13_PCREL:
-      case fixup_Hexagon_B15_PCREL:
-      case fixup_Hexagon_B22_PCREL:
-        Value >>= 2;
-        break;
+    case fixup_Hexagon_B7_PCREL:
+    case fixup_Hexagon_B9_PCREL:
+    case fixup_Hexagon_B13_PCREL:
+    case fixup_Hexagon_B15_PCREL:
+    case fixup_Hexagon_B22_PCREL:
+      Value >>= 2;
+      break;
 
-      case fixup_Hexagon_B7_PCREL_X:
-      case fixup_Hexagon_B9_PCREL_X:
-      case fixup_Hexagon_B13_PCREL_X:
-      case fixup_Hexagon_B15_PCREL_X:
-      case fixup_Hexagon_B22_PCREL_X:
-        Value &= 0x3f;
-        break;
+    case fixup_Hexagon_B7_PCREL_X:
+    case fixup_Hexagon_B9_PCREL_X:
+    case fixup_Hexagon_B13_PCREL_X:
+    case fixup_Hexagon_B15_PCREL_X:
+    case fixup_Hexagon_B22_PCREL_X:
+      Value &= 0x3f;
+      break;
 
-      case fixup_Hexagon_B32_PCREL_X:
-      case fixup_Hexagon_GD_PLT_B32_PCREL_X:
-      case fixup_Hexagon_LD_PLT_B32_PCREL_X:
-        Value >>= 6;
-        break;
+    case fixup_Hexagon_B32_PCREL_X:
+    case fixup_Hexagon_GD_PLT_B32_PCREL_X:
+    case fixup_Hexagon_LD_PLT_B32_PCREL_X:
+      Value >>= 6;
+      break;
     }
     return (Value);
   }
 
   void HandleFixupError(const int bits, const int align_bits,
-    const int64_t FixupValue, const char *fixupStr) const {
+                        const int64_t FixupValue, const char *fixupStr) const {
     // Error: value 1124 out of range: -1024-1023 when resolving
     // symbol in file xprtsock.S
-    const APInt IntMin = APInt::getSignedMinValue(bits+align_bits);
-    const APInt IntMax = APInt::getSignedMaxValue(bits+align_bits);
+    const APInt IntMin = APInt::getSignedMinValue(bits + align_bits);
+    const APInt IntMax = APInt::getSignedMaxValue(bits + align_bits);
     std::stringstream errStr;
-    errStr << "\nError: value " <<
-      FixupValue <<
-      " out of range: " <<
-      IntMin.getSExtValue() <<
-      "-" <<
-      IntMax.getSExtValue() <<
-      " when resolving " <<
-      fixupStr <<
-      " fixup\n";
+    errStr << "\nError: value " << FixupValue
+           << " out of range: " << IntMin.getSExtValue() << "-"
+           << IntMax.getSExtValue() << " when resolving " << fixupStr
+           << " fixup\n";
     llvm_unreachable(errStr.str().c_str());
   }
 
@@ -531,8 +527,8 @@ public:
 
         MCInst *HMIx = takeExtender();
         *HMIx = HexagonMCInstrInfo::deriveExtender(
-                *MCII, CrntHMI,
-                HexagonMCInstrInfo::getExtendableOperand(*MCII, CrntHMI));
+            *MCII, CrntHMI,
+            HexagonMCInstrInfo::getExtendableOperand(*MCII, CrntHMI));
         Res.addOperand(MCOperand::createInst(HMIx));
         *RelaxTarget = nullptr;
       }
@@ -562,8 +558,8 @@ public:
     while (Count) {
       Count -= HEXAGON_INSTR_SIZE;
       // Close the packet whenever a multiple of the maximum packet size remains
-      uint32_t ParseBits = (Count % (MaxPacketSize * HEXAGON_INSTR_SIZE)) ?
-                           ParseIn : ParseEnd;
+      uint32_t ParseBits =
+          (Count % (MaxPacketSize * HEXAGON_INSTR_SIZE)) ? ParseIn : ParseEnd;
       support::endian::write<uint32_t>(OS, Nopcode | ParseBits, Endian);
     }
     return true;
@@ -619,9 +615,8 @@ public:
                 Nop->setOpcode(Hexagon::A2_nop);
                 Inst.addOperand(MCOperand::createInst(Nop));
                 Size -= 4;
-                if (!HexagonMCChecker(
-                         Context, *MCII, *RF.getSubtargetInfo(), Inst,
-                         *Context.getRegisterInfo(), false)
+                if (!HexagonMCChecker(Context, *MCII, *RF.getSubtargetInfo(),
+                                      Inst, *Context.getRegisterInfo(), false)
                          .check()) {
                   Inst.erase(Inst.end() - 1);
                   Size = 0;
@@ -629,7 +624,7 @@ public:
               }
               bool Error = HexagonMCShuffle(Context, true, *MCII,
                                             *RF.getSubtargetInfo(), Inst);
-              //assert(!Error);
+              // assert(!Error);
               (void)Error;
               ReplaceInstruction(Asm->getEmitter(), RF, Inst);
               Size = 0; // Only look back one instruction

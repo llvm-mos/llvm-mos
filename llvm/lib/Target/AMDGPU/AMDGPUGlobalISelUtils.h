@@ -53,7 +53,7 @@ void buildReadAnyLane(MachineIRBuilder &B, Register SgprDst, Register VgprSrc,
                       const RegisterBankInfo &RBI);
 void buildReadFirstLane(MachineIRBuilder &B, Register SgprDst, Register VgprSrc,
                         const RegisterBankInfo &RBI);
-}
-}
+} // namespace AMDGPU
+} // namespace llvm
 
 #endif

@@ -528,7 +528,8 @@ public:
 
   /// Returns the maximum possible encoded instruction size in bytes. If \p STI
   /// is null, this should be the maximum size for any subtarget.
-  virtual unsigned getMaxInstLength(const MCSubtargetInfo *STI = nullptr) const {
+  virtual unsigned
+  getMaxInstLength(const MCSubtargetInfo *STI = nullptr) const {
     return MaxInstLength;
   }
 
@@ -623,7 +624,9 @@ public:
 
   MCSymbolAttr getHiddenVisibilityAttr() const { return HiddenVisibilityAttr; }
 
-  MCSymbolAttr getExportedVisibilityAttr() const { return ExportedVisibilityAttr; }
+  MCSymbolAttr getExportedVisibilityAttr() const {
+    return ExportedVisibilityAttr;
+  }
 
   MCSymbolAttr getHiddenDeclarationVisibilityAttr() const {
     return HiddenDeclarationVisibilityAttr;
@@ -638,9 +641,7 @@ public:
   ExceptionHandling getExceptionHandlingType() const { return ExceptionsType; }
   WinEH::EncodingType getWinEHEncodingType() const { return WinEHEncodingType; }
 
-  void setExceptionsType(ExceptionHandling EH) {
-    ExceptionsType = EH;
-  }
+  void setExceptionsType(ExceptionHandling EH) { ExceptionsType = EH; }
 
   bool usesCFIWithoutEH() const {
     return ExceptionsType == ExceptionHandling::None && UsesCFIWithoutEH;
@@ -717,7 +718,6 @@ public:
   virtual void setPreserveAsmComments(bool Value) {
     PreserveAsmComments = Value;
   }
-
 
   bool shouldUseLogicalShr() const { return UseLogicalShr; }
 

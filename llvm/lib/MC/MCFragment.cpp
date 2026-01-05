@@ -96,7 +96,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     }
     OS << " [";
     for (unsigned i = 0, e = Fixed.size(); i != e; ++i) {
-      if (i) OS << ",";
+      if (i)
+        OS << ",";
       OS << format("%02x", uint8_t(Fixed[i]));
     }
     for (unsigned i = 0, e = Var.size(); i != e; ++i) {
@@ -142,7 +143,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     printFixups(getVarFixups());
     break;
   }
-  case MCFragment::FT_Fill:  {
+  case MCFragment::FT_Fill: {
     const auto *FF = cast<MCFillFragment>(this);
     OS << " Value:" << static_cast<unsigned>(FF->getValue())
        << " ValueSize:" << static_cast<unsigned>(FF->getValueSize())
@@ -156,7 +157,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
        << " ControlledNopLength:" << NF->getControlledNopLength();
     break;
   }
-  case MCFragment::FT_Org:  {
+  case MCFragment::FT_Org: {
     const auto *OF = cast<MCOrgFragment>(this);
     OS << " Offset:";
     OF->getOffset().print(OS, nullptr);

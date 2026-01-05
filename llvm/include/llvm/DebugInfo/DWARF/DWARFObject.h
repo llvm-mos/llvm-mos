@@ -66,9 +66,7 @@ public:
   virtual const DWARFSection &getLocDWOSection() const { return Dummy; }
   virtual const DWARFSection &getLoclistsDWOSection() const { return Dummy; }
   virtual StringRef getStrDWOSection() const { return ""; }
-  virtual const DWARFSection &getStrOffsetsDWOSection() const {
-    return Dummy;
-  }
+  virtual const DWARFSection &getStrOffsetsDWOSection() const { return Dummy; }
   virtual const DWARFSection &getRangesDWOSection() const { return Dummy; }
   virtual const DWARFSection &getRnglistsDWOSection() const { return Dummy; }
   virtual const DWARFSection &getAddrSection() const { return Dummy; }

@@ -77,11 +77,7 @@ public:
 /// potential for overflow.
 class OverflowingBinaryOperator : public Operator {
 public:
-  enum {
-    AnyWrap        = 0,
-    NoUnsignedWrap = (1 << 0),
-    NoSignedWrap   = (1 << 1)
-  };
+  enum { AnyWrap = 0, NoUnsignedWrap = (1 << 0), NoSignedWrap = (1 << 1) };
 
 private:
   friend class Instruction;
@@ -89,11 +85,11 @@ private:
 
   void setHasNoUnsignedWrap(bool B) {
     SubclassOptionalData =
-      (SubclassOptionalData & ~NoUnsignedWrap) | (B * NoUnsignedWrap);
+        (SubclassOptionalData & ~NoUnsignedWrap) | (B * NoUnsignedWrap);
   }
   void setHasNoSignedWrap(bool B) {
     SubclassOptionalData =
-      (SubclassOptionalData & ~NoSignedWrap) | (B * NoSignedWrap);
+        (SubclassOptionalData & ~NoSignedWrap) | (B * NoSignedWrap);
   }
 
 public:
@@ -153,9 +149,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(OverflowingBinaryOperator, Value)
 /// indicating that no bits are destroyed.
 class PossiblyExactOperator : public Operator {
 public:
-  enum {
-    IsExact = (1 << 0)
-  };
+  enum { IsExact = (1 << 0) };
 
 private:
   friend class Instruction;
@@ -170,15 +164,11 @@ public:
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   /// Test whether this division is known to be exact, with zero remainder.
-  bool isExact() const {
-    return SubclassOptionalData & IsExact;
-  }
+  bool isExact() const { return SubclassOptionalData & IsExact; }
 
   static bool isPossiblyExactOpcode(unsigned OpC) {
-    return OpC == Instruction::SDiv ||
-           OpC == Instruction::UDiv ||
-           OpC == Instruction::AShr ||
-           OpC == Instruction::LShr;
+    return OpC == Instruction::SDiv || OpC == Instruction::UDiv ||
+           OpC == Instruction::AShr || OpC == Instruction::LShr;
   }
 
   static bool classof(const Instruction *I) {
@@ -214,32 +204,30 @@ private:
 
   void setHasAllowReassoc(bool B) {
     SubclassOptionalData =
-    (SubclassOptionalData & ~FastMathFlags::AllowReassoc) |
-    (B * FastMathFlags::AllowReassoc);
+        (SubclassOptionalData & ~FastMathFlags::AllowReassoc) |
+        (B * FastMathFlags::AllowReassoc);
   }
 
   void setHasNoNaNs(bool B) {
-    SubclassOptionalData =
-      (SubclassOptionalData & ~FastMathFlags::NoNaNs) |
-      (B * FastMathFlags::NoNaNs);
+    SubclassOptionalData = (SubclassOptionalData & ~FastMathFlags::NoNaNs) |
+                           (B * FastMathFlags::NoNaNs);
   }
 
   void setHasNoInfs(bool B) {
-    SubclassOptionalData =
-      (SubclassOptionalData & ~FastMathFlags::NoInfs) |
-      (B * FastMathFlags::NoInfs);
+    SubclassOptionalData = (SubclassOptionalData & ~FastMathFlags::NoInfs) |
+                           (B * FastMathFlags::NoInfs);
   }
 
   void setHasNoSignedZeros(bool B) {
     SubclassOptionalData =
-      (SubclassOptionalData & ~FastMathFlags::NoSignedZeros) |
-      (B * FastMathFlags::NoSignedZeros);
+        (SubclassOptionalData & ~FastMathFlags::NoSignedZeros) |
+        (B * FastMathFlags::NoSignedZeros);
   }
 
   void setHasAllowReciprocal(bool B) {
     SubclassOptionalData =
-      (SubclassOptionalData & ~FastMathFlags::AllowReciprocal) |
-      (B * FastMathFlags::AllowReciprocal);
+        (SubclassOptionalData & ~FastMathFlags::AllowReciprocal) |
+        (B * FastMathFlags::AllowReciprocal);
   }
 
   void setHasAllowContract(bool B) {
@@ -249,9 +237,8 @@ private:
   }
 
   void setHasApproxFunc(bool B) {
-    SubclassOptionalData =
-        (SubclassOptionalData & ~FastMathFlags::ApproxFunc) |
-        (B * FastMathFlags::ApproxFunc);
+    SubclassOptionalData = (SubclassOptionalData & ~FastMathFlags::ApproxFunc) |
+                           (B * FastMathFlags::ApproxFunc);
   }
 
   /// Convenience function for setting multiple fast-math flags.
@@ -381,15 +368,11 @@ public:
 };
 
 /// A helper template for defining operators for individual opcodes.
-template<typename SuperClass, unsigned Opc>
+template <typename SuperClass, unsigned Opc>
 class ConcreteOperator : public SuperClass {
 public:
-  static bool classof(const Instruction *I) {
-    return I->getOpcode() == Opc;
-  }
-  static bool classof(const ConstantExpr *CE) {
-    return CE->getOpcode() == Opc;
-  }
+  static bool classof(const Instruction *I) { return I->getOpcode() == Opc; }
+  static bool classof(const ConstantExpr *CE) { return CE->getOpcode() == Opc; }
   static bool classof(const Value *V) {
     return (isa<Instruction>(V) && classof(cast<Instruction>(V))) ||
            (isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V)));
@@ -397,24 +380,18 @@ public:
 };
 
 class AddOperator
-  : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Add> {
-};
+    : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Add> {};
 class SubOperator
-  : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Sub> {
-};
+    : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Sub> {};
 class MulOperator
-  : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Mul> {
-};
+    : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Mul> {};
 class ShlOperator
-  : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Shl> {
-};
+    : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Shl> {};
 
 class AShrOperator
-  : public ConcreteOperator<PossiblyExactOperator, Instruction::AShr> {
-};
+    : public ConcreteOperator<PossiblyExactOperator, Instruction::AShr> {};
 class LShrOperator
-  : public ConcreteOperator<PossiblyExactOperator, Instruction::LShr> {
-};
+    : public ConcreteOperator<PossiblyExactOperator, Instruction::LShr> {};
 
 class GEPOperator
     : public ConcreteOperator<Operator, Instruction::GetElementPtr> {
@@ -441,10 +418,10 @@ public:
   /// std::nullopt if none.
   LLVM_ABI std::optional<ConstantRange> getInRange() const;
 
-  inline op_iterator       idx_begin()       { return op_begin()+1; }
-  inline const_op_iterator idx_begin() const { return op_begin()+1; }
-  inline op_iterator       idx_end()         { return op_end(); }
-  inline const_op_iterator idx_end()   const { return op_end(); }
+  inline op_iterator idx_begin() { return op_begin() + 1; }
+  inline const_op_iterator idx_begin() const { return op_begin() + 1; }
+  inline op_iterator idx_end() { return op_end(); }
+  inline const_op_iterator idx_end() const { return op_end(); }
 
   inline iterator_range<op_iterator> indices() {
     return make_range(idx_begin(), idx_end());
@@ -454,20 +431,14 @@ public:
     return make_range(idx_begin(), idx_end());
   }
 
-  Value *getPointerOperand() {
-    return getOperand(0);
-  }
-  const Value *getPointerOperand() const {
-    return getOperand(0);
-  }
+  Value *getPointerOperand() { return getOperand(0); }
+  const Value *getPointerOperand() const { return getOperand(0); }
   static unsigned getPointerOperandIndex() {
-    return 0U;                      // get index for modifying correct operand
+    return 0U; // get index for modifying correct operand
   }
 
   /// Method to return the pointer operand as a PointerType.
-  Type *getPointerOperandType() const {
-    return getPointerOperand()->getType();
-  }
+  Type *getPointerOperandType() const { return getPointerOperand()->getType(); }
 
   LLVM_ABI Type *getSourceElementType() const;
   LLVM_ABI Type *getResultElementType() const;
@@ -477,13 +448,11 @@ public:
     return getPointerOperandType()->getPointerAddressSpace();
   }
 
-  unsigned getNumIndices() const {  // Note: always non-negative
+  unsigned getNumIndices() const { // Note: always non-negative
     return getNumOperands() - 1;
   }
 
-  bool hasIndices() const {
-    return getNumOperands() > 1;
-  }
+  bool hasIndices() const { return getNumOperands() > 1; }
 
   /// Return true if all of the indices of this GEP are zeros.
   /// If so, the result pointer and the first operand have the same
@@ -510,9 +479,8 @@ public:
   }
 
   unsigned countNonConstantIndices() const {
-    return count_if(indices(), [](const Use& use) {
-        return !isa<ConstantInt>(*use);
-      });
+    return count_if(indices(),
+                    [](const Use &use) { return !isa<ConstantInt>(*use); });
   }
 
   /// Compute the maximum alignment that this GEP is garranteed to preserve.
@@ -567,21 +535,15 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  Value *getPointerOperand() {
-    return getOperand(0);
-  }
-  const Value *getPointerOperand() const {
-    return getOperand(0);
-  }
+  Value *getPointerOperand() { return getOperand(0); }
+  const Value *getPointerOperand() const { return getOperand(0); }
 
   static unsigned getPointerOperandIndex() {
-    return 0U;                      // get index for modifying correct operand
+    return 0U; // get index for modifying correct operand
   }
 
   /// Method to return the pointer operand as a PointerType.
-  Type *getPointerOperandType() const {
-    return getPointerOperand()->getType();
-  }
+  Type *getPointerOperandType() const { return getPointerOperand()->getType(); }
 
   /// Method to return the address space of the pointer operand.
   unsigned getPointerAddressSpace() const {
@@ -635,13 +597,9 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  Type *getSrcTy() const {
-    return getOperand(0)->getType();
-  }
+  Type *getSrcTy() const { return getOperand(0)->getType(); }
 
-  Type *getDestTy() const {
-    return getType();
-  }
+  Type *getDestTy() const { return getType(); }
 };
 
 template <>

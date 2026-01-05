@@ -84,7 +84,7 @@ static bool upgradeX86IntrinsicsWith8BitMask(Function *F, Intrinsic::ID IID,
                                              Function *&NewFn) {
   // Check that the last argument is an i32.
   Type *LastArgType = F->getFunctionType()->getParamType(
-     F->getFunctionType()->getNumParams() - 1);
+      F->getFunctionType()->getNumParams() - 1);
   if (!LastArgType->isIntegerTy(32))
     return false;
 
@@ -1184,7 +1184,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     return false;
 
   switch (Name[0]) {
-  default: break;
+  default:
+    break;
   case 'a': {
     bool IsArm = Name.consume_front("arm.");
     if (IsArm || Name.consume_front("aarch64.")) {
@@ -1376,7 +1377,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     if (Name.starts_with("invariant.group.barrier")) {
       // Rename invariant.group.barrier to launder.invariant.group
       auto Args = F->getFunctionType()->params();
-      Type* ObjectPtr[1] = {Args[0]};
+      Type *ObjectPtr[1] = {Args[0]};
       rename(F);
       NewFn = Intrinsic::getOrInsertDeclaration(
           F->getParent(), Intrinsic::launder_invariant_group, ObjectPtr);
@@ -1563,7 +1564,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
   }
   case 'o':
     if (Name.starts_with("objectsize.")) {
-      Type *Tys[2] = { F->getReturnType(), F->arg_begin()->getType() };
+      Type *Tys[2] = {F->getReturnType(), F->arg_begin()->getType()};
       if (F->arg_size() == 2 || F->arg_size() == 3) {
         rename(F);
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
@@ -1938,7 +1939,7 @@ static Value *upgradeX86ALIGNIntrinsics(IRBuilder<> &Builder, Value *Op0,
     for (unsigned i = 0; i != 16; ++i) {
       unsigned Idx = ShiftVal + i;
       if (!IsVALIGN && Idx >= 16) // Disable wrap for VALIGN.
-        Idx += NumElts - 16; // End of lane, switch operand.
+        Idx += NumElts - 16;      // End of lane, switch operand.
       Indices[l + i] = Idx + l;
     }
   }
@@ -1995,8 +1996,8 @@ static Value *upgradeX86VPERMT2Intrinsics(IRBuilder<> &Builder, CallBase &CI,
   else
     llvm_unreachable("Unexpected intrinsic");
 
-  Value *Args[] = { CI.getArgOperand(0) , CI.getArgOperand(1),
-                    CI.getArgOperand(2) };
+  Value *Args[] = {CI.getArgOperand(0), CI.getArgOperand(1),
+                   CI.getArgOperand(2)};
 
   // If this isn't index form we need to swap operand 0 and 1.
   if (!IndexForm)
@@ -2004,8 +2005,7 @@ static Value *upgradeX86VPERMT2Intrinsics(IRBuilder<> &Builder, CallBase &CI,
 
   Value *V = Builder.CreateIntrinsic(IID, Args);
   Value *PassThru = ZeroMask ? ConstantAggregateZero::get(Ty)
-                             : Builder.CreateBitCast(CI.getArgOperand(1),
-                                                     Ty);
+                             : Builder.CreateBitCast(CI.getArgOperand(1), Ty);
   return emitX86Select(Builder, CI.getArgOperand(3), V, PassThru);
 }
 
@@ -2113,9 +2113,9 @@ static Value *upgradeX86ConcatShift(IRBuilder<> &Builder, CallBase &CI,
 
   unsigned NumArgs = CI.arg_size();
   if (NumArgs >= 4) { // For masked intrinsics.
-    Value *VecSrc = NumArgs == 5 ? CI.getArgOperand(3) :
-                    ZeroMask     ? ConstantAggregateZero::get(CI.getType()) :
-                                   CI.getArgOperand(0);
+    Value *VecSrc = NumArgs == 5 ? CI.getArgOperand(3)
+                    : ZeroMask   ? ConstantAggregateZero::get(CI.getType())
+                                 : CI.getArgOperand(0);
     Value *Mask = CI.getOperand(NumArgs - 1);
     Res = emitX86Select(Builder, Mask, Res, VecSrc);
   }
@@ -2216,9 +2216,8 @@ static Value *applyX86MaskOn1BitsVec(IRBuilder<> &Builder, Value *Vec,
       Indices[i] = i;
     for (unsigned i = NumElts; i != 8; ++i)
       Indices[i] = NumElts + i % NumElts;
-    Vec = Builder.CreateShuffleVector(Vec,
-                                      Constant::getNullValue(Vec->getType()),
-                                      Indices);
+    Vec = Builder.CreateShuffleVector(
+        Vec, Constant::getNullValue(Vec->getType()), Indices);
   }
   return Builder.CreateBitCast(Vec, Builder.getIntNTy(std::max(NumElts, 8U)));
 }
@@ -2238,13 +2237,26 @@ static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallBase &CI,
   } else {
     ICmpInst::Predicate Pred;
     switch (CC) {
-    default: llvm_unreachable("Unknown condition code");
-    case 0: Pred = ICmpInst::ICMP_EQ;  break;
-    case 1: Pred = Signed ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT; break;
-    case 2: Pred = Signed ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE; break;
-    case 4: Pred = ICmpInst::ICMP_NE;  break;
-    case 5: Pred = Signed ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE; break;
-    case 6: Pred = Signed ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT; break;
+    default:
+      llvm_unreachable("Unknown condition code");
+    case 0:
+      Pred = ICmpInst::ICMP_EQ;
+      break;
+    case 1:
+      Pred = Signed ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
+      break;
+    case 2:
+      Pred = Signed ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
+      break;
+    case 4:
+      Pred = ICmpInst::ICMP_NE;
+      break;
+    case 5:
+      Pred = Signed ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
+      break;
+    case 6:
+      Pred = Signed ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
+      break;
     }
     Cmp = Builder.CreateICmp(Pred, Op0, CI.getArgOperand(1));
   }
@@ -2263,22 +2275,22 @@ static Value *upgradeX86MaskedShift(IRBuilder<> &Builder, CallBase &CI,
 }
 
 static Value *upgradeMaskedMove(IRBuilder<> &Builder, CallBase &CI) {
-  Value* A = CI.getArgOperand(0);
-  Value* B = CI.getArgOperand(1);
-  Value* Src = CI.getArgOperand(2);
-  Value* Mask = CI.getArgOperand(3);
+  Value *A = CI.getArgOperand(0);
+  Value *B = CI.getArgOperand(1);
+  Value *Src = CI.getArgOperand(2);
+  Value *Mask = CI.getArgOperand(3);
 
-  Value* AndNode = Builder.CreateAnd(Mask, APInt(8, 1));
-  Value* Cmp = Builder.CreateIsNotNull(AndNode);
-  Value* Extract1 = Builder.CreateExtractElement(B, (uint64_t)0);
-  Value* Extract2 = Builder.CreateExtractElement(Src, (uint64_t)0);
-  Value* Select = Builder.CreateSelect(Cmp, Extract1, Extract2);
+  Value *AndNode = Builder.CreateAnd(Mask, APInt(8, 1));
+  Value *Cmp = Builder.CreateIsNotNull(AndNode);
+  Value *Extract1 = Builder.CreateExtractElement(B, (uint64_t)0);
+  Value *Extract2 = Builder.CreateExtractElement(Src, (uint64_t)0);
+  Value *Select = Builder.CreateSelect(Cmp, Extract1, Extract2);
   return Builder.CreateInsertElement(A, Select, (uint64_t)0);
 }
 
 static Value *upgradeMaskToInt(IRBuilder<> &Builder, CallBase &CI) {
-  Value* Op = CI.getArgOperand(0);
-  Type* ReturnOp = CI.getType();
+  Value *Op = CI.getArgOperand(0);
+  Type *ReturnOp = CI.getType();
   unsigned NumElts = cast<FixedVectorType>(CI.getType())->getNumElements();
   Value *Mask = getX86MaskVec(Builder, Op, NumElts);
   return Builder.CreateSExt(Mask, ReturnOp, "vpmovm2");
@@ -4906,8 +4918,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
         CI->arg_size() == 2 ? Builder.getFalse() : CI->getArgOperand(2);
     Value *Dynamic =
         CI->arg_size() < 4 ? Builder.getFalse() : CI->getArgOperand(3);
-    NewCall = Builder.CreateCall(
-        NewFn, {CI->getArgOperand(0), CI->getArgOperand(1), NullIsUnknownSize, Dynamic});
+    NewCall =
+        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
+                                   NullIsUnknownSize, Dynamic});
     break;
   }
 
@@ -5209,7 +5222,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   }
   case Intrinsic::x86_avx512bf16_dpbf16ps_128:
   case Intrinsic::x86_avx512bf16_dpbf16ps_256:
-  case Intrinsic::x86_avx512bf16_dpbf16ps_512:{
+  case Intrinsic::x86_avx512bf16_dpbf16ps_512: {
     SmallVector<Value *, 4> Args(CI->args());
     unsigned NumElts =
         cast<FixedVectorType>(CI->getType())->getNumElements() * 2;
@@ -5430,8 +5443,9 @@ MDNode *llvm::UpgradeTBAANode(MDNode &MD) {
     return MDNode::get(Context, Elts2);
   }
   // Create a MDNode <MD, MD, offset 0>
-  Metadata *Elts[] = {&MD, &MD, ConstantAsMetadata::get(Constant::getNullValue(
-                                    Type::getInt64Ty(Context)))};
+  Metadata *Elts[] = {&MD, &MD,
+                      ConstantAsMetadata::get(
+                          Constant::getNullValue(Type::getInt64Ty(Context)))};
   return MDNode::get(Context, Elts);
 }
 
@@ -5725,8 +5739,8 @@ void llvm::UpgradeARCRuntime(Module &M) {
         // Bitcast argument to the parameter type of the new function if it's
         // not a variadic argument.
         if (I < NewFuncTy->getNumParams()) {
-          // Don't upgrade the intrinsic if it's not valid to bitcast the argument
-          // to the parameter type of the new function.
+          // Don't upgrade the intrinsic if it's not valid to bitcast the
+          // argument to the parameter type of the new function.
           if (!CastInst::castIsValid(Instruction::BitCast, Arg,
                                      NewFuncTy->getParamType(I))) {
             InvalidCast = true;
@@ -5894,8 +5908,9 @@ bool llvm::UpgradeModuleFlags(Module &M) {
       }
     }
 
-    // IRUpgrader turns a i32 type "Objective-C Garbage Collection" into i8 value.
-    // If the higher bits are set, it adds new module flag for swift info.
+    // IRUpgrader turns a i32 type "Objective-C Garbage Collection" into i8
+    // value. If the higher bits are set, it adds new module flag for swift
+    // info.
     if (ID->getString() == "Objective-C Garbage Collection") {
       auto Md = dyn_cast<ConstantAsMetadata>(Op->getOperand(2));
       if (Md) {
@@ -5911,9 +5926,9 @@ bool llvm::UpgradeModuleFlags(Module &M) {
           SwiftMinorVersion = (Val & 0xff0000) >> 16;
         }
         Metadata *Ops[3] = {
-          ConstantAsMetadata::get(ConstantInt::get(Int32Ty,Module::Error)),
-          Op->getOperand(1),
-          ConstantAsMetadata::get(ConstantInt::get(Int8Ty,Val & 0xff))};
+            ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Module::Error)),
+            Op->getOperand(1),
+            ConstantAsMetadata::get(ConstantInt::get(Int8Ty, Val & 0xff))};
         ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
         Changed = true;
       }
@@ -5941,8 +5956,7 @@ bool llvm::UpgradeModuleFlags(Module &M) {
   }
 
   if (HasSwiftVersionFlag) {
-    M.addModuleFlag(Module::Error, "Swift ABI Version",
-                    SwiftABIVersion);
+    M.addModuleFlag(Module::Error, "Swift ABI Version", SwiftABIVersion);
     M.addModuleFlag(Module::Error, "Swift Major Version",
                     ConstantInt::get(Int8Ty, SwiftMajorVersion));
     M.addModuleFlag(Module::Error, "Swift Minor Version",
@@ -6404,7 +6418,6 @@ void llvm::UpgradeOperandBundles(std::vector<OperandBundleDef> &Bundles) {
   // the "attachedcall" is meaningful and required, but without an operand,
   // it's just a marker NOP.  Dropping it merely prevents an optimization.
   erase_if(Bundles, [&](OperandBundleDef &OBD) {
-    return OBD.getTag() == "clang.arc.attachedcall" &&
-           OBD.inputs().empty();
+    return OBD.getTag() == "clang.arc.attachedcall" && OBD.inputs().empty();
   });
 }

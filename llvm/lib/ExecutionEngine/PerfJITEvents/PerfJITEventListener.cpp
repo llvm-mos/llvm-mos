@@ -32,9 +32,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include <mutex>
 
-#include <sys/mman.h>  // mmap()
-#include <time.h>      // clock_gettime(), time(), localtime_r() */
-#include <unistd.h>    // for read(), close()
+#include <sys/mman.h> // mmap()
+#include <time.h>     // clock_gettime(), time(), localtime_r() */
+#include <unistd.h>   // for read(), close()
 
 using namespace llvm;
 using namespace llvm::object;
@@ -274,8 +274,8 @@ void PerfJITEventListener::notifyObjectLoaded(
 
     uint64_t SectionIndex = object::SectionedAddress::UndefSection;
     if (auto SectOrErr = Sym.getSection())
-        if (*SectOrErr != Obj.section_end())
-            SectionIndex = SectOrErr.get()->getIndex();
+      if (*SectOrErr != Obj.section_end())
+        SectionIndex = SectOrErr.get()->getIndex();
 
     // According to spec debugging info has to come before loading the
     // corresponding code load.
@@ -375,9 +375,7 @@ bool PerfJITEventListener::FillMachine(LLVMPerfJitHeader &hdr) {
   size_t RequiredMemory = sizeof(id) + sizeof(info);
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-    MemoryBuffer::getFileSlice("/proc/self/exe",
-			       RequiredMemory,
-			       0);
+      MemoryBuffer::getFileSlice("/proc/self/exe", RequiredMemory, 0);
 
   // This'll not guarantee that enough data was actually read from the
   // underlying file. Instead the trailing part of the buffer would be
@@ -502,7 +500,6 @@ JITEventListener *JITEventListener::createPerfJITEventListener() {
 
 } // namespace llvm
 
-LLVMJITEventListenerRef LLVMCreatePerfJITEventListener(void)
-{
+LLVMJITEventListenerRef LLVMCreatePerfJITEventListener(void) {
   return wrap(JITEventListener::createPerfJITEventListener());
 }

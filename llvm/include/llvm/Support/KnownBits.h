@@ -116,14 +116,10 @@ public:
   }
 
   /// Make this value negative.
-  void makeNegative() {
-    One.setSignBit();
-  }
+  void makeNegative() { One.setSignBit(); }
 
   /// Make this value non-negative.
-  void makeNonNegative() {
-    Zero.setSignBit();
-  }
+  void makeNonNegative() { Zero.setSignBit(); }
 
   /// Return the minimal unsigned value possible given these KnownBits.
   APInt getMinValue() const {
@@ -298,9 +294,7 @@ public:
   }
 
   /// Create known bits from a known constant.
-  static KnownBits makeConstant(const APInt &C) {
-    return KnownBits(~C, C);
-  }
+  static KnownBits makeConstant(const APInt &C) { return KnownBits(~C, C); }
 
   /// Returns KnownBits information that is known to be true for both this and
   /// RHS.

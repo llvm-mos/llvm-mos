@@ -13,8 +13,8 @@
 #ifndef LLVM_LIB_TARGET_X86_X86INSTRFOLDTABLES_H
 #define LLVM_LIB_TARGET_X86_X86INSTRFOLDTABLES_H
 
-#include <cstdint>
 #include "llvm/Support/X86FoldTablesUtils.h"
+#include <cstdint>
 
 namespace llvm {
 

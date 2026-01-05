@@ -113,10 +113,9 @@ struct LegacyLegalizeActionStep {
 
   bool operator==(const LegacyLegalizeActionStep &RHS) const {
     return std::tie(Action, TypeIdx, NewType) ==
-        std::tie(RHS.Action, RHS.TypeIdx, RHS.NewType);
+           std::tie(RHS.Action, RHS.TypeIdx, RHS.NewType);
   }
 };
-
 
 class LegacyLegalizerInfo {
 public:
@@ -352,12 +351,12 @@ private:
 
   /// A partial SizeAndActionsVec potentially doesn't cover all bit sizes,
   /// i.e. it's OK if it doesn't start from size 1.
-  static void checkPartialSizeAndActionsVector(const SizeAndActionsVec& v) {
+  static void checkPartialSizeAndActionsVector(const SizeAndActionsVec &v) {
     using namespace LegacyLegalizeActions;
 #ifndef NDEBUG
     // The sizes should be in increasing order
     int prev_size = -1;
-    for(auto SizeAndAction: v) {
+    for (auto SizeAndAction : v) {
       assert(SizeAndAction.first > prev_size);
       prev_size = SizeAndAction.first;
     }
@@ -370,23 +369,23 @@ private:
     int LargestWidenIdx = -1;
     int SmallestLegalizableToSameSizeIdx = -1;
     int LargestLegalizableToSameSizeIdx = -1;
-    for(size_t i=0; i<v.size(); ++i) {
+    for (size_t i = 0; i < v.size(); ++i) {
       switch (v[i].second) {
-        case FewerElements:
-        case NarrowScalar:
-          if (SmallestNarrowIdx == -1)
-            SmallestNarrowIdx = i;
-          break;
-        case WidenScalar:
-        case MoreElements:
-          LargestWidenIdx = i;
-          break;
-        case Unsupported:
-          break;
-        default:
-          if (SmallestLegalizableToSameSizeIdx == -1)
-            SmallestLegalizableToSameSizeIdx = i;
-          LargestLegalizableToSameSizeIdx = i;
+      case FewerElements:
+      case NarrowScalar:
+        if (SmallestNarrowIdx == -1)
+          SmallestNarrowIdx = i;
+        break;
+      case WidenScalar:
+      case MoreElements:
+        LargestWidenIdx = i;
+        break;
+      case Unsupported:
+        break;
+      default:
+        if (SmallestLegalizableToSameSizeIdx == -1)
+          SmallestLegalizableToSameSizeIdx = i;
+        LargestLegalizableToSameSizeIdx = i;
       }
     }
     if (SmallestNarrowIdx != -1) {
@@ -400,7 +399,7 @@ private:
 
   /// A full SizeAndActionsVec must cover all bit sizes, i.e. must start with
   /// from size 1.
-  static void checkFullSizeAndActionsVector(const SizeAndActionsVec& v) {
+  static void checkFullSizeAndActionsVector(const SizeAndActionsVec &v) {
 #ifndef NDEBUG
     // Data structure invariant: The first bit size must be size 1.
     assert(v.size() >= 1);

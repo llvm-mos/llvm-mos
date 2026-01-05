@@ -625,8 +625,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         if (!OmitComments)
           OS << "/*" << getEnumName(cast<SwitchTypeMatcher>(N)->getCaseType(i))
              << "*/";
-        EmitVBRValue(cast<SwitchTypeMatcher>(N)->getCaseType(i),
-                     OS);
+        EmitVBRValue(cast<SwitchTypeMatcher>(N)->getCaseType(i), OS);
       }
       if (!OmitComments)
         OS << "// ->" << CurrentIdx + ChildSize;

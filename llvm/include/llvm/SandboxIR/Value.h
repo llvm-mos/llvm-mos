@@ -105,74 +105,74 @@ protected:
   /// order.
   llvm::Value *Val = nullptr;
 
-  friend class Context;               // For getting `Val`.
-  friend class User;                  // For getting `Val`.
-  friend class Use;                   // For getting `Val`.
-  friend class VAArgInst;             // For getting `Val`.
-  friend class FreezeInst;            // For getting `Val`.
-  friend class FenceInst;             // For getting `Val`.
-  friend class SelectInst;            // For getting `Val`.
-  friend class ExtractElementInst;    // For getting `Val`.
-  friend class InsertElementInst;     // For getting `Val`.
-  friend class ShuffleVectorInst;     // For getting `Val`.
-  friend class ExtractValueInst;      // For getting `Val`.
-  friend class InsertValueInst;       // For getting `Val`.
-  friend class BranchInst;            // For getting `Val`.
-  friend class LoadInst;              // For getting `Val`.
-  friend class StoreInst;             // For getting `Val`.
-  friend class ReturnInst;            // For getting `Val`.
-  friend class CallBase;              // For getting `Val`.
-  friend class CallInst;              // For getting `Val`.
-  friend class InvokeInst;            // For getting `Val`.
-  friend class CallBrInst;            // For getting `Val`.
-  friend class LandingPadInst;        // For getting `Val`.
-  friend class FuncletPadInst;        // For getting `Val`.
-  friend class CatchPadInst;          // For getting `Val`.
-  friend class CleanupPadInst;        // For getting `Val`.
-  friend class CatchReturnInst;       // For getting `Val`.
-  friend class GetElementPtrInst;     // For getting `Val`.
-  friend class ResumeInst;            // For getting `Val`.
-  friend class CatchSwitchInst;       // For getting `Val`.
-  friend class CleanupReturnInst;     // For getting `Val`.
-  friend class SwitchInst;            // For getting `Val`.
-  friend class UnaryOperator;         // For getting `Val`.
-  friend class BinaryOperator;        // For getting `Val`.
-  friend class AtomicRMWInst;         // For getting `Val`.
-  friend class AtomicCmpXchgInst;     // For getting `Val`.
-  friend class AllocaInst;            // For getting `Val`.
-  friend class CastInst;              // For getting `Val`.
-  friend class PHINode;               // For getting `Val`.
-  friend class UnreachableInst;       // For getting `Val`.
-  friend class CatchSwitchAddHandler; // For `Val`.
-  friend class CmpInst;               // For getting `Val`.
-  friend class ConstantArray;         // For `Val`.
-  friend class ConstantStruct;        // For `Val`.
-  friend class ConstantVector;        // For `Val`.
-  friend class ConstantAggregateZero; // For `Val`.
-  friend class ConstantPointerNull;   // For `Val`.
-  friend class UndefValue;            // For `Val`.
-  friend class PoisonValue;           // For `Val`.
-  friend class BlockAddress;          // For `Val`.
-  friend class GlobalValue;           // For `Val`.
-  friend class DSOLocalEquivalent;    // For `Val`.
-  friend class GlobalObject;          // For `Val`.
-  friend class GlobalIFunc;           // For `Val`.
-  friend class GlobalVariable;        // For `Val`.
-  friend class GlobalAlias;           // For `Val`.
-  friend class NoCFIValue;            // For `Val`.
-  friend class ConstantPtrAuth;       // For `Val`.
-  friend class ConstantExpr;          // For `Val`.
-  friend class Utils;                 // For `Val`.
-  friend class Module;                // For `Val`.
-  friend class IntrinsicInst;         // For `Val`.
-  friend class Operator;              // For `Val`.
+  friend class Context;                   // For getting `Val`.
+  friend class User;                      // For getting `Val`.
+  friend class Use;                       // For getting `Val`.
+  friend class VAArgInst;                 // For getting `Val`.
+  friend class FreezeInst;                // For getting `Val`.
+  friend class FenceInst;                 // For getting `Val`.
+  friend class SelectInst;                // For getting `Val`.
+  friend class ExtractElementInst;        // For getting `Val`.
+  friend class InsertElementInst;         // For getting `Val`.
+  friend class ShuffleVectorInst;         // For getting `Val`.
+  friend class ExtractValueInst;          // For getting `Val`.
+  friend class InsertValueInst;           // For getting `Val`.
+  friend class BranchInst;                // For getting `Val`.
+  friend class LoadInst;                  // For getting `Val`.
+  friend class StoreInst;                 // For getting `Val`.
+  friend class ReturnInst;                // For getting `Val`.
+  friend class CallBase;                  // For getting `Val`.
+  friend class CallInst;                  // For getting `Val`.
+  friend class InvokeInst;                // For getting `Val`.
+  friend class CallBrInst;                // For getting `Val`.
+  friend class LandingPadInst;            // For getting `Val`.
+  friend class FuncletPadInst;            // For getting `Val`.
+  friend class CatchPadInst;              // For getting `Val`.
+  friend class CleanupPadInst;            // For getting `Val`.
+  friend class CatchReturnInst;           // For getting `Val`.
+  friend class GetElementPtrInst;         // For getting `Val`.
+  friend class ResumeInst;                // For getting `Val`.
+  friend class CatchSwitchInst;           // For getting `Val`.
+  friend class CleanupReturnInst;         // For getting `Val`.
+  friend class SwitchInst;                // For getting `Val`.
+  friend class UnaryOperator;             // For getting `Val`.
+  friend class BinaryOperator;            // For getting `Val`.
+  friend class AtomicRMWInst;             // For getting `Val`.
+  friend class AtomicCmpXchgInst;         // For getting `Val`.
+  friend class AllocaInst;                // For getting `Val`.
+  friend class CastInst;                  // For getting `Val`.
+  friend class PHINode;                   // For getting `Val`.
+  friend class UnreachableInst;           // For getting `Val`.
+  friend class CatchSwitchAddHandler;     // For `Val`.
+  friend class CmpInst;                   // For getting `Val`.
+  friend class ConstantArray;             // For `Val`.
+  friend class ConstantStruct;            // For `Val`.
+  friend class ConstantVector;            // For `Val`.
+  friend class ConstantAggregateZero;     // For `Val`.
+  friend class ConstantPointerNull;       // For `Val`.
+  friend class UndefValue;                // For `Val`.
+  friend class PoisonValue;               // For `Val`.
+  friend class BlockAddress;              // For `Val`.
+  friend class GlobalValue;               // For `Val`.
+  friend class DSOLocalEquivalent;        // For `Val`.
+  friend class GlobalObject;              // For `Val`.
+  friend class GlobalIFunc;               // For `Val`.
+  friend class GlobalVariable;            // For `Val`.
+  friend class GlobalAlias;               // For `Val`.
+  friend class NoCFIValue;                // For `Val`.
+  friend class ConstantPtrAuth;           // For `Val`.
+  friend class ConstantExpr;              // For `Val`.
+  friend class Utils;                     // For `Val`.
+  friend class Module;                    // For `Val`.
+  friend class IntrinsicInst;             // For `Val`.
+  friend class Operator;                  // For `Val`.
   friend class OverflowingBinaryOperator; // For `Val`.
   friend class FPMathOperator;            // For `Val`.
   // Region needs to manipulate metadata in the underlying LLVM Value, we don't
   // expose metadata in sandboxir.
   friend class Region;
   friend class ScoreBoard; // Needs access to `Val` for the instruction cost.
-  friend class ConstantDataArray; // For `Val`
+  friend class ConstantDataArray;  // For `Val`
   friend class ConstantDataVector; // For `Val`
 
   /// All values point to the context.

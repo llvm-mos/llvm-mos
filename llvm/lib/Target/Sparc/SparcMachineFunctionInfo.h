@@ -16,45 +16,47 @@
 
 namespace llvm {
 
-  class SparcMachineFunctionInfo : public MachineFunctionInfo {
-    virtual void anchor();
-  private:
-    Register GlobalBaseReg;
+class SparcMachineFunctionInfo : public MachineFunctionInfo {
+  virtual void anchor();
 
-    /// VarArgsFrameOffset - Frame offset to start of varargs area.
-    int VarArgsFrameOffset;
+private:
+  Register GlobalBaseReg;
 
-    /// SRetReturnReg - Holds the virtual register into which the sret
-    /// argument is passed.
-    Register SRetReturnReg;
+  /// VarArgsFrameOffset - Frame offset to start of varargs area.
+  int VarArgsFrameOffset;
 
-    /// IsLeafProc - True if the function is a leaf procedure.
-    bool IsLeafProc;
-  public:
-    SparcMachineFunctionInfo()
+  /// SRetReturnReg - Holds the virtual register into which the sret
+  /// argument is passed.
+  Register SRetReturnReg;
+
+  /// IsLeafProc - True if the function is a leaf procedure.
+  bool IsLeafProc;
+
+public:
+  SparcMachineFunctionInfo()
       : GlobalBaseReg(0), VarArgsFrameOffset(0), SRetReturnReg(0),
         IsLeafProc(false) {}
-    SparcMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI)
-        : GlobalBaseReg(0), VarArgsFrameOffset(0), SRetReturnReg(0),
-          IsLeafProc(false) {}
+  SparcMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI)
+      : GlobalBaseReg(0), VarArgsFrameOffset(0), SRetReturnReg(0),
+        IsLeafProc(false) {}
 
-    MachineFunctionInfo *
-    clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
-          const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
-        const override;
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override;
 
-    Register getGlobalBaseReg() const { return GlobalBaseReg; }
-    void setGlobalBaseReg(Register Reg) { GlobalBaseReg = Reg; }
+  Register getGlobalBaseReg() const { return GlobalBaseReg; }
+  void setGlobalBaseReg(Register Reg) { GlobalBaseReg = Reg; }
 
-    int getVarArgsFrameOffset() const { return VarArgsFrameOffset; }
-    void setVarArgsFrameOffset(int Offset) { VarArgsFrameOffset = Offset; }
+  int getVarArgsFrameOffset() const { return VarArgsFrameOffset; }
+  void setVarArgsFrameOffset(int Offset) { VarArgsFrameOffset = Offset; }
 
-    Register getSRetReturnReg() const { return SRetReturnReg; }
-    void setSRetReturnReg(Register Reg) { SRetReturnReg = Reg; }
+  Register getSRetReturnReg() const { return SRetReturnReg; }
+  void setSRetReturnReg(Register Reg) { SRetReturnReg = Reg; }
 
-    void setLeafProc(bool rhs) { IsLeafProc = rhs; }
-    bool isLeafProc() const { return IsLeafProc; }
-  };
-}
+  void setLeafProc(bool rhs) { IsLeafProc = rhs; }
+  bool isLeafProc() const { return IsLeafProc; }
+};
+} // namespace llvm
 
 #endif

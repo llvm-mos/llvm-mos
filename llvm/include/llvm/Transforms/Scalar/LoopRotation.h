@@ -35,6 +35,6 @@ private:
   const bool EnableHeaderDuplication;
   const bool PrepareForLTO;
 };
-}
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_LOOPROTATION_H

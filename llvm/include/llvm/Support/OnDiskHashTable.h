@@ -94,8 +94,8 @@ private:
 
   /// Resize the hash table, moving the old entries into the new buckets.
   void resize(size_t NewSize) {
-    Bucket *NewBuckets = static_cast<Bucket *>(
-        safe_calloc(NewSize, sizeof(Bucket)));
+    Bucket *NewBuckets =
+        static_cast<Bucket *>(safe_calloc(NewSize, sizeof(Bucket)));
     // Populate NewBuckets with the old entries.
     for (size_t I = 0; I < NumBuckets; ++I)
       for (Item *E = Buckets[I].Head; E;) {
@@ -609,8 +609,8 @@ public:
     auto NumBucketsAndEntries =
         OnDiskIterableChainedHashTable<Info>::readNumBucketsAndEntries(Buckets);
     return new OnDiskIterableChainedHashTable<Info>(
-        NumBucketsAndEntries.first, NumBucketsAndEntries.second,
-        Buckets, Payload, Base, InfoObj);
+        NumBucketsAndEntries.first, NumBucketsAndEntries.second, Buckets,
+        Payload, Base, InfoObj);
   }
 };
 

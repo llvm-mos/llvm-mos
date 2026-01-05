@@ -23,7 +23,7 @@
 using namespace llvm;
 
 namespace llvm {
-  extern bool TimePassesIsEnabled;
+extern bool TimePassesIsEnabled;
 }
 
 const char TimeIRParsingGroupName[] = "irparse";
@@ -123,7 +123,7 @@ LLVMBool LLVMParseIRInContext(LLVMContextRef ContextRef,
   *OutM =
       wrap(parseIR(MB->getMemBufferRef(), Diag, *unwrap(ContextRef)).release());
 
-  if(!*OutM) {
+  if (!*OutM) {
     if (OutMessage) {
       std::string buf;
       raw_string_ostream os(buf);

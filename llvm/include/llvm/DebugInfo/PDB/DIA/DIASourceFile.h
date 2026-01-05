@@ -34,7 +34,7 @@ private:
   const DIASession &Session;
   CComPtr<IDiaSourceFile> SourceFile;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

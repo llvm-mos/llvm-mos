@@ -336,7 +336,8 @@ bool DominatorTree::isReachableFromEntry(const Use &U) const {
 
   // ConstantExprs aren't really reachable from the entry block, but they
   // don't need to be treated like unreachable code either.
-  if (!I) return true;
+  if (!I)
+    return true;
 
   // PHI nodes use their operands on their incoming edges.
   if (PHINode *PN = dyn_cast<PHINode>(I))

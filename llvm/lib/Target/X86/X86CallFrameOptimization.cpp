@@ -60,7 +60,7 @@ namespace {
 
 class X86CallFrameOptimization : public MachineFunctionPass {
 public:
-  X86CallFrameOptimization() : MachineFunctionPass(ID) { }
+  X86CallFrameOptimization() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -284,23 +284,23 @@ X86CallFrameOptimization::classifyInstruction(
   // The instructions we actually care about are movs onto the stack or special
   // cases of constant-stores to stack
   switch (MI->getOpcode()) {
-    case X86::AND16mi:
-    case X86::AND32mi:
-    case X86::AND64mi32: {
-      const MachineOperand &ImmOp = MI->getOperand(X86::AddrNumOperands);
-      return ImmOp.getImm() == 0 ? Convert : Exit;
-    }
-    case X86::OR16mi:
-    case X86::OR32mi:
-    case X86::OR64mi32: {
-      const MachineOperand &ImmOp = MI->getOperand(X86::AddrNumOperands);
-      return ImmOp.getImm() == -1 ? Convert : Exit;
-    }
-    case X86::MOV32mi:
-    case X86::MOV32mr:
-    case X86::MOV64mi32:
-    case X86::MOV64mr:
-      return Convert;
+  case X86::AND16mi:
+  case X86::AND32mi:
+  case X86::AND64mi32: {
+    const MachineOperand &ImmOp = MI->getOperand(X86::AddrNumOperands);
+    return ImmOp.getImm() == 0 ? Convert : Exit;
+  }
+  case X86::OR16mi:
+  case X86::OR32mi:
+  case X86::OR64mi32: {
+    const MachineOperand &ImmOp = MI->getOperand(X86::AddrNumOperands);
+    return ImmOp.getImm() == -1 ? Convert : Exit;
+  }
+  case X86::MOV32mi:
+  case X86::MOV32mr:
+  case X86::MOV64mi32:
+  case X86::MOV64mr:
+    return Convert;
   }
 
   // Not all calling conventions have only stack MOVs between the stack
@@ -569,9 +569,8 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
     // offset after each push.
     // TODO: This is needed only if we require precise CFA.
     if (!TFL->hasFP(MF))
-      TFL->BuildCFI(
-          MBB, std::next(Push), DL,
-          MCCFIInstruction::createAdjustCfaOffset(nullptr, SlotSize));
+      TFL->BuildCFI(MBB, std::next(Push), DL,
+                    MCCFIInstruction::createAdjustCfaOffset(nullptr, SlotSize));
 
     MBB.erase(Store);
   }

@@ -11,8 +11,8 @@ namespace locale {
 
 LLVM_ABI int columnWidth(StringRef s);
 LLVM_ABI bool isPrint(int c);
-}
-}
-}
+} // namespace locale
+} // namespace sys
+} // namespace llvm
 
 #endif // LLVM_SUPPORT_LOCALE_H

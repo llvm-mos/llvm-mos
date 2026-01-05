@@ -31,17 +31,17 @@ void sys::MemoryFence() {
 #if LLVM_HAS_ATOMICS == 0
   return;
 #else
-#  if defined(GNU_ATOMICS)
+#if defined(GNU_ATOMICS)
   __sync_synchronize();
-#  elif defined(_MSC_VER)
+#elif defined(_MSC_VER)
   MemoryBarrier();
-#  else
-# error No memory fence implementation for your platform!
-#  endif
+#else
+#error No memory fence implementation for your platform!
+#endif
 #endif
 }
 
-sys::cas_flag sys::CompareAndSwap(volatile sys::cas_flag* ptr,
+sys::cas_flag sys::CompareAndSwap(volatile sys::cas_flag *ptr,
                                   sys::cas_flag new_value,
                                   sys::cas_flag old_value) {
 #if LLVM_HAS_ATOMICS == 0
@@ -54,6 +54,6 @@ sys::cas_flag sys::CompareAndSwap(volatile sys::cas_flag* ptr,
 #elif defined(_MSC_VER)
   return InterlockedCompareExchange(ptr, new_value, old_value);
 #else
-#  error No compare-and-swap implementation for your platform!
+#error No compare-and-swap implementation for your platform!
 #endif
 }

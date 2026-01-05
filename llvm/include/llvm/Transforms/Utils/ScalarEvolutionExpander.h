@@ -32,14 +32,14 @@ LLVM_ABI extern cl::opt<unsigned> SCEVCheapExpansionBudget;
 /// struct for holding enough information to help calculate the cost of the
 /// given SCEV when expanded into IR.
 struct SCEVOperand {
-  explicit SCEVOperand(unsigned Opc, int Idx, const SCEV *S) :
-    ParentOpcode(Opc), OperandIdx(Idx), S(S) { }
+  explicit SCEVOperand(unsigned Opc, int Idx, const SCEV *S)
+      : ParentOpcode(Opc), OperandIdx(Idx), S(S) {}
   /// LLVM instruction opcode that uses the operand.
   unsigned ParentOpcode;
   /// The use index of an expanded instruction.
   int OperandIdx;
   /// The SCEV operand to be costed.
-  const SCEV* S;
+  const SCEV *S;
 };
 
 struct PoisonFlags {

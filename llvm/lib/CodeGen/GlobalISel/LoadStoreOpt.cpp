@@ -151,7 +151,6 @@ bool GISelAddressing::aliasIsKnownForLoadStore(const MachineInstr &MI1,
   if (!Base0Def || !Base1Def)
     return false; // Couldn't tell anything.
 
-
   if (Base0Def->getOpcode() != Base1Def->getOpcode())
     return false;
 
@@ -411,7 +410,7 @@ bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
   WideReg = Builder.buildConstant(WideValueTy, WideConst).getReg(0);
   auto NewStore =
       Builder.buildStore(WideReg, FirstStore->getPointerReg(), *WideMMO);
-  (void) NewStore;
+  (void)NewStore;
   LLVM_DEBUG(dbgs() << "Merged " << Stores.size()
                     << " stores into merged store: " << *NewStore);
   LLVM_DEBUG(for (auto *MI : Stores) dbgs() << "  " << *MI;);
@@ -828,8 +827,8 @@ bool LoadStoreOpt::mergeTruncStore(GStore &StoreMI,
   auto &C = LastStore.getMF()->getFunction().getContext();
   // Check that a store of the wide type is both allowed and fast on the target
   unsigned Fast = 0;
-  bool Allowed = TLI->allowsMemoryAccess(
-      C, DL, WideStoreTy, LowestIdxStore->getMMO(), &Fast);
+  bool Allowed = TLI->allowsMemoryAccess(C, DL, WideStoreTy,
+                                         LowestIdxStore->getMMO(), &Fast);
   if (!Allowed || !Fast)
     return false;
 
@@ -919,7 +918,7 @@ bool LoadStoreOpt::mergeTruncStoresBlock(MachineBasicBlock &BB) {
 
 bool LoadStoreOpt::mergeFunctionStores(MachineFunction &MF) {
   bool Changed = false;
-  for (auto &BB : MF){
+  for (auto &BB : MF) {
     Changed |= mergeBlockStores(BB);
     Changed |= mergeTruncStoresBlock(BB);
   }

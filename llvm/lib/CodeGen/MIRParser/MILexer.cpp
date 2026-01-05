@@ -333,9 +333,10 @@ static Cursor maybeLexMachineBasicBlock(Cursor C, MIToken &Token,
     while (isIdentifierChar(C.peek()))
       C.advance();
   }
-  Token.reset(IsReference ? MIToken::MachineBasicBlock
-                          : MIToken::MachineBasicBlockLabel,
-              Range.upto(C))
+  Token
+      .reset(IsReference ? MIToken::MachineBasicBlock
+                         : MIToken::MachineBasicBlockLabel,
+             Range.upto(C))
       .setIntegerValue(APSInt(Number))
       .setStringValue(Range.upto(C).drop_front(StringOffset));
   return C;
@@ -442,9 +443,7 @@ static Cursor lexVirtualRegister(Cursor C, MIToken &Token) {
 }
 
 /// Returns true for a character allowed in a register name.
-static bool isRegisterChar(char C) {
-  return isIdentifierChar(C) && C != '.';
-}
+static bool isRegisterChar(char C) { return isIdentifierChar(C) && C != '.'; }
 
 static Cursor lexNamedVirtualRegister(Cursor C, MIToken &Token) {
   Cursor Range = C;

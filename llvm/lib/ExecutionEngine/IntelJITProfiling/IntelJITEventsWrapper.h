@@ -31,9 +31,9 @@ typedef enum {
 class IntelJITEventsWrapper {
   // Function pointer types for testing implementation of Intel jitprofiling
   // library
-  typedef int (*NotifyEventPtr)(iJIT_JVM_EVENT, void*);
+  typedef int (*NotifyEventPtr)(iJIT_JVM_EVENT, void *);
   typedef int (*IttnotifyInfoPtr)(IttEventType, const char *, unsigned int);
-  typedef void (*RegisterCallbackExPtr)(void *, iJIT_ModeChangedEx );
+  typedef void (*RegisterCallbackExPtr)(void *, iJIT_ModeChangedEx);
   typedef iJIT_IsProfilingActiveFlags (*IsProfilingActivePtr)(void);
   typedef void (*FinalizeThreadPtr)(void);
   typedef void (*FinalizeProcessPtr)(void);
@@ -70,7 +70,7 @@ public:
 
   // Sends an event announcing that a function has been emitted
   //   return values are event-specific.  See Intel documentation for details.
-  int  iJIT_NotifyEvent(iJIT_JVM_EVENT EventType, void *EventSpecificData) {
+  int iJIT_NotifyEvent(iJIT_JVM_EVENT EventType, void *EventSpecificData) {
     if (!NotifyEventFunc)
       return -1;
     return NotifyEventFunc(EventType, EventSpecificData);
@@ -107,4 +107,4 @@ public:
 
 } // namespace llvm
 
-#endif //INTEL_JIT_EVENTS_WRAPPER_H
+#endif // INTEL_JIT_EVENTS_WRAPPER_H

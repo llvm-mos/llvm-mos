@@ -60,91 +60,91 @@ LLVM_C_EXTERN_C_BEGIN
 /// to reorder them.
 typedef enum {
   /* Terminator Instructions */
-  LLVMRet            = 1,
-  LLVMBr             = 2,
-  LLVMSwitch         = 3,
-  LLVMIndirectBr     = 4,
-  LLVMInvoke         = 5,
+  LLVMRet = 1,
+  LLVMBr = 2,
+  LLVMSwitch = 3,
+  LLVMIndirectBr = 4,
+  LLVMInvoke = 5,
   /* removed 6 due to API changes */
-  LLVMUnreachable    = 7,
-  LLVMCallBr         = 67,
+  LLVMUnreachable = 7,
+  LLVMCallBr = 67,
 
   /* Standard Unary Operators */
-  LLVMFNeg           = 66,
+  LLVMFNeg = 66,
 
   /* Standard Binary Operators */
-  LLVMAdd            = 8,
-  LLVMFAdd           = 9,
-  LLVMSub            = 10,
-  LLVMFSub           = 11,
-  LLVMMul            = 12,
-  LLVMFMul           = 13,
-  LLVMUDiv           = 14,
-  LLVMSDiv           = 15,
-  LLVMFDiv           = 16,
-  LLVMURem           = 17,
-  LLVMSRem           = 18,
-  LLVMFRem           = 19,
+  LLVMAdd = 8,
+  LLVMFAdd = 9,
+  LLVMSub = 10,
+  LLVMFSub = 11,
+  LLVMMul = 12,
+  LLVMFMul = 13,
+  LLVMUDiv = 14,
+  LLVMSDiv = 15,
+  LLVMFDiv = 16,
+  LLVMURem = 17,
+  LLVMSRem = 18,
+  LLVMFRem = 19,
 
   /* Logical Operators */
-  LLVMShl            = 20,
-  LLVMLShr           = 21,
-  LLVMAShr           = 22,
-  LLVMAnd            = 23,
-  LLVMOr             = 24,
-  LLVMXor            = 25,
+  LLVMShl = 20,
+  LLVMLShr = 21,
+  LLVMAShr = 22,
+  LLVMAnd = 23,
+  LLVMOr = 24,
+  LLVMXor = 25,
 
   /* Memory Operators */
-  LLVMAlloca         = 26,
-  LLVMLoad           = 27,
-  LLVMStore          = 28,
-  LLVMGetElementPtr  = 29,
+  LLVMAlloca = 26,
+  LLVMLoad = 27,
+  LLVMStore = 28,
+  LLVMGetElementPtr = 29,
 
   /* Cast Operators */
-  LLVMTrunc          = 30,
-  LLVMZExt           = 31,
-  LLVMSExt           = 32,
-  LLVMFPToUI         = 33,
-  LLVMFPToSI         = 34,
-  LLVMUIToFP         = 35,
-  LLVMSIToFP         = 36,
-  LLVMFPTrunc        = 37,
-  LLVMFPExt          = 38,
-  LLVMPtrToInt       = 39,
-  LLVMPtrToAddr      = 69,
-  LLVMIntToPtr       = 40,
-  LLVMBitCast        = 41,
-  LLVMAddrSpaceCast  = 60,
+  LLVMTrunc = 30,
+  LLVMZExt = 31,
+  LLVMSExt = 32,
+  LLVMFPToUI = 33,
+  LLVMFPToSI = 34,
+  LLVMUIToFP = 35,
+  LLVMSIToFP = 36,
+  LLVMFPTrunc = 37,
+  LLVMFPExt = 38,
+  LLVMPtrToInt = 39,
+  LLVMPtrToAddr = 69,
+  LLVMIntToPtr = 40,
+  LLVMBitCast = 41,
+  LLVMAddrSpaceCast = 60,
 
   /* Other Operators */
-  LLVMICmp           = 42,
-  LLVMFCmp           = 43,
-  LLVMPHI            = 44,
-  LLVMCall           = 45,
-  LLVMSelect         = 46,
-  LLVMUserOp1        = 47,
-  LLVMUserOp2        = 48,
-  LLVMVAArg          = 49,
+  LLVMICmp = 42,
+  LLVMFCmp = 43,
+  LLVMPHI = 44,
+  LLVMCall = 45,
+  LLVMSelect = 46,
+  LLVMUserOp1 = 47,
+  LLVMUserOp2 = 48,
+  LLVMVAArg = 49,
   LLVMExtractElement = 50,
-  LLVMInsertElement  = 51,
-  LLVMShuffleVector  = 52,
-  LLVMExtractValue   = 53,
-  LLVMInsertValue    = 54,
-  LLVMFreeze         = 68,
+  LLVMInsertElement = 51,
+  LLVMShuffleVector = 52,
+  LLVMExtractValue = 53,
+  LLVMInsertValue = 54,
+  LLVMFreeze = 68,
 
   /* Atomic operators */
-  LLVMFence          = 55,
-  LLVMAtomicCmpXchg  = 56,
-  LLVMAtomicRMW      = 57,
+  LLVMFence = 55,
+  LLVMAtomicCmpXchg = 56,
+  LLVMAtomicRMW = 57,
 
   /* Exception Handling Operators */
-  LLVMResume         = 58,
-  LLVMLandingPad     = 59,
-  LLVMCleanupRet     = 61,
-  LLVMCatchRet       = 62,
-  LLVMCatchPad       = 63,
-  LLVMCleanupPad     = 64,
-  LLVMCatchSwitch    = 65
+  LLVMResume = 58,
+  LLVMLandingPad = 59,
+  LLVMCleanupRet = 61,
+  LLVMCatchRet = 62,
+  LLVMCatchPad = 63,
+  LLVMCleanupPad = 64,
+  LLVMCatchSwitch = 65
 } LLVMOpcode;
 
 typedef enum {
@@ -172,25 +172,25 @@ typedef enum {
 } LLVMTypeKind;
 
 typedef enum {
-  LLVMExternalLinkage,    /**< Externally visible function */
+  LLVMExternalLinkage, /**< Externally visible function */
   LLVMAvailableExternallyLinkage,
   LLVMLinkOnceAnyLinkage, /**< Keep one copy of function when linking (inline)*/
   LLVMLinkOnceODRLinkage, /**< Same, but only replaced by something
                             equivalent. */
   LLVMLinkOnceODRAutoHideLinkage, /**< Obsolete */
-  LLVMWeakAnyLinkage,     /**< Keep one copy of function when linking (weak) */
-  LLVMWeakODRLinkage,     /**< Same, but only replaced by something
-                            equivalent. */
-  LLVMAppendingLinkage,   /**< Special purpose, only applies to global arrays */
-  LLVMInternalLinkage,    /**< Rename collisions when linking (static
-                               functions) */
-  LLVMPrivateLinkage,     /**< Like Internal, but omit from symbol table */
-  LLVMDLLImportLinkage,   /**< Obsolete */
-  LLVMDLLExportLinkage,   /**< Obsolete */
-  LLVMExternalWeakLinkage,/**< ExternalWeak linkage description */
-  LLVMGhostLinkage,       /**< Obsolete */
-  LLVMCommonLinkage,      /**< Tentative definitions */
-  LLVMLinkerPrivateLinkage, /**< Like Private, but linker removes. */
+  LLVMWeakAnyLinkage,   /**< Keep one copy of function when linking (weak) */
+  LLVMWeakODRLinkage,   /**< Same, but only replaced by something
+                          equivalent. */
+  LLVMAppendingLinkage, /**< Special purpose, only applies to global arrays */
+  LLVMInternalLinkage,  /**< Rename collisions when linking (static
+                             functions) */
+  LLVMPrivateLinkage,   /**< Like Internal, but omit from symbol table */
+  LLVMDLLImportLinkage, /**< Obsolete */
+  LLVMDLLExportLinkage, /**< Obsolete */
+  LLVMExternalWeakLinkage,     /**< ExternalWeak linkage description */
+  LLVMGhostLinkage,            /**< Obsolete */
+  LLVMCommonLinkage,           /**< Tentative definitions */
+  LLVMLinkerPrivateLinkage,    /**< Like Private, but linker removes. */
   LLVMLinkerPrivateWeakLinkage /**< Like LinkerPrivate, but is weak. */
 } LLVMLinkage;
 
@@ -207,53 +207,53 @@ typedef enum {
 } LLVMUnnamedAddr;
 
 typedef enum {
-  LLVMDefaultStorageClass   = 0,
+  LLVMDefaultStorageClass = 0,
   LLVMDLLImportStorageClass = 1, /**< Function to be imported from DLL. */
   LLVMDLLExportStorageClass = 2  /**< Function to be accessible from DLL. */
 } LLVMDLLStorageClass;
 
 typedef enum {
-  LLVMCCallConv             = 0,
-  LLVMFastCallConv          = 8,
-  LLVMColdCallConv          = 9,
-  LLVMGHCCallConv           = 10,
-  LLVMHiPECallConv          = 11,
-  LLVMAnyRegCallConv        = 13,
-  LLVMPreserveMostCallConv  = 14,
-  LLVMPreserveAllCallConv   = 15,
-  LLVMSwiftCallConv         = 16,
-  LLVMCXXFASTTLSCallConv    = 17,
-  LLVMX86StdcallCallConv    = 64,
-  LLVMX86FastcallCallConv   = 65,
-  LLVMARMAPCSCallConv       = 66,
-  LLVMARMAAPCSCallConv      = 67,
-  LLVMARMAAPCSVFPCallConv   = 68,
-  LLVMMSP430INTRCallConv    = 69,
-  LLVMX86ThisCallCallConv   = 70,
-  LLVMPTXKernelCallConv     = 71,
-  LLVMPTXDeviceCallConv     = 72,
-  LLVMSPIRFUNCCallConv      = 75,
-  LLVMSPIRKERNELCallConv    = 76,
-  LLVMIntelOCLBICallConv    = 77,
-  LLVMX8664SysVCallConv     = 78,
-  LLVMWin64CallConv         = 79,
+  LLVMCCallConv = 0,
+  LLVMFastCallConv = 8,
+  LLVMColdCallConv = 9,
+  LLVMGHCCallConv = 10,
+  LLVMHiPECallConv = 11,
+  LLVMAnyRegCallConv = 13,
+  LLVMPreserveMostCallConv = 14,
+  LLVMPreserveAllCallConv = 15,
+  LLVMSwiftCallConv = 16,
+  LLVMCXXFASTTLSCallConv = 17,
+  LLVMX86StdcallCallConv = 64,
+  LLVMX86FastcallCallConv = 65,
+  LLVMARMAPCSCallConv = 66,
+  LLVMARMAAPCSCallConv = 67,
+  LLVMARMAAPCSVFPCallConv = 68,
+  LLVMMSP430INTRCallConv = 69,
+  LLVMX86ThisCallCallConv = 70,
+  LLVMPTXKernelCallConv = 71,
+  LLVMPTXDeviceCallConv = 72,
+  LLVMSPIRFUNCCallConv = 75,
+  LLVMSPIRKERNELCallConv = 76,
+  LLVMIntelOCLBICallConv = 77,
+  LLVMX8664SysVCallConv = 78,
+  LLVMWin64CallConv = 79,
   LLVMX86VectorCallCallConv = 80,
-  LLVMHHVMCallConv          = 81,
-  LLVMHHVMCCallConv         = 82,
-  LLVMX86INTRCallConv       = 83,
-  LLVMAVRINTRCallConv       = 84,
-  LLVMAVRSIGNALCallConv     = 85,
-  LLVMAVRBUILTINCallConv    = 86,
-  LLVMAMDGPUVSCallConv      = 87,
-  LLVMAMDGPUGSCallConv      = 88,
-  LLVMAMDGPUPSCallConv      = 89,
-  LLVMAMDGPUCSCallConv      = 90,
-  LLVMAMDGPUKERNELCallConv  = 91,
-  LLVMX86RegCallCallConv    = 92,
-  LLVMAMDGPUHSCallConv      = 93,
+  LLVMHHVMCallConv = 81,
+  LLVMHHVMCCallConv = 82,
+  LLVMX86INTRCallConv = 83,
+  LLVMAVRINTRCallConv = 84,
+  LLVMAVRSIGNALCallConv = 85,
+  LLVMAVRBUILTINCallConv = 86,
+  LLVMAMDGPUVSCallConv = 87,
+  LLVMAMDGPUGSCallConv = 88,
+  LLVMAMDGPUPSCallConv = 89,
+  LLVMAMDGPUCSCallConv = 90,
+  LLVMAMDGPUKERNELCallConv = 91,
+  LLVMX86RegCallCallConv = 92,
+  LLVMAMDGPUHSCallConv = 93,
   LLVMMSP430BUILTINCallConv = 94,
-  LLVMAMDGPULSCallConv      = 95,
-  LLVMAMDGPUESCallConv      = 96
+  LLVMAMDGPULSCallConv = 95,
+  LLVMAMDGPUESCallConv = 96
 } LLVMCallConv;
 
 typedef enum {
@@ -338,12 +338,12 @@ typedef enum {
   LLVMAtomicOrderingMonotonic = 2, /**< guarantees that if you take all the
                                      operations affecting a specific address,
                                      a consistent ordering exists */
-  LLVMAtomicOrderingAcquire = 4, /**< Acquire provides a barrier of the sort
-                                   necessary to acquire a lock to access other
-                                   memory with normal loads and stores. */
-  LLVMAtomicOrderingRelease = 5, /**< Release is similar to Acquire, but with
-                                   a barrier of the sort necessary to release
-                                   a lock. */
+  LLVMAtomicOrderingAcquire = 4,   /**< Acquire provides a barrier of the sort
+                                     necessary to acquire a lock to access other
+                                     memory with normal loads and stores. */
+  LLVMAtomicOrderingRelease = 5,   /**< Release is similar to Acquire, but with
+                                     a barrier of the sort necessary to release
+                                     a lock. */
   LLVMAtomicOrderingAcquireRelease = 6, /**< provides both an Acquire and a
                                           Release barrier (for fences and
                                           operations which both read and write
@@ -404,10 +404,10 @@ typedef enum {
 } LLVMAtomicRMWBinOp;
 
 typedef enum {
-    LLVMDSError,
-    LLVMDSWarning,
-    LLVMDSRemark,
-    LLVMDSNote
+  LLVMDSError,
+  LLVMDSWarning,
+  LLVMDSRemark,
+  LLVMDSNote
 } LLVMDiagnosticSeverity;
 
 typedef enum {
@@ -4412,8 +4412,8 @@ LLVM_C_ABI void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Builder,
  * current debug location for the given builder.  If the builder has no current
  * debug location, this function is a no-op.
  *
- * @deprecated LLVMSetInstDebugLocation is deprecated in favor of the more general
- *             LLVMAddMetadataToInst.
+ * @deprecated LLVMSetInstDebugLocation is deprecated in favor of the more
+ * general LLVMAddMetadataToInst.
  *
  * @see llvm::IRBuilder::SetInstDebugLocation()
  */

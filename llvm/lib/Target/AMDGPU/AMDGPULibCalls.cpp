@@ -28,19 +28,20 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
-static cl::opt<bool> EnablePreLink("amdgpu-prelink",
-  cl::desc("Enable pre-link mode optimizations"),
-  cl::init(false),
-  cl::Hidden);
+static cl::opt<bool>
+    EnablePreLink("amdgpu-prelink",
+                  cl::desc("Enable pre-link mode optimizations"),
+                  cl::init(false), cl::Hidden);
 
-static cl::list<std::string> UseNative("amdgpu-use-native",
-  cl::desc("Comma separated list of functions to replace with native, or all"),
-  cl::CommaSeparated, cl::ValueOptional,
-  cl::Hidden);
+static cl::list<std::string> UseNative(
+    "amdgpu-use-native",
+    cl::desc(
+        "Comma separated list of functions to replace with native, or all"),
+    cl::CommaSeparated, cl::ValueOptional, cl::Hidden);
 
-#define MATH_PI      numbers::pi
-#define MATH_E       numbers::e
-#define MATH_SQRT2   numbers::sqrt2
+#define MATH_PI numbers::pi
+#define MATH_E numbers::e
+#define MATH_SQRT2 numbers::sqrt2
 #define MATH_SQRT1_2 numbers::inv_sqrt2
 
 namespace llvm {
@@ -173,157 +174,58 @@ static FunctionType *getPownType(FunctionType *FT) {
 //  FuncTbl works for both f32 and f64 functions with 1 input argument
 
 struct TableEntry {
-  double   result;
-  double   input;
+  double result;
+  double input;
 };
 
 /* a list of {result, input} */
 static const TableEntry tbl_acos[] = {
-  {MATH_PI / 2.0, 0.0},
-  {MATH_PI / 2.0, -0.0},
-  {0.0, 1.0},
-  {MATH_PI, -1.0}
-};
-static const TableEntry tbl_acosh[] = {
-  {0.0, 1.0}
-};
+    {MATH_PI / 2.0, 0.0}, {MATH_PI / 2.0, -0.0}, {0.0, 1.0}, {MATH_PI, -1.0}};
+static const TableEntry tbl_acosh[] = {{0.0, 1.0}};
 static const TableEntry tbl_acospi[] = {
-  {0.5, 0.0},
-  {0.5, -0.0},
-  {0.0, 1.0},
-  {1.0, -1.0}
-};
+    {0.5, 0.0}, {0.5, -0.0}, {0.0, 1.0}, {1.0, -1.0}};
 static const TableEntry tbl_asin[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0},
-  {MATH_PI / 2.0, 1.0},
-  {-MATH_PI / 2.0, -1.0}
-};
-static const TableEntry tbl_asinh[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0}
-};
+    {0.0, 0.0}, {-0.0, -0.0}, {MATH_PI / 2.0, 1.0}, {-MATH_PI / 2.0, -1.0}};
+static const TableEntry tbl_asinh[] = {{0.0, 0.0}, {-0.0, -0.0}};
 static const TableEntry tbl_asinpi[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0},
-  {0.5, 1.0},
-  {-0.5, -1.0}
-};
+    {0.0, 0.0}, {-0.0, -0.0}, {0.5, 1.0}, {-0.5, -1.0}};
 static const TableEntry tbl_atan[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0},
-  {MATH_PI / 4.0, 1.0},
-  {-MATH_PI / 4.0, -1.0}
-};
-static const TableEntry tbl_atanh[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0}
-};
+    {0.0, 0.0}, {-0.0, -0.0}, {MATH_PI / 4.0, 1.0}, {-MATH_PI / 4.0, -1.0}};
+static const TableEntry tbl_atanh[] = {{0.0, 0.0}, {-0.0, -0.0}};
 static const TableEntry tbl_atanpi[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0},
-  {0.25, 1.0},
-  {-0.25, -1.0}
-};
+    {0.0, 0.0}, {-0.0, -0.0}, {0.25, 1.0}, {-0.25, -1.0}};
 static const TableEntry tbl_cbrt[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0},
-  {1.0, 1.0},
-  {-1.0, -1.0},
+    {0.0, 0.0},
+    {-0.0, -0.0},
+    {1.0, 1.0},
+    {-1.0, -1.0},
 };
-static const TableEntry tbl_cos[] = {
-  {1.0, 0.0},
-  {1.0, -0.0}
-};
-static const TableEntry tbl_cosh[] = {
-  {1.0, 0.0},
-  {1.0, -0.0}
-};
-static const TableEntry tbl_cospi[] = {
-  {1.0, 0.0},
-  {1.0, -0.0}
-};
-static const TableEntry tbl_erfc[] = {
-  {1.0, 0.0},
-  {1.0, -0.0}
-};
-static const TableEntry tbl_erf[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0}
-};
-static const TableEntry tbl_exp[] = {
-  {1.0, 0.0},
-  {1.0, -0.0},
-  {MATH_E, 1.0}
-};
-static const TableEntry tbl_exp2[] = {
-  {1.0, 0.0},
-  {1.0, -0.0},
-  {2.0, 1.0}
-};
-static const TableEntry tbl_exp10[] = {
-  {1.0, 0.0},
-  {1.0, -0.0},
-  {10.0, 1.0}
-};
-static const TableEntry tbl_expm1[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0}
-};
-static const TableEntry tbl_log[] = {
-  {0.0, 1.0},
-  {1.0, MATH_E}
-};
-static const TableEntry tbl_log2[] = {
-  {0.0, 1.0},
-  {1.0, 2.0}
-};
-static const TableEntry tbl_log10[] = {
-  {0.0, 1.0},
-  {1.0, 10.0}
-};
-static const TableEntry tbl_rsqrt[] = {
-  {1.0, 1.0},
-  {MATH_SQRT1_2, 2.0}
-};
-static const TableEntry tbl_sin[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0}
-};
-static const TableEntry tbl_sinh[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0}
-};
-static const TableEntry tbl_sinpi[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0}
-};
+static const TableEntry tbl_cos[] = {{1.0, 0.0}, {1.0, -0.0}};
+static const TableEntry tbl_cosh[] = {{1.0, 0.0}, {1.0, -0.0}};
+static const TableEntry tbl_cospi[] = {{1.0, 0.0}, {1.0, -0.0}};
+static const TableEntry tbl_erfc[] = {{1.0, 0.0}, {1.0, -0.0}};
+static const TableEntry tbl_erf[] = {{0.0, 0.0}, {-0.0, -0.0}};
+static const TableEntry tbl_exp[] = {{1.0, 0.0}, {1.0, -0.0}, {MATH_E, 1.0}};
+static const TableEntry tbl_exp2[] = {{1.0, 0.0}, {1.0, -0.0}, {2.0, 1.0}};
+static const TableEntry tbl_exp10[] = {{1.0, 0.0}, {1.0, -0.0}, {10.0, 1.0}};
+static const TableEntry tbl_expm1[] = {{0.0, 0.0}, {-0.0, -0.0}};
+static const TableEntry tbl_log[] = {{0.0, 1.0}, {1.0, MATH_E}};
+static const TableEntry tbl_log2[] = {{0.0, 1.0}, {1.0, 2.0}};
+static const TableEntry tbl_log10[] = {{0.0, 1.0}, {1.0, 10.0}};
+static const TableEntry tbl_rsqrt[] = {{1.0, 1.0}, {MATH_SQRT1_2, 2.0}};
+static const TableEntry tbl_sin[] = {{0.0, 0.0}, {-0.0, -0.0}};
+static const TableEntry tbl_sinh[] = {{0.0, 0.0}, {-0.0, -0.0}};
+static const TableEntry tbl_sinpi[] = {{0.0, 0.0}, {-0.0, -0.0}};
 static const TableEntry tbl_sqrt[] = {
-  {0.0, 0.0},
-  {1.0, 1.0},
-  {MATH_SQRT2, 2.0}
-};
-static const TableEntry tbl_tan[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0}
-};
-static const TableEntry tbl_tanh[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0}
-};
-static const TableEntry tbl_tanpi[] = {
-  {0.0, 0.0},
-  {-0.0, -0.0}
-};
+    {0.0, 0.0}, {1.0, 1.0}, {MATH_SQRT2, 2.0}};
+static const TableEntry tbl_tan[] = {{0.0, 0.0}, {-0.0, -0.0}};
+static const TableEntry tbl_tanh[] = {{0.0, 0.0}, {-0.0, -0.0}};
+static const TableEntry tbl_tanpi[] = {{0.0, 0.0}, {-0.0, -0.0}};
 static const TableEntry tbl_tgamma[] = {
-  {1.0, 1.0},
-  {1.0, 2.0},
-  {2.0, 3.0},
-  {6.0, 4.0}
-};
+    {1.0, 1.0}, {1.0, 2.0}, {2.0, 3.0}, {6.0, 4.0}};
 
 static bool HasNative(AMDGPULibFunc::EFuncId id) {
-  switch(id) {
+  switch (id) {
   case AMDGPULibFunc::EI_DIVIDE:
   case AMDGPULibFunc::EI_COS:
   case AMDGPULibFunc::EI_EXP:
@@ -348,54 +250,85 @@ static bool HasNative(AMDGPULibFunc::EFuncId id) {
 using TableRef = ArrayRef<TableEntry>;
 
 static TableRef getOptTable(AMDGPULibFunc::EFuncId id) {
-  switch(id) {
-  case AMDGPULibFunc::EI_ACOS:    return TableRef(tbl_acos);
-  case AMDGPULibFunc::EI_ACOSH:   return TableRef(tbl_acosh);
-  case AMDGPULibFunc::EI_ACOSPI:  return TableRef(tbl_acospi);
-  case AMDGPULibFunc::EI_ASIN:    return TableRef(tbl_asin);
-  case AMDGPULibFunc::EI_ASINH:   return TableRef(tbl_asinh);
-  case AMDGPULibFunc::EI_ASINPI:  return TableRef(tbl_asinpi);
-  case AMDGPULibFunc::EI_ATAN:    return TableRef(tbl_atan);
-  case AMDGPULibFunc::EI_ATANH:   return TableRef(tbl_atanh);
-  case AMDGPULibFunc::EI_ATANPI:  return TableRef(tbl_atanpi);
-  case AMDGPULibFunc::EI_CBRT:    return TableRef(tbl_cbrt);
+  switch (id) {
+  case AMDGPULibFunc::EI_ACOS:
+    return TableRef(tbl_acos);
+  case AMDGPULibFunc::EI_ACOSH:
+    return TableRef(tbl_acosh);
+  case AMDGPULibFunc::EI_ACOSPI:
+    return TableRef(tbl_acospi);
+  case AMDGPULibFunc::EI_ASIN:
+    return TableRef(tbl_asin);
+  case AMDGPULibFunc::EI_ASINH:
+    return TableRef(tbl_asinh);
+  case AMDGPULibFunc::EI_ASINPI:
+    return TableRef(tbl_asinpi);
+  case AMDGPULibFunc::EI_ATAN:
+    return TableRef(tbl_atan);
+  case AMDGPULibFunc::EI_ATANH:
+    return TableRef(tbl_atanh);
+  case AMDGPULibFunc::EI_ATANPI:
+    return TableRef(tbl_atanpi);
+  case AMDGPULibFunc::EI_CBRT:
+    return TableRef(tbl_cbrt);
   case AMDGPULibFunc::EI_NCOS:
-  case AMDGPULibFunc::EI_COS:     return TableRef(tbl_cos);
-  case AMDGPULibFunc::EI_COSH:    return TableRef(tbl_cosh);
-  case AMDGPULibFunc::EI_COSPI:   return TableRef(tbl_cospi);
-  case AMDGPULibFunc::EI_ERFC:    return TableRef(tbl_erfc);
-  case AMDGPULibFunc::EI_ERF:     return TableRef(tbl_erf);
-  case AMDGPULibFunc::EI_EXP:     return TableRef(tbl_exp);
+  case AMDGPULibFunc::EI_COS:
+    return TableRef(tbl_cos);
+  case AMDGPULibFunc::EI_COSH:
+    return TableRef(tbl_cosh);
+  case AMDGPULibFunc::EI_COSPI:
+    return TableRef(tbl_cospi);
+  case AMDGPULibFunc::EI_ERFC:
+    return TableRef(tbl_erfc);
+  case AMDGPULibFunc::EI_ERF:
+    return TableRef(tbl_erf);
+  case AMDGPULibFunc::EI_EXP:
+    return TableRef(tbl_exp);
   case AMDGPULibFunc::EI_NEXP2:
-  case AMDGPULibFunc::EI_EXP2:    return TableRef(tbl_exp2);
-  case AMDGPULibFunc::EI_EXP10:   return TableRef(tbl_exp10);
-  case AMDGPULibFunc::EI_EXPM1:   return TableRef(tbl_expm1);
-  case AMDGPULibFunc::EI_LOG:     return TableRef(tbl_log);
+  case AMDGPULibFunc::EI_EXP2:
+    return TableRef(tbl_exp2);
+  case AMDGPULibFunc::EI_EXP10:
+    return TableRef(tbl_exp10);
+  case AMDGPULibFunc::EI_EXPM1:
+    return TableRef(tbl_expm1);
+  case AMDGPULibFunc::EI_LOG:
+    return TableRef(tbl_log);
   case AMDGPULibFunc::EI_NLOG2:
-  case AMDGPULibFunc::EI_LOG2:    return TableRef(tbl_log2);
-  case AMDGPULibFunc::EI_LOG10:   return TableRef(tbl_log10);
+  case AMDGPULibFunc::EI_LOG2:
+    return TableRef(tbl_log2);
+  case AMDGPULibFunc::EI_LOG10:
+    return TableRef(tbl_log10);
   case AMDGPULibFunc::EI_NRSQRT:
-  case AMDGPULibFunc::EI_RSQRT:   return TableRef(tbl_rsqrt);
+  case AMDGPULibFunc::EI_RSQRT:
+    return TableRef(tbl_rsqrt);
   case AMDGPULibFunc::EI_NSIN:
-  case AMDGPULibFunc::EI_SIN:     return TableRef(tbl_sin);
-  case AMDGPULibFunc::EI_SINH:    return TableRef(tbl_sinh);
-  case AMDGPULibFunc::EI_SINPI:   return TableRef(tbl_sinpi);
+  case AMDGPULibFunc::EI_SIN:
+    return TableRef(tbl_sin);
+  case AMDGPULibFunc::EI_SINH:
+    return TableRef(tbl_sinh);
+  case AMDGPULibFunc::EI_SINPI:
+    return TableRef(tbl_sinpi);
   case AMDGPULibFunc::EI_NSQRT:
-  case AMDGPULibFunc::EI_SQRT:    return TableRef(tbl_sqrt);
-  case AMDGPULibFunc::EI_TAN:     return TableRef(tbl_tan);
-  case AMDGPULibFunc::EI_TANH:    return TableRef(tbl_tanh);
-  case AMDGPULibFunc::EI_TANPI:   return TableRef(tbl_tanpi);
-  case AMDGPULibFunc::EI_TGAMMA:  return TableRef(tbl_tgamma);
+  case AMDGPULibFunc::EI_SQRT:
+    return TableRef(tbl_sqrt);
+  case AMDGPULibFunc::EI_TAN:
+    return TableRef(tbl_tan);
+  case AMDGPULibFunc::EI_TANH:
+    return TableRef(tbl_tanh);
+  case AMDGPULibFunc::EI_TANPI:
+    return TableRef(tbl_tanpi);
+  case AMDGPULibFunc::EI_TGAMMA:
+    return TableRef(tbl_tgamma);
   default:;
   }
   return TableRef();
 }
 
-static inline int getVecSize(const AMDGPULibFunc& FInfo) {
+static inline int getVecSize(const AMDGPULibFunc &FInfo) {
   return FInfo.getLeads()[0].VectorSize;
 }
 
-static inline AMDGPULibFunc::EType getArgType(const AMDGPULibFunc& FInfo) {
+static inline AMDGPULibFunc::EType getArgType(const AMDGPULibFunc &FInfo) {
   return (AMDGPULibFunc::EType)FInfo.getLeads()[0].ArgType;
 }
 
@@ -829,11 +762,11 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
     if (ConstantDataVector *CV = dyn_cast<ConstantDataVector>(opr0)) {
       SmallVector<double, 0> DVal;
       for (int eltNo = 0; eltNo < getVecSize(FInfo); ++eltNo) {
-        ConstantFP *eltval = dyn_cast<ConstantFP>(
-                               CV->getElementAsConstant((unsigned)eltNo));
+        ConstantFP *eltval =
+            dyn_cast<ConstantFP>(CV->getElementAsConstant((unsigned)eltNo));
         assert(eltval && "Non-FP arguments in math function!");
         bool found = false;
-        for (int i=0; i < sz; ++i) {
+        for (int i = 0; i < sz; ++i) {
           if (eltval->isExactlyValue(tr[i].input)) {
             DVal.push_back(tr[i].result);
             found = true;
@@ -880,7 +813,8 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
 
 namespace llvm {
 static double log2(double V) {
-#if _XOPEN_SOURCE >= 600 || defined(_ISOC99_SOURCE) || _POSIX_C_SOURCE >= 200112L
+#if _XOPEN_SOURCE >= 600 || defined(_ISOC99_SOURCE) ||                         \
+    _POSIX_C_SOURCE >= 200112L
   return ::log2(V);
 #else
   return log(V) / numbers::ln2;
@@ -953,8 +887,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
                                          FInfo))) {
       LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << FInfo.getName()
                         << '(' << *opr0 << ")\n");
-      Value *nval = CreateCallEx(B,FPExpr, opr0, issqrt ? "__pow2sqrt"
-                                                        : "__pow2rsqrt");
+      Value *nval =
+          CreateCallEx(B, FPExpr, opr0, issqrt ? "__pow2sqrt" : "__pow2rsqrt");
       replaceCall(FPOp, nval);
       return true;
     }
@@ -1045,8 +979,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
       V = log2(std::abs(V));
       cnval = ConstantFP::get(eltType, V);
-      needcopysign = (FInfo.getId() != AMDGPULibFunc::EI_POWR) &&
-                     CF->isNegative();
+      needcopysign =
+          (FInfo.getId() != AMDGPULibFunc::EI_POWR) && CF->isNegative();
     } else {
       needlog = true;
       needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR;
@@ -1058,13 +992,14 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
       needlog = true;
       needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR;
     } else {
-      assert ((int)CDV->getNumElements() == getVecSize(FInfo) &&
-              "Wrong vector size detected");
+      assert((int)CDV->getNumElements() == getVecSize(FInfo) &&
+             "Wrong vector size detected");
 
       SmallVector<double, 0> DVal;
-      for (int i=0; i < getVecSize(FInfo); ++i) {
+      for (int i = 0; i < getVecSize(FInfo); ++i) {
         double V = CDV->getElementAsAPFloat(i).convertToDouble();
-        if (V < 0.0) needcopysign = true;
+        if (V < 0.0)
+          needcopysign = true;
         V = log2(std::abs(V));
         DVal.push_back(V);
       }
@@ -1105,7 +1040,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
         return false;
     }
 
-    nval = CreateCallEx(B,LogExpr, nval, "__log2");
+    nval = CreateCallEx(B, LogExpr, nval, "__log2");
   }
 
   if (FInfo.getId() == AMDGPULibFunc::EI_POWN) {
@@ -1113,10 +1048,10 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     opr1 = B.CreateSIToFP(opr1, nval->getType(), "pownI2F");
   }
   nval = B.CreateFMul(opr1, nval, "__ylogx");
-  nval = CreateCallEx(B,ExpExpr, nval, "__exp2");
+  nval = CreateCallEx(B, ExpExpr, nval, "__exp2");
 
   if (needcopysign) {
-    Type* nTyS = B.getIntNTy(eltType->getPrimitiveSizeInBits());
+    Type *nTyS = B.getIntNTy(eltType->getPrimitiveSizeInBits());
     Type *nTy = FPOp->getType()->getWithNewType(nTyS);
     unsigned size = nTy->getScalarSizeInBits();
     Value *opr_n = FPOp->getOperand(1);
@@ -1125,7 +1060,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     else
       opr_n = B.CreateFPToSI(opr1, nTy, "__ytou");
 
-    Value *sign = B.CreateShl(opr_n, size-1, "__yeven");
+    Value *sign = B.CreateShl(opr_n, size - 1, "__yeven");
     sign = B.CreateAnd(B.CreateBitCast(opr0, nTy), sign, "__pow_sign");
     nval = B.CreateOr(B.CreateBitCast(nval, nTy), sign);
     nval = B.CreateBitCast(nval, opr0->getType());
@@ -1187,14 +1122,13 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
             getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_CBRT, FInfo))) {
       LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> cbrt(" << *opr0
                         << ")\n");
-      Value *nval = CreateCallEx(B,FPExpr, opr0, "__rootn2cbrt");
+      Value *nval = CreateCallEx(B, FPExpr, opr0, "__rootn2cbrt");
       replaceCall(FPOp, nval);
       return true;
     }
   } else if (ci_opr1 == -1) { // rootn(x, -1) = 1.0/x
     LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1.0 / " << *opr0 << "\n");
-    Value *nval = B.CreateFDiv(ConstantFP::get(opr0->getType(), 1.0),
-                               opr0,
+    Value *nval = B.CreateFDiv(ConstantFP::get(opr0->getType(), 1.0), opr0,
                                "__rootn2div");
     replaceCall(FPOp, nval);
     return true;
@@ -1395,7 +1329,7 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
 
   SmallVector<DILocation *> MergeDbgLocs = {CI->getDebugLoc()};
 
-  for (User* U : CArgVal->users()) {
+  for (User *U : CArgVal->users()) {
     CallInst *XI = dyn_cast<CallInst>(U);
     if (!XI || XI->getFunction() != F || XI->isNoBuiltin())
       continue;
@@ -1462,18 +1396,19 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
   ConstantFP *fpopr1 = dyn_cast_or_null<ConstantFP>(copr1);
   if (fpopr0) {
     opr0 = (getArgType(FInfo) == AMDGPULibFunc::F64)
-             ? fpopr0->getValueAPF().convertToDouble()
-             : (double)fpopr0->getValueAPF().convertToFloat();
+               ? fpopr0->getValueAPF().convertToDouble()
+               : (double)fpopr0->getValueAPF().convertToFloat();
   }
 
   if (fpopr1) {
     opr1 = (getArgType(FInfo) == AMDGPULibFunc::F64)
-             ? fpopr1->getValueAPF().convertToDouble()
-             : (double)fpopr1->getValueAPF().convertToFloat();
+               ? fpopr1->getValueAPF().convertToDouble()
+               : (double)fpopr1->getValueAPF().convertToFloat();
   }
 
   switch (FInfo.getId()) {
-  default : return false;
+  default:
+    return false;
 
   case AMDGPULibFunc::EI_ACOS:
     Res0 = acos(opr0);
@@ -1481,7 +1416,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
 
   case AMDGPULibFunc::EI_ACOSH:
     // acosh(x) == log(x + sqrt(x*x - 1))
-    Res0 = log(opr0 + sqrt(opr0*opr0 - 1.0));
+    Res0 = log(opr0 + sqrt(opr0 * opr0 - 1.0));
     return true;
 
   case AMDGPULibFunc::EI_ACOSPI:
@@ -1494,7 +1429,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
 
   case AMDGPULibFunc::EI_ASINH:
     // asinh(x) == log(x + sqrt(x*x + 1))
-    Res0 = log(opr0 + sqrt(opr0*opr0 + 1.0));
+    Res0 = log(opr0 + sqrt(opr0 * opr0 + 1.0));
     return true;
 
   case AMDGPULibFunc::EI_ASINPI:
@@ -1507,7 +1442,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
 
   case AMDGPULibFunc::EI_ATANH:
     // atanh(x) == (log(x+1) - log(x-1))/2;
-    Res0 = (log(opr0 + 1.0) - log(opr0 - 1.0))/2.0;
+    Res0 = (log(opr0 + 1.0) - log(opr0 - 1.0)) / 2.0;
     return true;
 
   case AMDGPULibFunc::EI_ATANPI:
@@ -1515,7 +1450,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
     return true;
 
   case AMDGPULibFunc::EI_CBRT:
-    Res0 = (opr0 < 0.0) ? -pow(-opr0, 1.0/3.0) : pow(opr0, 1.0/3.0);
+    Res0 = (opr0 < 0.0) ? -pow(-opr0, 1.0 / 3.0) : pow(opr0, 1.0 / 3.0);
     return true;
 
   case AMDGPULibFunc::EI_COS:
@@ -1665,7 +1600,7 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
       nval1 = ConstantFP::get(aCI->getType(), DVal1[0]);
   } else {
     if (getArgType(FInfo) == AMDGPULibFunc::F32) {
-      SmallVector <float, 0> FVal0, FVal1;
+      SmallVector<float, 0> FVal0, FVal1;
       for (int i = 0; i < FuncVecSize; ++i)
         FVal0.push_back((float)DVal0[i]);
       ArrayRef<float> tmp0(FVal0);

@@ -187,8 +187,8 @@ private:
           ExecutorAddr::fromPtr(TrampolineMem + (I * ORCABI::TrampolineSize)));
 
     if (auto EC = sys::Memory::protectMappedMemory(
-                    TrampolineBlock.getMemoryBlock(),
-                    sys::Memory::MF_READ | sys::Memory::MF_EXEC))
+            TrampolineBlock.getMemoryBlock(),
+            sys::Memory::MF_READ | sys::Memory::MF_EXEC))
       return errorCodeToError(EC);
 
     TrampolineBlocks.push_back(std::move(TrampolineBlock));

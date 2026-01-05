@@ -88,8 +88,8 @@ void DwarfCFIException::beginFunction(const MachineFunction *MF) {
       Per;
 
   unsigned LSDAEncoding = TLOF.getLSDAEncoding();
-  shouldEmitLSDA = shouldEmitPersonality &&
-    LSDAEncoding != dwarf::DW_EH_PE_omit;
+  shouldEmitLSDA =
+      shouldEmitPersonality && LSDAEncoding != dwarf::DW_EH_PE_omit;
 
   const MCAsmInfo &MAI = *MF->getContext().getAsmInfo();
   if (MAI.getExceptionHandlingType() != ExceptionHandling::None)

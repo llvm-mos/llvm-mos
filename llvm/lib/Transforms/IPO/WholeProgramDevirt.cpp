@@ -371,8 +371,7 @@ void wholeprogramdevirt::setAfterReturnValues(
 }
 
 VirtualCallTarget::VirtualCallTarget(GlobalValue *Fn, const TypeMemberInfo *TM)
-    : Fn(Fn), TM(TM),
-      IsBigEndian(Fn->getDataLayout().isBigEndian()),
+    : Fn(Fn), TM(TM), IsBigEndian(Fn->getDataLayout().isBigEndian()),
       WasDevirt(false) {}
 
 namespace {
@@ -403,8 +402,7 @@ template <> struct llvm::DenseMapInfo<VTableSlot> {
     return DenseMapInfo<Metadata *>::getHashValue(I.TypeID) ^
            DenseMapInfo<uint64_t>::getHashValue(I.ByteOffset);
   }
-  static bool isEqual(const VTableSlot &LHS,
-                      const VTableSlot &RHS) {
+  static bool isEqual(const VTableSlot &LHS, const VTableSlot &RHS) {
     return LHS.TypeID == RHS.TypeID && LHS.ByteOffset == RHS.ByteOffset;
   }
 };
@@ -1599,7 +1597,7 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
       NewArgAttrs.push_back(AttributeSet::get(
           M.getContext(), ArrayRef<Attribute>{Attribute::get(
                               M.getContext(), Attribute::Nest)}));
-      for (unsigned I = 0; I + 2 <  Attrs.getNumAttrSets(); ++I)
+      for (unsigned I = 0; I + 2 < Attrs.getNumAttrSets(); ++I)
         NewArgAttrs.push_back(Attrs.getParamAttrs(I));
       NewCS->setAttributes(
           AttributeList::get(M.getContext(), Attrs.getFnAttrs(),
@@ -2000,7 +1998,6 @@ bool DevirtModule::tryVirtualConstProp(
     if (RemarksEnabled || AreStatisticsEnabled())
       for (auto &&Target : TargetsForSlot)
         Target.WasDevirt = true;
-
 
     if (CSByConstantArg.second.isExported()) {
       ResByArg->TheKind = WholeProgramDevirtResolution::ByArg::VirtualConstProp;
@@ -2648,7 +2645,8 @@ void DevirtIndex::run() {
     // function implementation at offset S.first.ByteOffset, and add to
     // TargetsForSlot.
     std::vector<ValueInfo> TargetsForSlot;
-    auto TidSummary = ExportSummary.getTypeIdCompatibleVtableSummary(S.first.TypeID);
+    auto TidSummary =
+        ExportSummary.getTypeIdCompatibleVtableSummary(S.first.TypeID);
     assert(TidSummary);
     // The type id summary would have been created while building the NameByGUID
     // map earlier.

@@ -1,4 +1,5 @@
-//==- llvm/CodeGen/BreakFalseDeps.cpp - Break False Dependency Fix -*- C++ -*==//
+//==- llvm/CodeGen/BreakFalseDeps.cpp - Break False Dependency Fix -*- C++
+//-*==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -81,7 +82,7 @@ private:
   /// Returns true if it was able to find a true dependency, thus not requiring
   /// a dependency breaking instruction regardless of clearance.
   bool pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
-    unsigned Pref);
+                                unsigned Pref);
 
   /// Return true to if it makes sense to break dependence on a partial
   /// def or undef use.
@@ -100,14 +101,15 @@ private:
 #define DEBUG_TYPE "break-false-deps"
 
 char BreakFalseDeps::ID = 0;
-INITIALIZE_PASS_BEGIN(BreakFalseDeps, DEBUG_TYPE, "BreakFalseDeps", false, false)
+INITIALIZE_PASS_BEGIN(BreakFalseDeps, DEBUG_TYPE, "BreakFalseDeps", false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(BreakFalseDeps, DEBUG_TYPE, "BreakFalseDeps", false, false)
 
 FunctionPass *llvm::createBreakFalseDeps() { return new BreakFalseDeps(); }
 
 bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
-  unsigned Pref) {
+                                              unsigned Pref) {
 
   // We can't change tied operands.
   if (MI->isRegTiedToDefOperand(OpIdx))
@@ -213,8 +215,8 @@ void BreakFalseDeps::processDefs(MachineInstr *MI) {
     return;
 
   for (unsigned i = 0,
-    e = MI->isVariadic() ? MI->getNumOperands() : MCID.getNumDefs();
-    i != e; ++i) {
+                e = MI->isVariadic() ? MI->getNumOperands() : MCID.getNumDefs();
+       i != e; ++i) {
     MachineOperand &MO = MI->getOperand(i);
     if (!MO.isReg() || !MO.getReg())
       continue;

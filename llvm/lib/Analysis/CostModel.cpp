@@ -107,7 +107,8 @@ PreservedAnalyses CostModelPrinterPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-  OS << "Printing analysis 'Cost Model Analysis' for function '" << F.getName() << "':\n";
+  OS << "Printing analysis 'Cost Model Analysis' for function '" << F.getName()
+     << "':\n";
   for (BasicBlock &B : F) {
     for (Instruction &Inst : B) {
       OS << "Cost Model: ";

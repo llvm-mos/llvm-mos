@@ -30,7 +30,7 @@ namespace llvm {
 /// override runOnMachineFunction.
 class LLVM_ABI MachineFunctionPass : public FunctionPass {
 public:
-  bool doInitialization(Module&) override {
+  bool doInitialization(Module &) override {
     // Cache the properties info at module-init time so we don't have to
     // construct them for every function.
     RequiredProperties = getRequiredProperties();
@@ -38,6 +38,7 @@ public:
     ClearedProperties = getClearedProperties();
     return false;
   }
+
 protected:
   explicit MachineFunctionPass(char &ID) : FunctionPass(ID) {}
 
@@ -76,6 +77,6 @@ private:
   bool runOnFunction(Function &F) override;
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

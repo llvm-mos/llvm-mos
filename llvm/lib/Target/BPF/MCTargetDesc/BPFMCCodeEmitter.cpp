@@ -119,8 +119,7 @@ unsigned BPFMCCodeEmitter::getMachineOpValue(const MCInst &MI,
   return 0;
 }
 
-static uint8_t SwapBits(uint8_t Val)
-{
+static uint8_t SwapBits(uint8_t Val) {
   return (Val & 0x0F) << 4 | (Val & 0xF0) >> 4;
 }
 

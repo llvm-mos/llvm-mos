@@ -29,6 +29,6 @@ public:
   static bool isRequired() { return true; }
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

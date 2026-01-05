@@ -37,6 +37,7 @@ public:
   StringRef getPassName() const override {
     return "NVPTX Replace Image Handles";
   }
+
 private:
   bool processInstr(MachineInstr &MI);
   bool replaceImageHandle(MachineOperand &Op, MachineFunction &MF);
@@ -46,7 +47,7 @@ private:
 char NVPTXReplaceImageHandles::ID = 0;
 
 NVPTXReplaceImageHandles::NVPTXReplaceImageHandles()
-  : MachineFunctionPass(ID) {}
+    : MachineFunctionPass(ID) {}
 
 bool NVPTXReplaceImageHandles::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;

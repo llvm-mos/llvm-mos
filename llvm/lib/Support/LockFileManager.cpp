@@ -32,7 +32,9 @@
 #include <unistd.h>
 #endif
 
-#if defined(__APPLE__) && defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ > 1050)
+#if defined(__APPLE__) &&                                                      \
+    defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                  \
+    (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ > 1050)
 #define USE_OSX_GETHOSTUUID 1
 #else
 #define USE_OSX_GETHOSTUUID 0
@@ -136,9 +138,10 @@ namespace {
 class RemoveUniqueLockFileOnSignal {
   StringRef Filename;
   bool RemoveImmediately;
+
 public:
   RemoveUniqueLockFileOnSignal(StringRef Name)
-  : Filename(Name), RemoveImmediately(true) {
+      : Filename(Name), RemoveImmediately(true) {
     sys::RemoveFileOnSignal(Filename, nullptr);
   }
 
@@ -212,8 +215,7 @@ Expected<bool> LockFileManager::tryLock() {
 
   while (true) {
     // Create a link from the lock file name. If this succeeds, we're done.
-    std::error_code EC =
-        sys::fs::create_link(UniqueLockFileName, LockFileName);
+    std::error_code EC = sys::fs::create_link(UniqueLockFileName, LockFileName);
     if (!EC) {
       RemoveUniqueFile.lockAcquired();
       Owner = OwnedByUs{};

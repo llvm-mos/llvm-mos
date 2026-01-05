@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "../Error.h"
 #include "../Target.h"
+#include "../Error.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "Mips.h"
 #include "MipsRegisterInfo.h"
@@ -90,10 +90,8 @@ static std::vector<MCInst> loadImmediate(MCRegister Reg, bool IsGPR32,
   }
 
   if (Value.isIntN(16)) {
-    return {MCInstBuilder(ORi)
-        .addReg(Reg)
-        .addReg(ZeroReg)
-        .addImm(Value.getZExtValue())};
+    return {MCInstBuilder(ORi).addReg(Reg).addReg(ZeroReg).addImm(
+        Value.getZExtValue())};
   }
 
   std::vector<MCInst> Instructions;
@@ -103,29 +101,17 @@ static std::vector<MCInst> loadImmediate(MCRegister Reg, bool IsGPR32,
       // Expand to an ORi instead of a LUi to avoid sign-extending into the
       // upper 32 bits.
       Instructions.push_back(
-          MCInstBuilder(ORi)
-              .addReg(Reg)
-              .addReg(ZeroReg)
-              .addImm(HiBits));
+          MCInstBuilder(ORi).addReg(Reg).addReg(ZeroReg).addImm(HiBits));
       Instructions.push_back(
-          MCInstBuilder(SLL)
-              .addReg(Reg)
-              .addReg(Reg)
-              .addImm(16));
+          MCInstBuilder(SLL).addReg(Reg).addReg(Reg).addImm(16));
     } else {
-      Instructions.push_back(
-          MCInstBuilder(LUi)
-              .addReg(Reg)
-              .addImm(HiBits));
+      Instructions.push_back(MCInstBuilder(LUi).addReg(Reg).addImm(HiBits));
     }
 
     const uint16_t LoBits = Value.getLoBits(16).getZExtValue();
     if (LoBits) {
       Instructions.push_back(
-          MCInstBuilder(ORi)
-          .addReg(Reg)
-          .addReg(ZeroReg)
-          .addImm(LoBits));
+          MCInstBuilder(ORi).addReg(Reg).addReg(ZeroReg).addImm(LoBits));
     }
 
     return Instructions;

@@ -268,8 +268,7 @@ public:
   }
 
   /// Allow generating valid, but non-deterministic output.
-  void setAllowNonDeterministicOutput(bool) override { /* Nothing to do. */
-  }
+  void setAllowNonDeterministicOutput(bool) override { /* Nothing to do. */ }
 
   /// Set whether to keep the enclosing function for a static variable.
   void setKeepFunctionForStatic(bool KeepFunctionForStatic) override {

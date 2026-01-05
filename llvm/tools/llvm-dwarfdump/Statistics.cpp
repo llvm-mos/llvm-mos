@@ -236,8 +236,7 @@ static std::string constructDieID(DWARFDie Die,
                                   StringRef Prefix = StringRef()) {
   std::string IDStr;
   llvm::raw_string_ostream ID(IDStr);
-  ID << Prefix
-     << Die.getName(DINameKind::LinkageName);
+  ID << Prefix << Die.getName(DINameKind::LinkageName);
 
   // Prefix + Name is enough for local variables and parameters.
   if (!Prefix.empty() && Prefix != "g")
@@ -290,8 +289,8 @@ static void collectStatsForDie(DWARFDie Die, const std::string &FnPrefix,
   auto &FnStats = FnStatMap[FnPrefix];
   bool IsParam = Tag == dwarf::DW_TAG_formal_parameter;
   bool IsLocalVar = Tag == dwarf::DW_TAG_variable;
-  bool IsConstantMember = Tag == dwarf::DW_TAG_member &&
-                          Die.find(dwarf::DW_AT_const_value);
+  bool IsConstantMember =
+      Tag == dwarf::DW_TAG_member && Die.find(dwarf::DW_AT_const_value);
 
   // For zero covered inlined variables the locstats will be
   // calculated later.
@@ -997,8 +996,7 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
     VarParamWithLoc += Stats.TotalVarWithLoc + Constants;
     VarParamTotal += TotalVars;
     VarParamUnique += Stats.VarsInFunction.size();
-    LLVM_DEBUG(for (auto &V
-                    : Stats.VarsInFunction) llvm::dbgs()
+    LLVM_DEBUG(for (auto &V : Stats.VarsInFunction) llvm::dbgs()
                << Entry.getKey() << ": " << V.getKey() << "\n");
     NumFunctions += Stats.IsFunction;
     NumFuncsWithSrcLoc += Stats.HasSourceLocation;

@@ -93,7 +93,7 @@ private:
   CodeViewContainer Container;
   std::unique_ptr<MappingInfo> Mapping;
 };
-}
-}
+} // namespace codeview
+} // namespace llvm
 
 #endif

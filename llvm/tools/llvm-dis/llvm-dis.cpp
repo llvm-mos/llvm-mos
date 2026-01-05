@@ -114,7 +114,7 @@ public:
     if (!canSafelyAccessUses(*F))
       return;
 
-    OS << "; [#uses=" << F->getNumUses() << ']';  // Output # uses
+    OS << "; [#uses=" << F->getNumUses() << ']'; // Output # uses
     OS << '\n';
   }
   void printInfoComment(const Value &V, formatted_raw_ostream &OS) override {
@@ -136,7 +136,7 @@ public:
           OS << ";";
         }
         OS << " [debug line = ";
-        printDebugLoc(DL,OS);
+        printDebugLoc(DL, OS);
         OS << "]";
       }
     }
@@ -150,10 +150,18 @@ struct LLVMDisDiagnosticHandler : public DiagnosticHandler {
     raw_ostream &OS = errs();
     OS << Prefix << ": ";
     switch (DI.getSeverity()) {
-      case DS_Error: WithColor::error(OS); break;
-      case DS_Warning: WithColor::warning(OS); break;
-      case DS_Remark: OS << "remark: "; break;
-      case DS_Note: WithColor::note(OS); break;
+    case DS_Error:
+      WithColor::error(OS);
+      break;
+    case DS_Warning:
+      WithColor::warning(OS);
+      break;
+    case DS_Remark:
+      OS << "remark: ";
+      break;
+    case DS_Note:
+      WithColor::note(OS);
+      break;
     }
 
     DiagnosticPrinterRawOStream DP(OS);
@@ -165,7 +173,7 @@ struct LLVMDisDiagnosticHandler : public DiagnosticHandler {
     return true;
   }
 };
-} // end anon namespace
+} // namespace
 
 static ExitOnError ExitOnErr;
 

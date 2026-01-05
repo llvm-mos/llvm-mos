@@ -42,9 +42,7 @@ bool SimpleLoopSafetyInfo::blockMayThrow(const BasicBlock *BB) const {
   return anyBlockMayThrow();
 }
 
-bool SimpleLoopSafetyInfo::anyBlockMayThrow() const {
-  return MayThrow;
-}
+bool SimpleLoopSafetyInfo::anyBlockMayThrow() const { return MayThrow; }
 
 void SimpleLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
   assert(CurLoop != nullptr && "CurLoop can't be null");
@@ -70,9 +68,7 @@ bool ICFLoopSafetyInfo::blockMayThrow(const BasicBlock *BB) const {
   return ICF.hasICF(BB);
 }
 
-bool ICFLoopSafetyInfo::anyBlockMayThrow() const {
-  return MayThrow;
-}
+bool ICFLoopSafetyInfo::anyBlockMayThrow() const { return MayThrow; }
 
 void ICFLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
   assert(CurLoop != nullptr && "CurLoop can't be null");
@@ -236,8 +232,8 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
       continue;
 
     for (const auto *Succ : successors(Pred))
-      if (CheckedSuccessors.insert(Succ).second &&
-          Succ != BB && !Predecessors.count(Succ))
+      if (CheckedSuccessors.insert(Succ).second && Succ != BB &&
+          !Predecessors.count(Succ))
         // By discharging conditions that are not executed on the 1st iteration,
         // we guarantee that *at least* on the first iteration all paths from
         // header that *may* execute will lead us to the block of interest. So
@@ -324,19 +320,19 @@ static bool isMustExecuteIn(const Instruction &I, Loop *L, DominatorTree *DT) {
   SimpleLoopSafetyInfo LSI;
   LSI.computeLoopSafetyInfo(L);
   return LSI.isGuaranteedToExecute(I, DT, L) ||
-    isGuaranteedToExecuteForEveryIteration(&I, L);
+         isGuaranteedToExecuteForEveryIteration(&I, L);
 }
 
 namespace {
 /// An assembly annotator class to print must execute information in
 /// comments.
 class MustExecuteAnnotatedWriter : public AssemblyAnnotationWriter {
-  DenseMap<const Value*, SmallVector<Loop*, 4> > MustExec;
+  DenseMap<const Value *, SmallVector<Loop *, 4>> MustExec;
 
 public:
-  MustExecuteAnnotatedWriter(const Function &F,
-                             DominatorTree &DT, LoopInfo &LI) {
-    for (const auto &I: instructions(F)) {
+  MustExecuteAnnotatedWriter(const Function &F, DominatorTree &DT,
+                             LoopInfo &LI) {
+    for (const auto &I : instructions(F)) {
       Loop *L = LI.getLoopFor(I.getParent());
       while (L) {
         if (isMustExecuteIn(I, L, &DT)) {
@@ -346,20 +342,18 @@ public:
       };
     }
   }
-  MustExecuteAnnotatedWriter(const Module &M,
-                             DominatorTree &DT, LoopInfo &LI) {
+  MustExecuteAnnotatedWriter(const Module &M, DominatorTree &DT, LoopInfo &LI) {
     for (const auto &F : M)
-    for (const auto &I: instructions(F)) {
-      Loop *L = LI.getLoopFor(I.getParent());
-      while (L) {
-        if (isMustExecuteIn(I, L, &DT)) {
-          MustExec[&I].push_back(L);
-        }
-        L = L->getParentLoop();
-      };
-    }
+      for (const auto &I : instructions(F)) {
+        Loop *L = LI.getLoopFor(I.getParent());
+        while (L) {
+          if (isMustExecuteIn(I, L, &DT)) {
+            MustExec[&I].push_back(L);
+          }
+          L = L->getParentLoop();
+        };
+      }
   }
-
 
   void printInfoComment(const Value &V, formatted_raw_ostream &OS) override {
     if (!MustExec.count(&V))
@@ -490,7 +484,8 @@ MustBeExecutedContextExplorer::findForwardJoinPoint(const BasicBlock *InitBB) {
   if (!JoinBB)
     return nullptr;
 
-  LLVM_DEBUG(dbgs() << "\t\tJoin block candidate: " << JoinBB->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tJoin block candidate: " << JoinBB->getName()
+                    << "\n");
 
   // In forward direction we check if control will for sure reach JoinBB from
   // InitBB, thus it can not be "stopped" along the way. Ways to "stop" control

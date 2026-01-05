@@ -35,21 +35,24 @@ bool latency_sort::operator()(const SUnit *LHS, const SUnit *RHS) const {
   // The most important heuristic is scheduling the critical path.
   unsigned LHSLatency = PQ->getLatency(LHSNum);
   unsigned RHSLatency = PQ->getLatency(RHSNum);
-  if (LHSLatency < RHSLatency) return true;
-  if (LHSLatency > RHSLatency) return false;
+  if (LHSLatency < RHSLatency)
+    return true;
+  if (LHSLatency > RHSLatency)
+    return false;
 
   // After that, if two nodes have identical latencies, look to see if one will
   // unblock more other nodes than the other.
   unsigned LHSBlocked = PQ->getNumSolelyBlockNodes(LHSNum);
   unsigned RHSBlocked = PQ->getNumSolelyBlockNodes(RHSNum);
-  if (LHSBlocked < RHSBlocked) return true;
-  if (LHSBlocked > RHSBlocked) return false;
+  if (LHSBlocked < RHSBlocked)
+    return true;
+  if (LHSBlocked > RHSBlocked)
+    return false;
 
   // Finally, just to provide a stable ordering, use the node number as a
   // deciding factor.
   return RHSNum < LHSNum;
 }
-
 
 /// getSingleUnscheduledPred - If there is exactly one unscheduled predecessor
 /// of SU, return it, otherwise return null.
@@ -81,7 +84,6 @@ void LatencyPriorityQueue::push(SUnit *SU) {
   Queue.push_back(SU);
 }
 
-
 // scheduledNode - As nodes are scheduled, we look to see if there are any
 // successor nodes that have a single unscheduled predecessor.  If so, that
 // single predecessor has a higher priority, since scheduling it will make
@@ -98,10 +100,12 @@ void LatencyPriorityQueue::scheduledNode(SUnit *SU) {
 /// scheduled will make this node available, so it is better than some other
 /// node of the same priority that will not make a node available.
 void LatencyPriorityQueue::AdjustPriorityOfUnscheduledPreds(SUnit *SU) {
-  if (SU->isAvailable) return;  // All preds scheduled.
+  if (SU->isAvailable)
+    return; // All preds scheduled.
 
   SUnit *OnlyAvailablePred = getSingleUnscheduledPred(SU);
-  if (!OnlyAvailablePred || !OnlyAvailablePred->isAvailable) return;
+  if (!OnlyAvailablePred || !OnlyAvailablePred->isAvailable)
+    return;
 
   // Okay, we found a single predecessor that is available, but not scheduled.
   // Since it is available, it must be in the priority queue.  First remove it.
@@ -113,10 +117,12 @@ void LatencyPriorityQueue::AdjustPriorityOfUnscheduledPreds(SUnit *SU) {
 }
 
 SUnit *LatencyPriorityQueue::pop() {
-  if (empty()) return nullptr;
+  if (empty())
+    return nullptr;
   std::vector<SUnit *>::iterator Best = Queue.begin();
   for (std::vector<SUnit *>::iterator I = std::next(Queue.begin()),
-       E = Queue.end(); I != E; ++I)
+                                      E = Queue.end();
+       I != E; ++I)
     if (Picker(*Best, *I))
       Best = I;
   SUnit *V = *Best;

@@ -16,23 +16,22 @@
 #define LLVM_C_DEPRECATED_H
 
 #ifndef __has_feature
-# define __has_feature(x) 0
+#define __has_feature(x) 0
 #endif
 
 // This is a variant of LLVM_ATTRIBUTE_DEPRECATED() that is compatible with
 // C compilers.
 #if __has_feature(attribute_deprecated_with_message)
-# define LLVM_ATTRIBUTE_C_DEPRECATED(decl, message) \
+#define LLVM_ATTRIBUTE_C_DEPRECATED(decl, message)                             \
   decl __attribute__((deprecated(message)))
 #elif defined(__GNUC__)
-# define LLVM_ATTRIBUTE_C_DEPRECATED(decl, message) \
+#define LLVM_ATTRIBUTE_C_DEPRECATED(decl, message)                             \
   decl __attribute__((deprecated))
 #elif defined(_MSC_VER)
-# define LLVM_ATTRIBUTE_C_DEPRECATED(decl, message) \
+#define LLVM_ATTRIBUTE_C_DEPRECATED(decl, message)                             \
   __declspec(deprecated(message)) decl
 #else
-# define LLVM_ATTRIBUTE_C_DEPRECATED(decl, message) \
-  decl
+#define LLVM_ATTRIBUTE_C_DEPRECATED(decl, message) decl
 #endif
 
 #endif /* LLVM_C_DEPRECATED_H */

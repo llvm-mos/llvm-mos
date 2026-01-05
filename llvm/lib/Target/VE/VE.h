@@ -85,28 +85,50 @@ enum RoundingMode {
 
 inline static const char *VECondCodeToString(VECC::CondCode CC) {
   switch (CC) {
-  case VECC::CC_IG:    return "gt";
-  case VECC::CC_IL:    return "lt";
-  case VECC::CC_INE:   return "ne";
-  case VECC::CC_IEQ:   return "eq";
-  case VECC::CC_IGE:   return "ge";
-  case VECC::CC_ILE:   return "le";
-  case VECC::CC_AF:    return "af";
-  case VECC::CC_G:     return "gt";
-  case VECC::CC_L:     return "lt";
-  case VECC::CC_NE:    return "ne";
-  case VECC::CC_EQ:    return "eq";
-  case VECC::CC_GE:    return "ge";
-  case VECC::CC_LE:    return "le";
-  case VECC::CC_NUM:   return "num";
-  case VECC::CC_NAN:   return "nan";
-  case VECC::CC_GNAN:  return "gtnan";
-  case VECC::CC_LNAN:  return "ltnan";
-  case VECC::CC_NENAN: return "nenan";
-  case VECC::CC_EQNAN: return "eqnan";
-  case VECC::CC_GENAN: return "genan";
-  case VECC::CC_LENAN: return "lenan";
-  case VECC::CC_AT:    return "at";
+  case VECC::CC_IG:
+    return "gt";
+  case VECC::CC_IL:
+    return "lt";
+  case VECC::CC_INE:
+    return "ne";
+  case VECC::CC_IEQ:
+    return "eq";
+  case VECC::CC_IGE:
+    return "ge";
+  case VECC::CC_ILE:
+    return "le";
+  case VECC::CC_AF:
+    return "af";
+  case VECC::CC_G:
+    return "gt";
+  case VECC::CC_L:
+    return "lt";
+  case VECC::CC_NE:
+    return "ne";
+  case VECC::CC_EQ:
+    return "eq";
+  case VECC::CC_GE:
+    return "ge";
+  case VECC::CC_LE:
+    return "le";
+  case VECC::CC_NUM:
+    return "num";
+  case VECC::CC_NAN:
+    return "nan";
+  case VECC::CC_GNAN:
+    return "gtnan";
+  case VECC::CC_LNAN:
+    return "ltnan";
+  case VECC::CC_NENAN:
+    return "nenan";
+  case VECC::CC_EQNAN:
+    return "eqnan";
+  case VECC::CC_GENAN:
+    return "genan";
+  case VECC::CC_LENAN:
+    return "lenan";
+  case VECC::CC_AT:
+    return "at";
   default:
     llvm_unreachable("Invalid cond code");
   }

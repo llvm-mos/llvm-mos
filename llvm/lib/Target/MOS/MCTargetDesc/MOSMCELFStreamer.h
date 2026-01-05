@@ -52,11 +52,7 @@ public:
   bool hasFiniArray() const { return HasFiniArray; }
 
 private:
-  enum MXFlagState {
-    MXFlagUnknown,
-    MXFlagLow,
-    MXFlagHigh
-  };
+  enum MXFlagState { MXFlagUnknown, MXFlagLow, MXFlagHigh };
 
   int64_t MappingSymbolCounter = 0;
   bool HasBSS = false;

@@ -58,60 +58,60 @@ constexpr char AssemblerDirectiveBegin[] = ".amd_amdgpu_hsa_metadata";
 
 /// Access qualifiers.
 enum class AccessQualifier : uint8_t {
-  Default   = 0,
-  ReadOnly  = 1,
+  Default = 0,
+  ReadOnly = 1,
   WriteOnly = 2,
   ReadWrite = 3,
-  Unknown   = 0xff
+  Unknown = 0xff
 };
 
 /// Address space qualifiers.
 enum class AddressSpaceQualifier : uint8_t {
-  Private  = 0,
-  Global   = 1,
+  Private = 0,
+  Global = 1,
   Constant = 2,
-  Local    = 3,
-  Generic  = 4,
-  Region   = 5,
-  Unknown  = 0xff
+  Local = 3,
+  Generic = 4,
+  Region = 5,
+  Unknown = 0xff
 };
 
 /// Value kinds.
 enum class ValueKind : uint8_t {
-  ByValue                = 0,
-  GlobalBuffer           = 1,
-  DynamicSharedPointer   = 2,
-  Sampler                = 3,
-  Image                  = 4,
-  Pipe                   = 5,
-  Queue                  = 6,
-  HiddenGlobalOffsetX    = 7,
-  HiddenGlobalOffsetY    = 8,
-  HiddenGlobalOffsetZ    = 9,
-  HiddenNone             = 10,
-  HiddenPrintfBuffer     = 11,
-  HiddenDefaultQueue     = 12,
+  ByValue = 0,
+  GlobalBuffer = 1,
+  DynamicSharedPointer = 2,
+  Sampler = 3,
+  Image = 4,
+  Pipe = 5,
+  Queue = 6,
+  HiddenGlobalOffsetX = 7,
+  HiddenGlobalOffsetY = 8,
+  HiddenGlobalOffsetZ = 9,
+  HiddenNone = 10,
+  HiddenPrintfBuffer = 11,
+  HiddenDefaultQueue = 12,
   HiddenCompletionAction = 13,
   HiddenMultiGridSyncArg = 14,
-  HiddenHostcallBuffer   = 15,
-  Unknown                = 0xff
+  HiddenHostcallBuffer = 15,
+  Unknown = 0xff
 };
 
 /// Value types. This is deprecated and only remains for compatibility parsing
 /// of old metadata.
 enum class ValueType : uint8_t {
-  Struct  = 0,
-  I8      = 1,
-  U8      = 2,
-  I16     = 3,
-  U16     = 4,
-  F16     = 5,
-  I32     = 6,
-  U32     = 7,
-  F32     = 8,
-  I64     = 9,
-  U64     = 10,
-  F64     = 11,
+  Struct = 0,
+  I8 = 1,
+  U8 = 2,
+  I16 = 3,
+  U16 = 4,
+  F16 = 5,
+  I32 = 6,
+  U32 = 7,
+  F32 = 8,
+  I64 = 9,
+  U64 = 10,
+  F64 = 11,
   Unknown = 0xff
 };
 
@@ -152,9 +152,7 @@ struct Metadata final {
   Metadata() = default;
 
   /// \returns True if kernel attributes metadata is empty, false otherwise.
-  bool empty() const {
-    return !notEmpty();
-  }
+  bool empty() const { return !notEmpty(); }
 
   /// \returns True if kernel attributes metadata is not empty, false otherwise.
   bool notEmpty() const {
@@ -311,15 +309,11 @@ struct Metadata final {
 
   /// \returns True if kernel code properties metadata is empty, false
   /// otherwise.
-  bool empty() const {
-    return !notEmpty();
-  }
+  bool empty() const { return !notEmpty(); }
 
   /// \returns True if kernel code properties metadata is not empty, false
   /// otherwise.
-  bool notEmpty() const {
-    return true;
-  }
+  bool notEmpty() const { return true; }
 };
 
 } // end namespace CodeProps
@@ -368,15 +362,11 @@ struct Metadata final {
 
   /// \returns True if kernel debug properties metadata is empty, false
   /// otherwise.
-  bool empty() const {
-    return !notEmpty();
-  }
+  bool empty() const { return !notEmpty(); }
 
   /// \returns True if kernel debug properties metadata is not empty, false
   /// otherwise.
-  bool notEmpty() const {
-    return !mDebuggerABIVersion.empty();
-  }
+  bool notEmpty() const { return !mDebuggerABIVersion.empty(); }
 };
 
 } // end namespace DebugProps

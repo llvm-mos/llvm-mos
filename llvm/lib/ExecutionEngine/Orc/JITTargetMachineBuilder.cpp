@@ -96,8 +96,7 @@ void JITTargetMachineBuilderPrinter::print(raw_ostream &OS) const {
   } else
     OS << "unspecified (will use target default)";
 
-  OS << "\n"
-     << Indent << "  Code Model = ";
+  OS << "\n" << Indent << "  Code Model = ";
 
   if (JTMB.CM) {
     switch (*JTMB.CM) {
@@ -120,8 +119,7 @@ void JITTargetMachineBuilderPrinter::print(raw_ostream &OS) const {
   } else
     OS << "unspecified (will use target default)";
 
-  OS << "\n"
-     << Indent << "  Optimization Level = ";
+  OS << "\n" << Indent << "  Optimization Level = ";
   switch (JTMB.OptLevel) {
   case CodeGenOptLevel::None:
     OS << "None";

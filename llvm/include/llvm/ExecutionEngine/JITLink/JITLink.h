@@ -883,8 +883,7 @@ private:
   using AbsoluteSymbolSet = DenseSet<Symbol *>;
   using BlockSet = DenseSet<Block *>;
 
-  template <typename... ArgTs>
-  Addressable &createAddressable(ArgTs &&... Args) {
+  template <typename... ArgTs> Addressable &createAddressable(ArgTs &&...Args) {
     Addressable *A =
         reinterpret_cast<Addressable *>(Allocator.Allocate<Addressable>());
     new (A) Addressable(std::forward<ArgTs>(Args)...);
@@ -896,7 +895,7 @@ private:
     Allocator.Deallocate(&A);
   }
 
-  template <typename... ArgTs> Block &createBlock(ArgTs &&... Args) {
+  template <typename... ArgTs> Block &createBlock(ArgTs &&...Args) {
     Block *B = reinterpret_cast<Block *>(Allocator.Allocate<Block>());
     new (B) Block(std::forward<ArgTs>(Args)...);
     B->getSection().addBlock(*B);
@@ -1633,10 +1632,9 @@ public:
   /// Remove a block. The block reference is defunct after calling this
   /// function and should no longer be used.
   void removeBlock(Block &B) {
-    assert(llvm::none_of(B.getSection().symbols(),
-                         [&](const Symbol *Sym) {
-                           return &Sym->getBlock() == &B;
-                         }) &&
+    assert(llvm::none_of(
+               B.getSection().symbols(),
+               [&](const Symbol *Sym) { return &Sym->getBlock() == &B; }) &&
            "Block still has symbols attached");
     B.getSection().removeBlock(B);
     destroyBlock(B);

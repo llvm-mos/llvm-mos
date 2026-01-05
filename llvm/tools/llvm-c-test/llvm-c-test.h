@@ -13,8 +13,8 @@
 #ifndef LLVM_C_TEST_H
 #define LLVM_C_TEST_H
 
-#include <stdbool.h>
 #include "llvm-c/Core.h"
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {

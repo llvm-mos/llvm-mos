@@ -22,14 +22,15 @@ namespace llvm {
 
 /// SmallString - A SmallString is just a SmallVector with methods and accessors
 /// that make it work better as a string (e.g. operator+ etc).
-template<unsigned InternalLen>
+template <unsigned InternalLen>
 class SmallString : public SmallVector<char, InternalLen> {
 public:
   /// Default ctor - Initialize to empty.
   SmallString() = default;
 
   /// Initialize from a StringRef.
-  SmallString(StringRef S) : SmallVector<char, InternalLen>(S.begin(), S.end()) {}
+  SmallString(StringRef S)
+      : SmallVector<char, InternalLen>(S.begin(), S.end()) {}
 
   /// Initialize by concatenating a list of StringRefs.
   SmallString(std::initializer_list<StringRef> Refs)
@@ -38,7 +39,7 @@ public:
   }
 
   /// Initialize with a range.
-  template<typename ItTy>
+  template <typename ItTy>
   SmallString(ItTy S, ItTy E) : SmallVector<char, InternalLen>(S, E) {}
 
   /// @}
@@ -256,7 +257,7 @@ public:
   }
 
   // TODO: Make this const, if it's safe...
-  const char* c_str() {
+  const char *c_str() {
     this->push_back(0);
     this->pop_back();
     return this->data();

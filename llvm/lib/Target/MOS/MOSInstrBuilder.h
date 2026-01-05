@@ -14,8 +14,8 @@
 #ifndef LLVM_LIB_TARGET_MOS_MOSINSTRBUILDER_H
 #define LLVM_LIB_TARGET_MOS_MOSINSTRBUILDER_H
 
-#include "MOSSubtarget.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MOSSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -33,20 +33,18 @@ static inline unsigned getDecPseudoOpcode(const MachineIRBuilder &Builder) {
   return STI.hasGPRIncDec() ? MOS::DEC : MOS::DecNMOS;
 }
 
-static inline MachineInstrBuilder
-buildLdImm(MachineIRBuilder &Builder, DstOp Dest) {
+static inline MachineInstrBuilder buildLdImm(MachineIRBuilder &Builder,
+                                             DstOp Dest) {
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
   LLT DestType = Dest.getLLTTy(*Builder.getMRI());
   assert(DestType.isByteSized() && DestType.getScalarSizeInBits() <= 16);
 
   if (DestType.getScalarSizeInBits() == 16) {
     if (STI.hasSPC700()) {
-      return Builder
-              .buildInstr(MOS::LDImm16SPC700, {Dest}, {});
+      return Builder.buildInstr(MOS::LDImm16SPC700, {Dest}, {});
     }
 
-    return Builder
-            .buildInstr(MOS::LDImm16, {Dest, &MOS::GPRRegClass}, {});
+    return Builder.buildInstr(MOS::LDImm16, {Dest, &MOS::GPRRegClass}, {});
   }
 
   return Builder.buildInstr(MOS::LDImm, {Dest}, {});

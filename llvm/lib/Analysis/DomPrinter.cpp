@@ -24,13 +24,12 @@
 
 using namespace llvm;
 
-
 void DominatorTree::viewGraph(const Twine &Name, const Twine &Title) {
 #ifndef NDEBUG
   ViewGraph(this, Name, false, Title);
 #else
   errs() << "DomTree dump not available, build with DEBUG\n";
-#endif  // NDEBUG
+#endif // NDEBUG
 }
 
 void DominatorTree::viewGraph() {
@@ -38,7 +37,7 @@ void DominatorTree::viewGraph() {
   this->viewGraph("domtree", "Dominator Tree for function");
 #else
   errs() << "DomTree dump not available, build with DEBUG\n";
-#endif  // NDEBUG
+#endif // NDEBUG
 }
 
 namespace {

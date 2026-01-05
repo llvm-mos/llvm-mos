@@ -7721,8 +7721,8 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
 
   // Round-inexact-to-odd f64 to f32, then do the final rounding using the
   // hardware f32 -> bf16 instruction.
-  EVT F32VT = SrcVT.isVector() ? SrcVT.changeVectorElementType(MVT::f32) :
-                                 MVT::f32;
+  EVT F32VT =
+      SrcVT.isVector() ? SrcVT.changeVectorElementType(MVT::f32) : MVT::f32;
   SDValue Rod = expandRoundInexactToOdd(F32VT, Src, DL, DAG);
   return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
                      DAG.getTargetConstant(0, DL, MVT::i32));
@@ -10323,7 +10323,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     unsigned Offset = Offset0 | (Offset1 << 8);
 
     SDValue Ops[] = {
-        Chain, Value, DAG.getTargetConstant(Offset, DL, MVT::i16),
+        Chain,
+        Value,
+        DAG.getTargetConstant(Offset, DL, MVT::i16),
         copyToM0(DAG, Chain, DL, M0).getValue(1), // Glue
     };
     return DAG.getMemIntrinsicNode(AMDGPUISD::DS_ORDERED_COUNT, DL,
@@ -11205,18 +11207,18 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     case 12:
       if (!Subtarget->hasLDSLoadB96_B128())
         return SDValue();
-      Opc = HasVIndex ? HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX3_LDS_BOTHEN
-                                   : AMDGPU::BUFFER_LOAD_DWORDX3_LDS_IDXEN
-                      : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX3_LDS_OFFEN
-                                   : AMDGPU::BUFFER_LOAD_DWORDX3_LDS_OFFSET;
+      Opc = HasVIndex    ? HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX3_LDS_BOTHEN
+                                      : AMDGPU::BUFFER_LOAD_DWORDX3_LDS_IDXEN
+            : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX3_LDS_OFFEN
+                         : AMDGPU::BUFFER_LOAD_DWORDX3_LDS_OFFSET;
       break;
     case 16:
       if (!Subtarget->hasLDSLoadB96_B128())
         return SDValue();
-      Opc = HasVIndex ? HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX4_LDS_BOTHEN
-                                   : AMDGPU::BUFFER_LOAD_DWORDX4_LDS_IDXEN
-                      : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX4_LDS_OFFEN
-                                   : AMDGPU::BUFFER_LOAD_DWORDX4_LDS_OFFSET;
+      Opc = HasVIndex    ? HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX4_LDS_BOTHEN
+                                      : AMDGPU::BUFFER_LOAD_DWORDX4_LDS_IDXEN
+            : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX4_LDS_OFFEN
+                         : AMDGPU::BUFFER_LOAD_DWORDX4_LDS_OFFSET;
       break;
     }
 
@@ -11246,9 +11248,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         Aux & (IsGFX12Plus ? AMDGPU::CPol::SWZ : AMDGPU::CPol::SWZ_pregfx12)
             ? 1
             : 0,
-        DL, MVT::i8));                                           // swz
-    Ops.push_back(M0Val.getValue(0));                            // Chain
-    Ops.push_back(M0Val.getValue(1));                            // Glue
+        DL, MVT::i8));                // swz
+    Ops.push_back(M0Val.getValue(0)); // Chain
+    Ops.push_back(M0Val.getValue(1)); // Glue
 
     auto *M = cast<MemSDNode>(Op);
     MachineMemOperand *LoadMMO = M->getMemOperand();
@@ -11345,7 +11347,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       Ops.push_back(VOffset);
     }
 
-    Ops.push_back(Op.getOperand(5));  // Offset
+    Ops.push_back(Op.getOperand(5)); // Offset
 
     unsigned Aux = Op.getConstantOperandVal(6);
     Ops.push_back(DAG.getTargetConstant(Aux & ~AMDGPU::CPol::VIRTUAL_BITS, DL,
@@ -11459,7 +11461,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   }
   case Intrinsic::amdgcn_s_buffer_prefetch_data: {
     SDValue Ops[] = {
-        Chain, bufferRsrcPtrToVector(Op.getOperand(2), DAG),
+        Chain,
+        bufferRsrcPtrToVector(Op.getOperand(2), DAG),
         Op.getOperand(3), // offset
         Op.getOperand(4), // length
     };

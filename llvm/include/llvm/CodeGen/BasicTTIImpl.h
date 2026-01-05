@@ -133,8 +133,7 @@ private:
                                               TTI::TargetCostKind CostKind,
                                               int Index,
                                               FixedVectorType *SubVTy) const {
-    assert(VTy && SubVTy &&
-           "Can only extract subvectors from vectors");
+    assert(VTy && SubVTy && "Can only extract subvectors from vectors");
     int NumSubElts = SubVTy->getNumElements();
     assert((!isa<FixedVectorType>(VTy) ||
             (Index + NumSubElts) <=
@@ -161,8 +160,7 @@ private:
                                              TTI::TargetCostKind CostKind,
                                              int Index,
                                              FixedVectorType *SubVTy) const {
-    assert(VTy && SubVTy &&
-           "Can only insert subvectors into vectors");
+    assert(VTy && SubVTy && "Can only insert subvectors into vectors");
     int NumSubElts = SubVTy->getNumElements();
     assert((!isa<FixedVectorType>(VTy) ||
             (Index + NumSubElts) <=
@@ -195,16 +193,16 @@ private:
 
   static ISD::MemIndexedMode getISDIndexedMode(TTI::MemIndexedMode M) {
     switch (M) {
-      case TTI::MIM_Unindexed:
-        return ISD::UNINDEXED;
-      case TTI::MIM_PreInc:
-        return ISD::PRE_INC;
-      case TTI::MIM_PreDec:
-        return ISD::PRE_DEC;
-      case TTI::MIM_PostInc:
-        return ISD::POST_INC;
-      case TTI::MIM_PostDec:
-        return ISD::POST_DEC;
+    case TTI::MIM_Unindexed:
+      return ISD::UNINDEXED;
+    case TTI::MIM_PreInc:
+      return ISD::PRE_INC;
+    case TTI::MIM_PreDec:
+      return ISD::PRE_DEC;
+    case TTI::MIM_PostInc:
+      return ISD::POST_INC;
+    case TTI::MIM_PostDec:
+      return ISD::POST_DEC;
     }
     llvm_unreachable("Unexpected MemIndexedMode");
   }
@@ -648,7 +646,8 @@ public:
         return N;
       uint64_t Range =
           (MaxCaseVal - MinCaseVal)
-              .getLimitedValue(std::numeric_limits<uint64_t>::max() - 1) + 1;
+              .getLimitedValue(std::numeric_limits<uint64_t>::max() - 1) +
+          1;
       // Check whether a range of clusters is dense enough for a jump table
       if (TLI->isSuitableForJumpTable(&SI, N, Range, PSI, BFI)) {
         JumpTableSize = Range;
@@ -1083,9 +1082,8 @@ public:
 
     // TODO: Handle more cost kinds.
     if (CostKind != TTI::TCK_RecipThroughput)
-      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
-                                           Opd1Info, Opd2Info,
-                                           Args, CxtI);
+      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
+                                           Opd2Info, Args, CxtI);
 
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -1135,8 +1133,8 @@ public:
     // similarly to what getCastInstrCost() does.
     if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
       InstructionCost Cost = thisT()->getArithmeticInstrCost(
-          Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
-          Args, CxtI);
+          Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info, Args,
+          CxtI);
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
       SmallVector<Type *> Tys(Args.size(), Ty);
@@ -1283,7 +1281,7 @@ public:
         EVT ExtVT = EVT::getEVT(Dst);
         EVT LoadVT = EVT::getEVT(Src);
         unsigned LType =
-          ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
+            ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
         if (DstLT.first == SrcLT.first &&
             TLI->isLoadExtLegal(LType, ExtVT, LoadVT))
           return 0;
@@ -1547,7 +1545,7 @@ public:
       const Instruction *I = nullptr) const override {
     assert(!Src->isVoidTy() && "Invalid type");
     // Assume types, such as structs, are expensive.
-    if (getTLI()->getValueType(DL, Src,  true) == MVT::Other)
+    if (getTLI()->getValueType(DL, Src, true) == MVT::Other)
       return 4;
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
 
@@ -2092,12 +2090,12 @@ public:
           thisT()->getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
       Cost +=
           thisT()->getArithmeticInstrCost(BinaryOperator::Sub, RetTy, CostKind);
-      Cost += thisT()->getArithmeticInstrCost(
-          BinaryOperator::Shl, RetTy, CostKind, OpInfoX,
-          {OpInfoZ.Kind, TTI::OP_None});
-      Cost += thisT()->getArithmeticInstrCost(
-          BinaryOperator::LShr, RetTy, CostKind, OpInfoY,
-          {OpInfoZ.Kind, TTI::OP_None});
+      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::Shl, RetTy,
+                                              CostKind, OpInfoX,
+                                              {OpInfoZ.Kind, TTI::OP_None});
+      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::LShr, RetTy,
+                                              CostKind, OpInfoY,
+                                              {OpInfoZ.Kind, TTI::OP_None});
       // Non-constant shift amounts requires a modulo. If the typesize is a
       // power-2 then this will be converted to an and, otherwise it will use a
       // urem.
@@ -2110,12 +2108,10 @@ public:
       // For non-rotates (X != Y) we must add shift-by-zero handling costs.
       if (X != Y) {
         Type *CondTy = RetTy->getWithNewBitWidth(1);
-        Cost +=
-            thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                        CmpInst::ICMP_EQ, CostKind);
-        Cost +=
-            thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
-                                        CmpInst::ICMP_EQ, CostKind);
+        Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                            CmpInst::ICMP_EQ, CostKind);
+        Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy,
+                                            CondTy, CmpInst::ICMP_EQ, CostKind);
       }
       return Cost;
     }
@@ -2714,9 +2710,9 @@ public:
     }
     case Intrinsic::experimental_constrained_fmuladd: {
       IntrinsicCostAttributes FMulAttrs(
-        Intrinsic::experimental_constrained_fmul, RetTy, Tys);
+          Intrinsic::experimental_constrained_fmul, RetTy, Tys);
       IntrinsicCostAttributes FAddAttrs(
-        Intrinsic::experimental_constrained_fadd, RetTy, Tys);
+          Intrinsic::experimental_constrained_fadd, RetTy, Tys);
       return thisT()->getIntrinsicInstrCost(FMulAttrs, CostKind) +
              thisT()->getIntrinsicInstrCost(FAddAttrs, CostKind);
     }

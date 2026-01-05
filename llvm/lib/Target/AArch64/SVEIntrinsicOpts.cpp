@@ -83,8 +83,10 @@ ModulePass *llvm::createSVEIntrinsicOptsPass() {
 /// ptrue will introduce zeroing. For example:
 ///
 ///     %1 = <vscale x 4 x i1> call @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-///     %2 = <vscale x 16 x i1> call @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %1)
-///     %3 = <vscale x 8 x i1> call @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %2)
+///     %2 = <vscale x 16 x i1> call
+///     @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %1) %3 =
+///     <vscale x 8 x i1> call
+///     @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %2)
 ///
 /// %1 is promoted, because it is converted:
 ///

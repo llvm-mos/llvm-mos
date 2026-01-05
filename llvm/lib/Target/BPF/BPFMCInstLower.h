@@ -36,6 +36,6 @@ public:
   MCSymbol *GetGlobalAddressSymbol(const MachineOperand &MO) const;
   MCSymbol *GetExternalSymbolSymbol(const MachineOperand &MO) const;
 };
-}
+} // namespace llvm
 
 #endif

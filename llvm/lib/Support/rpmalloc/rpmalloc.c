@@ -497,17 +497,17 @@ _Static_assert((SPAN_HEADER_SIZE & (SPAN_HEADER_SIZE - 1)) == 0,
 #if ENABLE_VALIDATE_ARGS
 //! Maximum allocation size to avoid integer overflow
 #undef MAX_ALLOC_SIZE
-#define MAX_ALLOC_SIZE (((size_t) - 1) - _memory_span_size)
+#define MAX_ALLOC_SIZE (((size_t)-1) - _memory_span_size)
 #endif
 
 #define pointer_offset(ptr, ofs) (void *)((char *)(ptr) + (ptrdiff_t)(ofs))
 #define pointer_diff(first, second)                                            \
   (ptrdiff_t)((const char *)(first) - (const char *)(second))
 
-#define INVALID_POINTER ((void *)((uintptr_t) - 1))
+#define INVALID_POINTER ((void *)((uintptr_t)-1))
 
 #define SIZE_CLASS_LARGE SIZE_CLASS_COUNT
-#define SIZE_CLASS_HUGE ((uint32_t) - 1)
+#define SIZE_CLASS_HUGE ((uint32_t)-1)
 
 ////////////
 ///

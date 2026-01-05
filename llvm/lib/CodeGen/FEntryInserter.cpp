@@ -37,7 +37,7 @@ struct FEntryInserterLegacy : public MachineFunctionPass {
     return FEntryInserter().run(F);
   }
 };
-}
+} // namespace
 
 PreservedAnalyses FEntryInserterPass::run(MachineFunction &MF,
                                           MachineFunctionAnalysisManager &AM) {

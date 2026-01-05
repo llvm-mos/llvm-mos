@@ -32,13 +32,9 @@ struct DWARFAttribute {
   /// The form and value for this attribute.
   DWARFFormValue Value;
 
-  bool isValid() const {
-    return Offset != 0 && Attr != dwarf::Attribute(0);
-  }
+  bool isValid() const { return Offset != 0 && Attr != dwarf::Attribute(0); }
 
-  explicit operator bool() const {
-    return isValid();
-  }
+  explicit operator bool() const { return isValid(); }
 
   /// Identify DWARF attributes that may contain a pointer to a location list.
   LLVM_ABI static bool mayHaveLocationList(dwarf::Attribute Attr);

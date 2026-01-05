@@ -34,7 +34,7 @@ public:
   virtual std::unique_ptr<IPDBEnumChildren<PDBSymbolCompiland>>
   getCompilands() const = 0;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

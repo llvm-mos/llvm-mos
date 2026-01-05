@@ -76,9 +76,7 @@ public:
   /// (e.g. getSubRegFromChannel(0) -> AMDGPU::sub0)
   static unsigned getSubRegFromChannel(unsigned Channel, unsigned NumRegs = 1);
 
-  bool spillSGPRToVGPR() const {
-    return SpillSGPRToVGPR;
-  }
+  bool spillSGPRToVGPR() const { return SpillSGPRToVGPR; }
 
   /// Return the largest available SGPR aligned to \p Align for the register
   /// class \p RC.
@@ -135,7 +133,7 @@ public:
 
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;
   bool requiresFrameIndexReplacementScavenging(
-    const MachineFunction &MF) const override;
+      const MachineFunction &MF) const override;
   bool requiresVirtualBaseRegisters(const MachineFunction &Fn) const override;
 
   int64_t getScratchInstrOffset(const MachineInstr *MI) const;
@@ -346,12 +344,9 @@ public:
   ArrayRef<int16_t> getRegSplitParts(const TargetRegisterClass *RC,
                                      unsigned EltSize) const;
 
-  bool shouldCoalesce(MachineInstr *MI,
-                      const TargetRegisterClass *SrcRC,
-                      unsigned SubReg,
-                      const TargetRegisterClass *DstRC,
-                      unsigned DstSubReg,
-                      const TargetRegisterClass *NewRC,
+  bool shouldCoalesce(MachineInstr *MI, const TargetRegisterClass *SrcRC,
+                      unsigned SubReg, const TargetRegisterClass *DstRC,
+                      unsigned DstSubReg, const TargetRegisterClass *NewRC,
                       LiveIntervals &LIS) const override;
 
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
@@ -377,13 +372,11 @@ public:
     return getRegClassForSizeOnBank(Ty.getSizeInBits(), Bank);
   }
 
-  const TargetRegisterClass *
-  getConstrainedRegClassForOperand(const MachineOperand &MO,
-                                 const MachineRegisterInfo &MRI) const override;
+  const TargetRegisterClass *getConstrainedRegClassForOperand(
+      const MachineOperand &MO, const MachineRegisterInfo &MRI) const override;
 
   const TargetRegisterClass *getBoolRC() const {
-    return isWave32 ? &AMDGPU::SReg_32RegClass
-                    : &AMDGPU::SReg_64RegClass;
+    return isWave32 ? &AMDGPU::SReg_32RegClass : &AMDGPU::SReg_64RegClass;
   }
 
   const TargetRegisterClass *getWaveMaskRegClass() const {
@@ -401,8 +394,7 @@ public:
 
   // Find reaching register definition
   MachineInstr *findReachingDef(Register Reg, unsigned SubReg,
-                                MachineInstr &Use,
-                                MachineRegisterInfo &MRI,
+                                MachineInstr &Use, MachineRegisterInfo &MRI,
                                 LiveIntervals *LIS) const;
 
   const uint32_t *getAllVGPRRegMask() const;

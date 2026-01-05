@@ -175,8 +175,8 @@ void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   OS << "\n";
 }
 
-DWARFDebugFrame::DWARFDebugFrame(Triple::ArchType Arch,
-    bool IsEH, uint64_t EHFrameAddress)
+DWARFDebugFrame::DWARFDebugFrame(Triple::ArchType Arch, bool IsEH,
+                                 uint64_t EHFrameAddress)
     : Arch(Arch), IsEH(IsEH), EHFrameAddress(EHFrameAddress) {}
 
 DWARFDebugFrame::~DWARFDebugFrame() = default;
@@ -186,7 +186,8 @@ DWARFDebugFrame::~DWARFDebugFrame() = default;
   errs() << "DUMP: ";
   for (int i = 0; i < Length; ++i) {
     uint8_t c = Data.getU8(&Offset);
-    errs().write_hex(c); errs() << " ";
+    errs().write_hex(c);
+    errs() << " ";
   }
   errs() << "\n";
 }
@@ -233,8 +234,8 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
       uint8_t Version = Data.getU8(&Offset);
       const char *Augmentation = Data.getCStr(&Offset);
       StringRef AugmentationString(Augmentation ? Augmentation : "");
-      uint8_t AddressSize = Version < 4 ? Data.getAddressSize() :
-                                          Data.getU8(&Offset);
+      uint8_t AddressSize =
+          Version < 4 ? Data.getAddressSize() : Data.getU8(&Offset);
       Data.setAddressSize(AddressSize);
       uint8_t SegmentDescriptorSize = Version < 4 ? 0 : Data.getU8(&Offset);
       uint64_t CodeAlignmentFactor = Data.getULEB128(&Offset);

@@ -224,8 +224,9 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         // make it non-negative.
         if (D->normalize(SE))
           LLVM_DEBUG(dbgs() << "Negative dependence vector normalized.\n");
-        LLVM_DEBUG(StringRef DepType =
-                       D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
+        LLVM_DEBUG(StringRef DepType = D->isFlow()   ? "flow"
+                                       : D->isAnti() ? "anti"
+                                                     : "output";
                    dbgs() << "Found " << DepType
                           << " dependency between Src and Dst\n"
                           << " Src:" << *Src << "\n Dst:" << *Dst << '\n');
@@ -1073,12 +1074,13 @@ bool LoopInterchangeLegality::currentLimitations() {
     if (!findInductionAndReductions(CurLevelLoop, Inductions, nullptr)) {
       LLVM_DEBUG(
           dbgs() << "Only inner loops with induction or reduction PHI nodes "
-                << "are supported currently.\n");
+                 << "are supported currently.\n");
       ORE->emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedPHIInner",
                                         CurLevelLoop->getStartLoc(),
                                         CurLevelLoop->getHeader())
-              << "Only inner loops with induction or reduction PHI nodes can be"
+               << "Only inner loops with induction or reduction PHI nodes can "
+                  "be"
                   " interchange currently.";
       });
       return true;
@@ -1148,11 +1150,11 @@ static bool areOuterLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
         continue;
 
       // The incoming value is defined in the outer loop latch. Currently we
-      // only support that in case the outer loop latch has a single predecessor.
-      // This guarantees that the outer loop latch is executed if and only if
-      // the inner loop is executed (because tightlyNested() guarantees that the
-      // outer loop header only branches to the inner loop or the outer loop
-      // latch).
+      // only support that in case the outer loop latch has a single
+      // predecessor. This guarantees that the outer loop latch is executed if
+      // and only if the inner loop is executed (because tightlyNested()
+      // guarantees that the outer loop header only branches to the inner loop
+      // or the outer loop latch).
       // FIXME: We could weaken this logic and allow multiple predecessors,
       //        if the values are produced outside the loop latch. We would need
       //        additional logic to update the PHI nodes in the exit block as
@@ -1225,8 +1227,7 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
                    << "safely.");
         ORE->emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "CallInst",
-                                          CI->getDebugLoc(),
-                                          CI->getParent())
+                                          CI->getDebugLoc(), CI->getParent())
                  << "Cannot interchange loops due to call instruction.";
         });
 

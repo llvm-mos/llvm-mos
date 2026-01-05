@@ -26,7 +26,6 @@ typedef int pid_t;
 #include <sys/types.h>
 #endif // _MSC_VER
 
-
 namespace llvm {
 namespace exegesis {
 

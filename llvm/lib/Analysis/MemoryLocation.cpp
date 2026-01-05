@@ -52,8 +52,8 @@ MemoryLocation MemoryLocation::get(const StoreInst *SI) {
 }
 
 MemoryLocation MemoryLocation::get(const VAArgInst *VI) {
-  return MemoryLocation(VI->getPointerOperand(),
-                        LocationSize::afterPointer(), VI->getAAMetadata());
+  return MemoryLocation(VI->getPointerOperand(), LocationSize::afterPointer(),
+                        VI->getAAMetadata());
 }
 
 MemoryLocation MemoryLocation::get(const AtomicCmpXchgInst *CXI) {
@@ -333,7 +333,8 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
     case LibFunc_strcpy:
     case LibFunc_strcat:
     case LibFunc_strncat:
-      assert((ArgIdx == 0 || ArgIdx == 1) && "Invalid argument index for str function");
+      assert((ArgIdx == 0 || ArgIdx == 1) &&
+             "Invalid argument index for str function");
       return MemoryLocation::getAfter(Arg, AATags);
 
     case LibFunc_memset_chk:

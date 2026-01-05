@@ -84,9 +84,8 @@ private:
 
   bool insertElse(BranchInst *Term);
 
-  Value *
-  handleLoopCondition(Value *Cond, PHINode *Broken, llvm::Loop *L,
-                      BranchInst *Term);
+  Value *handleLoopCondition(Value *Cond, PHINode *Broken, llvm::Loop *L,
+                             BranchInst *Term);
 
   bool handleLoop(BranchInst *Term);
 
@@ -116,8 +115,8 @@ void SIAnnotateControlFlow::initialize(const GCNSubtarget &ST) {
 
   Void = Type::getVoidTy(Context);
   Boolean = Type::getInt1Ty(Context);
-  IntMask = ST.isWave32() ? Type::getInt32Ty(Context)
-                           : Type::getInt64Ty(Context);
+  IntMask =
+      ST.isWave32() ? Type::getInt32Ty(Context) : Type::getInt64Ty(Context);
   ReturnStruct = StructType::get(Boolean, IntMask);
 
   BoolTrue = ConstantInt::getTrue(Context);
@@ -138,9 +137,7 @@ bool SIAnnotateControlFlow::isTopOfStack(BasicBlock *BB) {
 }
 
 /// Pop the last saved value from the control flow stack
-Value *SIAnnotateControlFlow::popSaved() {
-  return Stack.pop_back_val().second;
-}
+Value *SIAnnotateControlFlow::popSaved() { return Stack.pop_back_val().second; }
 
 /// Push a BB and saved value to the control flow stack
 void SIAnnotateControlFlow::push(BasicBlock *BB, Value *Saved) {
@@ -160,7 +157,6 @@ bool SIAnnotateControlFlow::isElse(PHINode *Phi) {
     } else {
       if (Phi->getIncomingValue(i) != BoolFalse)
         return false;
-
     }
   }
   return true;
@@ -215,8 +211,9 @@ bool SIAnnotateControlFlow::insertElse(BranchInst *Term) {
 }
 
 /// Recursively handle the condition leading to a loop
-Value *SIAnnotateControlFlow::handleLoopCondition(
-    Value *Cond, PHINode *Broken, llvm::Loop *L, BranchInst *Term) {
+Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
+                                                  llvm::Loop *L,
+                                                  BranchInst *Term) {
 
   auto CreateBreak = [this, Cond, Broken](Instruction *I) -> CallInst * {
     return IRBuilder<>(I).CreateCall(
@@ -242,8 +239,8 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
 
   // Insert IfBreak in the loop header TERM for constant COND other than true.
   if (isa<Constant>(Cond)) {
-    Instruction *Insert = Cond == BoolTrue ?
-      Term : L->getHeader()->getTerminator();
+    Instruction *Insert =
+        Cond == BoolTrue ? Term : L->getHeader()->getTerminator();
 
     return CreateBreak(Insert);
   }
@@ -305,7 +302,7 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
     // We can't insert an EndCF call into a loop header, because it will
     // get executed on every iteration of the loop, when it should be
     // executed only once before the loop.
-    SmallVector <BasicBlock *, 8> Latches;
+    SmallVector<BasicBlock *, 8> Latches;
     L->getLoopLatches(Latches);
 
     SmallVector<BasicBlock *, 2> Preds;

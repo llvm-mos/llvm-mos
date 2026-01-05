@@ -218,7 +218,7 @@ struct X86Operand final : public MCParsedAsmOperand {
     return Mem.MaybeDirectBranchDest;
   }
 
-  bool isToken() const override {return Kind == Token; }
+  bool isToken() const override { return Kind == Token; }
 
   bool isImm() const override { return Kind == Immediate; }
 
@@ -280,20 +280,24 @@ struct X86Operand final : public MCParsedAsmOperand {
   }
 
   bool isImmUnsignedi4() const {
-    if (!isImm()) return false;
+    if (!isImm())
+      return false;
     // If this isn't a constant expr, reject it. The immediate byte is shared
     // with a register encoding. We can't have it affected by a relocation.
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
+    if (!CE)
+      return false;
     return isImmUnsignedi4Value(CE->getValue());
   }
 
   bool isImmUnsignedi8() const {
-    if (!isImm()) return false;
+    if (!isImm())
+      return false;
     // If this isn't a constant expr, just assume it fits and let relaxation
     // handle it.
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return true;
+    if (!CE)
+      return true;
     return isImmUnsignedi8Value(CE->getValue());
   }
 
@@ -302,12 +306,8 @@ struct X86Operand final : public MCParsedAsmOperand {
   bool needAddressOf() const override { return AddressOf; }
 
   bool isMem() const override { return Kind == Memory; }
-  bool isMemUnsized() const {
-    return Kind == Memory && Mem.Size == 0;
-  }
-  bool isMem8() const {
-    return Kind == Memory && (!Mem.Size || Mem.Size == 8);
-  }
+  bool isMemUnsized() const { return Kind == Memory && Mem.Size == 0; }
+  bool isMem8() const { return Kind == Memory && (!Mem.Size || Mem.Size == 8); }
   bool isMem16() const {
     return Kind == Memory && (!Mem.Size || Mem.Size == 16);
   }
@@ -411,9 +411,7 @@ struct X86Operand final : public MCParsedAsmOperand {
            !getMemIndexReg() && getMemScale() == 1 && isMaybeDirectBranchDest();
   }
 
-  bool isAVX512RC() const{
-      return isImm();
-  }
+  bool isAVX512RC() const { return isImm(); }
 
   bool isAbsMemMode16() const { return isAbsMem() && Mem.ModeSize == 16; }
 
@@ -429,22 +427,15 @@ struct X86Operand final : public MCParsedAsmOperand {
 
   bool isSrcIdx() const {
     return !getMemIndexReg() && getMemScale() == 1 &&
-      (getMemBaseReg() == X86::RSI || getMemBaseReg() == X86::ESI ||
-       getMemBaseReg() == X86::SI) && isa<MCConstantExpr>(getMemDisp()) &&
-      cast<MCConstantExpr>(getMemDisp())->getValue() == 0;
+           (getMemBaseReg() == X86::RSI || getMemBaseReg() == X86::ESI ||
+            getMemBaseReg() == X86::SI) &&
+           isa<MCConstantExpr>(getMemDisp()) &&
+           cast<MCConstantExpr>(getMemDisp())->getValue() == 0;
   }
-  bool isSrcIdx8() const {
-    return isMem8() && isSrcIdx();
-  }
-  bool isSrcIdx16() const {
-    return isMem16() && isSrcIdx();
-  }
-  bool isSrcIdx32() const {
-    return isMem32() && isSrcIdx();
-  }
-  bool isSrcIdx64() const {
-    return isMem64() && isSrcIdx();
-  }
+  bool isSrcIdx8() const { return isMem8() && isSrcIdx(); }
+  bool isSrcIdx16() const { return isMem16() && isSrcIdx(); }
+  bool isSrcIdx32() const { return isMem32() && isSrcIdx(); }
+  bool isSrcIdx64() const { return isMem64() && isSrcIdx(); }
 
   bool isDstIdx() const {
     return !getMemIndexReg() && getMemScale() == 1 &&
@@ -454,22 +445,14 @@ struct X86Operand final : public MCParsedAsmOperand {
            isa<MCConstantExpr>(getMemDisp()) &&
            cast<MCConstantExpr>(getMemDisp())->getValue() == 0;
   }
-  bool isDstIdx8() const {
-    return isMem8() && isDstIdx();
-  }
-  bool isDstIdx16() const {
-    return isMem16() && isDstIdx();
-  }
-  bool isDstIdx32() const {
-    return isMem32() && isDstIdx();
-  }
-  bool isDstIdx64() const {
-    return isMem64() && isDstIdx();
-  }
+  bool isDstIdx8() const { return isMem8() && isDstIdx(); }
+  bool isDstIdx16() const { return isMem16() && isDstIdx(); }
+  bool isDstIdx32() const { return isMem32() && isDstIdx(); }
+  bool isDstIdx64() const { return isMem64() && isDstIdx(); }
 
   bool isMemOffs() const {
     return Kind == Memory && !getMemBaseReg() && !getMemIndexReg() &&
-      getMemScale() == 1;
+           getMemScale() == 1;
   }
 
   bool isMemOffs16_8() const {
@@ -512,15 +495,15 @@ struct X86Operand final : public MCParsedAsmOperand {
 
   bool isGR32orGR64() const {
     return Kind == Register &&
-      (X86MCRegisterClasses[X86::GR32RegClassID].contains(getReg()) ||
-       X86MCRegisterClasses[X86::GR64RegClassID].contains(getReg()));
+           (X86MCRegisterClasses[X86::GR32RegClassID].contains(getReg()) ||
+            X86MCRegisterClasses[X86::GR64RegClassID].contains(getReg()));
   }
 
   bool isGR16orGR32orGR64() const {
     return Kind == Register &&
-      (X86MCRegisterClasses[X86::GR16RegClassID].contains(getReg()) ||
-       X86MCRegisterClasses[X86::GR32RegClassID].contains(getReg()) ||
-       X86MCRegisterClasses[X86::GR64RegClassID].contains(getReg()));
+           (X86MCRegisterClasses[X86::GR16RegClassID].contains(getReg()) ||
+            X86MCRegisterClasses[X86::GR32RegClassID].contains(getReg()) ||
+            X86MCRegisterClasses[X86::GR64RegClassID].contains(getReg()));
   }
 
   bool isVectorReg() const {
@@ -533,27 +516,27 @@ struct X86Operand final : public MCParsedAsmOperand {
 
   bool isVK1Pair() const {
     return Kind == Register &&
-      X86MCRegisterClasses[X86::VK1RegClassID].contains(getReg());
+           X86MCRegisterClasses[X86::VK1RegClassID].contains(getReg());
   }
 
   bool isVK2Pair() const {
     return Kind == Register &&
-      X86MCRegisterClasses[X86::VK2RegClassID].contains(getReg());
+           X86MCRegisterClasses[X86::VK2RegClassID].contains(getReg());
   }
 
   bool isVK4Pair() const {
     return Kind == Register &&
-      X86MCRegisterClasses[X86::VK4RegClassID].contains(getReg());
+           X86MCRegisterClasses[X86::VK4RegClassID].contains(getReg());
   }
 
   bool isVK8Pair() const {
     return Kind == Register &&
-      X86MCRegisterClasses[X86::VK8RegClassID].contains(getReg());
+           X86MCRegisterClasses[X86::VK8RegClassID].contains(getReg());
   }
 
   bool isVK16Pair() const {
     return Kind == Register &&
-      X86MCRegisterClasses[X86::VK16RegClassID].contains(getReg());
+           X86MCRegisterClasses[X86::VK16RegClassID].contains(getReg());
   }
 
   void addExpr(MCInst &Inst, const MCExpr *Expr) const {
@@ -683,8 +666,7 @@ struct X86Operand final : public MCParsedAsmOperand {
     return Res;
   }
 
-  static std::unique_ptr<X86Operand>
-  CreateDXReg(SMLoc StartLoc, SMLoc EndLoc) {
+  static std::unique_ptr<X86Operand> CreateDXReg(SMLoc StartLoc, SMLoc EndLoc) {
     return std::make_unique<X86Operand>(DXRegister, StartLoc, EndLoc);
   }
 
@@ -701,11 +683,11 @@ struct X86Operand final : public MCParsedAsmOperand {
                                                void *OpDecl = nullptr,
                                                bool GlobalRef = true) {
     auto Res = std::make_unique<X86Operand>(Immediate, StartLoc, EndLoc);
-    Res->Imm.Val      = Val;
+    Res->Imm.Val = Val;
     Res->Imm.LocalRef = !GlobalRef;
-    Res->SymName      = SymName;
-    Res->OpDecl       = OpDecl;
-    Res->AddressOf    = true;
+    Res->SymName = SymName;
+    Res->OpDecl = OpDecl;
+    Res->AddressOf = true;
     return Res;
   }
 
@@ -717,19 +699,19 @@ struct X86Operand final : public MCParsedAsmOperand {
             bool UseUpRegs = false, bool MaybeDirectBranchDest = true) {
     auto Res = std::make_unique<X86Operand>(Memory, StartLoc, EndLoc);
     Res->Mem.SegReg = MCRegister();
-    Res->Mem.Disp     = Disp;
+    Res->Mem.Disp = Disp;
     Res->Mem.BaseReg = MCRegister();
     Res->Mem.DefaultBaseReg = MCRegister();
     Res->Mem.IndexReg = MCRegister();
-    Res->Mem.Scale    = 1;
-    Res->Mem.Size     = Size;
+    Res->Mem.Scale = 1;
+    Res->Mem.Size = Size;
     Res->Mem.ModeSize = ModeSize;
     Res->Mem.FrontendSize = FrontendSize;
     Res->Mem.MaybeDirectBranchDest = MaybeDirectBranchDest;
     Res->UseUpRegs = UseUpRegs;
-    Res->SymName      = SymName;
-    Res->OpDecl       = OpDecl;
-    Res->AddressOf    = false;
+    Res->SymName = SymName;
+    Res->OpDecl = OpDecl;
+    Res->AddressOf = false;
     return Res;
   }
 
@@ -751,20 +733,20 @@ struct X86Operand final : public MCParsedAsmOperand {
     assert(((Scale == 1 || Scale == 2 || Scale == 4 || Scale == 8)) &&
            "Invalid scale!");
     auto Res = std::make_unique<X86Operand>(Memory, StartLoc, EndLoc);
-    Res->Mem.SegReg   = SegReg;
-    Res->Mem.Disp     = Disp;
-    Res->Mem.BaseReg  = BaseReg;
+    Res->Mem.SegReg = SegReg;
+    Res->Mem.Disp = Disp;
+    Res->Mem.BaseReg = BaseReg;
     Res->Mem.DefaultBaseReg = DefaultBaseReg;
     Res->Mem.IndexReg = IndexReg;
-    Res->Mem.Scale    = Scale;
-    Res->Mem.Size     = Size;
+    Res->Mem.Scale = Scale;
+    Res->Mem.Size = Size;
     Res->Mem.ModeSize = ModeSize;
     Res->Mem.FrontendSize = FrontendSize;
     Res->Mem.MaybeDirectBranchDest = MaybeDirectBranchDest;
     Res->UseUpRegs = UseUpRegs;
-    Res->SymName      = SymName;
-    Res->OpDecl       = OpDecl;
-    Res->AddressOf    = false;
+    Res->SymName = SymName;
+    Res->OpDecl = OpDecl;
+    Res->AddressOf = false;
     return Res;
   }
 };

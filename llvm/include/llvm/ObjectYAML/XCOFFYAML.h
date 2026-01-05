@@ -75,9 +75,11 @@ struct Section {
   llvm::yaml::Hex64 Size;
   llvm::yaml::Hex64 FileOffsetToData;
   llvm::yaml::Hex64 FileOffsetToRelocations;
-  llvm::yaml::Hex64 FileOffsetToLineNumbers; // Line number pointer. Not supported yet.
+  llvm::yaml::Hex64
+      FileOffsetToLineNumbers; // Line number pointer. Not supported yet.
   llvm::yaml::Hex16 NumberOfRelocations;
-  llvm::yaml::Hex16 NumberOfLineNumbers; // Line number counts. Not supported yet.
+  llvm::yaml::Hex16
+      NumberOfLineNumbers; // Line number counts. Not supported yet.
   uint32_t Flags;
   std::optional<XCOFF::DwarfSectionSubtypeFlags> SectionSubtype;
   yaml::BinaryRef SectionData;

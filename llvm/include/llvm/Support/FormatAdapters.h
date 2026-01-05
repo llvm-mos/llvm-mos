@@ -108,6 +108,6 @@ support::detail::RepeatAdapter<T> fmt_repeat(T &&Item, size_t Count) {
 inline support::detail::ErrorAdapter fmt_consume(Error &&Item) {
   return support::detail::ErrorAdapter(std::move(Item));
 }
-}
+} // namespace llvm
 
 #endif

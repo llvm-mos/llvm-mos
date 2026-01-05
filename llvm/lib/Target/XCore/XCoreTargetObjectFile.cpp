@@ -16,8 +16,8 @@
 
 using namespace llvm;
 
-
-void XCoreTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
+void XCoreTargetObjectFile::Initialize(MCContext &Ctx,
+                                       const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
 
   BSSSection = Ctx.getELFSection(".dp.bss", ELF::SHT_NOBITS,
@@ -60,7 +60,7 @@ void XCoreTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
   // TextSection       - see MObjectFileInfo.cpp
   // StaticCtorSection - see MObjectFileInfo.cpp
   // StaticDtorSection - see MObjectFileInfo.cpp
- }
+}
 
 static unsigned getXCoreSectionType(SectionKind K) {
   if (K.isBSS())
@@ -110,30 +110,39 @@ MCSection *XCoreTargetObjectFile::SelectSectionForGlobal(
 
   bool UseCPRel = GO->hasLocalLinkage();
 
-  if (Kind.isText())                    return TextSection;
+  if (Kind.isText())
+    return TextSection;
   if (UseCPRel) {
-    if (Kind.isMergeable1ByteCString()) return CStringSection;
-    if (Kind.isMergeableConst4())       return MergeableConst4Section;
-    if (Kind.isMergeableConst8())       return MergeableConst8Section;
-    if (Kind.isMergeableConst16())      return MergeableConst16Section;
+    if (Kind.isMergeable1ByteCString())
+      return CStringSection;
+    if (Kind.isMergeableConst4())
+      return MergeableConst4Section;
+    if (Kind.isMergeableConst8())
+      return MergeableConst8Section;
+    if (Kind.isMergeableConst16())
+      return MergeableConst16Section;
   }
   Type *ObjType = GO->getValueType();
   auto &DL = GO->getDataLayout();
   if (TM.getCodeModel() == CodeModel::Small || !ObjType->isSized() ||
       DL.getTypeAllocSize(ObjType) < CodeModelLargeSize) {
-    if (Kind.isReadOnly())              return UseCPRel? ReadOnlySection
-                                                       : DataRelROSection;
-    if (Kind.isBSS() || Kind.isCommon())return BSSSection;
+    if (Kind.isReadOnly())
+      return UseCPRel ? ReadOnlySection : DataRelROSection;
+    if (Kind.isBSS() || Kind.isCommon())
+      return BSSSection;
     if (Kind.isData())
       return DataSection;
-    if (Kind.isReadOnlyWithRel())       return DataRelROSection;
+    if (Kind.isReadOnlyWithRel())
+      return DataRelROSection;
   } else {
-    if (Kind.isReadOnly())              return UseCPRel? ReadOnlySectionLarge
-                                                       : DataRelROSectionLarge;
-    if (Kind.isBSS() || Kind.isCommon())return BSSSectionLarge;
+    if (Kind.isReadOnly())
+      return UseCPRel ? ReadOnlySectionLarge : DataRelROSectionLarge;
+    if (Kind.isBSS() || Kind.isCommon())
+      return BSSSectionLarge;
     if (Kind.isData())
       return DataSectionLarge;
-    if (Kind.isReadOnlyWithRel())       return DataRelROSectionLarge;
+    if (Kind.isReadOnlyWithRel())
+      return DataRelROSectionLarge;
   }
 
   assert((Kind.isThreadLocal() || Kind.isCommon()) && "Unknown section kind");
@@ -143,9 +152,12 @@ MCSection *XCoreTargetObjectFile::SelectSectionForGlobal(
 MCSection *XCoreTargetObjectFile::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C,
     Align &Alignment) const {
-  if (Kind.isMergeableConst4())           return MergeableConst4Section;
-  if (Kind.isMergeableConst8())           return MergeableConst8Section;
-  if (Kind.isMergeableConst16())          return MergeableConst16Section;
+  if (Kind.isMergeableConst4())
+    return MergeableConst4Section;
+  if (Kind.isMergeableConst8())
+    return MergeableConst8Section;
+  if (Kind.isMergeableConst16())
+    return MergeableConst16Section;
   assert((Kind.isReadOnly() || Kind.isReadOnlyWithRel()) &&
          "Unknown section kind");
   // We assume the size of the object is never greater than CodeModelLargeSize.

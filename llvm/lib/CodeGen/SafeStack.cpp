@@ -88,9 +88,8 @@ STATISTIC(NumUnsafeStackRestorePoints, "Number of setjmps and landingpads");
 
 /// Use __safestack_pointer_address even if the platform has a faster way of
 /// access safe stack pointer.
-static cl::opt<bool>
-    SafeStackUsePointerAddress("safestack-use-pointer-address",
-                                  cl::init(false), cl::Hidden);
+static cl::opt<bool> SafeStackUsePointerAddress("safestack-use-pointer-address",
+                                                cl::init(false), cl::Hidden);
 
 static cl::opt<bool> ClColoring("safe-stack-coloring",
                                 cl::desc("enable safe stack coloring"),
@@ -142,7 +141,7 @@ class SafeStack {
 
   /// Calculate the allocation size of a given alloca. Returns 0 if the
   /// size can not be statically determined.
-  uint64_t getStaticAllocaAllocationSize(const AllocaInst* AI);
+  uint64_t getStaticAllocaAllocationSize(const AllocaInst *AI);
 
   /// Allocate space for all static allocas in \p StaticAllocas,
   /// replace allocas with pointers into the unsafe stack.
@@ -195,7 +194,7 @@ public:
   bool run();
 };
 
-uint64_t SafeStack::getStaticAllocaAllocationSize(const AllocaInst* AI) {
+uint64_t SafeStack::getStaticAllocaAllocationSize(const AllocaInst *AI) {
   uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
   if (AI->isArrayAllocation()) {
     auto C = dyn_cast<ConstantInt>(AI->getArraySize());
@@ -257,7 +256,8 @@ bool SafeStack::IsMemIntrinsicSafe(const MemIntrinsic *MI, const Use &U,
 
   auto Len = MI->getLengthInBytes();
   // Non-constant size => unsafe. FIXME: try SCEV getRange.
-  if (!Len) return false;
+  if (!Len)
+    return false;
   return IsAccessSafe(U, Len->getZExtValue(), AllocaPtr, AllocaSize);
 }
 
@@ -743,7 +743,7 @@ void SafeStack::TryInlinePointerAddress() {
   if (!CI)
     return;
 
-  if(F.hasOptNone())
+  if (F.hasOptNone())
     return;
 
   Function *Callee = CI->getCalledFunction();

@@ -62,8 +62,8 @@ struct llvm::DOTGraphTraits<ScheduleDAG *> : public DefaultDOTGraphTraits {
   }
 };
 
-std::string DOTGraphTraits<ScheduleDAG*>::getNodeLabel(const SUnit *SU,
-                                                       const ScheduleDAG *G) {
+std::string DOTGraphTraits<ScheduleDAG *>::getNodeLabel(const SUnit *SU,
+                                                        const ScheduleDAG *G) {
   return G->getGraphNodeLabel(SU);
 }
 
@@ -77,7 +77,7 @@ void ScheduleDAG::viewGraph(const Twine &Name, const Twine &Title) {
 #else
   errs() << "ScheduleDAG::viewGraph is only available in debug builds on "
          << "systems with Graphviz or gv!\n";
-#endif  // NDEBUG
+#endif // NDEBUG
 }
 
 /// Out-of-line implementation with no arguments is handy for gdb.

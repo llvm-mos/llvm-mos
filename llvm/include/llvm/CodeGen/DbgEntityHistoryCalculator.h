@@ -58,11 +58,11 @@ public:
   ///
   /// * Debug value entry:
   ///
-  ///   A new debug value becomes live. If the entry's \p EndIndex is \p NoEntry,
-  ///   the value is valid until the end of the function. For other values, the
-  ///   index points to the entry in the entry vector that ends this debug
-  ///   value. The ending entry can either be an overlapping debug value, or
-  ///   an instruction that clobbers the value.
+  ///   A new debug value becomes live. If the entry's \p EndIndex is \p
+  ///   NoEntry, the value is valid until the end of the function. For other
+  ///   values, the index points to the entry in the entry vector that ends this
+  ///   debug value. The ending entry can either be an overlapping debug value,
+  ///   or an instruction that clobbers the value.
   ///
   /// * Clobbering entry:
   ///
@@ -138,7 +138,7 @@ private:
   InstrMap LabelInstr;
 
 public:
-  void  addInstr(InlinedEntity Label, const MachineInstr &MI);
+  void addInstr(InlinedEntity Label, const MachineInstr &MI);
 
   bool empty() const { return LabelInstr.empty(); }
   void clear() { LabelInstr.clear(); }

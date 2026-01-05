@@ -157,7 +157,7 @@ public:
   template <typename ConcreteSymbolT, typename... Args>
   SymIndexId getOrCreateFieldListMember(codeview::TypeIndex FieldListTI,
                                         uint32_t Index,
-                                        Args &&... ConstructorArgs) {
+                                        Args &&...ConstructorArgs) {
     SymIndexId SymId = Cache.size();
     std::pair<codeview::TypeIndex, uint32_t> Key{FieldListTI, Index};
     auto Result = FieldListMembersToSymbolId.try_emplace(Key, SymId);

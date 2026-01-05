@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include <optional>
 
 using namespace llvm;
@@ -26,8 +26,7 @@ BlockFrequency MBFIWrapper::getBlockFreq(const MachineBasicBlock *MBB) const {
   return MBFI.getBlockFreq(MBB);
 }
 
-void MBFIWrapper::setBlockFreq(const MachineBasicBlock *MBB,
-                               BlockFrequency F) {
+void MBFIWrapper::setBlockFreq(const MachineBasicBlock *MBB, BlockFrequency F) {
   MergedBBFreq[MBB] = F;
 }
 

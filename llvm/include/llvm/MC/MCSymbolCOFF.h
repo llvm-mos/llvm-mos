@@ -36,12 +36,8 @@ public:
   bool isExternal() const { return IsExternal; }
   void setExternal(bool Value) const { IsExternal = Value; }
 
-  uint16_t getType() const {
-    return Type;
-  }
-  void setType(uint16_t Ty) const {
-    Type = Ty;
-  }
+  uint16_t getType() const { return Type; }
+  void setType(uint16_t Ty) const { Type = Ty; }
 
   uint16_t getClass() const {
     return (getFlags() & SF_ClassMask) >> SF_ClassShift;
@@ -51,23 +47,19 @@ public:
   }
 
   COFF::WeakExternalCharacteristics getWeakExternalCharacteristics() const {
-    return static_cast<COFF::WeakExternalCharacteristics>((getFlags() & SF_WeakExternalCharacteristicsMask) >>
-           SF_WeakExternalCharacteristicsShift);
+    return static_cast<COFF::WeakExternalCharacteristics>(
+        (getFlags() & SF_WeakExternalCharacteristicsMask) >>
+        SF_WeakExternalCharacteristicsShift);
   }
-  void setWeakExternalCharacteristics(COFF::WeakExternalCharacteristics Characteristics) const {
+  void setWeakExternalCharacteristics(
+      COFF::WeakExternalCharacteristics Characteristics) const {
     modifyFlags(Characteristics << SF_WeakExternalCharacteristicsShift,
                 SF_WeakExternalCharacteristicsMask);
   }
-  void setIsWeakExternal(bool WeakExt) const {
-    IsWeakExternal = WeakExt;
-  }
+  void setIsWeakExternal(bool WeakExt) const { IsWeakExternal = WeakExt; }
 
-  bool isSafeSEH() const {
-    return getFlags() & SF_SafeSEH;
-  }
-  void setIsSafeSEH() const {
-    modifyFlags(SF_SafeSEH, SF_SafeSEH);
-  }
+  bool isSafeSEH() const { return getFlags() & SF_SafeSEH; }
+  void setIsSafeSEH() const { modifyFlags(SF_SafeSEH, SF_SafeSEH); }
 };
 
 } // end namespace llvm

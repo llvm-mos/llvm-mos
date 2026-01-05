@@ -86,8 +86,7 @@ static MCOperand createSparcMCOperand(uint16_t Kind, MCSymbol *Sym,
   auto *expr = MCSpecifierExpr::create(MCSym, Kind, OutContext);
   return MCOperand::createExpr(expr);
 }
-static MCOperand createPCXCallOP(MCSymbol *Label,
-                                 MCContext &OutContext) {
+static MCOperand createPCXCallOP(MCSymbol *Label, MCContext &OutContext) {
   return MCOperand::createExpr(MCSymbolRefExpr::create(Label, OutContext));
 }
 
@@ -95,10 +94,9 @@ static MCOperand createPCXRelExprOp(uint16_t Spec, MCSymbol *GOTLabel,
                                     MCSymbol *StartLabel, MCSymbol *CurLabel,
                                     MCContext &OutContext) {
   const MCSymbolRefExpr *GOT = MCSymbolRefExpr::create(GOTLabel, OutContext);
-  const MCSymbolRefExpr *Start = MCSymbolRefExpr::create(StartLabel,
-                                                         OutContext);
-  const MCSymbolRefExpr *Cur = MCSymbolRefExpr::create(CurLabel,
-                                                       OutContext);
+  const MCSymbolRefExpr *Start =
+      MCSymbolRefExpr::create(StartLabel, OutContext);
+  const MCSymbolRefExpr *Cur = MCSymbolRefExpr::create(CurLabel, OutContext);
 
   const MCBinaryExpr *Sub = MCBinaryExpr::createSub(Cur, Start, OutContext);
   const MCBinaryExpr *Add = MCBinaryExpr::createAdd(GOT, Sub, OutContext);
@@ -106,10 +104,8 @@ static MCOperand createPCXRelExprOp(uint16_t Spec, MCSymbol *GOTLabel,
   return MCOperand::createExpr(expr);
 }
 
-static void EmitCall(MCStreamer &OutStreamer,
-                     MCOperand &Callee,
-                     const MCSubtargetInfo &STI)
-{
+static void EmitCall(MCStreamer &OutStreamer, MCOperand &Callee,
+                     const MCSubtargetInfo &STI) {
   MCInst CallInst;
   CallInst.setOpcode(SP::CALL);
   CallInst.addOperand(Callee);
@@ -125,10 +121,8 @@ static void EmitRDPC(MCStreamer &OutStreamer, MCOperand &RD,
   OutStreamer.emitInstruction(RDPCInst, STI);
 }
 
-static void EmitSETHI(MCStreamer &OutStreamer,
-                      MCOperand &Imm, MCOperand &RD,
-                      const MCSubtargetInfo &STI)
-{
+static void EmitSETHI(MCStreamer &OutStreamer, MCOperand &Imm, MCOperand &RD,
+                      const MCSubtargetInfo &STI) {
   MCInst SETHIInst;
   SETHIInst.setOpcode(SP::SETHIi);
   SETHIInst.addOperand(RD);
@@ -136,10 +130,9 @@ static void EmitSETHI(MCStreamer &OutStreamer,
   OutStreamer.emitInstruction(SETHIInst, STI);
 }
 
-static void EmitBinary(MCStreamer &OutStreamer, unsigned Opcode,
-                       MCOperand &RS1, MCOperand &Src2, MCOperand &RD,
-                       const MCSubtargetInfo &STI)
-{
+static void EmitBinary(MCStreamer &OutStreamer, unsigned Opcode, MCOperand &RS1,
+                       MCOperand &Src2, MCOperand &RD,
+                       const MCSubtargetInfo &STI) {
   MCInst Inst;
   Inst.setOpcode(Opcode);
   Inst.addOperand(RD);
@@ -148,21 +141,18 @@ static void EmitBinary(MCStreamer &OutStreamer, unsigned Opcode,
   OutStreamer.emitInstruction(Inst, STI);
 }
 
-static void EmitOR(MCStreamer &OutStreamer,
-                   MCOperand &RS1, MCOperand &Imm, MCOperand &RD,
-                   const MCSubtargetInfo &STI) {
+static void EmitOR(MCStreamer &OutStreamer, MCOperand &RS1, MCOperand &Imm,
+                   MCOperand &RD, const MCSubtargetInfo &STI) {
   EmitBinary(OutStreamer, SP::ORri, RS1, Imm, RD, STI);
 }
 
-static void EmitADD(MCStreamer &OutStreamer,
-                    MCOperand &RS1, MCOperand &RS2, MCOperand &RD,
-                    const MCSubtargetInfo &STI) {
+static void EmitADD(MCStreamer &OutStreamer, MCOperand &RS1, MCOperand &RS2,
+                    MCOperand &RD, const MCSubtargetInfo &STI) {
   EmitBinary(OutStreamer, SP::ADDrr, RS1, RS2, RD, STI);
 }
 
-static void EmitSHL(MCStreamer &OutStreamer,
-                    MCOperand &RS1, MCOperand &Imm, MCOperand &RD,
-                    const MCSubtargetInfo &STI) {
+static void EmitSHL(MCStreamer &OutStreamer, MCOperand &RS1, MCOperand &Imm,
+                    MCOperand &RD, const MCSubtargetInfo &STI) {
   EmitBinary(OutStreamer, SP::SLLri, RS1, Imm, RD, STI);
 }
 
@@ -176,21 +166,18 @@ static void emitHiLo(MCStreamer &OutStreamer, MCSymbol *GOTSym, uint16_t HiKind,
 }
 
 void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
-                                                const MCSubtargetInfo &STI)
-{
-  MCSymbol *GOTLabel   =
-    OutContext.getOrCreateSymbol(Twine("_GLOBAL_OFFSET_TABLE_"));
+                                                const MCSubtargetInfo &STI) {
+  MCSymbol *GOTLabel =
+      OutContext.getOrCreateSymbol(Twine("_GLOBAL_OFFSET_TABLE_"));
 
   const MachineOperand &MO = MI->getOperand(0);
-  assert(MO.getReg() != SP::O7 &&
-         "%o7 is assigned as destination for getpcx!");
+  assert(MO.getReg() != SP::O7 && "%o7 is assigned as destination for getpcx!");
 
   MCOperand MCRegOP = MCOperand::createReg(MO.getReg());
 
-
   if (!isPositionIndependent()) {
     // Just load the address of GOT to MCRegOP.
-    switch(TM.getCodeModel()) {
+    switch (TM.getCodeModel()) {
     default:
       llvm_unreachable("Unsupported absolute code model");
     case CodeModel::Small:
@@ -200,8 +187,8 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
     case CodeModel::Medium: {
       emitHiLo(*OutStreamer, GOTLabel, ELF::R_SPARC_H44, ELF::R_SPARC_M44,
                MCRegOP, OutContext, STI);
-      MCOperand imm = MCOperand::createExpr(MCConstantExpr::create(12,
-                                                                   OutContext));
+      MCOperand imm =
+          MCOperand::createExpr(MCConstantExpr::create(12, OutContext));
       EmitSHL(*OutStreamer, MCRegOP, imm, MCRegOP, STI);
       MCOperand lo =
           createSparcMCOperand(ELF::R_SPARC_L44, GOTLabel, OutContext);
@@ -211,8 +198,8 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
     case CodeModel::Large: {
       emitHiLo(*OutStreamer, GOTLabel, ELF::R_SPARC_HH22, ELF::R_SPARC_HM10,
                MCRegOP, OutContext, STI);
-      MCOperand imm = MCOperand::createExpr(MCConstantExpr::create(32,
-                                                                   OutContext));
+      MCOperand imm =
+          MCOperand::createExpr(MCConstantExpr::create(32, OutContext));
       EmitSHL(*OutStreamer, MCRegOP, imm, MCRegOP, STI);
       // Use register %o7 to load the lower 32 bits.
       MCOperand RegO7 = MCOperand::createReg(SP::O7);
@@ -225,10 +212,10 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
   }
 
   MCSymbol *StartLabel = OutContext.createTempSymbol();
-  MCSymbol *EndLabel   = OutContext.createTempSymbol();
+  MCSymbol *EndLabel = OutContext.createTempSymbol();
   MCSymbol *SethiLabel = OutContext.createTempSymbol();
 
-  MCOperand RegO7   = MCOperand::createReg(SP::O7);
+  MCOperand RegO7 = MCOperand::createReg(SP::O7);
 
   // <StartLabel>:
   //   <GET-PC> // This will be either `call <EndLabel>` or `rd %pc, %o7`.
@@ -337,7 +324,8 @@ void SparcAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   switch (MI->getOpcode()) {
-  default: break;
+  default:
+    break;
   case TargetOpcode::DBG_VALUE:
     // FIXME: Debug Value.
     return;
@@ -365,13 +353,13 @@ void SparcAsmPrinter::emitFunctionBodyStart() {
     return;
 
   const MachineRegisterInfo &MRI = MF->getRegInfo();
-  const unsigned globalRegs[] = { SP::G2, SP::G3, SP::G6, SP::G7, 0 };
+  const unsigned globalRegs[] = {SP::G2, SP::G3, SP::G6, SP::G7, 0};
   for (unsigned i = 0; globalRegs[i] != 0; ++i) {
     unsigned reg = globalRegs[i];
     if (MRI.use_empty(reg))
       continue;
 
-    if  (reg == SP::G6 || reg == SP::G7)
+    if (reg == SP::G6 || reg == SP::G7)
       getTargetStreamer().emitSparcRegisterIgnore(reg);
     else
       getTargetStreamer().emitSparcRegisterScratch(reg);
@@ -397,7 +385,7 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     PrintSymbolOperand(MO, O);
     break;
   case MachineOperand::MO_BlockAddress:
-    O <<  GetBlockAddressSymbol(MO.getBlockAddress())->getName();
+    O << GetBlockAddressSymbol(MO.getBlockAddress())->getName();
     break;
   case MachineOperand::MO_ExternalSymbol:
     O << MO.getSymbolName();
@@ -418,24 +406,24 @@ void SparcAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,
                                       raw_ostream &O) {
   printOperand(MI, opNum, O);
 
-  if (MI->getOperand(opNum+1).isReg() &&
-      MI->getOperand(opNum+1).getReg() == SP::G0)
-    return;   // don't print "+%g0"
-  if (MI->getOperand(opNum+1).isImm() &&
-      MI->getOperand(opNum+1).getImm() == 0)
-    return;   // don't print "+0"
+  if (MI->getOperand(opNum + 1).isReg() &&
+      MI->getOperand(opNum + 1).getReg() == SP::G0)
+    return; // don't print "+%g0"
+  if (MI->getOperand(opNum + 1).isImm() &&
+      MI->getOperand(opNum + 1).getImm() == 0)
+    return; // don't print "+0"
 
   O << "+";
-  printOperand(MI, opNum+1, O);
+  printOperand(MI, opNum + 1, O);
 }
 
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
 ///
 bool SparcAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                      const char *ExtraCode,
-                                      raw_ostream &O) {
+                                      const char *ExtraCode, raw_ostream &O) {
   if (ExtraCode && ExtraCode[0]) {
-    if (ExtraCode[1] != 0) return true; // Unknown modifier.
+    if (ExtraCode[1] != 0)
+      return true; // Unknown modifier.
 
     switch (ExtraCode[0]) {
     default:
@@ -487,7 +475,7 @@ bool SparcAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     }
     case 'f':
     case 'r':
-     break;
+      break;
     }
   }
 
@@ -501,7 +489,7 @@ bool SparcAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                             const char *ExtraCode,
                                             raw_ostream &O) {
   if (ExtraCode && ExtraCode[0])
-    return true;  // Unknown modifier
+    return true; // Unknown modifier
 
   O << '[';
   printMemOperand(MI, OpNo, O);

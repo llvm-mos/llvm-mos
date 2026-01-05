@@ -255,8 +255,8 @@ class Vectorizer {
 public:
   Vectorizer(Function &F, AliasAnalysis &AA, AssumptionCache &AC,
              DominatorTree &DT, ScalarEvolution &SE, TargetTransformInfo &TTI)
-      : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI),
-        DL(F.getDataLayout()), Builder(SE.getContext()) {}
+      : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI), DL(F.getDataLayout()),
+        Builder(SE.getContext()) {}
 
   bool run();
 
@@ -912,9 +912,8 @@ bool Vectorizer::vectorizeChain(Chain &C) {
 
     // Chain is in offset order, so C[0] is the instr with the lowest offset,
     // i.e. the root of the vector.
-    VecInst = Builder.CreateAlignedLoad(VecTy,
-                                        getLoadStorePointerOperand(C[0].Inst),
-                                        Alignment);
+    VecInst = Builder.CreateAlignedLoad(
+        VecTy, getLoadStorePointerOperand(C[0].Inst), Alignment);
 
     unsigned VecIdx = 0;
     for (const ChainElem &E : C) {
@@ -986,9 +985,7 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     // Chain is in offset order, so C[0] is the instr with the lowest offset,
     // i.e. the root of the vector.
     VecInst = Builder.CreateAlignedStore(
-        Vec,
-        getLoadStorePointerOperand(C[0].Inst),
-        Alignment);
+        Vec, getLoadStorePointerOperand(C[0].Inst), Alignment);
   }
 
   propagateMetadata(VecInst, C);
@@ -1289,8 +1286,9 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
   return std::nullopt;
 }
 
-std::optional<APInt> Vectorizer::getConstantOffsetSelects(
-    Value *PtrA, Value *PtrB, Instruction *ContextInst, unsigned Depth) {
+std::optional<APInt>
+Vectorizer::getConstantOffsetSelects(Value *PtrA, Value *PtrB,
+                                     Instruction *ContextInst, unsigned Depth) {
   if (Depth++ == MaxDepth)
     return std::nullopt;
 

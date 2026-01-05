@@ -683,7 +683,8 @@ bool CallLowering::determineAssignments(ValueAssigner &Assigner,
     ISD::ArgFlagsTy OrigFlags = Args[i].Flags[0];
     EVT CurVT = EVT::getEVT(Args[i].Ty);
 
-    MVT NewVT = TLI->getRegisterTypeForCallingConv(Ctx, CallConv, CurVT, OrigFlags);
+    MVT NewVT =
+        TLI->getRegisterTypeForCallingConv(Ctx, CallConv, CurVT, OrigFlags);
 
     // If we need to split the type over multiple regs, check it's a scenario
     // we currently support.
@@ -1120,7 +1121,8 @@ void CallLowering::getReturnInfo(CallingConv::ID CallConv, Type *RetTy,
   for (EVT VT : SplitVTs) {
     unsigned NumParts =
         TLI->getNumRegistersForCallingConv(Context, CallConv, VT, Flags);
-    MVT RegVT = TLI->getRegisterTypeForCallingConv(Context, CallConv, VT, Flags);
+    MVT RegVT =
+        TLI->getRegisterTypeForCallingConv(Context, CallConv, VT, Flags);
     Type *PartTy = EVT(RegVT).getTypeForEVT(Context);
 
     for (unsigned I = 0; I < NumParts; ++I) {

@@ -139,7 +139,7 @@ void SimpleRemoteEPCServer::handleDisconnect(Error Err) {
   // Shut down services.
   while (!Services.empty()) {
     ShutdownErr =
-      joinErrors(std::move(ShutdownErr), Services.back()->shutdown());
+        joinErrors(std::move(ShutdownErr), Services.back()->shutdown());
     Services.pop_back();
   }
 

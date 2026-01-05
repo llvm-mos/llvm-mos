@@ -155,11 +155,13 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
   if (Version >= 5) {
     UnitType = DebugInfoData.getU8(Offset);
     AddrSize = DebugInfoData.getU8(Offset);
-    AbbrOffset = isUnitDWARF64 ? DebugInfoData.getU64(Offset) : DebugInfoData.getU32(Offset);
+    AbbrOffset = isUnitDWARF64 ? DebugInfoData.getU64(Offset)
+                               : DebugInfoData.getU32(Offset);
     ValidType = dwarf::isUnitType(UnitType);
   } else {
     UnitType = 0;
-    AbbrOffset = isUnitDWARF64 ? DebugInfoData.getU64(Offset) : DebugInfoData.getU32(Offset);
+    AbbrOffset = isUnitDWARF64 ? DebugInfoData.getU64(Offset)
+                               : DebugInfoData.getU32(Offset);
     AddrSize = DebugInfoData.getU8(Offset);
   }
 
@@ -421,7 +423,7 @@ unsigned DWARFVerifier::verifyUnits(const DWARFUnitVector &Units) {
   unsigned Index = 1;
   for (const auto &Unit : Units) {
     OS << "Verifying unit: " << Index << " / " << Units.getNumUnits();
-    if (const char* Name = Unit->getUnitDIE(true).getShortName())
+    if (const char *Name = Unit->getUnitDIE(true).getShortName())
       OS << ", \"" << Name << '\"';
     OS << '\n';
     OS.flush();
@@ -536,14 +538,12 @@ bool DWARFVerifier::handleDebugInfo() {
   unsigned NumErrors = 0;
 
   OS << "Verifying .debug_info Unit Header Chain...\n";
-  DObj.forEachInfoSections([&](const DWARFSection &S) {
-    NumErrors += verifyUnitSection(S);
-  });
+  DObj.forEachInfoSections(
+      [&](const DWARFSection &S) { NumErrors += verifyUnitSection(S); });
 
   OS << "Verifying .debug_types Unit Header Chain...\n";
-  DObj.forEachTypesSections([&](const DWARFSection &S) {
-    NumErrors += verifyUnitSection(S);
-  });
+  DObj.forEachTypesSections(
+      [&](const DWARFSection &S) { NumErrors += verifyUnitSection(S); });
 
   OS << "Verifying non-dwo Units...\n";
   NumErrors += verifyUnits(DCtx.getNormalUnitsVector());
@@ -1027,8 +1027,7 @@ unsigned DWARFVerifier::verifyDebugInfoReferences(
     return DWARFDie();
   };
   unsigned NumErrors = 0;
-  for (const std::pair<const uint64_t, std::set<uint64_t>> &Pair :
-       References) {
+  for (const std::pair<const uint64_t, std::set<uint64_t>> &Pair : References) {
     if (GetDIEForOffset(Pair.first))
       continue;
     ++NumErrors;
@@ -2283,7 +2282,8 @@ bool DWARFVerifier::verifyDebugStrOffsets(
       });
       Success = false;
     }
-    for (uint64_t Index = 0; C && C.tell() + OffsetByteSize <= NextUnit; ++Index) {
+    for (uint64_t Index = 0; C && C.tell() + OffsetByteSize <= NextUnit;
+         ++Index) {
       uint64_t OffOff = C.tell();
       uint64_t StrOff = DA.getAddress(C);
       // check StrOff refers to the start of a string

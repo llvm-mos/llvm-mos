@@ -75,8 +75,7 @@ using SPSAllocActionCallPair =
     SPSTuple<SPSWrapperFunctionCall, SPSWrapperFunctionCall>;
 
 template <>
-class SPSSerializationTraits<SPSAllocActionCallPair,
-                             AllocActionCallPair> {
+class SPSSerializationTraits<SPSAllocActionCallPair, AllocActionCallPair> {
   using AL = SPSAllocActionCallPair::AsArgList;
 
 public:
@@ -84,13 +83,11 @@ public:
     return AL::size(AAP.Finalize, AAP.Dealloc);
   }
 
-  static bool serialize(SPSOutputBuffer &OB,
-                        const AllocActionCallPair &AAP) {
+  static bool serialize(SPSOutputBuffer &OB, const AllocActionCallPair &AAP) {
     return AL::serialize(OB, AAP.Finalize, AAP.Dealloc);
   }
 
-  static bool deserialize(SPSInputBuffer &IB,
-                          AllocActionCallPair &AAP) {
+  static bool deserialize(SPSInputBuffer &IB, AllocActionCallPair &AAP) {
     return AL::deserialize(IB, AAP.Finalize, AAP.Dealloc);
   }
 };

@@ -922,7 +922,7 @@ static Value *simplifyMulInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
        match(Op1, m_Exact(m_IDiv(m_Value(X), m_Specific(Op0)))))) // Y * (X / Y)
     return X;
 
-   if (Op0->getType()->isIntOrIntVectorTy(1)) {
+  if (Op0->getType()->isIntOrIntVectorTy(1)) {
     // mul i1 nsw is a special-case because -1 * -1 is poison (+1 is not
     // representable). All other cases reduce to 0, so just return 0.
     if (IsNSW)
@@ -4710,7 +4710,8 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   if (!match(CondVal, m_ICmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS))))
     return nullptr;
 
-  if (Value *V = simplifyCmpSelOfMaxMin(CmpLHS, CmpRHS, Pred, TrueVal, FalseVal))
+  if (Value *V =
+          simplifyCmpSelOfMaxMin(CmpLHS, CmpRHS, Pred, TrueVal, FalseVal))
     return V;
 
   // Canonicalize ne to eq predicate.
@@ -6200,7 +6201,7 @@ static Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
     return simplifyAddInst(LHS, RHS, /* IsNSW */ false, /* IsNUW */ false, Q,
                            MaxRecurse);
   case Instruction::Sub:
-    return simplifySubInst(LHS, RHS,  /* IsNSW */ false, /* IsNUW */ false, Q,
+    return simplifySubInst(LHS, RHS, /* IsNSW */ false, /* IsNUW */ false, Q,
                            MaxRecurse);
   case Instruction::Mul:
     return simplifyMulInst(LHS, RHS, /* IsNSW */ false, /* IsNUW */ false, Q,
@@ -7552,7 +7553,8 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
   case Instruction::Call:
     return simplifyCall(
         cast<CallInst>(I), NewOps.back(),
-        NewOps.drop_back(1 + cast<CallInst>(I)->getNumTotalBundleOperands()), Q);
+        NewOps.drop_back(1 + cast<CallInst>(I)->getNumTotalBundleOperands()),
+        Q);
   case Instruction::Freeze:
     return llvm::simplifyFreezeInst(NewOps[0], Q);
 #define HANDLE_CAST_INST(num, opc, clas) case Instruction::opc:

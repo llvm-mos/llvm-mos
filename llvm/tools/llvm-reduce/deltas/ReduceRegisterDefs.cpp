@@ -101,7 +101,7 @@ static void removeDefsFromFunction(Oracle &O, MachineFunction &MF) {
 
         unsigned OpFlags = getRegState(MO) & ~RegState::Implicit;
         InsPt = BuildMI(MBB, InsPt, DebugLoc(), TII->get(ImpDef))
-          .addReg(RegPair.Reg, OpFlags, RegPair.SubReg);
+                    .addReg(RegPair.Reg, OpFlags, RegPair.SubReg);
       }
 
       if (!HaveKeptDef)

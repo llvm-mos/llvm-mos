@@ -60,6 +60,6 @@ public:
     return &InstrInfo.getRegisterInfo();
   }
 };
-} // End llvm namespace
+} // namespace llvm
 
 #endif

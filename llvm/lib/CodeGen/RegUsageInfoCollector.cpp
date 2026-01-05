@@ -205,21 +205,21 @@ bool RegUsageInfoCollector::run(MachineFunction &MF) {
   }
 
   LLVM_DEBUG(
-    for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg) {
-      if (MachineOperand::clobbersPhysReg(&(RegMask[0]), PReg))
-        dbgs() << printReg(PReg, TRI) << " ";
-    }
+      for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg) {
+        if (MachineOperand::clobbersPhysReg(&(RegMask[0]), PReg))
+          dbgs() << printReg(PReg, TRI) << " ";
+      }
 
-    dbgs() << " \n----------------------------------------\n";
-  );
+          dbgs()
+          << " \n----------------------------------------\n";);
 
   PRUI.storeUpdateRegUsageInfo(F, RegMask);
 
   return false;
 }
 
-void RegUsageInfoCollector::
-computeCalleeSavedRegs(BitVector &SavedRegs, MachineFunction &MF) {
+void RegUsageInfoCollector::computeCalleeSavedRegs(BitVector &SavedRegs,
+                                                   MachineFunction &MF) {
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
 

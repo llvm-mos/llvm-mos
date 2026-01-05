@@ -93,6 +93,6 @@ Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
 // It returns nullptr if it cannot produce a constant.
 Constant *getConstantMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
                                          Type *LoadTy, const DataLayout &DL);
-}
-}
+} // namespace VNCoercion
+} // namespace llvm
 #endif

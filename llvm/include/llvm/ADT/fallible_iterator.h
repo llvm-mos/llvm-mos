@@ -206,9 +206,7 @@ private:
     ErrState.setInt(true);
   }
 
-  void resetCheckedFlag() {
-    *getErrPtr() = Error::success();
-  }
+  void resetCheckedFlag() { *getErrPtr() = Error::success(); }
 
   Underlying I;
   mutable PointerIntPair<Error *, 1> ErrState;

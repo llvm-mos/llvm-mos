@@ -57,7 +57,7 @@ public:
   /// the function stripped away.
   struct Element {
     Element(unsigned Priority, Function *Func, Value *Data)
-      : Priority(Priority), Func(Func), Data(Data) {}
+        : Priority(Priority), Func(Func), Data(Data) {}
 
     unsigned Priority;
     Function *Func;

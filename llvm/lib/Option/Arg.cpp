@@ -45,7 +45,7 @@ Arg::~Arg() {
   }
 }
 
-void Arg::print(raw_ostream& O) const {
+void Arg::print(raw_ostream &O) const {
   O << "<Opt:";
   Opt.print(O, /*AddNewLine=*/false);
 
@@ -53,7 +53,8 @@ void Arg::print(raw_ostream& O) const {
 
   O << " Values: [";
   for (unsigned i = 0, e = Values.size(); i != e; ++i) {
-    if (i) O << ", ";
+    if (i)
+      O << ", ";
     O << "'" << Values[i] << "'";
   }
 
@@ -100,9 +101,9 @@ void Arg::render(const ArgList &Args, ArgStringList &Output) const {
     break;
   }
 
- case Option::RenderJoinedStyle:
-    Output.push_back(Args.GetOrMakeJoinedArgString(
-                       getIndex(), getSpelling(), getValue(0)));
+  case Option::RenderJoinedStyle:
+    Output.push_back(
+        Args.GetOrMakeJoinedArgString(getIndex(), getSpelling(), getValue(0)));
     Output.append(Values.begin() + 1, Values.end());
     break;
 

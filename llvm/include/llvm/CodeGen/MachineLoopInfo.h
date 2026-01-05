@@ -97,7 +97,7 @@ private:
   bool isLoopInvariantImplicitPhysReg(Register Reg) const;
 
   explicit MachineLoop(MachineBasicBlock *MBB)
-    : LoopBase<MachineBasicBlock, MachineLoop>(MBB) {}
+      : LoopBase<MachineBasicBlock, MachineLoop>(MBB) {}
 
   MachineLoop() = default;
 };
@@ -176,7 +176,7 @@ public:
 };
 
 // Allow clients to walk the list of nested loops...
-template <> struct GraphTraits<const MachineLoop*> {
+template <> struct GraphTraits<const MachineLoop *> {
   using NodeRef = const MachineLoop *;
   using ChildIteratorType = MachineLoopInfo::iterator;
 
@@ -185,7 +185,7 @@ template <> struct GraphTraits<const MachineLoop*> {
   static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
-template <> struct GraphTraits<MachineLoop*> {
+template <> struct GraphTraits<MachineLoop *> {
   using NodeRef = MachineLoop *;
   using ChildIteratorType = MachineLoopInfo::iterator;
 

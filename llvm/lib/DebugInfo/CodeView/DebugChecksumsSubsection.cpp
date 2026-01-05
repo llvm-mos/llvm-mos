@@ -31,8 +31,8 @@ struct FileChecksumEntryHeader {
                               // Checksum bytes follow.
 };
 
-Error VarStreamArrayExtractor<FileChecksumEntry>::
-operator()(BinaryStreamRef Stream, uint32_t &Len, FileChecksumEntry &Item) {
+Error VarStreamArrayExtractor<FileChecksumEntry>::operator()(
+    BinaryStreamRef Stream, uint32_t &Len, FileChecksumEntry &Item) {
   BinaryStreamReader Reader(Stream);
 
   const FileChecksumEntryHeader *Header;

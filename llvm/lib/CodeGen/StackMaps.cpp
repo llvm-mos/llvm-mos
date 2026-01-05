@@ -52,10 +52,8 @@ static uint64_t getConstMetaVal(const MachineInstr &MI, unsigned Idx) {
   return MO.getImm();
 }
 
-StackMapOpers::StackMapOpers(const MachineInstr *MI)
-  : MI(MI) {
-  assert(getVarIdx() <= MI->getNumOperands() &&
-         "invalid stackmap definition");
+StackMapOpers::StackMapOpers(const MachineInstr *MI) : MI(MI) {
+  assert(getVarIdx() <= MI->getNumOperands() && "invalid stackmap definition");
 }
 
 PatchPointOpers::PatchPointOpers(const MachineInstr *MI)
@@ -79,11 +77,10 @@ unsigned PatchPointOpers::getNextScratchIdx(unsigned StartIdx) const {
 
   // Find the next scratch register (implicit def and early clobber)
   unsigned ScratchIdx = StartIdx, e = MI->getNumOperands();
-  while (ScratchIdx < e &&
-         !(MI->getOperand(ScratchIdx).isReg() &&
-           MI->getOperand(ScratchIdx).isDef() &&
-           MI->getOperand(ScratchIdx).isImplicit() &&
-           MI->getOperand(ScratchIdx).isEarlyClobber()))
+  while (ScratchIdx < e && !(MI->getOperand(ScratchIdx).isReg() &&
+                             MI->getOperand(ScratchIdx).isDef() &&
+                             MI->getOperand(ScratchIdx).isImplicit() &&
+                             MI->getOperand(ScratchIdx).isEarlyClobber()))
     ++ScratchIdx;
 
   assert(ScratchIdx != e && "No scratch register available");
@@ -280,8 +277,8 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     if (SubRegIdx)
       Offset = TRI->getSubRegIdxOffset(SubRegIdx);
 
-    Locs.emplace_back(Location::Register, TRI->getSpillSize(*RC),
-                      DwarfRegNum, Offset);
+    Locs.emplace_back(Location::Register, TRI->getSpillSize(*RC), DwarfRegNum,
+                      Offset);
     return ++MOI;
   }
 
@@ -531,8 +528,8 @@ void StackMaps::recordStackMap(const MCSymbol &L, const MachineInstr &MI) {
 
   StackMapOpers opers(&MI);
   const int64_t ID = MI.getOperand(PatchPointOpers::IDPos).getImm();
-  recordStackMapOpers(L, MI, ID, std::next(MI.operands_begin(),
-                                           opers.getVarIdx()),
+  recordStackMapOpers(L, MI, ID,
+                      std::next(MI.operands_begin(), opers.getVarIdx()),
                       MI.operands_end());
 }
 
@@ -685,7 +682,7 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
 
     for (const auto &Loc : CSLocs) {
       OS.emitIntValue(Loc.Type, 1);
-      OS.emitIntValue(0, 1);  // Reserved
+      OS.emitIntValue(0, 1); // Reserved
       OS.emitInt16(Loc.Size);
       OS.emitInt16(Loc.Reg);
       OS.emitInt16(0); // Reserved

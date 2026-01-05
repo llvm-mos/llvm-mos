@@ -118,7 +118,8 @@ AbstractCallSite::AbstractCallSite(const Use *U)
 
   NumCallbackCallSites++;
 
-  assert(CallbackEncMD->getNumOperands() >= 2 && "Incomplete !callback metadata");
+  assert(CallbackEncMD->getNumOperands() >= 2 &&
+         "Incomplete !callback metadata");
 
   unsigned NumCallOperands = CB->arg_size();
   // Skip the var-arg flag at the end when reading the metadata.

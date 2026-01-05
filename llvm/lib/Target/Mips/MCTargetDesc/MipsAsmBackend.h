@@ -49,6 +49,6 @@ public:
                     const MCSubtargetInfo *STI) const override;
 }; // class MipsAsmBackend
 
-} // namespace
+} // namespace llvm
 
 #endif

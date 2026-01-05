@@ -27,11 +27,11 @@
 
 // Forward references to llvm classes.
 namespace llvm {
-  class Function;
-  class GlobalValue;
-  class MemoryBuffer;
-  class TargetOptions;
-  class Value;
+class Function;
+class GlobalValue;
+class MemoryBuffer;
+class TargetOptions;
+class Value;
 
 //===----------------------------------------------------------------------===//
 /// C++ class which implements the opaque lto_module_t type.
@@ -40,8 +40,8 @@ struct LTOModule {
 private:
   struct NameAndAttributes {
     StringRef name;
-    uint32_t           attributes = 0;
-    bool               isFunction = false;
+    uint32_t attributes = 0;
+    bool isFunction = false;
     const GlobalValue *symbol = nullptr;
   };
 
@@ -56,7 +56,7 @@ private:
   std::vector<NameAndAttributes> _symbols;
 
   // _defines and _undefines only needed to disambiguate tentative definitions
-  StringSet<>                             _defines;
+  StringSet<> _defines;
   StringMap<NameAndAttributes> _undefines;
   std::vector<StringRef> _asm_undefines;
 
@@ -125,9 +125,7 @@ public:
   void setTargetTriple(Triple T) { getModule().setTargetTriple(T); }
 
   /// Get the number of symbols
-  uint32_t getSymbolCount() {
-    return _symbols.size();
-  }
+  uint32_t getSymbolCount() { return _symbols.size(); }
 
   /// Get the attributes for a symbol at the specified index.
   lto_symbol_attributes getSymbolAttributes(uint32_t index) {
@@ -190,8 +188,7 @@ private:
   void parseSymbols();
 
   /// Add a symbol which isn't defined just yet to a list to be resolved later.
-  void addPotentialUndefinedSymbol(ModuleSymbolTable::Symbol Sym,
-                                   bool isFunc);
+  void addPotentialUndefinedSymbol(ModuleSymbolTable::Symbol Sym, bool isFunc);
 
   /// Add a defined symbol to the list.
   void addDefinedSymbol(StringRef Name, const GlobalValue *def,
@@ -228,5 +225,5 @@ private:
   makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
                 LLVMContext &Context, bool ShouldBeLazy);
 };
-}
+} // namespace llvm
 #endif

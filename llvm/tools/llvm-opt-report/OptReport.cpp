@@ -41,28 +41,27 @@ using namespace llvm;
 
 // Mark all our options with this category, everything else (except for -version
 // and -help) will be hidden.
-static cl::OptionCategory
-    OptReportCategory("llvm-opt-report options");
+static cl::OptionCategory OptReportCategory("llvm-opt-report options");
+
+static cl::opt<std::string> InputFileName(cl::Positional, cl::desc("<input>"),
+                                          cl::init("-"),
+                                          cl::cat(OptReportCategory));
+
+static cl::opt<std::string> OutputFileName("o", cl::desc("Output file"),
+                                           cl::init("-"),
+                                           cl::cat(OptReportCategory));
 
 static cl::opt<std::string>
-  InputFileName(cl::Positional, cl::desc("<input>"), cl::init("-"),
+    InputRelDir("r", cl::desc("Root for relative input paths"), cl::init(""),
                 cl::cat(OptReportCategory));
 
-static cl::opt<std::string>
-  OutputFileName("o", cl::desc("Output file"), cl::init("-"),
-                 cl::cat(OptReportCategory));
-
-static cl::opt<std::string>
-  InputRelDir("r", cl::desc("Root for relative input paths"), cl::init(""),
-              cl::cat(OptReportCategory));
-
 static cl::opt<bool>
-  Succinct("s", cl::desc("Don't include vectorization factors, etc."),
-           cl::init(false), cl::cat(OptReportCategory));
-
-static cl::opt<bool>
-  NoDemangle("no-demangle", cl::desc("Don't demangle function names"),
+    Succinct("s", cl::desc("Don't include vectorization factors, etc."),
              cl::init(false), cl::cat(OptReportCategory));
+
+static cl::opt<bool> NoDemangle("no-demangle",
+                                cl::desc("Don't demangle function names"),
+                                cl::init(false), cl::cat(OptReportCategory));
 
 static cl::opt<std::string> ParserFormat("format",
                                          cl::desc("The format of the remarks."),
@@ -76,15 +75,14 @@ struct OptReportLocationItemInfo {
   bool Analyzed = false;
   bool Transformed = false;
 
-  OptReportLocationItemInfo &operator |= (
-    const OptReportLocationItemInfo &RHS) {
+  OptReportLocationItemInfo &operator|=(const OptReportLocationItemInfo &RHS) {
     Analyzed |= RHS.Analyzed;
     Transformed |= RHS.Transformed;
 
     return *this;
   }
 
-  bool operator < (const OptReportLocationItemInfo &RHS) const {
+  bool operator<(const OptReportLocationItemInfo &RHS) const {
     if (Analyzed < RHS.Analyzed)
       return true;
     else if (Analyzed > RHS.Analyzed)
@@ -105,7 +103,7 @@ struct OptReportLocationInfo {
   int InterleaveCount = 1;
   int UnrollCount = 1;
 
-  OptReportLocationInfo &operator |= (const OptReportLocationInfo &RHS) {
+  OptReportLocationInfo &operator|=(const OptReportLocationInfo &RHS) {
     Inlined |= RHS.Inlined;
     Unrolled |= RHS.Unrolled;
     Vectorized |= RHS.Vectorized;
@@ -119,7 +117,7 @@ struct OptReportLocationInfo {
     return *this;
   }
 
-  bool operator < (const OptReportLocationInfo &RHS) const {
+  bool operator<(const OptReportLocationInfo &RHS) const {
     if (Inlined < RHS.Inlined)
       return true;
     else if (RHS.Inlined < Inlined)
@@ -148,8 +146,10 @@ struct OptReportLocationInfo {
   }
 };
 
-typedef std::map<std::string, std::map<int, std::map<std::string, std::map<int,
-          OptReportLocationInfo>>>> LocationInfoTy;
+typedef std::map<
+    std::string,
+    std::map<int, std::map<std::string, std::map<int, OptReportLocationInfo>>>>
+    LocationInfoTy;
 } // anonymous namespace
 
 static bool readLocationInfo(LocationInfoTy &LocationInfo) {
@@ -370,13 +370,13 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
           OS << ":\n";
         }
 
-        // We try to keep the output as concise as possible. If only one thing on
-        // a given line could have been inlined, vectorized, etc. then we can put
-        // the marker on the source line itself. If there are multiple options
-        // then we want to distinguish them by placing the marker for each
-        // transformation on a separate line following the source line. When we
-        // do this, we use a '^' character to point to the appropriate column in
-        // the source line.
+        // We try to keep the output as concise as possible. If only one thing
+        // on a given line could have been inlined, vectorized, etc. then we can
+        // put the marker on the source line itself. If there are multiple
+        // options then we want to distinguish them by placing the marker for
+        // each transformation on a separate line following the source line.
+        // When we do this, we use a '^' character to point to the appropriate
+        // column in the source line.
 
         std::string USpaces(Succinct ? 0 : UCDigits, ' ');
         std::string VSpaces(Succinct ? 0 : VFDigits + ICDigits + 1, ' ');
@@ -410,12 +410,15 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
         };
 
         OS << llvm::format_decimal(L, LNDigits) << " ";
-        OS << (LLI.Inlined.Transformed && InlinedCols < 2 ? "I" :
-                (NothingInlined ? "" : " "));
-        OS << (LLI.Unrolled.Transformed && UnrolledCols < 2 ?
-                "U" + UStr(LLI) : (NothingUnrolled ? "" : " " + USpaces));
-        OS << (LLI.Vectorized.Transformed && VectorizedCols < 2 ?
-                "V" + VStr(LLI) : (NothingVectorized ? "" : " " + VSpaces));
+        OS << (LLI.Inlined.Transformed && InlinedCols < 2
+                   ? "I"
+                   : (NothingInlined ? "" : " "));
+        OS << (LLI.Unrolled.Transformed && UnrolledCols < 2
+                   ? "U" + UStr(LLI)
+                   : (NothingUnrolled ? "" : " " + USpaces));
+        OS << (LLI.Vectorized.Transformed && VectorizedCols < 2
+                   ? "V" + VStr(LLI)
+                   : (NothingVectorized ? "" : " " + VSpaces));
 
         OS << " | " << *LI << "\n";
 
@@ -424,14 +427,15 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
               (J.second.Unrolled.Transformed && UnrolledCols > 1) ||
               (J.second.Vectorized.Transformed && VectorizedCols > 1)) {
             OS << std::string(LNDigits + 1, ' ');
-            OS << (J.second.Inlined.Transformed &&
-                   InlinedCols > 1 ? "I" : (NothingInlined ? "" : " "));
-            OS << (J.second.Unrolled.Transformed &&
-                   UnrolledCols > 1 ? "U" + UStr(J.second) :
-                     (NothingUnrolled ? "" : " " + USpaces));
-            OS << (J.second.Vectorized.Transformed &&
-                   VectorizedCols > 1 ? "V" + VStr(J.second) :
-                     (NothingVectorized ? "" : " " + VSpaces));
+            OS << (J.second.Inlined.Transformed && InlinedCols > 1
+                       ? "I"
+                       : (NothingInlined ? "" : " "));
+            OS << (J.second.Unrolled.Transformed && UnrolledCols > 1
+                       ? "U" + UStr(J.second)
+                       : (NothingUnrolled ? "" : " " + USpaces));
+            OS << (J.second.Vectorized.Transformed && VectorizedCols > 1
+                       ? "V" + VStr(J.second)
+                       : (NothingVectorized ? "" : " " + VSpaces));
 
             OS << " | " << std::string(J.first - 1, ' ') << "^\n";
           }
@@ -443,8 +447,8 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
       // function contexts together and display each group separately. If
       // they're all the same, then we only display the line once without any
       // additional markings.
-      std::map<std::map<int, OptReportLocationInfo>,
-               std::set<std::string>> UniqueLIs;
+      std::map<std::map<int, OptReportLocationInfo>, std::set<std::string>>
+          UniqueLIs;
 
       OptReportLocationInfo AllLI;
       if (LII != FileInfo.end()) {

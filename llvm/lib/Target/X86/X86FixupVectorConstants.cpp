@@ -57,7 +57,8 @@ private:
 
 char X86FixupVectorConstantsPass::ID = 0;
 
-INITIALIZE_PASS(X86FixupVectorConstantsPass, DEBUG_TYPE, DEBUG_TYPE, false, false)
+INITIALIZE_PASS(X86FixupVectorConstantsPass, DEBUG_TYPE, DEBUG_TYPE, false,
+                false)
 
 FunctionPass *llvm::createX86FixupVectorConstants() {
   return new X86FixupVectorConstantsPass();
@@ -296,9 +297,8 @@ static Constant *rebuildZeroUpperCst(const Constant *C, unsigned NumBits,
   return nullptr;
 }
 
-static Constant *rebuildExtCst(const Constant *C, bool IsSExt,
-                               unsigned NumBits, unsigned NumElts,
-                               unsigned SrcEltBitWidth) {
+static Constant *rebuildExtCst(const Constant *C, bool IsSExt, unsigned NumBits,
+                               unsigned NumElts, unsigned SrcEltBitWidth) {
   unsigned DstEltBitWidth = NumBits / NumElts;
   assert((NumBits % NumElts) == 0 && (NumBits % SrcEltBitWidth) == 0 &&
          (DstEltBitWidth % SrcEltBitWidth) == 0 &&

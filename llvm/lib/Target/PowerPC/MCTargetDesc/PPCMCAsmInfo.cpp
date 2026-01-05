@@ -17,7 +17,7 @@
 
 using namespace llvm;
 
-void PPCELFMCAsmInfo::anchor() { }
+void PPCELFMCAsmInfo::anchor() {}
 
 const MCAsmInfo::AtSpecifier elfAtSpecifiers[] = {
     {PPC::S_DTPREL, "DTPREL"},
@@ -169,7 +169,7 @@ static bool evaluateAsRelocatable(const MCSpecifierExpr &Expr, MCValue &Res,
   return true;
 }
 
-PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
+PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple &T) {
   // FIXME: This is not always needed. For example, it is not needed in the
   // v2 abi.
   NeedsLocalForSize = true;
@@ -202,7 +202,7 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
 
   ZeroDirective = "\t.space\t";
   Data64bitsDirective = is64Bit ? "\t.quad\t" : nullptr;
-  AssemblerDialect = 1;           // New-Style mnemonics.
+  AssemblerDialect = 1; // New-Style mnemonics.
   LCOMMDirectiveAlignmentType = LCOMM::ByteAlignment;
 
   initializeAtSpecifiers(elfAtSpecifiers);

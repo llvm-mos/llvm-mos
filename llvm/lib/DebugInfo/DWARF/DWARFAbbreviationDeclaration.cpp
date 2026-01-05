@@ -30,9 +30,7 @@ void DWARFAbbreviationDeclaration::clear() {
   FixedAttributeSize.reset();
 }
 
-DWARFAbbreviationDeclaration::DWARFAbbreviationDeclaration() {
-  clear();
-}
+DWARFAbbreviationDeclaration::DWARFAbbreviationDeclaration() { clear(); }
 
 llvm::Expected<DWARFAbbreviationDeclaration::ExtractState>
 DWARFAbbreviationDeclaration::extract(DataExtractor Data, uint64_t *OffsetPtr) {

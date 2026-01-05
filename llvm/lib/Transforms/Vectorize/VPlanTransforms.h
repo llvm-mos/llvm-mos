@@ -306,7 +306,8 @@ struct VPlanTransforms {
                              DenseMap<VPValue *, VPValue *> &EndValues,
                              ScalarEvolution &SE);
 
-  /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
+  /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's
+  /// entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
 
   /// Hoist single-scalar loads with invariant addresses out of the vector loop
