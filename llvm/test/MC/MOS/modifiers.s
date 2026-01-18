@@ -141,3 +141,34 @@ _start:
 
 .byte $a9, mos24bank(1234)      ; CHECK: a9 00
 .byte $a9, mos24bank($1234)     ; CHECK: a9 00
+
+; Function-style modifiers in directives: mos8
+.byte $a9, mos8($1234)          ; CHECK: a9 34
+
+; Function-style modifiers in directives: mos16 (16-bit value)
+.2byte mos16($1234)             ; CHECK: 34
+                                ; CHECK: 12
+
+; Function-style modifiers in directives: mos24 byte extractors
+.byte $a9, mos24segmentlo($040506) ; CHECK: a9 06
+.byte $a9, mos24segmenthi($040506) ; CHECK: a9 05
+
+; Function-style modifiers in directives: mos24segment (16-bit value)
+.2byte mos24segment($040506)    ; CHECK: 06
+                                ; CHECK: 05
+
+; Function-style modifiers in directives: mos13 (13-bit value fits in 16 bits)
+.2byte mos13($1FFF)             ; CHECK: ff
+                                ; CHECK: 1f
+.2byte mos13($3FFF)             ; CHECK: ff
+                                ; CHECK: 1f
+
+; Function-style modifiers with symbolic expressions
+.byte $a9, mos16lo(val16)       ; CHECK: a9 03
+.byte $a9, mos16hi(val16)       ; CHECK: a9 02
+.byte $a9, mos24bank(val24)     ; CHECK: a9 04
+
+; Function-style modifiers with arithmetic expressions
+.byte $a9, mos16lo($1200 + $34) ; CHECK: a9 34
+.byte $a9, mos16hi($1200 + $34) ; CHECK: a9 12
+.byte $a9, mos24bank($040000 + $0506) ; CHECK: a9 04

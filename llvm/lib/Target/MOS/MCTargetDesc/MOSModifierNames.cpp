@@ -1,3 +1,11 @@
+//===-- MOSModifierNames.cpp - MOS modifier name table --------------------===//
+//
+// Part of LLVM-MOS, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "MOSModifierNames.h"
 #include "llvm/ADT/ArrayRef.h"
 
