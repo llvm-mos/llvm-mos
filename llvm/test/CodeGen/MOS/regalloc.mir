@@ -31,9 +31,9 @@ body: |
     ; CHECK-LABEL: name: spill_y
     ; CHECK: liveins: $y
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: dead early-clobber $rs8 = STStk $y, %stack.0, 0 :: (store (s8) into %stack.0)
+    ; CHECK-NEXT: dead early-clobber %1:imag16 = STStk $y, %stack.0, 0 :: (store (s8) into %stack.0)
     ; CHECK-NEXT: JSR &fn, mos_csr
-    ; CHECK-NEXT: $y, dead early-clobber $rs8 = LDStk %stack.0, 0 :: (load (s8) from %stack.0)
+    ; CHECK-NEXT: $y, dead early-clobber %2:imag16 = LDStk %stack.0, 0 :: (load (s8) from %stack.0)
     ; CHECK-NEXT: RTS implicit $y
     %0:yc = COPY $y
     JSR &fn, mos_csr

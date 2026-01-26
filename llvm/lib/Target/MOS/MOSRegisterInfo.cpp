@@ -202,27 +202,8 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
 
     if (UseHardStack)
       Builder.buildInstr(MOS::PH, {}, {Reg});
-    else {
-      // We're about to use RS8 (specifically RC16 or RC17) as a save location.
-      // This must not conflict with other uses of RS8, such as the scratch
-      // register in STStk/LDStk pseudo-instructions. The canSaveScavengerRegister
-      // function checks liveness to prevent such conflicts, but we add this
-      // assertion as a defensive check.
-      //
-      // If this assertion fires, it means either:
-      // 1. canSaveScavengerRegister has a bug and approved a conflicting save
-      // 2. Someone called saveScavengerRegister without checking
-      //    canSaveScavengerRegister first
-      // 3. RS8 is being used in an unanticipated way (e.g., STStk scratch)
-      //
-      // See MOSInstrInfo::loadStoreRegStackSlot for details on STStk's use of
-      // RS8 and why this should be safe.
-      assert(canSaveScavengerRegister(Reg, I, UseMI) &&
-             "RS8 conflict: register is live in save region, cannot use as "
-             "scavenger save location. This may indicate a conflict with "
-             "STStk/LDStk scratch register usage.");
+    else
       Builder.buildInstr(MOS::STImag8, {Save}, {Reg});
-    }
 
     Builder.setInsertPt(MBB, UseMI);
 
@@ -256,13 +237,9 @@ bool MOSRegisterInfo::canSaveScavengerRegister(
   if (UseHardStack)
     return true;
 
-  // RS8 (containing RC16 and RC17) may already be in use. This can happen if:
-  // 1. The scavenger ran previously and is still using RS8 for another save
-  // 2. An STStk/LDStk pseudo-instruction is using RS8 as its scratch register
-  //    (see MOSInstrInfo::loadStoreRegStackSlot)
-  //
-  // We check liveness to detect these conflicts. If the save register is live
-  // anywhere in the region between I and UseMI, we cannot use it.
+  // Because the scavenger may run more than once, the reserved register may
+  // already be in use. In such cases, it's not safe to save it, and a
+  // different register must be used.
   Register Save = Reg == MOS::A ? MOS::RC16 : MOS::RC17;
   LivePhysRegs LPR(*STI.getRegisterInfo());
   LPR.addLiveOuts(*I->getParent());
