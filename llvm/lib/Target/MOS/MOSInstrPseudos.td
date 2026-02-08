@@ -289,20 +289,18 @@ def DecDcpMB : MOSIncDecMB {
 
 // 65CE02 word increment/decrement. INW/DEW operate on a 16-bit word at a
 // zero-page address, replacing a multi-instruction INC/BNE/INC or DEC sequence.
+// Imaginary registers cannot alias IR-level memory, so these are not modeled
+// as loads/stores, allowing the compiler more freedom to reorder them.
 let Predicates = [Has65CE02] in {
   def INWImag : MOSPseudo {
     dag OutOperandList = (outs Imag16:$dst);
     dag InOperandList = (ins Imag16:$src);
     let Constraints = "$dst = $src";
-    let mayLoad = true;
-    let mayStore = true;
   }
   def DEWImag : MOSPseudo {
     dag OutOperandList = (outs Imag16:$dst);
     dag InOperandList = (ins Imag16:$src);
     let Constraints = "$dst = $src";
-    let mayLoad = true;
-    let mayStore = true;
   }
 }
 
