@@ -1,4 +1,5 @@
 ; RUN: llc -no-integrated-as < %s
+; UNSUPPORTED: limited-inline-asm
 
         %struct..0anon = type { [100 x i32] }
 

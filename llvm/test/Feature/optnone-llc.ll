@@ -7,6 +7,7 @@
 
 ; REQUIRES: asserts, default_triple
 ; UNSUPPORTED: target=nvptx{{.*}}
+; UNSUPPORTED: global-isel-only
 
 ; This test verifies that we don't run Machine Function optimizations
 ; on optnone functions, and that we can turn off FastISel.

@@ -1,5 +1,8 @@
 ;; This fixes https://github.com/llvm/llvm-project/issues/81555
 ; REQUIRES: object-emission
+; MOS does not emit debug info for variables with only line 0 (artificial)
+; locations. Without the variable, the type is not referenced and not emitted.
+; UNSUPPORTED: target=mos{{.*}}
 ; RUN: %llc_dwarf %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
 ; RUN: %llc_dwarf %s -filetype=obj -o - | llvm-dwarfdump - -verify | FileCheck %s --check-prefix=VERIFY
 

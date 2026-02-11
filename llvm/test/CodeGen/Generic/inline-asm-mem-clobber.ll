@@ -2,6 +2,7 @@
 
 ; XCore default subtarget does not support 8-byte alignment on stack.
 ; XFAIL: target=xcore{{.*}}
+; UNSUPPORTED: limited-inline-asm
 
 @G = common global i32 0, align 4
 

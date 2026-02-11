@@ -1,4 +1,5 @@
 ; RUN: llc < %s
+; UNSUPPORTED: no-vector-legalization
 
 define void @test1(ptr %ptr)
 {

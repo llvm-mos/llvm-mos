@@ -1,5 +1,6 @@
 ; Test that vectors are scalarized/lowered correctly.
 ; RUN: llc < %s
+; UNSUPPORTED: no-vector-legalization
 
 %d8 = type <8 x double>
 %f1 = type <1 x float>

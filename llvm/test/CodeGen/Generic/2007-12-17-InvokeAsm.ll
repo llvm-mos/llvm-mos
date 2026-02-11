@@ -2,6 +2,7 @@
 
 ; The test uses inline assembly with x86-specific constraints.
 ; UNSUPPORTED: target=nvptx{{.*}}
+; UNSUPPORTED: no-invoke-support
 
 
 define fastcc void @bc__support__high_resolution_time__initialize_clock_rate() personality ptr @__gxx_personality_v0 {

@@ -1,5 +1,6 @@
 ; RUN: llc < %s
 ; PR5495
+; UNSUPPORTED: no-invoke-support
 
 %"struct.std::__ctype_abstract_base<wchar_t>" = type { %"struct.std::locale::facet" }
 %"struct.std::basic_ios<char,std::char_traits<char> >" = type { %"struct.std::ios_base", ptr, i8, i8, ptr, ptr, ptr, ptr }
