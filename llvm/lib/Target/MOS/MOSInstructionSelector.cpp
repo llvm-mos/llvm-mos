@@ -486,8 +486,7 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
                      .add(Addr)
                      .addUse(CIn)
                      .cloneMemRefs(*Load);
-    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-      llvm_unreachable("Could not constrain absolute instruction.");
+    constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -519,8 +518,7 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
                      .addUse(Idx)
                      .addUse(CIn)
                      .cloneMemRefs(*Load);
-    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-      llvm_unreachable("Could not constrain absolute indexed instruction.");
+    constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -550,8 +548,7 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
                      .addUse(IndirAddr)
                      .addUse(CIn)
                      .cloneMemRefs(*Load);
-    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-      llvm_unreachable("Could not constrain indirect instruction.");
+    constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -583,8 +580,7 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
                      .addUse(Idx)
                      .addUse(CIn)
                      .cloneMemRefs(*Load);
-    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-      llvm_unreachable("Could not constrain indirect indexed instruction.");
+    constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -633,8 +629,7 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
                      .addUse(LHS)
                      .add(Addr)
                      .cloneMemRefs(*Load);
-    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-      llvm_unreachable("Could not constrain absolute logical instruction.");
+    constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -671,9 +666,7 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
                      .add(Addr)
                      .addUse(Idx)
                      .cloneMemRefs(*Load);
-    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-      llvm_unreachable(
-          "Could not constrain absolute indexed logical instruction.");
+    constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -708,8 +701,7 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
                      .addUse(LHS)
                      .addUse(IndirAddr)
                      .cloneMemRefs(*Load);
-    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-      llvm_unreachable("Could not constrain indirect logical instruction.");
+    constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -747,9 +739,7 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
                      .addUse(IndirAddr)
                      .addUse(Idx)
                      .cloneMemRefs(*Load);
-    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-      llvm_unreachable(
-          "Could not constrain indirect indexed logical instruction.");
+    constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -993,8 +983,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
         Builder.buildInstr(MOS::CmpBrZeroMultiByte).addMBB(Tgt).addImm(FlagVal);
     for (const MachineOperand &MO : CMPZ->uses())
       Branch.addUse(MO.getReg());
-    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -1004,8 +993,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
                       .addUse(Flag, RegState::Undef)
                       .addImm(FlagVal)
                       .addUse(LHS);
-    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -1017,8 +1005,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
                       .addImm(FlagVal)
                       .addUse(LHS)
                       .addImm(RHSConst);
-    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -1032,8 +1019,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
                       .addUse(LHS)
                       .add(Addr)
                       .cloneMemRefs(*Load);
-    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -1048,8 +1034,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
                       .add(Addr)
                       .addUse(Idx)
                       .cloneMemRefs(*Load);
-    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -1062,8 +1047,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
                       .addUse(LHS)
                       .addUse(RegAddr)
                       .cloneMemRefs(*Load);
-    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -1077,8 +1061,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
                       .addUse(RegAddr)
                       .addUse(Idx)
                       .cloneMemRefs(*Load);
-    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -1090,8 +1073,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
                       .addImm(FlagVal)
                       .addUse(LHS)
                       .addUse(RHS);
-    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -1100,8 +1082,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
                  .addMBB(MI.getOperand(1).getMBB())
                  .addUse(MI.getOperand(0).getReg())
                  .addImm(MI.getOperand(2).getImm());
-  if (!constrainSelectedInstRegOperands(*GBR, TII, TRI, RBI))
-    return false;
+  constrainSelectedInstRegOperands(*GBR, TII, TRI, RBI);
   MI.eraseFromParent();
   return true;
 }
@@ -1256,8 +1237,7 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
           {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
     }
   }
-  if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-    return false;
+  constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
   MI.eraseFromParent();
   return true;
 }
@@ -1305,10 +1285,8 @@ MOSInstructionSelector::selectFrameIndexLoHi(MachineInstr &MI) {
                .addImm(0)
                .addUse(Carry);
 
-  if (!constrainSelectedInstRegOperands(*LoAddr, TII, TRI, RBI))
-    llvm_unreachable("Cannot constrain instruction.");
-  if (!constrainSelectedInstRegOperands(*HiAddr, TII, TRI, RBI))
-    llvm_unreachable("Cannot constrain instruction.");
+  constrainSelectedInstRegOperands(*LoAddr, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*HiAddr, TII, TRI, RBI);
 
   return {LoAddr.getReg(0), HiAddr.getReg(0)};
 }
@@ -1321,8 +1299,7 @@ bool MOSInstructionSelector::selectAddr(MachineInstr &MI) {
 
   MachineInstrBuilder Instr = buildLdImm(Builder, MI.getOperand(0))
                                   .add(Op);
-  if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-    return false;
+  constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
   MI.eraseFromParent();
   return true;
 }
@@ -1333,12 +1310,10 @@ MOSInstructionSelector::selectAddrLoHi(MachineInstr &MI) {
   LLT S8 = LLT::scalar(8);
   auto LoImm = buildLdImm(Builder, S8).add(MI.getOperand(1));
   LoImm->getOperand(1).setTargetFlags(MOS::MO_LO);
-  if (!constrainSelectedInstRegOperands(*LoImm, TII, TRI, RBI))
-    llvm_unreachable("Cannot constrain instruction.");
+  constrainSelectedInstRegOperands(*LoImm, TII, TRI, RBI);
   auto HiImm = buildLdImm(Builder, S8).add(MI.getOperand(1));
   HiImm->getOperand(1).setTargetFlags(MOS::MO_HI);
-  if (!constrainSelectedInstRegOperands(*HiImm, TII, TRI, RBI))
-    llvm_unreachable("Cannot constrain instruction.");
+  constrainSelectedInstRegOperands(*HiImm, TII, TRI, RBI);
 
   return {LoImm.getReg(0), HiImm.getReg(0)};
 }
@@ -1474,8 +1449,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
 
   MI.setDesc(TII.get(Opcode));
   MI.removeOperand(0);
-  if (!constrainSelectedInstRegOperands(MI, TII, TRI, RBI))
-    return false;
+  constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
   return true;
 }
 
@@ -1537,8 +1511,7 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
                      .add(Addr)
                      .cloneMergedMemRefs({&MI, Load});
       replaceUsesAfter(Asl, CarryOut, Asl.getReg(0), MRI);
-      if (!constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI))
-        return false;
+      constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI);
       MI.eraseFromParent();
       return true;
     }
@@ -1551,8 +1524,7 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
                      .add(Addr)
                      .cloneMergedMemRefs({&MI, Load});
       replaceUsesAfter(Lsr, CarryOut, Lsr.getReg(0), MRI);
-      if (!constrainSelectedInstRegOperands(*Lsr, TII, TRI, RBI))
-        return false;
+      constrainSelectedInstRegOperands(*Lsr, TII, TRI, RBI);
       MI.eraseFromParent();
       return true;
     }
@@ -1567,8 +1539,7 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
                      .addUse(CarryIn)
                      .cloneMergedMemRefs({&MI, Load});
       replaceUsesAfter(Rol, CarryOut, Rol.getReg(0), MRI);
-      if (!constrainSelectedInstRegOperands(*Rol, TII, TRI, RBI))
-        return false;
+      constrainSelectedInstRegOperands(*Rol, TII, TRI, RBI);
       MI.eraseFromParent();
       return true;
     }
@@ -1582,8 +1553,7 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
                      .addUse(CarryIn)
                      .cloneMergedMemRefs({&MI, Load});
       replaceUsesAfter(Ror, CarryOut, Ror.getReg(0), MRI);
-      if (!constrainSelectedInstRegOperands(*Ror, TII, TRI, RBI))
-        return false;
+      constrainSelectedInstRegOperands(*Ror, TII, TRI, RBI);
       MI.eraseFromParent();
       return true;
     }
@@ -1601,8 +1571,7 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
                      .add(Addr)
                      .addUse(Idx)
                      .cloneMergedMemRefs({&MI, Load});
-      if (!constrainSelectedInstRegOperands(*Inc, TII, TRI, RBI))
-        return false;
+      constrainSelectedInstRegOperands(*Inc, TII, TRI, RBI);
       MI.eraseFromParent();
       return true;
     }
@@ -1616,8 +1585,7 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
                      .add(Addr)
                      .addUse(Idx)
                      .cloneMergedMemRefs({&MI, Load});
-      if (!constrainSelectedInstRegOperands(*Inc, TII, TRI, RBI))
-        return false;
+      constrainSelectedInstRegOperands(*Inc, TII, TRI, RBI);
       MI.eraseFromParent();
       return true;
     }
@@ -1634,8 +1602,7 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
                      .addUse(Idx)
                      .cloneMergedMemRefs({&MI, Load});
       replaceUsesAfter(Asl, CarryOut, Asl.getReg(0), MRI);
-      if (!constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI))
-        return false;
+      constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI);
       MI.eraseFromParent();
       return true;
     }
@@ -1651,8 +1618,7 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
                      .addUse(Idx)
                      .cloneMergedMemRefs({&MI, Load});
       replaceUsesAfter(Lsr, CarryOut, Lsr.getReg(0), MRI);
-      if (!constrainSelectedInstRegOperands(*Lsr, TII, TRI, RBI))
-        return false;
+      constrainSelectedInstRegOperands(*Lsr, TII, TRI, RBI);
       MI.eraseFromParent();
       return true;
     }
@@ -1670,8 +1636,7 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
                      .addUse(CarryIn)
                      .cloneMergedMemRefs({&MI, Load});
       replaceUsesAfter(Rol, CarryOut, Rol.getReg(0), MRI);
-      if (!constrainSelectedInstRegOperands(*Rol, TII, TRI, RBI))
-        return false;
+      constrainSelectedInstRegOperands(*Rol, TII, TRI, RBI);
       MI.eraseFromParent();
       return true;
     }
@@ -1688,8 +1653,7 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
                      .addUse(CarryIn)
                      .cloneMergedMemRefs({&MI, Load});
       replaceUsesAfter(Ror, CarryOut, Ror.getReg(0), MRI);
-      if (!constrainSelectedInstRegOperands(*Ror, TII, TRI, RBI))
-        return false;
+      constrainSelectedInstRegOperands(*Ror, TII, TRI, RBI);
       MI.eraseFromParent();
       return true;
     }
@@ -1711,8 +1675,7 @@ bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
     auto Instr = STI.hasSPC700()
         ? Builder.buildInstr(MOS::LDImm16SPC700, {Dst}, {Val})
         : Builder.buildInstr(MOS::LDImm16, {Dst, &MOS::GPRRegClass}, {Val});
-    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -1742,13 +1705,11 @@ bool MOSInstructionSelector::selectLshrShlE(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   if (mi_match(CarryIn, *Builder.getMRI(), m_SpecificICst(0))) {
     auto Asl = Builder.buildInstr(ShiftOpcode, {Dst, CarryOut}, {Src});
-    if (!constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI);
   } else {
     auto Rol =
         Builder.buildInstr(RotateOpcode, {Dst, CarryOut}, {Src, CarryIn});
-    if (!constrainSelectedInstRegOperands(*Rol, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Rol, TII, TRI, RBI);
   }
   MI.eraseFromParent();
   return true;
@@ -1849,8 +1810,7 @@ bool MOSInstructionSelector::selectAddE(MachineInstr &MI) {
     Instr->getOperand(2).setReg(Tmp);
   } else
     assert(MI.getOpcode() == MOS::G_UADDE);
-  if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-    return false;
+  constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
 
   MI.eraseFromParent();
   return true;
@@ -1889,7 +1849,8 @@ bool MOSInstructionSelector::selectIncDecMB(MachineInstr &MI) {
       Instr.addDef(Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass));
     Instr.addDef(MI.getOperand(0).getReg()).addUse(MI.getOperand(1).getReg());
     MI.eraseFromParent();
-    return constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
+    return true;
   }
 
   auto Instr = Builder.buildInstr(Opcode);
@@ -2014,8 +1975,7 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
   MI.setDesc(TII.get(Opcode));
   MI.addImplicitDefUseOperands(*MI.getMF());
   // Establish any tied operands and known register classes.
-  if (!constrainSelectedInstRegOperands(MI, TII, TRI, RBI))
-    return false;
+  constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
   // Make sure that the outputs have register classes.
   constrainGenericOp(MI);
   return true;

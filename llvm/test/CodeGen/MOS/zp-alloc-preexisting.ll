@@ -13,37 +13,73 @@ target triple = "mos-sim"
 define i64 @foo(i64 %live_across_call) norecurse {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sta .Lfoo_sstk ; 1-byte Folded Spill
-; CHECK-NEXT:    stx .Lfoo_sstk+1 ; 1-byte Folded Spill
+; CHECK-NEXT:    sta __rc16
+; CHECK-NEXT:    lda __rc20
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    lda __rc21
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    lda __rc22
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    lda __rc23
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    lda __rc16
+; CHECK-NEXT:    ldy __rc24
+; CHECK-NEXT:    sty .Lfoo_sstk ; 1-byte Folded Spill
+; CHECK-NEXT:    ldy __rc25
+; CHECK-NEXT:    sty .Lfoo_sstk+1 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldy __rc26
+; CHECK-NEXT:    sty .Lfoo_sstk+2 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldy __rc27
+; CHECK-NEXT:    sty .Lfoo_sstk+3 ; 1-byte Folded Spill
+; CHECK-NEXT:    sta __rc20
+; CHECK-NEXT:    stx __rc21
 ; CHECK-NEXT:    ldx __rc2
-; CHECK-NEXT:    stx .Lfoo_sstk+2 ; 1-byte Folded Spill
+; CHECK-NEXT:    stx __rc22
 ; CHECK-NEXT:    ldx __rc3
-; CHECK-NEXT:    stx .Lfoo_sstk+3 ; 1-byte Folded Spill
+; CHECK-NEXT:    stx __rc23
 ; CHECK-NEXT:    ldx __rc4
-; CHECK-NEXT:    stx .Lfoo_sstk+4 ; 1-byte Folded Spill
+; CHECK-NEXT:    stx __rc24
 ; CHECK-NEXT:    ldx __rc5
-; CHECK-NEXT:    stx .Lfoo_sstk+5 ; 1-byte Folded Spill
+; CHECK-NEXT:    stx __rc25
 ; CHECK-NEXT:    ldx __rc6
-; CHECK-NEXT:    stx .Lfoo_sstk+6 ; 1-byte Folded Spill
+; CHECK-NEXT:    stx __rc26
 ; CHECK-NEXT:    ldx __rc7
-; CHECK-NEXT:    stx .Lfoo_sstk+7 ; 1-byte Folded Spill
+; CHECK-NEXT:    stx __rc27
 ; CHECK-NEXT:    ldx global
 ; CHECK-NEXT:    stx global_noinit
 ; CHECK-NEXT:    jsr bar
-; CHECK-NEXT:    ldx .Lfoo_sstk+2 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx __rc22
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx .Lfoo_sstk+3 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx __rc23
 ; CHECK-NEXT:    stx __rc3
-; CHECK-NEXT:    ldx .Lfoo_sstk+4 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx __rc24
 ; CHECK-NEXT:    stx __rc4
-; CHECK-NEXT:    ldx .Lfoo_sstk+5 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx __rc25
 ; CHECK-NEXT:    stx __rc5
-; CHECK-NEXT:    ldx .Lfoo_sstk+6 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx __rc26
 ; CHECK-NEXT:    stx __rc6
-; CHECK-NEXT:    ldx .Lfoo_sstk+7 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx __rc27
 ; CHECK-NEXT:    stx __rc7
-; CHECK-NEXT:    ldx .Lfoo_sstk+1 ; 1-byte Folded Reload
-; CHECK-NEXT:    lda .Lfoo_sstk ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx __rc21
+; CHECK-NEXT:    lda __rc20
+; CHECK-NEXT:    sta __rc16
+; CHECK-NEXT:    ldy .Lfoo_sstk+3 ; 1-byte Folded Reload
+; CHECK-NEXT:    sty __rc27
+; CHECK-NEXT:    ldy .Lfoo_sstk+2 ; 1-byte Folded Reload
+; CHECK-NEXT:    sty __rc26
+; CHECK-NEXT:    ldy .Lfoo_sstk+1 ; 1-byte Folded Reload
+; CHECK-NEXT:    sty __rc25
+; CHECK-NEXT:    ldy .Lfoo_sstk ; 1-byte Folded Reload
+; CHECK-NEXT:    sty __rc24
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    sta __rc23
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    sta __rc22
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    sta __rc21
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    sta __rc20
+; CHECK-NEXT:    lda __rc16
 ; CHECK-NEXT:    rts
 entry:
   %0 = load i8, ptr @global, align 1

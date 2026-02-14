@@ -117,7 +117,7 @@ MOSRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
 // up.  Unfortunately, the way the register allocator actually uses this is very
 // heuristic, and if tuning these params doesn't suffice, we'll need to build a
 // more sophisticated analysis into the register allocator.
-unsigned MOSRegisterInfo::getCSRFirstUseCost(const MachineFunction &MF) const {
+unsigned MOSRegisterInfo::getCSRCost(const MachineFunction &MF) const {
   const MOSFrameLowering &TFL =
       *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
   return TFL.usesStaticStack(MF) ? 15 * 16384 / 10 : 5 * 16384 / 10;

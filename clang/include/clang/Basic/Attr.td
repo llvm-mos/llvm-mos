@@ -477,7 +477,7 @@ def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
 def TargetMSP430 : TargetArch<["msp430"]>;
 def TargetM68k : TargetArch<["m68k"]>;
 def TargetMOS : TargetArch<["mos"]>;
-def TargetRISCV : TargetArch<["riscv32", "riscv64"]>;
+def TargetRISCV : TargetArch<["riscv32", "riscv64", "riscv32be", "riscv64be"]>;
 def TargetX86 : TargetArch<["x86"]>;
 def TargetX86_64 : TargetArch<["x86_64"]>;
 def TargetAnyX86 : TargetArch<["x86", "x86_64"]>;
@@ -970,9 +970,10 @@ def XRayLogArgs : InheritableAttr {
 
 def PatchableFunctionEntry
     : InheritableAttr,
-      TargetSpecificAttr<TargetArch<
-          ["aarch64", "aarch64_be", "loongarch32", "loongarch64", "riscv32",
-           "riscv64", "x86", "x86_64", "ppc", "ppc64", "ppc64le"]>> {
+      TargetSpecificAttr<
+          TargetArch<["aarch64", "aarch64_be", "loongarch32", "loongarch64",
+                      "riscv32", "riscv64", "x86", "x86_64", "ppc", "ppc64",
+                      "ppc64le", "systemz"]>> {
   let Spellings = [GCC<"patchable_function_entry">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
   let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>,
@@ -2402,6 +2403,13 @@ def NoInline : DeclOrStmtAttr {
   let SimpleHandler = 1;
 }
 
+def NoOutline : DeclOrStmtAttr {
+  let Spellings = [Clang<"no_outline">];
+  let Subjects = SubjectList<[Function, ObjCMethod, Block], ErrorDiag>;
+  let Documentation = [NoOutlineDocs];
+  let SimpleHandler = true;
+}
+
 def NoMips16 : InheritableAttr, TargetSpecificAttr<TargetMips32> {
   let Spellings = [GCC<"nomips16">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
@@ -2754,6 +2762,13 @@ def NoStackProtector : InheritableAttr {
                    C23<"gnu", "no_stack_protector">, Declspec<"safebuffers">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [NoStackProtectorDocs];
+  let SimpleHandler = 1;
+}
+
+def StackProtectorIgnore : InheritableAttr {
+  let Spellings = [Clang<"stack_protector_ignore">];
+  let Subjects = SubjectList<[LocalVar]>;
+  let Documentation = [StackProtectorIgnoreDocs];
   let SimpleHandler = 1;
 }
 
@@ -5126,12 +5141,22 @@ def HLSLROV : TypeAttr {
 def HLSLResourceClass : TypeAttr {
   let Spellings = [CXX11<"hlsl", "resource_class">];
   let LangOpts = [HLSL];
-  let Args = [
-	EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
-				 /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
-				 ["SRV", "UAV", "CBuffer", "Sampler"],
-				 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
-  ];
+  let Args = [EnumArgument<
+      "ResourceClass", "llvm::hlsl::ResourceClass",
+      /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
+      ["SRV", "UAV", "CBuffer", "Sampler"],
+      /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLResourceDimension : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "dimension">];
+  let LangOpts = [HLSL];
+  let Args = [EnumArgument<
+      "Dimension", "llvm::hlsl::ResourceDimension",
+      /*is_string=*/true, ["Unknown", "1D", "2D", "3D", "Cube"],
+      ["Unknown", "Dim1D", "Dim2D", "Dim3D", "Cube"],
+      /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
   let Documentation = [InternalOnly];
 }
 
