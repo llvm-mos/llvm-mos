@@ -443,22 +443,42 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   // - "3. DEC (memory)" is also used for imaginary registers, which are
   //   modeled as registers, but exist in memory.
   MachineIRBuilder Builder(MI);
+  const TargetRegisterInfo &TRI = *MBB->getParent()->getSubtarget().getRegisterInfo();
   bool IsDec = MI.getOpcode() == MOS::DecMB || MI.getOpcode() == MOS::DecDcpMB;
   assert(IsDec || MI.getOpcode() == MOS::IncMB);
   unsigned FirstUseIdx = MI.getNumExplicitDefs();
   unsigned FirstDefIdx = IsDec ? 1 : 0;
   bool IsReg = MI.getOperand(FirstUseIdx).isReg();
   Register UseReg = IsReg ? MI.getOperand(FirstUseIdx).getReg() : Register();
-  bool IsImag16 = IsReg && MOS::Imag16RegClass.contains(UseReg);
-  bool IsMemReg = IsReg && (IsImag16 || MOS::Imag8RegClass.contains(UseReg));
-  bool IsLast = FirstUseIdx >= MI.getNumExplicitOperands() - 1;
+  bool IsImag8 = IsReg && MOS::Imag8RegClass.contains(UseReg);
+  bool IsMemReg = IsImag8;
+  bool IsLastByte = FirstUseIdx >= MI.getNumExplicitOperands() - 1;
+
+  // Defer the INW/DEW decision to post-RA so the register allocator can freely
+  // assign A/X/Y. Only use word ops when RA placed consecutive bytes into an
+  // adjacent Imag16 pair.
+  bool UseWordOp = false;
+  unsigned NextUseIdx = FirstUseIdx + 1;
+  Register WordReg;
+  if (IsImag8 && !IsLastByte && STI.has65CE02()) {
+    bool NextIsReg = MI.getOperand(NextUseIdx).isReg();
+    MCRegister NextUseReg =
+        NextIsReg ? MI.getOperand(NextUseIdx).getReg().asMCReg() : MCRegister();
+    if (NextIsReg && MOS::Imag8RegClass.contains(NextUseReg)) {
+      WordReg = TRI.getMatchingSuperReg(UseReg, MOS::sublo,
+                                        &MOS::Imag16RegClass);
+      if (WordReg && TRI.getSubReg(WordReg, MOS::subhi) == NextUseReg) {
+        bool IsLastWord = NextUseIdx >= MI.getNumExplicitOperands() - 1;
+        // INW chains via Z+BNE. DEW lacks borrow detection, so only use on
+        // the last word.
+        UseWordOp = !IsDec || IsLastWord;
+      }
+    }
+  }
+  bool IsLast = UseWordOp ? (NextUseIdx >= MI.getNumExplicitOperands() - 1)
+                           : IsLastByte;
   bool UseDcpOpcode = (!IsReg || IsMemReg) && !IsLast && STI.has6502X() &&
                       MI.getOpcode() == MOS::DecDcpMB;
-
-  // 65CE02 INW/DEW can increment/decrement a 16-bit word in place. INW sets
-  // Z on 16-bit wraparound, so it chains with BNE just like byte INC. DEW
-  // doesn't provide usable borrow detection, so only use it for the last word.
-  bool UseWordOp = IsImag16 && STI.has65CE02() && (!IsDec || IsLast);
 
   if (IsDec && !IsLast) {
     if (!IsReg || IsMemReg) {
@@ -471,9 +491,8 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   MachineInstrBuilder First;
   if (UseWordOp) {
     First = Builder.buildInstr(IsDec ? MOS::DEWImag : MOS::INWImag);
-    First.addDef(MI.getOperand(FirstDefIdx).getReg())
-        .addUse(MI.getOperand(FirstUseIdx).getReg());
-    ++FirstDefIdx;
+    First.addDef(WordReg).addUse(WordReg);
+    FirstDefIdx += 2; // Word op consumed both bytes
   } else if (UseDcpOpcode) {
     // 3. DEC (memory): Emit DCP opcode, if requested.
     if (IsMemReg) {
@@ -557,7 +576,7 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   if (IsDec)
     Rest.addDef(MI.getOperand(0).getReg());
   for (unsigned I = FirstDefIdx, E = MI.getNumExplicitOperands(); I != E; ++I) {
-    if (I == FirstUseIdx)
+    if (I == FirstUseIdx || (UseWordOp && I == NextUseIdx))
       continue;
     Rest.add(MI.getOperand(I));
     if (MI.getOperand(I).isReg())

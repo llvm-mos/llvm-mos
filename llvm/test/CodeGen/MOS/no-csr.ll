@@ -9,9 +9,17 @@ declare void @foo()
 define i8 @norecurse(i8 %a) optsize norecurse {
 ; CHECK-LABEL: norecurse:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sta .Lnorecurse_sstk ; 1-byte Folded Spill
+; CHECK-NEXT:    sta __rc16
+; CHECK-NEXT:    lda __rc20
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    lda __rc16
+; CHECK-NEXT:    sta __rc20
 ; CHECK-NEXT:    jsr foo
-; CHECK-NEXT:    lda .Lnorecurse_sstk ; 1-byte Folded Reload
+; CHECK-NEXT:    lda __rc20
+; CHECK-NEXT:    sta __rc16
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    sta __rc20
+; CHECK-NEXT:    lda __rc16
 ; CHECK-NEXT:    rts
   call void @foo()
   ret i8 %a

@@ -679,45 +679,18 @@ bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
   if (MI.getOpcode() == MOS::G_SUB)
     Amt = -Amt;
 
-  // 65CE02 has INW/DEW that operate on 16-bit words. Use i16 parts for
-  // increments (INW chains via Z+BNE). For decrements, restrict to exactly
-  // i16 since DEW lacks usable borrow detection for multi-word chains.
-  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
-  LLT PartType = S8;
-  unsigned SrcBits = MRI.getType(Src).getSizeInBits();
-  if (STI.has65CE02() && SrcBits >= 16 && (SrcBits % 16 == 0) &&
-      (Amt == 1 || (Amt == -1 && SrcBits == 16)))
-    PartType = LLT::scalar(16);
-
-  unsigned PartBits = PartType.getSizeInBits();
-  size_t NumParts = SrcBits / PartBits;
-
-  // buildUnmerge/buildMergeValues require >1 part; handle single-part directly.
-  SmallVector<Register> SrcParts;
-  if (NumParts > 1) {
-    auto Unmerge = Builder.buildUnmerge(PartType, Src);
-    for (MachineOperand &MO : unmergeDefs(Unmerge))
-      SrcParts.push_back(MO.getReg());
-  } else {
-    SrcParts.push_back(Src);
-  }
-
+  auto Unmerge = Builder.buildUnmerge(S8, Src);
+  size_t NumParts = llvm::size(unmergeDefs(Unmerge));
   auto IncDec = Builder.buildInstr(Amt == 1 ? MOS::G_INC : MOS::G_DEC);
   SmallVector<Register> DstParts;
   for (size_t Idx = 0; Idx < NumParts; ++Idx) {
-    Register R = MRI.createGenericVirtualRegister(PartType);
+    Register R = MRI.createGenericVirtualRegister(S8);
     IncDec.addDef(R);
     DstParts.push_back(R);
   }
-  for (Register R : SrcParts)
-    IncDec.addUse(R);
-
-  // See above: buildMergeValues asserts on single-part input.
-  if (NumParts > 1)
-    Builder.buildMergeValues(Dst, DstParts);
-  else
-    Builder.buildCopy(Dst, DstParts[0]);
-
+  for (MachineOperand &MO : unmergeDefs(Unmerge))
+    IncDec.addUse(MO.getReg());
+  Builder.buildMergeValues(Dst, DstParts);
   MI.eraseFromParent();
   return true;
 }

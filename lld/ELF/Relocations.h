@@ -119,9 +119,7 @@ enum RelExpr {
   RE_PPC32_PLTREL,
   RE_PPC64_CALL,
   RE_PPC64_CALL_PLT,
-  RE_PPC64_RELAX_TOC,
   RE_PPC64_TOCBASE,
-  RE_PPC64_RELAX_GOT_PC,
   RE_RISCV_ADD,
   RE_RISCV_LEB128,
   RE_RISCV_PC_INDIRECT,
@@ -312,7 +310,7 @@ template <bool is64> struct RelocsCrel {
         step();
       return *this;
     }
-    // For RelocationScanner::scanOne.
+    // For RelocScan::scan when TLS relocations consume multiple entries.
     void operator+=(size_t n) {
       for (; n; --n)
         operator++();

@@ -11,37 +11,37 @@ target triple = "mos-sim"
 define i64 @foo(i64 %live_across_call) norecurse {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sta mos8(.Lfoo_zp_stk) ; 1-byte Folded Spill
-; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+1) ; 1-byte Folded Spill
+; CHECK-NEXT:    sta mos8(.Lfoo_zp_stk)
+; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+1)
 ; CHECK-NEXT:    ldx __rc2
-; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+2) ; 1-byte Folded Spill
+; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+2)
 ; CHECK-NEXT:    ldx __rc3
-; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+3) ; 1-byte Folded Spill
+; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+3)
 ; CHECK-NEXT:    ldx __rc4
-; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+4) ; 1-byte Folded Spill
+; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+4)
 ; CHECK-NEXT:    ldx __rc5
-; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+5) ; 1-byte Folded Spill
+; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+5)
 ; CHECK-NEXT:    ldx __rc6
-; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+6) ; 1-byte Folded Spill
+; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+6)
 ; CHECK-NEXT:    ldx __rc7
-; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+7) ; 1-byte Folded Spill
+; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+7)
 ; CHECK-NEXT:    ldx global
 ; CHECK-NEXT:    stx mos8(global_noinit)
 ; CHECK-NEXT:    jsr bar
-; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+2) ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+2)
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+3) ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+3)
 ; CHECK-NEXT:    stx __rc3
-; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+4) ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+4)
 ; CHECK-NEXT:    stx __rc4
-; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+5) ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+5)
 ; CHECK-NEXT:    stx __rc5
-; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+6) ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+6)
 ; CHECK-NEXT:    stx __rc6
-; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+7) ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+7)
 ; CHECK-NEXT:    stx __rc7
-; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+1) ; 1-byte Folded Reload
-; CHECK-NEXT:    lda mos8(.Lfoo_zp_stk) ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+1)
+; CHECK-NEXT:    lda mos8(.Lfoo_zp_stk)
 ; CHECK-NEXT:    rts
 entry:
   %0 = load i8, ptr @global, align 1
@@ -189,9 +189,9 @@ define void @inr() norecurse "interrupt-norecurse" {
 ; CHECK-NEXT:    ldx __rc19
 ; CHECK-NEXT:    stx .Linr_sstk+16 ; 1-byte Folded Spill
 ; CHECK-NEXT:    ldx global
-; CHECK-NEXT:    stx mos8(.Linr_zp_stk) ; 1-byte Folded Spill
+; CHECK-NEXT:    stx mos8(.Linr_zp_stk)
 ; CHECK-NEXT:    jsr inr_callee
-; CHECK-NEXT:    ldx mos8(.Linr_zp_stk) ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx mos8(.Linr_zp_stk)
 ; CHECK-NEXT:    stx mos8(vol)
 ; CHECK-NEXT:    ldx .Linr_sstk+16 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc19
@@ -262,9 +262,9 @@ define void @apparent_recursion() norecurse {
 ; CHECK-LABEL: apparent_recursion:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldx global
-; CHECK-NEXT:    stx mos8(.Lapparent_recursion_zp_stk) ; 1-byte Folded Spill
+; CHECK-NEXT:    stx mos8(.Lapparent_recursion_zp_stk)
 ; CHECK-NEXT:    jsr apparent_recursion_callee
-; CHECK-NEXT:    ldx mos8(.Lapparent_recursion_zp_stk) ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx mos8(.Lapparent_recursion_zp_stk)
 ; CHECK-NEXT:    stx mos8(vol)
 ; CHECK-NEXT:    rts
 entry:
@@ -278,9 +278,9 @@ define void @apparent_recursion_callee() norecurse {
 ; CHECK-LABEL: apparent_recursion_callee:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldx global
-; CHECK-NEXT:    stx mos8(.Lapparent_recursion_callee_zp_stk) ; 1-byte Folded Spill
+; CHECK-NEXT:    stx mos8(.Lapparent_recursion_callee_zp_stk)
 ; CHECK-NEXT:    jsr ext_callback
-; CHECK-NEXT:    ldx mos8(.Lapparent_recursion_callee_zp_stk) ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx mos8(.Lapparent_recursion_callee_zp_stk)
 ; CHECK-NEXT:    stx mos8(vol)
 ; CHECK-NEXT:    rts
 entry:
