@@ -668,29 +668,52 @@ bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
 
   auto RHSConst =
       getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
-  if (!RHSConst || std::abs(RHSConst->Value.getSExtValue()) != 1)
+  if (!RHSConst || RHSConst->Value.getSExtValue() == 0)
     return Helper.narrowScalarAddSub(MI, 0, S8) !=
            LegalizerHelper::UnableToLegalize;
 
-  // Handle multi-byte increments and decrements.
-
+  // Normalize SUB to a negative ADD so threshold logic is direction-aware.
   assert(MI.getOpcode() == MOS::G_ADD || MI.getOpcode() == MOS::G_SUB);
   int64_t Amt = RHSConst->Value.getSExtValue();
   if (MI.getOpcode() == MOS::G_SUB)
     Amt = -Amt;
 
+  // 65CE02+ chained INC saves 1 byte and 4 cycles vs ADC for i16 += 2 when
+  // the value lives in A:X. Decrement threshold stays at 1 because chained
+  // DEC needs cmp #255 for borrow detection, adding 3 bytes per iteration.
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
+  unsigned MaxIncDec = (STI.has65CE02() && Amt > 0) ? 2 : 1;
+
+  unsigned AbsAmt = static_cast<unsigned>(std::abs(Amt));
+  if (AbsAmt > MaxIncDec)
+    return Helper.narrowScalarAddSub(MI, 0, S8) !=
+           LegalizerHelper::UnableToLegalize;
+
+  unsigned Opc = Amt > 0 ? MOS::G_INC : MOS::G_DEC;
+
   auto Unmerge = Builder.buildUnmerge(S8, Src);
   size_t NumParts = llvm::size(unmergeDefs(Unmerge));
-  auto IncDec = Builder.buildInstr(Amt == 1 ? MOS::G_INC : MOS::G_DEC);
-  SmallVector<Register> DstParts;
-  for (size_t Idx = 0; Idx < NumParts; ++Idx) {
-    Register R = MRI.createGenericVirtualRegister(S8);
-    IncDec.addDef(R);
-    DstParts.push_back(R);
-  }
+
+  SmallVector<Register> CurParts;
   for (MachineOperand &MO : unmergeDefs(Unmerge))
-    IncDec.addUse(MO.getReg());
-  Builder.buildMergeValues(Dst, DstParts);
+    CurParts.push_back(MO.getReg());
+
+  // Post-RA, each G_INC/G_DEC becomes IncMB/DecMB which emits INW/DEW when
+  // the register allocator places byte pairs in adjacent zero-page slots.
+  for (unsigned I = 0; I < AbsAmt; ++I) {
+    auto IncDec = Builder.buildInstr(Opc);
+    SmallVector<Register> NextParts;
+    for (size_t Idx = 0; Idx < NumParts; ++Idx) {
+      Register R = MRI.createGenericVirtualRegister(S8);
+      IncDec.addDef(R);
+      NextParts.push_back(R);
+    }
+    for (Register R : CurParts)
+      IncDec.addUse(R);
+    CurParts = NextParts;
+  }
+
+  Builder.buildMergeValues(Dst, CurParts);
   MI.eraseFromParent();
   return true;
 }
@@ -1465,9 +1488,24 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
     return true;
   }
 
-  if (ConstOffset && ConstOffset->Value.abs().isOne()) {
-    Builder.buildInstr(ConstOffset->Value.isOne() ? MOS::G_INC : MOS::G_DEC,
-                       {Result}, {Base});
+  // 65CE02+ pointers always live in ZP (Imag16), so chained INW/DEW (2 bytes,
+  // 7 cycles each) is a large win over generic 16-bit ADC (~13 bytes).
+  // Higher threshold than integers since there's no A:X register pressure.
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
+  unsigned MaxIncDec = STI.has65CE02() ? 4 : 1;
+  if (ConstOffset && !ConstOffset->Value.isZero() &&
+      ConstOffset->Value.abs().ule(MaxIncDec)) {
+    int64_t N = ConstOffset->Value.getSExtValue();
+    unsigned Opc = N > 0 ? MOS::G_INC : MOS::G_DEC;
+    unsigned Count = static_cast<unsigned>(std::abs(N));
+    Register Cur = Base;
+    for (unsigned I = 0; I < Count; ++I) {
+      Register Next = (I == Count - 1)
+                          ? Result
+                          : MRI.createGenericVirtualRegister(MRI.getType(Base));
+      Builder.buildInstr(Opc, {Next}, {Cur});
+      Cur = Next;
+    }
     MI.eraseFromParent();
     return true;
   }
