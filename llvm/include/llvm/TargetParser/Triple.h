@@ -253,8 +253,10 @@ public:
     Serenity,
     Vulkan, // Vulkan SPIR-V
     CheriotRTOS,
+    OpenCL,
     ChipStar,
-    LastOSType = ChipStar
+    Firmware,
+    LastOSType = Firmware
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -314,7 +316,6 @@ public:
     Mesh,
     Amplification,
     RootSignature,
-    OpenCL,
     OpenHOS,
     Mlibc,
 
@@ -628,11 +629,18 @@ public:
     return (getVendor() == Triple::Apple) && isOSBinFormatMachO();
   }
 
+  /// Is this an Apple firmware triple.
+  bool isAppleFirmware() const {
+    return (getVendor() == Triple::Apple) && isOSFirmware();
+  }
+
   /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, DriverKit, XROS, or
   /// bridgeOS).
   bool isOSDarwin() const {
     return isMacOSX() || isiOS() || isWatchOS() || isDriverKit() || isXROS() ||
-           isBridgeOS();
+           isBridgeOS() || isAppleFirmware();
+    // Apple firmware isn't necessarily a Darwin based OS, but for most intents
+    // and purposes it can be treated like a Darwin OS in the compiler.
   }
 
   bool isSimulatorEnvironment() const {
@@ -894,6 +902,8 @@ public:
 
   bool isOSManagarm() const { return getOS() == Triple::Managarm; }
 
+  bool isOSFirmware() const { return getOS() == Triple::Firmware; }
+
   bool isShaderStageEnvironment() const {
     EnvironmentType Env = getEnvironment();
     return Env == Triple::Pixel || Env == Triple::Vertex ||
@@ -1048,6 +1058,8 @@ public:
                ? PointerWidth == 32
                : PointerWidth == 64;
   }
+
+  bool isAVR() const { return getArch() == Triple::avr; }
 
   /// Tests whether the target is 32-bit LoongArch.
   bool isLoongArch32() const { return getArch() == Triple::loongarch32; }

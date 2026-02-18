@@ -8,46 +8,48 @@ target triple = "mos"
 define dso_local void @clear_screen(i8* nocapture writeonly %scr) local_unnamed_addr #0 {
 ; CHECK-LABEL: clear_screen:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldx #0
-; CHECK-NEXT:    stx __rc4
-; CHECK-NEXT:    ldx #216
-; CHECK-NEXT:    stx __rc5
-; CHECK-NEXT:    ldx __rc4
-; CHECK-NEXT:    stx .Lclear_screen_sstk+32 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx __rc5
-; CHECK-NEXT:    stx .Lclear_screen_sstk+33 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx #164
-; CHECK-NEXT:    stx __rc4
-; CHECK-NEXT:    ldx #216
-; CHECK-NEXT:    stx __rc5
-; CHECK-NEXT:    ldx __rc4
-; CHECK-NEXT:    stx .Lclear_screen_sstk+30 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx __rc5
-; CHECK-NEXT:    stx .Lclear_screen_sstk+31 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx #204
-; CHECK-NEXT:    stx __rc4
-; CHECK-NEXT:    ldx #216
-; CHECK-NEXT:    stx __rc5
-; CHECK-NEXT:    ldx __rc4
-; CHECK-NEXT:    stx .Lclear_screen_sstk+28 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx __rc5
-; CHECK-NEXT:    stx .Lclear_screen_sstk+29 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx #244
-; CHECK-NEXT:    stx __rc4
-; CHECK-NEXT:    ldx #216
-; CHECK-NEXT:    stx __rc5
-; CHECK-NEXT:    ldx __rc4
-; CHECK-NEXT:    stx .Lclear_screen_sstk+26 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx __rc5
-; CHECK-NEXT:    stx .Lclear_screen_sstk+27 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx #28
-; CHECK-NEXT:    stx __rc4
-; CHECK-NEXT:    ldx #217
-; CHECK-NEXT:    stx __rc5
-; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    lda __rc20
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    lda __rc21
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    lda __rc22
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    lda __rc23
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    ldx __rc24
 ; CHECK-NEXT:    stx .Lclear_screen_sstk+24 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    ldx __rc25
 ; CHECK-NEXT:    stx .Lclear_screen_sstk+25 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc26
+; CHECK-NEXT:    stx .Lclear_screen_sstk+26 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc27
+; CHECK-NEXT:    stx .Lclear_screen_sstk+27 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc28
+; CHECK-NEXT:    stx .Lclear_screen_sstk+28 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc29
+; CHECK-NEXT:    stx .Lclear_screen_sstk+29 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc30
+; CHECK-NEXT:    stx .Lclear_screen_sstk+30 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:    stx __rc28
+; CHECK-NEXT:    ldx #216
+; CHECK-NEXT:    stx __rc29
+; CHECK-NEXT:    ldx #164
+; CHECK-NEXT:    stx __rc26
+; CHECK-NEXT:    ldx #216
+; CHECK-NEXT:    stx __rc27
+; CHECK-NEXT:    ldx #204
+; CHECK-NEXT:    stx __rc24
+; CHECK-NEXT:    ldx #216
+; CHECK-NEXT:    stx __rc25
+; CHECK-NEXT:    ldx #244
+; CHECK-NEXT:    stx __rc22
+; CHECK-NEXT:    ldx #216
+; CHECK-NEXT:    stx __rc23
+; CHECK-NEXT:    ldx #28
+; CHECK-NEXT:    stx __rc20
+; CHECK-NEXT:    ldx #217
+; CHECK-NEXT:    stx __rc21
 ; CHECK-NEXT:    ldx #68
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #217
@@ -147,47 +149,48 @@ define dso_local void @clear_screen(i8* nocapture writeonly %scr) local_unnamed_
 ; CHECK-NEXT:    lda #15
 ; CHECK-NEXT:    ldx #3
 ; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    stx __rc30
 ; CHECK-NEXT:    ldx #232
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx .Lclear_screen_sstk+32 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx .Lclear_screen_sstk+33 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx #216
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    lda #11
-; CHECK-NEXT:    ldx #3
+; CHECK-NEXT:    ldx __rc30
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #232
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx .Lclear_screen_sstk+30 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx #164
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx .Lclear_screen_sstk+31 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx #216
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx .Lclear_screen_sstk+28 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx #204
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx .Lclear_screen_sstk+29 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx #216
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx .Lclear_screen_sstk+26 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx #244
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx .Lclear_screen_sstk+27 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx #216
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx .Lclear_screen_sstk+24 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx #28
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx .Lclear_screen_sstk+25 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx #217
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
@@ -301,7 +304,30 @@ define dso_local void @clear_screen(i8* nocapture writeonly %scr) local_unnamed_
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
-; CHECK-NEXT:    jmp __memset
+; CHECK-NEXT:    jsr __memset
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+30 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc30
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+29 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc29
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+28 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc28
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+27 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc27
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+26 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc26
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+25 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc25
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+24 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc24
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    sta __rc23
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    sta __rc22
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    sta __rc21
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    sta __rc20
+; CHECK-NEXT:    rts
 entry:
   call void @llvm.memset.p0i8.i16(i8* noundef nonnull align 1 dereferenceable(1000) %scr, i8 15, i16 1000, i1 false)
   call void @llvm.memset.p0i8.i16(i8* noundef nonnull align 2048 dereferenceable(1000) inttoptr (i16 -10240 to i8*), i8 11, i16 1000, i1 false)
