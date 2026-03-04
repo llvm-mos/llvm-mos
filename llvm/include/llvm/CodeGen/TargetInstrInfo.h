@@ -48,6 +48,7 @@ class InstrItineraryData;
 class LiveIntervals;
 class LiveVariables;
 class MachineLoop;
+class MachineLoopInfo;
 class MachineMemOperand;
 class MachineModuleInfo;
 class MachineRegisterInfo;
@@ -1792,7 +1793,8 @@ public:
   /// Allocate and return a hazard recognizer to use for by non-scheduling
   /// passes.
   virtual ScheduleHazardRecognizer *
-  CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const {
+  CreateTargetPostRAHazardRecognizer(const MachineFunction &MF,
+                                     MachineLoopInfo *MLI) const {
     return nullptr;
   }
 

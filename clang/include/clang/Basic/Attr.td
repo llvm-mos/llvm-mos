@@ -853,7 +853,7 @@ def AbiTag : Attr {
 def AddressSpace : TypeAttr {
   let Spellings = [Clang<"address_space">];
   let Args = [IntArgument<"AddressSpace">];
-  let Documentation = [Undocumented];
+  let Documentation = [AddressSpaceDocs];
 }
 
 def Alias : Attr {
@@ -2669,6 +2669,19 @@ def CountedByOrNull : DeclOrTypeAttr {
   let LangOpts = [COnly];
 }
 
+def NoFieldProtection : DeclOrTypeAttr {
+  let Spellings = [Clang<"no_field_protection">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def PointerFieldProtection : DeclOrTypeAttr {
+  let Spellings = [Clang<"pointer_field_protection">];
+  let Subjects = SubjectList<[CXXRecord], ErrorDiag>;
+  let Documentation = [Undocumented];
+  let SimpleHandler = 1;
+}
+
 def SizedBy : DeclOrTypeAttr {
   let Spellings = [Clang<"sized_by">];
   let Subjects = SubjectList<[Field], ErrorDiag>;
@@ -3307,6 +3320,7 @@ def InitPriority : InheritableAttr, TargetSpecificAttr<TargetSupportsInitPriorit
   let Args = [UnsignedArgument<"Priority">];
   let Subjects = SubjectList<[Var], ErrorDiag>;
   let Documentation = [InitPriorityDocs];
+  let IsTypeDependent = 1;
 }
 
 def Section : InheritableAttr {
@@ -4754,6 +4768,15 @@ def OMPDeclareTargetDecl : InheritableAttr {
   }];
 }
 
+def OMPTargetIndirectCall : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  // The attribute is added to the VarDecl of the function pointer used in
+  // an indirect call in a OMP target region.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
 def OMPAllocateDecl : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
@@ -5402,4 +5425,12 @@ def ModularFormat : InheritableAttr {
               VariadicStringArgument<"Aspects">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [ModularFormatDocs];
+}
+
+def OverflowBehavior : TypeAttr {
+  let Spellings = [Clang<"overflow_behavior">];
+  let Args = [IdentifierArgument<"BehaviorKind">];
+  let Subjects = SubjectList<[Var, TypedefName, Field], WarnDiag,
+                             "variables, typedefs, and data members">;
+  let Documentation = [Undocumented];
 }
