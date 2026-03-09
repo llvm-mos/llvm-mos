@@ -83,10 +83,15 @@ bool MOSAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
   return true;
 }
 
-static int getRelativeMOSPCCorrection(const bool IsPCRel16) {
-  // MOS's PC relative addressing is off by one or two from the standard LLVM
-  // PC relative convention.
-  return IsPCRel16 ? -2 : -1;
+static int getRelativeMOSPCCorrection(const bool IsPCRel16,
+                                      const bool Is65CE02 = false) {
+  // LLVM measures PC-relative fixups from the fixup location (opcode_addr + 1).
+  // 8-bit branches: offset from opcode_addr + 2 → correction -1.
+  // 65CE02 16-bit branches: also offset from opcode_addr + 2 → correction -1.
+  // 65816 BRL: offset from opcode_addr + 3 (past full instruction) → correction -2.
+  if (IsPCRel16 && !Is65CE02)
+    return -2;
+  return -1;
 }
 
 static bool fitsIntoFixup(const int64_t SignedValue, const bool IsPCRel16) {
@@ -150,10 +155,13 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &F,
     const bool IsPCRel16 = Fixup.getKind() == (MCFixupKind)MOS::PCRel16;
     assert((IsPCRel16 || Fixup.getKind() == (MCFixupKind)MOS::PCRel8) &&
            "unexpected target fixup kind");
+    const MCSubtargetInfo *STI = F.getSubtargetInfo();
+    bool Is65CE02 = STI && STI->hasFeature(MOS::Feature65CE02);
     // This fixup concerns a relative branch.
     // If the fixup is unresolved, we can't know if relaxation is needed.
     return !Resolved ||
-           !fitsIntoFixup(Value + getRelativeMOSPCCorrection(IsPCRel16), false);
+           !fitsIntoFixup(
+               Value + getRelativeMOSPCCorrection(IsPCRel16, Is65CE02), false);
   }
 
   // See if the expression is derived from a zero page symbol.
@@ -212,10 +220,12 @@ void MOSAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     return;
   }
   case MOS::PCRel8:
-  case MOS::PCRel16:
-    Value += getRelativeMOSPCCorrection(Kind == MOS::PCRel16);
-    ;
+  case MOS::PCRel16: {
+    const MCSubtargetInfo *STI = F.getSubtargetInfo();
+    bool Is65CE02 = STI && STI->hasFeature(MOS::Feature65CE02);
+    Value += getRelativeMOSPCCorrection(Kind == MOS::PCRel16, Is65CE02);
     break;
+  }
   default:
     break;
   }
