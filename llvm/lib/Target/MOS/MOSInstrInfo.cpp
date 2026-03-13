@@ -323,6 +323,11 @@ bool MOSInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
   case MOS::GBR:
   case MOS::BR:
   case MOS::BRA:
+    // 65CE02+ has 16-bit PC-relative branches; the MC layer relaxes 8-bit
+    // branches to 16-bit via BranchInstructionRelaxation table, so report
+    // the wider range to avoid unnecessary JMP trampolines at codegen level.
+    if (STI->has65CE02())
+      return -32766 <= BrOffset && BrOffset <= 32769;
     // BR range is [-128,127] starting from the PC location after the
     // instruction, which is two bytes after the start of the instruction.
     return -126 <= BrOffset && BrOffset <= 129;
