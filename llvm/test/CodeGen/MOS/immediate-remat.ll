@@ -17,19 +17,21 @@ define dso_local void @clear_screen(i8* nocapture writeonly %scr) local_unnamed_
 ; CHECK-NEXT:    lda __rc23
 ; CHECK-NEXT:    pha
 ; CHECK-NEXT:    ldx __rc24
-; CHECK-NEXT:    stx .Lclear_screen_sstk+24 ; 1-byte Folded Spill
+; CHECK-NEXT:    stx .Lclear_screen_sstk+22 ; 1-byte Folded Spill
 ; CHECK-NEXT:    ldx __rc25
-; CHECK-NEXT:    stx .Lclear_screen_sstk+25 ; 1-byte Folded Spill
+; CHECK-NEXT:    stx .Lclear_screen_sstk+23 ; 1-byte Folded Spill
 ; CHECK-NEXT:    ldx __rc26
-; CHECK-NEXT:    stx .Lclear_screen_sstk+26 ; 1-byte Folded Spill
+; CHECK-NEXT:    stx .Lclear_screen_sstk+24 ; 1-byte Folded Spill
 ; CHECK-NEXT:    ldx __rc27
-; CHECK-NEXT:    stx .Lclear_screen_sstk+27 ; 1-byte Folded Spill
+; CHECK-NEXT:    stx .Lclear_screen_sstk+25 ; 1-byte Folded Spill
 ; CHECK-NEXT:    ldx __rc28
-; CHECK-NEXT:    stx .Lclear_screen_sstk+28 ; 1-byte Folded Spill
+; CHECK-NEXT:    stx .Lclear_screen_sstk+26 ; 1-byte Folded Spill
 ; CHECK-NEXT:    ldx __rc29
-; CHECK-NEXT:    stx .Lclear_screen_sstk+29 ; 1-byte Folded Spill
+; CHECK-NEXT:    stx .Lclear_screen_sstk+27 ; 1-byte Folded Spill
 ; CHECK-NEXT:    ldx __rc30
-; CHECK-NEXT:    stx .Lclear_screen_sstk+30 ; 1-byte Folded Spill
+; CHECK-NEXT:    stx .Lclear_screen_sstk+28 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc31
+; CHECK-NEXT:    stx .Lclear_screen_sstk+29 ; 1-byte Folded Spill
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc28
 ; CHECK-NEXT:    ldx #216
@@ -51,13 +53,9 @@ define dso_local void @clear_screen(i8* nocapture writeonly %scr) local_unnamed_
 ; CHECK-NEXT:    ldx #217
 ; CHECK-NEXT:    stx __rc21
 ; CHECK-NEXT:    ldx #68
-; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    stx __rc30
 ; CHECK-NEXT:    ldx #217
-; CHECK-NEXT:    stx __rc5
-; CHECK-NEXT:    ldx __rc4
-; CHECK-NEXT:    stx .Lclear_screen_sstk+22 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx __rc5
-; CHECK-NEXT:    stx .Lclear_screen_sstk+23 ; 1-byte Folded Spill
+; CHECK-NEXT:    stx __rc31
 ; CHECK-NEXT:    ldx #108
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #217
@@ -149,7 +147,6 @@ define dso_local void @clear_screen(i8* nocapture writeonly %scr) local_unnamed_
 ; CHECK-NEXT:    lda #15
 ; CHECK-NEXT:    ldx #3
 ; CHECK-NEXT:    stx __rc4
-; CHECK-NEXT:    stx __rc30
 ; CHECK-NEXT:    ldx #232
 ; CHECK-NEXT:    jsr __memset
 ; CHECK-NEXT:    ldx #0
@@ -157,7 +154,7 @@ define dso_local void @clear_screen(i8* nocapture writeonly %scr) local_unnamed_
 ; CHECK-NEXT:    ldx #216
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    lda #11
-; CHECK-NEXT:    ldx __rc30
+; CHECK-NEXT:    ldx #3
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #232
 ; CHECK-NEXT:    jsr __memset
@@ -197,9 +194,9 @@ define dso_local void @clear_screen(i8* nocapture writeonly %scr) local_unnamed_
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx .Lclear_screen_sstk+22 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx #68
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx .Lclear_screen_sstk+23 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx #217
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
@@ -305,19 +302,21 @@ define dso_local void @clear_screen(i8* nocapture writeonly %scr) local_unnamed_
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx .Lclear_screen_sstk+30 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx __rc30
 ; CHECK-NEXT:    ldx .Lclear_screen_sstk+29 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx __rc29
+; CHECK-NEXT:    stx __rc31
 ; CHECK-NEXT:    ldx .Lclear_screen_sstk+28 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx __rc28
+; CHECK-NEXT:    stx __rc30
 ; CHECK-NEXT:    ldx .Lclear_screen_sstk+27 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx __rc27
+; CHECK-NEXT:    stx __rc29
 ; CHECK-NEXT:    ldx .Lclear_screen_sstk+26 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx __rc26
+; CHECK-NEXT:    stx __rc28
 ; CHECK-NEXT:    ldx .Lclear_screen_sstk+25 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx __rc25
+; CHECK-NEXT:    stx __rc27
 ; CHECK-NEXT:    ldx .Lclear_screen_sstk+24 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc26
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+23 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc25
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+22 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc24
 ; CHECK-NEXT:    pla
 ; CHECK-NEXT:    sta __rc23
