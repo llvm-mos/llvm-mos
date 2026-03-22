@@ -86,15 +86,8 @@ are using the MOS.cmake cache file.
 ## Build the LLVM-MOS project
 
 ```
-cmake --build build [-- [options] <target>]
+cmake --build build [-- [options]] distribution
 ```
-
-The default target will build all of LLVM.  The `check-all` target will run the
-regression tests.  The `distribution` target will build a collection of
-all the LLVM-MOS tools, suitable for redistribution.
-
-CMake will generate targets for each tool and library, and most
-LLVM sub-projects generate their own ``check-<project>`` target.
 
 Running a serial build will be **slow**.  To improve speed, try running a
 parallel build.  That's done by default in Ninja; for ``make``, use the option
