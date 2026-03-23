@@ -1,0 +1,167 @@
+# RUN: llc -mtriple=mos -mcpu=mos65ce02 -run-pass=branch-relaxation -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=CE02
+# RUN: llc -mtriple=mos -mcpu=mos45gs02 -run-pass=branch-relaxation -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=CE02
+# RUN: llc -mtriple=mos -mcpu=mos65c02 -run-pass=branch-relaxation -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=C02
+
+# Verify that 65CE02+ targets (including 45GS02) do not insert JMP trampolines
+# for far conditional or unconditional branches -- the MC layer will relax them
+# to 16-bit relative. Contrast with 65C02, which still needs trampolines.
+
+---
+name: far_conditional_branch
+tracksRegLiveness: true
+body: |
+  ; CE02-LABEL: name: far_conditional_branch
+  ; CE02-NOT: JMP
+  ; CE02:   BR %bb.0, $c, 0
+
+  ; C02-LABEL: name: far_conditional_branch
+  ; C02: bb.1:
+  ; C02:   BR %bb.2, $c, 1
+  ; C02:   JMP %bb.0
+  bb.0.entry:
+    liveins: $c
+    BR %bb.1, $c, 0
+
+  bb.1:
+    liveins: $c
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    BR %bb.0.entry, $c, 0
+
+  bb.2:
+    RTS
+...
+---
+name: far_unconditional_branch
+tracksRegLiveness: true
+body: |
+  ; CE02-LABEL: name: far_unconditional_branch
+  ; CE02-NOT: JMP
+  ; CE02:   RTS
+
+  ; C02-LABEL: name: far_unconditional_branch
+  ; C02:   JMP %bb.1
+  ; C02:   RTS
+  bb.0.entry:
+    BRA %bb.1
+
+  bb.1:
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    ; This BRA is kept as-is
+    BRA %bb.1
+
+  bb.2:
+    $a = LDImm 0
+    ; This BRA exceeds 8-bit range
+    BRA %bb.1
+
+  bb.3:
+    RTS
+...
+---
+# Short branches within 8-bit range should remain untouched on all targets.
+name: short_branch
+tracksRegLiveness: true
+body: |
+  ; CE02-LABEL: name: short_branch
+  ; CE02: BR %bb.0, $c, 0
+  ; CE02-NOT: JMP
+  ; CE02:   RTS
+
+  ; C02-LABEL: name: short_branch
+  ; C02: BR %bb.0, $c, 0
+  ; C02-NOT: JMP
+  ; C02:   RTS
+  bb.0.entry:
+    liveins: $c
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    $a = LDImm 0
+    BR %bb.0.entry, $c, 0
+
+  bb.1:
+    RTS
+...
