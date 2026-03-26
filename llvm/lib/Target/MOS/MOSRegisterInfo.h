@@ -44,6 +44,14 @@ public:
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &) const override;
 
+  /// MOS uses disjoint union register classes (Anyi8 = GPR ∪ Imag8) where
+  /// getLargestLegalSuperClass returns the union type. Blocking remat to
+  /// preserve inflation to this union is counterproductive: the "inflated"
+  /// class doesn't represent interchangeable registers, and blocking remat
+  /// forces expensive multi-byte COPY sequences instead of cheap immediate
+  /// reloads.
+  bool shouldBlockClassRestrictingRemat() const override { return false; }
+
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 

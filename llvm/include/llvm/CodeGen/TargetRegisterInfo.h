@@ -948,6 +948,21 @@ public:
     return RC;
   }
 
+  /// Return true if rematerialization during live range splitting should be
+  /// blocked when it would restrict the register class (i.e., when the
+  /// rematerialized instruction constrains to a subclass of what
+  /// getLargestLegalSuperClass would allow after inflation).
+  ///
+  /// The default is true: remat that restricts the class is blocked to avoid
+  /// undoing subclass-based splits (important on targets where splits move
+  /// values between register files, e.g. AMDGPU's VGPR/SGPR).
+  ///
+  /// Targets where getLargestLegalSuperClass returns a disjoint union class
+  /// that does not represent interchangeable allocation choices should
+  /// override this to return false, since blocking remat in that case forces
+  /// expensive copies instead of cheap reload instructions.
+  virtual bool shouldBlockClassRestrictingRemat() const { return true; }
+
   /// Return the register pressure "high water mark" for the specific register
   /// class. The scheduler is in high register pressure mode (for the specific
   /// register class) if it goes over the limit.

@@ -594,6 +594,13 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
 bool SplitEditor::rematWillIncreaseRestriction(const MachineInstr *DefMI,
                                                MachineBasicBlock &MBB,
                                                SlotIndex UseIdx) const {
+  // Allow targets to opt out of this check entirely. Targets with disjoint
+  // union register classes where getLargestLegalSuperClass returns a union type
+  // that doesn't represent interchangeable allocation choices should do so,
+  // since blocking remat forces expensive copies.
+  if (!TRI.shouldBlockClassRestrictingRemat())
+    return false;
+
   const MachineInstr *UseMI = LIS.getInstructionFromIndex(UseIdx);
   if (!UseMI)
     return false;
