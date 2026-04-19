@@ -594,26 +594,33 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
 bool SplitEditor::rematWillIncreaseRestriction(const MachineInstr *DefMI,
                                                MachineBasicBlock &MBB,
                                                SlotIndex UseIdx) const {
-  const MachineInstr *UseMI = LIS.getInstructionFromIndex(UseIdx);
-  if (!UseMI)
-    return false;
-
   // Currently code assumes rematerialization only happens for a def at 0.
   const unsigned DefOperandIdx = 0;
-  // We want to compute the static register class constraint for the instruction
-  // def. If it is a smaller subclass than getLargestLegalSuperClass at the use
-  // site, then rematerializing it will increase the constraints.
   const TargetRegisterClass *DefConstrainRC =
       DefMI->getRegClassConstraint(DefOperandIdx, &TII, &TRI);
   if (!DefConstrainRC)
     return false;
 
   const TargetRegisterClass *RC = MRI.getRegClass(Edit->getReg());
-
-  // We want to find the register class that can be inflated to after the split
-  // occurs in recomputeRegClass
   const TargetRegisterClass *SuperRC =
       TRI.getLargestLegalSuperClass(RC, *MBB.getParent());
+
+  // Correctness: the rematerialized instruction's op0 constraint is
+  // DefConstrainRC, but cloneVirtualRegister makes the new vreg inherit the
+  // edit-vreg's class RC. The verifier invariant requires the new vreg's
+  // class to be a subclass of DefConstrainRC. Normally recomputeRegClass
+  // (called by calculateRegClassAndHint after the split) narrows the new
+  // vreg's class to honor the cloned instruction's constraints, but it has
+  // an early exit when OldRC is already the largest legal super class, so
+  // no narrowing happens in that case. Detect it and skip remat if RC
+  // wouldn't already satisfy DefConstrainRC; defFromParent falls back to
+  // emitting a COPY, which imposes no static class constraint.
+  if (SuperRC == RC && !DefConstrainRC->hasSubClassEq(RC))
+    return true;
+
+  const MachineInstr *UseMI = LIS.getInstructionFromIndex(UseIdx);
+  if (!UseMI)
+    return false;
 
   Register DefReg = DefMI->getOperand(DefOperandIdx).getReg();
   const TargetRegisterClass *UseConstrainRC =
