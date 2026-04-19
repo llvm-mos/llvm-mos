@@ -21,6 +21,7 @@ define void @_ZN38SanitizerCommonInterceptors_Scanf_Test8TestBodyEv(ptr %.str.40
 ; CHECK-NEXT:    mov x23, x1
 ; CHECK-NEXT:    mov x25, x0
 ; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    mov w26, #1 ; =0x1
 ; CHECK-NEXT:    mov x0, #0 ; =0x0
 ; CHECK-NEXT:    mov w1, #1 ; =0x1
 ; CHECK-NEXT:    bl __ZL9testScanfPKcjz
@@ -39,7 +40,6 @@ define void @_ZN38SanitizerCommonInterceptors_Scanf_Test8TestBodyEv(ptr %.str.40
 ; CHECK-NEXT:    mov x0, #0 ; =0x0
 ; CHECK-NEXT:    mov w1, #0 ; =0x0
 ; CHECK-NEXT:    bl __ZL9testScanfPKcjz
-; CHECK-NEXT:    mov w26, #1 ; =0x1
 ; CHECK-NEXT:    stp xzr, x26, [sp]
 ; CHECK-NEXT:    mov x0, #0 ; =0x0
 ; CHECK-NEXT:    mov w1, #0 ; =0x0
