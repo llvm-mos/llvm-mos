@@ -78,11 +78,6 @@ MCAsmBackend *createMOSAsmBackend(const Target &T, const MCSubtargetInfo &STI,
   return new MOSAsmBackend(STI.getTargetTriple().getOS());
 }
 
-bool MOSAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                         uint64_t Value) const {
-  return true;
-}
-
 static int getRelativeMOSPCCorrection(const bool IsPCRel16) {
   // MOS's PC relative addressing is off by one or two from the standard LLVM
   // PC relative convention.

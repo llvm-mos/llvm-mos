@@ -25,6 +25,7 @@
 ; ENABLED-O1-NEXT:  WebAssemblyPostLegalizerCombiner
 ; ENABLED-NEXT:  RegBankSelect
 ; ENABLED-NEXT:  Analysis for ComputingKnownBits
+; ENABLED-O1-NEXT:  Dominator Tree Construction
 ; ENABLED-O1-NEXT:  Basic Alias Analysis (stateless AA impl)
 ; ENABLED-O1-NEXT:  Function Alias Analysis Results
 ; ENABLED-O1-NEXT:  Natural Loop Information

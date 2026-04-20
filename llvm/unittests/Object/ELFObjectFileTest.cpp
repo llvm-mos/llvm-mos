@@ -550,7 +550,8 @@ Sections:
   {
     SCOPED_TRACE("unsupported version");
     DoCheck(UnsupportedVersionYamlString,
-            "unsupported SHT_LLVM_BB_ADDR_MAP version: 6");
+            "unsupported BB address map version: 6 in SHT_LLVM_BB_ADDR_MAP "
+            "section with index 1");
   }
 
   SmallString<128> ZeroBBRangesYamlString(CommonYamlString);
@@ -586,8 +587,8 @@ Sections:
   {
     SCOPED_TRACE("truncated section");
     DoCheck(TruncatedYamlString,
-            "unable to decode LEB128 at offset 0x0000000b: "
-            "malformed uleb128, extends past end");
+            "unable to decode LEB128 at offset 0x0000000b: malformed uleb128, "
+            "extends past end in SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 
   // Check that we can detect when the encoded BB entry fields exceed the UINT32
@@ -618,11 +619,14 @@ Sections:
   {
     SCOPED_TRACE("overlimit fields");
     DoCheck(OverInt32LimitYamlStrings[0],
-            "ULEB128 value at offset 0x10 exceeds UINT32_MAX (0x100000000)");
+            "ULEB128 value at offset 0x10 exceeds UINT32_MAX (0x100000000) in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
     DoCheck(OverInt32LimitYamlStrings[1],
-            "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000)");
+            "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000) in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
     DoCheck(OverInt32LimitYamlStrings[2],
-            "ULEB128 value at offset 0x1a exceeds UINT32_MAX (0x100000000)");
+            "ULEB128 value at offset 0x1a exceeds UINT32_MAX (0x100000000) in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 
   // Check the proper error handling when the section has fields exceeding
@@ -647,11 +651,13 @@ Sections:
     SCOPED_TRACE("overlimit fields, truncated section");
     DoCheck(OverInt32LimitAndTruncated[0],
             "unable to decode LEB128 at offset 0x00000015: malformed uleb128, "
-            "extends past end");
+            "extends past end in SHT_LLVM_BB_ADDR_MAP section with index 1");
     DoCheck(OverInt32LimitAndTruncated[1],
-            "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000)");
+            "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000) in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
     DoCheck(OverInt32LimitAndTruncated[2],
-            "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000)");
+            "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000) in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 
   // Check for proper error handling when the 'NumBlocks' field is overridden
@@ -664,7 +670,8 @@ Sections:
   {
     SCOPED_TRACE("overlimit 'NumBlocks' field");
     DoCheck(OverLimitNumBlocks,
-            "ULEB128 value at offset 0xa exceeds UINT32_MAX (0x100000000)");
+            "ULEB128 value at offset 0xa exceeds UINT32_MAX (0x100000000) in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 
   // Check for proper error handling when the 'NumBBRanges' field is overridden
@@ -675,7 +682,8 @@ Sections:
         Feature:     0x8
 )";
   DoCheck(OverLimitNumBBRanges,
-          "ULEB128 value at offset 0x2 exceeds UINT32_MAX (0x100000000)");
+          "ULEB128 value at offset 0x2 exceeds UINT32_MAX (0x100000000) in "
+          "SHT_LLVM_BB_ADDR_MAP section with index 1");
 
   // Check that we can detect unsupported version for callsite offsets.
   SmallString<128> UnsupportedLowVersionYamlString(CommonYamlString);
@@ -693,8 +701,9 @@ Sections:
   {
     SCOPED_TRACE("unsupported version");
     DoCheck(UnsupportedLowVersionYamlString,
-            "version should be >= 3 for SHT_LLVM_BB_ADDR_MAP when callsite"
-            " offsets feature is enabled: version = 2 feature = 32");
+            "version should be >= 3 for BB address map when callsite offsets "
+            "feature is enabled: version = 2 feature = 32 in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 }
 
@@ -863,9 +872,9 @@ Sections:
   {
     SCOPED_TRACE("truncated section");
     DoCheckFails(TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
-                 "unable to read SHT_LLVM_BB_ADDR_MAP section with index 4: "
-                 "unable to decode LEB128 at offset 0x0000000a: malformed "
-                 "uleb128, extends past end");
+                 "unable to read BB addr map section: unable to decode LEB128 "
+                 "at offset 0x0000000a: malformed uleb128, extends past end in "
+                 "SHT_LLVM_BB_ADDR_MAP section with index 4");
 
     // Check that we can read the other section's bb-address-maps which are
     // valid.
@@ -922,7 +931,8 @@ Sections:
   {
     SCOPED_TRACE("unsupported version");
     DoCheck(UnsupportedLowVersionYamlString,
-            "unsupported SHT_LLVM_BB_ADDR_MAP version: 1");
+            "unsupported BB address map version: 1 in SHT_LLVM_BB_ADDR_MAP "
+            "section with index 1");
   }
 
   // Check that we fail when function entry count is enabled but not provided.
@@ -935,7 +945,8 @@ Sections:
   {
     SCOPED_TRACE("missing function entry count");
     DoCheck(MissingFuncEntryCount,
-            "unexpected end of data at offset 0x2 while reading [0x2, 0xa)");
+            "unexpected end of data at offset 0x2 while reading [0x2, 0xa) in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 
   // Check that we fail when basic block frequency is enabled but not provided.
@@ -953,8 +964,9 @@ Sections:
 
   {
     SCOPED_TRACE("missing bb frequency");
-    DoCheck(MissingBBFreq, "unable to decode LEB128 at offset 0x0000000f: "
-                           "malformed uleb128, extends past end");
+    DoCheck(MissingBBFreq,
+            "unable to decode LEB128 at offset 0x0000000f: malformed uleb128, "
+            "extends past end in SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 
   // Check that we fail when branch probability is enabled but not provided.
@@ -990,8 +1002,9 @@ Sections:
 
   {
     SCOPED_TRACE("missing branch probability");
-    DoCheck(MissingBrProb, "unable to decode LEB128 at offset 0x00000017: "
-                           "malformed uleb128, extends past end");
+    DoCheck(MissingBrProb,
+            "unable to decode LEB128 at offset 0x00000017: malformed uleb128, "
+            "extends past end in SHT_LLVM_BB_ADDR_MAP section with index 1");
   }
 }
 
@@ -1478,10 +1491,10 @@ Sections:
 
   {
     SCOPED_TRACE("truncated section");
-    DoCheckFails(
-        TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
-        "unable to read SHT_LLVM_BB_ADDR_MAP section with index 6: "
-        "unexpected end of data at offset 0xa while reading [0x4, 0xc)");
+    DoCheckFails(TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
+                 "unable to read BB addr map section: unexpected end of data "
+                 "at offset 0xa while reading [0x4, 0xc) in "
+                 "SHT_LLVM_BB_ADDR_MAP section with index 6");
     // Check that we can read the other section's bb-address-maps which are
     // valid.
     DoCheckSucceeds(TruncatedYamlString, /*TextSectionIndex=*/2,

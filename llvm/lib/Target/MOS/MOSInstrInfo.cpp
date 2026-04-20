@@ -88,16 +88,19 @@ Register MOSInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 void MOSInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
                                  Register DestReg, unsigned SubIdx,
-                                 const MachineInstr &Orig) const {
+                                 const MachineInstr &Orig,
+                                 LaneBitmask UsedLanes) const {
   const TargetRegisterInfo &TRI = *STI->getRegisterInfo();
   if (Orig.getOpcode() == MOS::LDImm16) {
+    // TODO: Use UsedLanes to narrow LDImm16 to LDImm when only one 8-bit lane
+    // is live at the rematerialization point.
     MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
     MI->removeOperand(1);
     MI->substituteRegister(MI->getOperand(0).getReg(), DestReg, SubIdx, TRI);
     MI->setDesc(get(MOS::LDImm16Remat));
     MBB.insert(I, MI);
   } else {
-    TargetInstrInfo::reMaterialize(MBB, I, DestReg, SubIdx, Orig);
+    TargetInstrInfo::reMaterialize(MBB, I, DestReg, SubIdx, Orig, UsedLanes);
   }
 }
 

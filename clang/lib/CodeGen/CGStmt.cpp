@@ -20,6 +20,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -100,6 +101,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::SEHExceptStmtClass:
   case Stmt::SEHFinallyStmtClass:
   case Stmt::MSDependentExistsStmtClass:
+  case Stmt::UnresolvedSYCLKernelCallStmtClass:
     llvm_unreachable("invalid statement class to emit generically");
   case Stmt::NullStmtClass:
   case Stmt::CompoundStmtClass:
@@ -228,6 +230,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     break;
   case Stmt::OMPReverseDirectiveClass:
     EmitOMPReverseDirective(cast<OMPReverseDirective>(*S));
+    break;
+  case Stmt::OMPSplitDirectiveClass:
+    EmitOMPSplitDirective(cast<OMPSplitDirective>(*S));
     break;
   case Stmt::OMPInterchangeDirectiveClass:
     EmitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*S));
@@ -544,21 +549,7 @@ bool CodeGenFunction::EmitSimpleStmt(const Stmt *S,
     EmitSEHLeaveStmt(cast<SEHLeaveStmt>(*S));
     break;
   case Stmt::SYCLKernelCallStmtClass:
-    // SYCL kernel call statements are generated as wrappers around the body
-    // of functions declared with the sycl_kernel_entry_point attribute. Such
-    // functions are used to specify how a SYCL kernel (a function object) is
-    // to be invoked; the SYCL kernel call statement contains a transformed
-    // variation of the function body and is used to generate a SYCL kernel
-    // caller function; a function that serves as the device side entry point
-    // used to execute the SYCL kernel. The sycl_kernel_entry_point attributed
-    // function is invoked by host code in order to trigger emission of the
-    // device side SYCL kernel caller function and to generate metadata needed
-    // by SYCL run-time library implementations; the function is otherwise
-    // intended to have no effect. As such, the function body is not evaluated
-    // as part of the invocation during host compilation (and the function
-    // should not be called or emitted during device compilation); the SYCL
-    // kernel call statement is thus handled as a null statement for the
-    // purpose of code generation.
+    EmitSYCLKernelCallStmt(cast<SYCLKernelCallStmt>(*S));
     break;
   }
   return true;
@@ -629,7 +620,7 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
 }
 
 void CodeGenFunction::SimplifyForwardingBlocks(llvm::BasicBlock *BB) {
-  llvm::BranchInst *BI = dyn_cast<llvm::BranchInst>(BB->getTerminator());
+  llvm::UncondBrInst *BI = dyn_cast<llvm::UncondBrInst>(BB->getTerminator());
 
   // If there is a cleanup stack, then we it isn't worth trying to
   // simplify this block (we would need to remove it from the scope map
@@ -638,14 +629,14 @@ void CodeGenFunction::SimplifyForwardingBlocks(llvm::BasicBlock *BB) {
     return;
 
   // Can only simplify direct branches.
-  if (!BI || !BI->isUnconditional())
+  if (!BI)
     return;
 
   // Can only simplify empty blocks.
   if (BI->getIterator() != BB->begin())
     return;
 
-  BB->replaceAllUsesWith(BI->getSuccessor(0));
+  BB->replaceAllUsesWith(BI->getSuccessor());
   BI->eraseFromParent();
   BB->eraseFromParent();
 }
@@ -676,7 +667,7 @@ void CodeGenFunction::EmitBranch(llvm::BasicBlock *Target) {
   // terminator, don't emit it.
   llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
 
-  if (!CurBB || CurBB->getTerminator()) {
+  if (!CurBB || CurBB->hasTerminator()) {
     // If there is no insert point or the previous block is already
     // terminated, don't touch it.
   } else {
@@ -877,7 +868,7 @@ void CodeGenFunction::EmitIndirectGotoStmt(const IndirectGotoStmt &S) {
   cast<llvm::PHINode>(IndGotoBB->begin())->addIncoming(V, CurBB);
 
   EmitBranch(IndGotoBB);
-  if (CurBB && CurBB->getTerminator())
+  if (CurBB && CurBB->hasTerminator())
     addInstToCurrentSourceAtom(CurBB->getTerminator(), nullptr);
 }
 

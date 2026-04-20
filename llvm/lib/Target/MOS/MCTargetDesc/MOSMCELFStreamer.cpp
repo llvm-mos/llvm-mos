@@ -31,17 +31,13 @@ using namespace llvm;
 
 namespace llvm {
 
-void MOSMCELFStreamer::initSections(bool NoExecStack,
-                                    const MCSubtargetInfo &STI) {
+void MOSMCELFStreamer::initSections(const MCSubtargetInfo &STI) {
   Has65816Instructions =
       STI.hasFeature(MOS::FeatureW65816) || STI.hasFeature(MOS::Feature65EL02);
 
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
   emitCodeAlignment(Align(1), &STI);
-
-  if (NoExecStack)
-    switchSection(Ctx.getAsmInfo()->getStackSection(Ctx, false));
 }
 
 static bool HasPrefix(StringRef Name, StringRef Prefix) {

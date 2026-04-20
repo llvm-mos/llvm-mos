@@ -180,12 +180,9 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     return;
   }
 
-  // There is really no runtime library on AMDGPU, apart from
-  // __kmpc_alloc/free_shared.
+  // There is really no runtime library on AMDGPU.
   if (T.isAMDGPU()) {
     TLI.disableAllFunctions();
-    TLI.setAvailable(llvm::LibFunc___kmpc_alloc_shared);
-    TLI.setAvailable(llvm::LibFunc___kmpc_free_shared);
     return;
   }
 
@@ -823,8 +820,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     // Miscellaneous other functions not provided.
     TLI.setUnavailable(LibFunc_atomic_load);
     TLI.setUnavailable(LibFunc_atomic_store);
-    TLI.setUnavailable(LibFunc___kmpc_alloc_shared);
-    TLI.setUnavailable(LibFunc___kmpc_free_shared);
     TLI.setUnavailable(LibFunc_dunder_strndup);
     TLI.setUnavailable(LibFunc_bcmp);
     TLI.setUnavailable(LibFunc_bcopy);
@@ -872,8 +867,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setAvailable(LibFunc_putc_unlocked);
     TLI.setAvailable(LibFunc_putchar_unlocked);
 
-    TLI.setUnavailable(LibFunc___kmpc_alloc_shared);
-    TLI.setUnavailable(LibFunc___kmpc_free_shared);
     TLI.setUnavailable(LibFunc_dunder_strndup);
     TLI.setUnavailable(LibFunc_memccpy_chk);
     TLI.setUnavailable(LibFunc_strlen_chk);
@@ -913,8 +906,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     //    TLI.setAvailable(llvm::LibFunc_memcpy);
     //    TLI.setAvailable(llvm::LibFunc_memset);
 
-    TLI.setAvailable(llvm::LibFunc___kmpc_alloc_shared);
-    TLI.setAvailable(llvm::LibFunc___kmpc_free_shared);
   } else {
     TLI.setUnavailable(LibFunc_nvvm_reflect);
   }
@@ -1490,7 +1481,7 @@ unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
   if (auto *ShortWChar = cast_or_null<ConstantAsMetadata>(
       M.getModuleFlag("wchar_size")))
     return cast<ConstantInt>(ShortWChar->getValue())->getZExtValue();
-  return 0;
+  return Triple(M.getTargetTriple()).getDefaultWCharSize();
 }
 
 unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {

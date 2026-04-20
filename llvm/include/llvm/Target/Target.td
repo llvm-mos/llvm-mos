@@ -855,6 +855,10 @@ class Instruction : InstructionEncoding {
   /// ID, so that instruction that is defined earlier can be sorted earlier
   /// in the assembly matching table.
   bit HasPositionOrder = false;
+
+  // If set, GlobalISel match-table type checks for this instruction should
+  // ignore scalar int/float distinctions and match by size/shape only.
+  bit GISelMatchGenericTypes = 0;
 }
 
 /// Defines a Pat match between compressed and uncompressed instruction.
@@ -1673,6 +1677,7 @@ def RELOC_NONE : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins unknown:$symbol);
   let hasSideEffects = true;
+  let isMeta = true;
 }
 
 let hasSideEffects = false, isMeta = true, isConvergent = true in {

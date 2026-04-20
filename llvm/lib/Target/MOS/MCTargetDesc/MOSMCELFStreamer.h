@@ -30,7 +30,7 @@ public:
                       std::move(Emitter)),
         MCII(createMOSMCInstrInfo()) {}
 
-  void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
+  void initSections(const MCSubtargetInfo &STI) override;
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
 
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;

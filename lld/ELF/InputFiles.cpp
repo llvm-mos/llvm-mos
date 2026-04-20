@@ -211,12 +211,7 @@ static void updateSupportedARMFeatures(Ctx &ctx,
 }
 
 InputFile::InputFile(Ctx &ctx, Kind k, MemoryBufferRef m)
-    : ctx(ctx), mb(m), groupId(ctx.driver.nextGroupId), fileKind(k) {
-  // All files within the same --{start,end}-group get the same group ID.
-  // Otherwise, a new file will get a new group ID.
-  if (!ctx.driver.isInGroup)
-    ++ctx.driver.nextGroupId;
-}
+    : ctx(ctx), mb(m), groupId(ctx.driver.nextGroupId), fileKind(k) {}
 
 InputFile::~InputFile() {}
 
@@ -1634,7 +1629,8 @@ template <class ELFT> void SharedFile::parse() {
   // --as-needed, --no-as-needed takes precedence over --as-needed because a
   // user can add an extra DSO with --no-as-needed to force it to be added to
   // the dependency list.
-  it->second->isNeeded |= isNeeded;
+  if (isNeeded)
+    it->second->isNeeded.store(true, std::memory_order_relaxed);
   if (!wasInserted)
     return;
 

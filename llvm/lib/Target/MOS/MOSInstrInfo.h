@@ -35,7 +35,8 @@ public:
 
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig) const override;
+                     const MachineInstr &Orig,
+                     LaneBitmask UsedLanes) const override;
 
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx1,

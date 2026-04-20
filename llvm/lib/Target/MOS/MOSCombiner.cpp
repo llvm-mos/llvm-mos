@@ -136,7 +136,7 @@ MOSCombinerImpl::MOSCombinerImpl(
     bool IsPreLegalize, GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
     const MOSCombinerImplRuleConfig &RuleConfig, const MOSSubtarget &STI,
     MachineDominatorTree *MDT, const LegalizerInfo *LI, AAResults *AA)
-    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
+    : Combiner(MF, CInfo, &VT, CSEInfo),
       Helper(Observer, B, IsPreLegalize, &VT, MDT, LI), RuleConfig(RuleConfig),
       AA(AA),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS

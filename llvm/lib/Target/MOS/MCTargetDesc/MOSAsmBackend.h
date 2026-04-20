@@ -60,9 +60,6 @@ public:
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
 
-  /// Simple predicate for targets where !Resolved implies requiring relaxation
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value) const override;
   /// Carefully determine whether the instruction in question requires
   /// relaxation.  This implementation considers the fixup as well as
   /// the section that the symbol points to.
