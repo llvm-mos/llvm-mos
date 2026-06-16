@@ -331,10 +331,12 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
       } else if (STI.hasW65816Or65EL02()) {
         if (Dst == MOS::X && LoadY.MI && LoadY.Val == Val) {
           // LDX #imm -> TYX if Y==imm
+          Load = &LoadY;
           MI.setDesc(TII.get(MOS::TX));
           MI.getOperand(1).ChangeToRegister(MOS::Y, /*isDef=*/false);
         } else if (Dst == MOS::Y && LoadX.MI && LoadX.Val == Val) {
           // LDY #imm -> TXY if X==imm
+          Load = &LoadX;
           MI.setDesc(TII.get(MOS::TX));
           MI.getOperand(1).ChangeToRegister(MOS::X, /*isDef=*/false);
         }
