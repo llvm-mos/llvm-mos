@@ -373,6 +373,12 @@ template <class ELFT> void Writer<ELFT>::run() {
     auto restoreOutputFile =
         llvm::scope_exit([&]() { ctx.arg.outputFile = customOutputFile; });
     SmallString<64> outputFile = customOutputFile;
+    // A custom OUTPUT_FORMAT { FULL/TRIM } script renders a flat binary image
+    // (e.g. a headerless .sfc/.nes/.a26 ROM) to -o <output>; write the complete
+    // ELF — including all .debug_* sections under -g — to <output>.elf so debug
+    // info is not lost. The companion shares this exact link, so its addresses
+    // match the flat image precisely. See writeCustomOutputFormat() for the
+    // flat-image pass. This is the artifact a source-level debugger should load.
     if (!ctx.script->outputFormat.empty()) {
       outputFile += ".elf";
       ctx.arg.outputFile = outputFile;
