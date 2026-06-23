@@ -58,6 +58,16 @@ let Entry = 1 in {
 def CC_MOS : CallingConv<[
   CCIfType<[i1], CCPromoteToType<i8>>,
 
+  // An 8-bit direct-page (addrspace 1) pointer is only 8 bits wide, so it must take
+  // an 8-bit slot like an i8 value -- NOT the 16-bit RS pair the generic CCIfPtr rule
+  // below would assign, which yields an illegal size-mismatched COPY ((p1) = COPY
+  // $rsN, def 8 / src 16) at argument materialization / return. Mirror the i8 register
+  // pool; placed BEFORE CCIfPtr so it claims the DP pointer first.
+  CCIfPtrAddrSpace<1, CCAssignToReg<[
+    A, X, RC2, RC3, RC4, RC5, RC6, RC7, RC8, RC9, RC10, RC11, RC12, RC13, RC14,
+    RC15
+  ]>>,
+
   // Pointers are preferentially assigned to imaginary registers so indirect
   // addressing modes work without additional copying.
   //
