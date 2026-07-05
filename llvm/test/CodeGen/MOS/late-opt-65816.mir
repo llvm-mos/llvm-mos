@@ -32,7 +32,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm_to_txy
     ; CHECK: $x = LDImm 1
-    ; CHECK-NEXT: $rc0 = STImag8 killed $x
+    ; CHECK-NEXT: $rc0 = STImag8 $x
     ; CHECK-NEXT: $y = TX $x
     ; CHECK-NEXT: RTS implicit $y
     $x = LDImm 1
@@ -46,11 +46,39 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm_to_tyx
     ; CHECK: $y = LDImm 1
-    ; CHECK-NEXT: $rc0 = STImag8 killed $y
+    ; CHECK-NEXT: $rc0 = STImag8 $y
     ; CHECK-NEXT: $x = TX $y
     ; CHECK-NEXT: RTS implicit $x
     $y = LDImm 1
     $rc0 = STImag8 killed $y
+    $x = LDImm 1
+    RTS implicit $x
+...
+---
+# When the transfer source is a dead LDImm (e.g. an RA-rematerialized constant whose
+# value was otherwise unused), reusing it as a TXY/TYX must clear the dead flag, else
+# the new transfer reads a register the verifier considers undefined. Before the fix
+# these crashed with "Bad machine code: Using an undefined physical register".
+name: ldimm_to_txy_clears_dead_source
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ldimm_to_txy_clears_dead_source
+    ; CHECK: $x = LDImm 1
+    ; CHECK-NEXT: $y = TX $x
+    ; CHECK-NEXT: RTS implicit $y
+    dead $x = LDImm 1
+    $y = LDImm 1
+    RTS implicit $y
+...
+---
+name: ldimm_to_tyx_clears_dead_source
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ldimm_to_tyx_clears_dead_source
+    ; CHECK: $y = LDImm 1
+    ; CHECK-NEXT: $x = TX $y
+    ; CHECK-NEXT: RTS implicit $x
+    dead $y = LDImm 1
     $x = LDImm 1
     RTS implicit $x
 ...
