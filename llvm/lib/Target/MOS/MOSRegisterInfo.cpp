@@ -76,7 +76,19 @@ MOSRegisterInfo::MOSRegisterInfo()
 const MCPhysReg *
 MOSRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const MOSFrameLowering &TFI = *getFrameLowering(*MF);
-  return TFI.isISR(*MF) ? MOS_Interrupt_CSR_SaveList : MOS_CSR_SaveList;
+  const MCPhysReg * RegList;
+  if (TFI.isISR(*MF)) {
+    RegList = MOS_Interrupt_CSR_SaveList;
+  } else {
+    const Function &F = MF->getFunction();
+    const CallingConv::ID CC = F.getCallingConv();
+    if (CC == CallingConv::PreserveMost) {
+      RegList = MOS_PreserveMost_CSR_SaveList;
+    } else {
+      RegList = MOS_CSR_SaveList;
+    }
+  }
+  return RegList;
 }
 
 const uint32_t *

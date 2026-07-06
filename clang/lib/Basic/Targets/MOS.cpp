@@ -14,6 +14,7 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetInfo.h"
 
+using namespace clang;
 using namespace clang::targets;
 
 MOSTargetInfo::MOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
@@ -261,4 +262,15 @@ void MOSTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   Builder.defineMacro("__zp", "__attribute__((__address_space__(1)))");
   Builder.defineMacro("__zeropage", "__attribute__((__address_space__(1)))");
+}
+
+TargetInfo::CallingConvCheckResult
+MOSTargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  case CC_C:
+  case CC_PreserveMost:
+    return CCCR_OK;
+  default:
+    return CCCR_Warning;
+  }
 }

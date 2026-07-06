@@ -31,6 +31,8 @@ public:
 
   bool enableShrinkWrapping(const MachineFunction &MF) const override;
 
+  bool isProfitableForNoCSROpt(const Function &F) const override;
+
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
