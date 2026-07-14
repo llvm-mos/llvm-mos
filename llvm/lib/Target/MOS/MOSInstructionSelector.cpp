@@ -1687,6 +1687,8 @@ bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
 
 bool MOSInstructionSelector::selectLshrShlE(MachineInstr &MI) {
   auto [Dst, CarryOut, Src, CarryIn] = MI.getFirst4Regs();
+  MachineIRBuilder Builder(MI);
+  const auto &MRI = *Builder.getMRI();
 
   unsigned ShiftOpcode, RotateOpcode;
   switch (MI.getOpcode()) {
@@ -1697,13 +1699,35 @@ bool MOSInstructionSelector::selectLshrShlE(MachineInstr &MI) {
     RotateOpcode = MOS::ROL;
     break;
   case MOS::G_LSHRE:
+    // 65CE02 ASR replaces the CMP #128 + ROR idiom for arithmetic right
+    // shift, saving one instruction per shift-by-1 iteration. Skip when
+    // Dst is unused: store folding may have already consumed the result
+    // via RORAbs RMW, and selecting ASR for a dead value would only add
+    // register pressure.
+    if (STI.has65CE02() && !MRI.use_nodbg_empty(Dst)) {
+      MachineInstr *Sbc = MRI.getVRegDef(CarryIn);
+      if (Sbc && Sbc->getOpcode() == MOS::G_SBC &&
+          Sbc->getOperand(1).getReg() == CarryIn) {
+        Register L = Sbc->getOperand(5).getReg();
+        auto R = getIConstantVRegValWithLookThrough(Sbc->getOperand(6).getReg(),
+                                                    MRI);
+        auto CIn = getIConstantVRegValWithLookThrough(
+            Sbc->getOperand(7).getReg(), MRI);
+        if (L == Src && R && R->Value.getZExtValue() == 0x80 && CIn &&
+            !CIn->Value.isZero()) {
+          auto Asr = Builder.buildInstr(MOS::ASR, {Dst, CarryOut}, {Src});
+          constrainSelectedInstRegOperands(*Asr, TII, TRI, RBI);
+          MI.eraseFromParent();
+          return true;
+        }
+      }
+    }
     ShiftOpcode = MOS::LSR;
     RotateOpcode = MOS::ROR;
     break;
   }
 
-  MachineIRBuilder Builder(MI);
-  if (mi_match(CarryIn, *Builder.getMRI(), m_SpecificICst(0))) {
+  if (mi_match(CarryIn, MRI, m_SpecificICst(0))) {
     auto Asl = Builder.buildInstr(ShiftOpcode, {Dst, CarryOut}, {Src});
     constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI);
   } else {
