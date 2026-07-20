@@ -1501,7 +1501,14 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
 }
 
 static void finalizeSynthetic(Ctx &ctx, SyntheticSection *sec) {
-  if (sec && sec->isNeeded() && sec->getParent()) {
+  if (!sec)
+    return;
+  LLVM_DEBUG(llvm::dbgs()
+             << "finalizeSynthetic: " << sec->name
+             << " isNeeded=" << sec->isNeeded() << " getParent="
+             << (sec->getParent() ? sec->getParent()->name.str() : "null")
+             << "\n");
+  if (sec->isNeeded() && sec->getParent()) {
     llvm::TimeTraceScope timeScope("Finalize synthetic sections", sec->name);
     sec->finalizeContents();
   }
@@ -1922,6 +1929,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       for (Partition &part : ctx.partitions)
         finalizeSynthetic(ctx, part.ehFrame.get());
     }
+
+    // Finalize .debug_frame early so its size is known before assignAddresses.
+    // Unlike .eh_frame, this is not loaded at runtime.
+    finalizeSynthetic(ctx, ctx.in.debugFrame.get());
   }
 
   // If the previous code block defines any non-hidden symbols (e.g.
@@ -2189,6 +2200,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // static symbol table.
     finalizeSynthetic(ctx, ctx.in.symTab.get());
     finalizeSynthetic(ctx, ctx.in.debugNames.get());
+    // Note: debugFrame is finalized early (near ehFrame) for proper sizing.
     finalizeSynthetic(ctx, ctx.in.ppc64LongBranchTarget.get());
     finalizeSynthetic(ctx, ctx.in.armCmseSGSection.get());
   }
