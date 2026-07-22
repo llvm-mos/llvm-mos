@@ -845,6 +845,7 @@ set(mips64el_SOURCES ${GENERIC_TF_SOURCES}
 
 set(mos_SOURCES
   mos/addsf3.c
+  mos/divsf3.c
   mos/mulsf3.c
   mos/subsf3.c
   ${GENERIC_SOURCES}
@@ -852,6 +853,7 @@ set(mos_SOURCES
 # MOS-specific replacements for GENERIC_SOURCES (smaller/faster than generic).
 list(REMOVE_ITEM mos_SOURCES
   addsf3.c
+  divsf3.c
   mulsf3.c
   subsf3.c
 )
