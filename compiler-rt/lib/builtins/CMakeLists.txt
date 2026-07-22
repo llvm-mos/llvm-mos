@@ -843,7 +843,14 @@ set(mips64_SOURCES ${GENERIC_TF_SOURCES}
 set(mips64el_SOURCES ${GENERIC_TF_SOURCES}
                      ${mips_SOURCES})
 
-set(mos_SOURCES ${GENERIC_SOURCES})
+set(mos_SOURCES
+  mos/addsf3.c
+  ${GENERIC_SOURCES}
+)
+# MOS-specific replacements for GENERIC_SOURCES (smaller/faster than generic).
+list(REMOVE_ITEM mos_SOURCES
+  addsf3.c
+)
 # MOS SDK implementations are already smaller and faster.
 list(REMOVE_ITEM mos_SOURCES
   ashldi3.c
