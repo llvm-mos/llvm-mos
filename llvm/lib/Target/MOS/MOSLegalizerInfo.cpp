@@ -217,6 +217,13 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX}).lower();
 
+  // Three-way compares (llvm.scmp/ucmp — the C `(a>b)-(a<b)` spaceship idiom and libc-style
+  // comparators) have no native form on the 6502/65816; lower them to icmp+select primitives the
+  // backend already legalizes (LegalizerHelper::lowerThreewayCompare). Without this the backend
+  // aborts with "unable to legalize G_SCMP" on any qsort-style comparator. Not accum-specific —
+  // it fires at every width and in default/+mos-a16/+mos-xy16 alike.
+  getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
+
   getActionDefinitionsBuilder(G_ABS).custom();
 
   // Odd operations are handled via even ones: 6502 has only ADC/SBC.
