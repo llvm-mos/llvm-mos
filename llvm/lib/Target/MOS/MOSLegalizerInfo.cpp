@@ -258,6 +258,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
       .scalarize(0)
       .lower();
 
+  getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
+
   getActionDefinitionsBuilder(G_ABS).scalarize(0).custom();
 
   // Odd operations are handled via even ones: 6502 has only ADC/SBC.
