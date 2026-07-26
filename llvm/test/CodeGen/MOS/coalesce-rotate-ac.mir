@@ -1,0 +1,25 @@
+# RUN: llc -mtriple=mos -mcpu=mosw65816 -run-pass=register-coalescer %s -o - | FileCheck %s
+
+# A value used by a rotate (ROL) is pinned to the accumulator (the Ac class), the
+# only register the rotate can read/write. Coalescing two such values together
+# into Ac removes the COPY that lets the live value vacate A when the other arm of
+# an enclosing conditional needs A (e.g. an inlined CRC16 bit loop). That strands
+# the value and the back-edge rotate reads a stale A -> a silent miscompile. The
+# coalescer must keep the COPY (MOSRegisterInfo::shouldCoalesce).
+---
+name: dont_coalesce_rotate_into_ac
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $a, $c
+    ; CHECK: [[ROL:%[0-9]+]]:ac, {{[^=]*}} = ROL %0
+    ; CHECK-NEXT: %{{[0-9]+}}:ac = COPY [[ROL]]
+    ; CHECK-NEXT: {{%[0-9]+}}:ac, {{.*}} = ROL
+    %0:ac = COPY $a
+    %1:cc = COPY $c
+    %2:ac, %3:cc = ROL %0, %1
+    %4:ac = COPY %2
+    %5:ac, %6:cc = ROL %4, %3
+    $a = COPY %5
+    RTS implicit $a
+...

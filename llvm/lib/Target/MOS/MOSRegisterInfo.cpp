@@ -647,6 +647,21 @@ bool MOSRegisterInfo::shouldCoalesce(
     const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
   const auto &MRI = MI->getMF()->getRegInfo();
 
+  // Don't coalesce two shift/rotate-referenced values together into the A-only Ac
+  // class. The accumulator is the only register ASL/LSR/ROL/ROR can operate on, so
+  // an Ac value is pinned to A for its whole live range. When such a value is also
+  // loop-carried across an inner conditional whose other arm needs A (e.g. an
+  // inlined CRC16 bit loop: the bit-test reloads the pre-rotate byte into A, while
+  // the rotated value must survive to the next iteration), pinning it to A-only
+  // leaves the allocator no register to evict it to on the skip path — it strands
+  // the live value in Y while the back-edge rotate reads a stale A, miscompiling
+  // silently (the machine verifier does not catch it). Keeping the copy live lets
+  // the value occupy the broader AImag8/AY class and spill/transfer as needed.
+  if (NewRC == &MOS::AcRegClass &&
+      referencedByShiftRotate(MI->getOperand(0).getReg(), MRI) &&
+      referencedByShiftRotate(MI->getOperand(1).getReg(), MRI))
+    return false;
+
   // Don't coalesce Imag8 and AImag8 registers together when used by shifts or
   // rotates.  This may cause expensive ASL zp's to be used when ASL A would
   // have sufficed. It's better to do arithmetic in A and then copy it out.
