@@ -24,6 +24,7 @@
 #include "llvm/Support/AArch64AttributeParser.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
@@ -34,6 +35,8 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+
+#define DEBUG_TYPE "lld"
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -1185,6 +1188,17 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
   // class. For relocatable outputs, they are just passed through.
   if (name == ".eh_frame" && !ctx.arg.relocatable)
     return makeThreadLocal<EhInputSection>(*this, sec, name);
+
+  // .debug_frame sections need special handling to discard FDEs for
+  // garbage-collected functions, similar to .eh_frame. This only matters
+  // when --gc-sections is active; otherwise the pass-through path handles
+  // .debug_frame correctly and preserves its natural section ordering.
+  if (name == ".debug_frame" && !ctx.arg.relocatable && ctx.arg.gcSections) {
+    LLVM_DEBUG(llvm::dbgs() << "creating DebugFrameInputSection for "
+                            << this->getName() << " size=" << sec.sh_size
+                            << "\n");
+    return makeThreadLocal<DebugFrameInputSection>(*this, sec, name);
+  }
 
   if ((sec.sh_flags & SHF_MERGE) && shouldMerge(sec, name))
     return makeThreadLocal<MergeInputSection>(*this, sec, name);

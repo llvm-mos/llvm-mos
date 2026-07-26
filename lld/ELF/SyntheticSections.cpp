@@ -35,12 +35,15 @@
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/Support/DJB.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <cinttypes>
 #include <cstdlib>
+
+#define DEBUG_TYPE "lld"
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -493,6 +496,226 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
   size_t oldSize = size;
   finalizeContents();
   return size != oldSize;
+}
+
+// .debug_frame section implementation.
+// Unlike .eh_frame, .debug_frame is not loaded at runtime. We still process
+// it to discard FDEs for garbage-collected functions.
+DebugFrameSection::DebugFrameSection(Ctx &ctx)
+    : SyntheticSection(ctx, ".debug_frame", SHT_PROGBITS, 0, 1) {}
+
+// Check if an FDE is live (i.e., its function was not garbage-collected).
+// Unlike .eh_frame where the first relocation points to the function,
+// in .debug_frame the first relocation points to the CIE (absolute offset)
+// and the second relocation points to the function's start address.
+Defined *DebugFrameSection::isFdeLive(EhSectionPiece &fde,
+                                       ArrayRef<Relocation> rels) {
+  unsigned firstRelI = fde.firstRelocation;
+  if (firstRelI == (unsigned)-1) {
+    LLVM_DEBUG(llvm::dbgs() << "DebugFrame isFdeLive: FDE at " << fde.inputOff
+                            << " has no relocations\n");
+    return nullptr;
+  }
+
+  // In .debug_frame, FDE layout is:
+  //   Bytes 0-3: Length
+  //   Bytes 4-7: CIE pointer (relocated - points to .debug_frame)
+  //   Bytes 8-11: Initial location (PC start - points to function)
+  // So we need to find the relocation at FDE offset + 8, not the first one.
+  uint64_t pcRelOffset = fde.inputOff + 8;
+
+  LLVM_DEBUG(llvm::dbgs() << "DebugFrame isFdeLive: FDE at " << fde.inputOff
+                          << " size=" << fde.size << " firstRelI=" << firstRelI
+                          << " looking for reloc at " << pcRelOffset << "\n");
+
+  // Find the relocation that points to the function's start address.
+  for (unsigned i = firstRelI; i < rels.size(); ++i) {
+    LLVM_DEBUG(llvm::dbgs() << "DebugFrame isFdeLive: checking rel[" << i
+                            << "] offset=" << rels[i].offset << "\n");
+    if (rels[i].offset >= fde.inputOff + fde.size)
+      break; // Past this FDE
+    if (rels[i].offset == pcRelOffset) {
+      // FDEs for garbage-collected or merged-by-ICF sections are dead.
+      if (auto *d = dyn_cast<Defined>(rels[i].sym)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "DebugFrame isFdeLive: found Defined sym, folded="
+                   << d->folded << " section="
+                   << (d->section ? d->section->name.str() : "null")
+                   << " isLive="
+                   << (d->section ? d->section->isLive() : false) << "\n");
+        if (!d->folded && d->section && d->section->isLive())
+          return d;
+      } else {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "DebugFrame isFdeLive: sym is not Defined\n");
+      }
+      return nullptr;
+    }
+  }
+  LLVM_DEBUG(llvm::dbgs() << "DebugFrame isFdeLive: no reloc found at offset "
+                          << pcRelOffset << "\n");
+  return nullptr;
+}
+
+template <endianness E>
+void DebugFrameSection::addRecords(DebugFrameInputSection *sec) {
+  LLVM_DEBUG(llvm::dbgs() << "DebugFrame addRecords: file="
+                          << sec->file->getName() << " cies=" << sec->cies.size()
+                          << " fdes=" << sec->fdes.size()
+                          << " rels=" << sec->rels.size() << "\n");
+  auto rels = sec->rels;
+  // Track which CIEs (by input offset within this section) are referenced by
+  // any surviving FDE from the same section.
+  llvm::DenseSet<size_t> usedCieOffsets;
+
+  for (EhSectionPiece &fde : sec->fdes) {
+    if (!isFdeLive(fde, rels))
+      continue;
+    // In .debug_frame the CIE pointer is an absolute offset from the start
+    // of the input section, stored at fde.data()[4..7].
+    uint32_t cieOffset = endian::read32<E>(fde.data().data() + 4);
+    LLVM_DEBUG(llvm::dbgs() << "DebugFrame addRecords: FDE at " << fde.inputOff
+                            << " is LIVE, cieOffset=" << cieOffset << "\n");
+    usedCieOffsets.insert(cieOffset);
+    liveFdes.push_back(&fde);
+  }
+
+  for (EhSectionPiece &cie : sec->cies) {
+    if (usedCieOffsets.contains(cie.inputOff)) {
+      LLVM_DEBUG(llvm::dbgs() << "DebugFrame addRecords: CIE at "
+                              << cie.inputOff << " is LIVE\n");
+      liveCies.push_back(&cie);
+    }
+  }
+  LLVM_DEBUG(llvm::dbgs() << "DebugFrame addRecords: totals liveCies="
+                          << liveCies.size() << " liveFdes=" << liveFdes.size()
+                          << "\n");
+}
+
+void DebugFrameSection::finalizeContents() {
+  LLVM_DEBUG(llvm::dbgs() << "DebugFrame finalizeContents: sections.size="
+                          << sections.size() << "\n");
+  assert(!this->size); // Not finalized.
+
+  switch (ctx.arg.ekind) {
+  case ELFNoneKind:
+    llvm_unreachable("invalid ekind");
+  case ELF32LEKind:
+  case ELF64LEKind:
+    for (DebugFrameInputSection *sec : sections) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "DebugFrame finalizeContents: processing section, cies="
+                 << sec->cies.size() << " fdes=" << sec->fdes.size() << "\n");
+      // .debug_frame is a non-SHF_ALLOC section, so partition is not set.
+      // Process all input sections unconditionally.
+      addRecords<endianness::little>(sec);
+    }
+    break;
+  case ELF32BEKind:
+  case ELF64BEKind:
+    for (DebugFrameInputSection *sec : sections)
+      addRecords<endianness::big>(sec);
+    break;
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "DebugFrame finalizeContents: liveCies="
+                          << liveCies.size() << " liveFdes=" << liveFdes.size()
+                          << "\n");
+
+  // Assign output offsets: all CIEs first, then all FDEs. Preserves the
+  // per-collection input order (i.e. per-file grouping), which keeps FDE
+  // CIE-pointer fixups localised to their originating file.
+  size_t off = 0;
+  for (EhSectionPiece *cie : liveCies) {
+    cie->outputOff = off;
+    off += cie->size;
+  }
+  for (EhSectionPiece *fde : liveFdes) {
+    fde->outputOff = off;
+    off += fde->size;
+  }
+
+  this->size = off;
+  LLVM_DEBUG(llvm::dbgs() << "DebugFrame finalizeContents: final size="
+                          << this->size << "\n");
+}
+
+size_t DebugFrameSection::getSize() const {
+  LLVM_DEBUG(llvm::dbgs() << "DebugFrame getSize() returning " << size
+                          << " parent="
+                          << (getParent() ? getParent()->name.str() : "null")
+                          << "\n");
+  return size;
+}
+
+void DebugFrameSection::writeTo(uint8_t *buf) {
+  LLVM_DEBUG(llvm::dbgs() << "DebugFrame writeTo: buf=" << (void *)buf
+                          << " size=" << size
+                          << " liveCies=" << liveCies.size()
+                          << " liveFdes=" << liveFdes.size() << "\n");
+  switch (ctx.arg.ekind) {
+  case ELFNoneKind:
+    llvm_unreachable("invalid ekind");
+  case ELF32LEKind:
+  case ELF64LEKind:
+    writeToImpl<endianness::little>(buf);
+    break;
+  case ELF32BEKind:
+  case ELF64BEKind:
+    writeToImpl<endianness::big>(buf);
+    break;
+  }
+}
+
+template <endianness E> void DebugFrameSection::writeToImpl(uint8_t *buf) {
+  // .debug_frame uses absolute CIE pointers, so each FDE's CIE-pointer field
+  // (bytes 4..7 of the FDE) must be rewritten to the CIE's new offset in the
+  // synthetic output section.
+  //
+  // The lookup is keyed by (input section, input offset) rather than input
+  // offset alone. Every compiled .o typically emits its CIE at input offset
+  // 0, so a bare input-offset key would collide across files and every FDE
+  // would end up pointing at the last file's CIE.
+  llvm::DenseMap<std::pair<InputSectionBase *, uint64_t>, size_t>
+      cieInputToOutput;
+  for (EhSectionPiece *cie : liveCies)
+    cieInputToOutput[{cie->sec, cie->inputOff}] = cie->outputOff;
+
+  // Copy CIE bytes verbatim; CIEs have no absolute intra-section pointers.
+  for (EhSectionPiece *cie : liveCies)
+    memcpy(buf + cie->outputOff, cie->data().data(), cie->size);
+
+  // Copy FDE bytes and patch the CIE pointer.
+  for (EhSectionPiece *fde : liveFdes) {
+    memcpy(buf + fde->outputOff, fde->data().data(), fde->size);
+    uint32_t cieOffset = endian::read32<E>(fde->data().data() + 4);
+    auto it = cieInputToOutput.find({fde->sec, cieOffset});
+    if (it != cieInputToOutput.end())
+      endian::write32<E>(buf + fde->outputOff + 4, it->second);
+  }
+
+  // Apply relocations. For FDEs, skip the CIE-pointer relocation at offset
+  // 4 -- that field is patched by the loop above from cieInputToOutput.
+  auto applyRelocs = [&](EhSectionPiece *piece, bool isFde) {
+    auto *s = cast<DebugFrameInputSection>(piece->sec);
+    for (const Relocation &rel : s->rels) {
+      if (rel.offset < piece->inputOff ||
+          rel.offset >= piece->inputOff + piece->size)
+        continue;
+      size_t relOffsetInPiece = rel.offset - piece->inputOff;
+      if (isFde && relOffsetInPiece == 4)
+        continue;
+      uint64_t va = 0;
+      if (auto *d = dyn_cast<Defined>(rel.sym))
+        va = d->getVA(ctx, rel.addend);
+      ctx.target->relocateNoSym(buf + piece->outputOff + relOffsetInPiece,
+                                rel.type, static_cast<int64_t>(va));
+    }
+  };
+  for (EhSectionPiece *cie : liveCies)
+    applyRelocs(cie, /*isFde=*/false);
+  for (EhSectionPiece *fde : liveFdes)
+    applyRelocs(fde, /*isFde=*/true);
 }
 
 GotSection::GotSection(Ctx &ctx)
@@ -3808,6 +4031,8 @@ template <class ELFT> void elf::splitSections(Ctx &ctx) {
         s->splitIntoPieces();
       else if (auto *eh = dyn_cast<EhInputSection>(sec))
         eh->split<ELFT>();
+      else if (auto *df = dyn_cast<DebugFrameInputSection>(sec))
+        df->split<ELFT>();
     }
 
     // For non-section Defined symbols in merge sections, pre-resolve the piece
@@ -3853,6 +4078,29 @@ void elf::combineEhSections(Ctx &ctx) {
     return s->kind() == SectionBase::Regular && part.armExidx &&
            part.armExidx->addSection(cast<InputSection>(s));
   });
+}
+
+void elf::combineDebugFrameSections(Ctx &ctx) {
+  LLVM_DEBUG(llvm::dbgs()
+             << "combineDebugFrameSections: ctx.in.debugFrame="
+             << (ctx.in.debugFrame ? "exists" : "null")
+             << " inputSections.size=" << ctx.debugFrameInputSections.size()
+             << "\n");
+  if (!ctx.in.debugFrame)
+    return;
+
+  llvm::TimeTraceScope timeScope("Combine debug frame sections");
+  DebugFrameSection &df = *ctx.in.debugFrame;
+  for (DebugFrameInputSection *sec : ctx.debugFrameInputSections) {
+    LLVM_DEBUG(llvm::dbgs() << "combineDebugFrameSections: adding section from "
+                            << sec->file->getName()
+                            << " size=" << sec->getSize() << "\n");
+    sec->parent = &df;
+    df.addralign = std::max(df.addralign, sec->addralign);
+    df.sections.push_back(sec);
+  }
+  LLVM_DEBUG(llvm::dbgs() << "combineDebugFrameSections: total sections="
+                          << df.sections.size() << "\n");
 }
 
 ARMExidxSyntheticSection::ARMExidxSyntheticSection(Ctx &ctx)
@@ -4705,6 +4953,18 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   if (ctx.arg.gdbIndex) {
     ctx.in.gdbIndex = GdbIndexSection::create<ELFT>(ctx);
     add(*ctx.in.gdbIndex);
+  }
+
+  // Create .debug_frame section if we have any debug frame input sections.
+  // This filters out FDEs for garbage-collected functions.
+  LLVM_DEBUG(llvm::dbgs()
+             << "createSyntheticSections: debugFrameInputSections.size="
+             << ctx.debugFrameInputSections.size() << "\n");
+  if (!ctx.debugFrameInputSections.empty()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "createSyntheticSections: creating DebugFrameSection\n");
+    ctx.in.debugFrame = std::make_unique<DebugFrameSection>(ctx);
+    add(*ctx.in.debugFrame);
   }
 
   // .note.GNU-stack is always added when we are creating a re-linkable

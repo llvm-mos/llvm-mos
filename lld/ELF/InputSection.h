@@ -64,6 +64,7 @@ public:
     Synthetic,
     Spill,
     EHFrame,
+    DebugFrame,
     Merge,
     Output,
     Class,
@@ -411,6 +412,34 @@ public:
 
   // Preprocessed relocations in uniform format to avoid REL/RELA/CREL
   // relocation format handling throughout the codebase.
+  SmallVector<Relocation, 0> rels;
+};
+
+// This corresponds to a .debug_frame section of an input file.
+// Unlike .eh_frame, .debug_frame is not loaded at runtime and uses
+// absolute CIE pointers (not relative offsets).
+class DebugFrameInputSection : public InputSectionBase {
+public:
+  template <class ELFT>
+  DebugFrameInputSection(ObjFile<ELFT> &f, const typename ELFT::Shdr &header,
+                         StringRef name);
+  static bool classof(const SectionBase *s) {
+    return s->kind() == DebugFrame;
+  }
+  template <class ELFT> void split();
+  template <class ELFT, class RelTy> void preprocessRelocs(Relocs<RelTy> rels);
+
+  // Splittable sections are handled as a sequence of data
+  // rather than a single large blob of data.
+  SmallVector<EhSectionPiece, 0> cies, fdes;
+
+  SyntheticSection *getParent() const;
+
+  // Map an input offset to the corresponding offset within the parent
+  // synthetic section, taking piece drops and repacking into account.
+  uint64_t getParentOffset(uint64_t offset) const;
+
+  // Preprocessed relocations in uniform format.
   SmallVector<Relocation, 0> rels;
 };
 

@@ -55,6 +55,7 @@
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LEB128.h"
@@ -68,6 +69,8 @@
 #include <cstdlib>
 #include <tuple>
 #include <utility>
+
+#define DEBUG_TYPE "lld"
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -3446,6 +3449,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
           continue;
         if (LLVM_UNLIKELY(isa<EhInputSection>(s)))
           ctx.ehInputSections.push_back(cast<EhInputSection>(s));
+        else if (LLVM_UNLIKELY(isa<DebugFrameInputSection>(s))) {
+          LLVM_DEBUG(llvm::dbgs()
+                     << "Driver: collecting DebugFrameInputSection from "
+                     << f->getName() << "\n");
+          ctx.debugFrameInputSections.push_back(cast<DebugFrameInputSection>(s));
+        }
         else
           ctx.inputSections.push_back(s);
       }
@@ -3545,8 +3554,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Some input sections that are used for exception handling need to be moved
   // into synthetic sections. Do that now so that they aren't assigned to
   // output sections in the usual way.
-  if (!ctx.arg.relocatable)
+  if (!ctx.arg.relocatable) {
     combineEhSections(ctx);
+    combineDebugFrameSections(ctx);
+  }
 
   // Merge .hexagon.attributes sections.
   if (ctx.arg.emachine == EM_HEXAGON)
