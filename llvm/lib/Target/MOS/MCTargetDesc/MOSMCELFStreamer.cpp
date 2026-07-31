@@ -37,7 +37,7 @@ void MOSMCELFStreamer::initSections(const MCSubtargetInfo &STI) {
 
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
-  emitCodeAlignment(Align(1), &STI);
+  emitCodeAlignment(Align(1), STI);
 }
 
 static bool HasPrefix(StringRef Name, StringRef Prefix) {

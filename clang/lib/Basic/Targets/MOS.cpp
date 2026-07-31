@@ -223,7 +223,7 @@ void MOSTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
 }
 
-bool MOSTargetInfo::setCPU(const std::string &Name) {
+bool MOSTargetInfo::setCPU(StringRef Name) {
   if (isValidCPUName(Name)) {
     CPUName = Name;
     return true;

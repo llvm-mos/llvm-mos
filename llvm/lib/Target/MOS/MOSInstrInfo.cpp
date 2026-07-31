@@ -205,7 +205,7 @@ unsigned MOSInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 0;
 
   const MachineFunction &MF = *MI.getParent()->getParent();
-  const MCAsmInfo &MCAI = *MF.getTarget().getMCAsmInfo();
+  const MCAsmInfo &MCAI = MF.getTarget().getMCAsmInfo();
 
   switch (MI.getOpcode()) {
   default: {

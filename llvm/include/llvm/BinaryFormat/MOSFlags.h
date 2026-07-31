@@ -22,8 +22,8 @@ class FeatureBitset;
 
 namespace MOS {
 
-/// EnumEntries for general EF_MOS_* printing.
-extern const ArrayRef<EnumEntry<unsigned>> ElfHeaderMOSFlags;
+/// Enum strings for general EF_MOS_* printing.
+EnumStrings<unsigned, 2> getElfHeaderMOSFlags();
 
 /// Makes a string describing all set EF_MOS_* bits.
 std::string makeEFlagsString(unsigned EFlags);

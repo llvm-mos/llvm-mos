@@ -93,7 +93,6 @@ body: |
     ; CHECK-NEXT: JSR &__mulsi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
     ; CHECK-NEXT: [[COPY32:%[0-9]+]]:_(s8) = COPY $a
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: [[COPY33:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
     ; CHECK-NEXT: [[COPY34:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY35:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
@@ -110,6 +109,7 @@ body: |
     ; CHECK-NEXT: [[COPY46:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY47:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY48:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[COPY49:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
     ; CHECK-NEXT: [[COPY50:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY51:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
@@ -126,15 +126,24 @@ body: |
     ; CHECK-NEXT: [[COPY62:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY63:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY64:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: $a = COPY [[COPY37]](s8)
-    ; CHECK-NEXT: $x = COPY [[COPY38]](s8)
-    ; CHECK-NEXT: $rc2 = COPY [[COPY39]](s8)
-    ; CHECK-NEXT: $rc3 = COPY [[COPY40]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[COPY]](s8)
-    ; CHECK-NEXT: $rc5 = COPY [[COPY50]](s8)
-    ; CHECK-NEXT: $rc6 = COPY [[COPY51]](s8)
-    ; CHECK-NEXT: $rc7 = COPY [[COPY52]](s8)
-    ; CHECK-NEXT: JSR &__mulsi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY34]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[COPY35]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[COPY36]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc8 = COPY [[COPY]](s8)
+    ; CHECK-NEXT: $rc9 = COPY [[COPY50]](s8)
+    ; CHECK-NEXT: $rc10 = COPY [[COPY51]](s8)
+    ; CHECK-NEXT: $rc11 = COPY [[COPY52]](s8)
+    ; CHECK-NEXT: $rc12 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc13 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc14 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc15 = COPY [[C]](s8)
+    ; CHECK-NEXT: JSR &__muldi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc4, implicit-def $rc5, implicit-def $rc6, implicit-def $rc7
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: [[COPY65:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
@@ -179,6 +188,7 @@ body: |
     ; CHECK-NEXT: $rc7 = COPY [[COPY88]](s8)
     ; CHECK-NEXT: JSR &__mulsi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: [[COPY97:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
     ; CHECK-NEXT: [[COPY98:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY99:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
@@ -195,7 +205,6 @@ body: |
     ; CHECK-NEXT: [[COPY110:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY111:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY112:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[COPY113:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
     ; CHECK-NEXT: [[COPY114:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY115:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
@@ -212,26 +221,16 @@ body: |
     ; CHECK-NEXT: [[COPY126:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY127:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY128:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
-    ; CHECK-NEXT: $x = COPY [[COPY98]](s8)
-    ; CHECK-NEXT: $rc2 = COPY [[COPY99]](s8)
-    ; CHECK-NEXT: $rc3 = COPY [[COPY100]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc8 = COPY [[COPY]](s8)
-    ; CHECK-NEXT: $rc9 = COPY [[COPY114]](s8)
-    ; CHECK-NEXT: $rc10 = COPY [[COPY115]](s8)
-    ; CHECK-NEXT: $rc11 = COPY [[COPY116]](s8)
-    ; CHECK-NEXT: $rc12 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc13 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc14 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc15 = COPY [[C]](s8)
-    ; CHECK-NEXT: JSR &__muldi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc4, implicit-def $rc5, implicit-def $rc6, implicit-def $rc7
+    ; CHECK-NEXT: $a = COPY [[COPY101]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY102]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[COPY103]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[COPY104]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[COPY]](s8)
+    ; CHECK-NEXT: $rc5 = COPY [[COPY114]](s8)
+    ; CHECK-NEXT: $rc6 = COPY [[COPY115]](s8)
+    ; CHECK-NEXT: $rc7 = COPY [[COPY116]](s8)
+    ; CHECK-NEXT: JSR &__mulsi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: [[COPY129:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
     ; CHECK-NEXT: [[COPY130:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY131:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
@@ -248,6 +247,25 @@ body: |
     ; CHECK-NEXT: [[COPY142:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY143:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY144:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: $a = COPY [[COPY133]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY134]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[COPY135]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[COPY136]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc8 = COPY [[COPY]](s8)
+    ; CHECK-NEXT: $rc9 = COPY [[COPY50]](s8)
+    ; CHECK-NEXT: $rc10 = COPY [[COPY51]](s8)
+    ; CHECK-NEXT: $rc11 = COPY [[COPY52]](s8)
+    ; CHECK-NEXT: $rc12 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc13 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc14 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc15 = COPY [[C]](s8)
+    ; CHECK-NEXT: JSR &__muldi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc4, implicit-def $rc5, implicit-def $rc6, implicit-def $rc7
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: [[COPY145:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
     ; CHECK-NEXT: [[COPY146:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY147:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
@@ -264,15 +282,24 @@ body: |
     ; CHECK-NEXT: [[COPY158:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY159:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY160:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: $a = COPY [[COPY137]](s8)
-    ; CHECK-NEXT: $x = COPY [[COPY138]](s8)
-    ; CHECK-NEXT: $rc2 = COPY [[COPY139]](s8)
-    ; CHECK-NEXT: $rc3 = COPY [[COPY140]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[COPY]](s8)
-    ; CHECK-NEXT: $rc5 = COPY [[COPY146]](s8)
-    ; CHECK-NEXT: $rc6 = COPY [[COPY147]](s8)
-    ; CHECK-NEXT: $rc7 = COPY [[COPY148]](s8)
-    ; CHECK-NEXT: JSR &__mulsi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY34]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[COPY35]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[COPY36]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc8 = COPY [[COPY149]](s8)
+    ; CHECK-NEXT: $rc9 = COPY [[COPY150]](s8)
+    ; CHECK-NEXT: $rc10 = COPY [[COPY151]](s8)
+    ; CHECK-NEXT: $rc11 = COPY [[COPY152]](s8)
+    ; CHECK-NEXT: $rc12 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc13 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc14 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc15 = COPY [[C]](s8)
+    ; CHECK-NEXT: JSR &__muldi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc4, implicit-def $rc5, implicit-def $rc6, implicit-def $rc7
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: [[COPY161:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
@@ -307,14 +334,14 @@ body: |
     ; CHECK-NEXT: [[COPY190:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY191:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY192:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: $a = COPY [[COPY165]](s8)
-    ; CHECK-NEXT: $x = COPY [[COPY166]](s8)
-    ; CHECK-NEXT: $rc2 = COPY [[COPY167]](s8)
-    ; CHECK-NEXT: $rc3 = COPY [[COPY168]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[COPY181]](s8)
-    ; CHECK-NEXT: $rc5 = COPY [[COPY182]](s8)
-    ; CHECK-NEXT: $rc6 = COPY [[COPY183]](s8)
-    ; CHECK-NEXT: $rc7 = COPY [[COPY184]](s8)
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY162]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[COPY163]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[COPY164]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[COPY185]](s8)
+    ; CHECK-NEXT: $rc5 = COPY [[COPY186]](s8)
+    ; CHECK-NEXT: $rc6 = COPY [[COPY187]](s8)
+    ; CHECK-NEXT: $rc7 = COPY [[COPY188]](s8)
     ; CHECK-NEXT: JSR &__mulsi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
@@ -350,16 +377,17 @@ body: |
     ; CHECK-NEXT: [[COPY222:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY223:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY224:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
-    ; CHECK-NEXT: $x = COPY [[COPY194]](s8)
-    ; CHECK-NEXT: $rc2 = COPY [[COPY195]](s8)
-    ; CHECK-NEXT: $rc3 = COPY [[COPY196]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[COPY217]](s8)
-    ; CHECK-NEXT: $rc5 = COPY [[COPY218]](s8)
-    ; CHECK-NEXT: $rc6 = COPY [[COPY219]](s8)
-    ; CHECK-NEXT: $rc7 = COPY [[COPY220]](s8)
+    ; CHECK-NEXT: $a = COPY [[COPY197]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY198]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[COPY199]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[COPY200]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[COPY213]](s8)
+    ; CHECK-NEXT: $rc5 = COPY [[COPY214]](s8)
+    ; CHECK-NEXT: $rc6 = COPY [[COPY215]](s8)
+    ; CHECK-NEXT: $rc7 = COPY [[COPY216]](s8)
     ; CHECK-NEXT: JSR &__mulsi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: [[COPY225:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
     ; CHECK-NEXT: [[COPY226:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY227:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
@@ -376,25 +404,6 @@ body: |
     ; CHECK-NEXT: [[COPY238:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY239:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY240:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: $a = COPY [[COPY229]](s8)
-    ; CHECK-NEXT: $x = COPY [[COPY230]](s8)
-    ; CHECK-NEXT: $rc2 = COPY [[COPY231]](s8)
-    ; CHECK-NEXT: $rc3 = COPY [[COPY232]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc8 = COPY [[COPY]](s8)
-    ; CHECK-NEXT: $rc9 = COPY [[COPY114]](s8)
-    ; CHECK-NEXT: $rc10 = COPY [[COPY115]](s8)
-    ; CHECK-NEXT: $rc11 = COPY [[COPY116]](s8)
-    ; CHECK-NEXT: $rc12 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc13 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc14 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc15 = COPY [[C]](s8)
-    ; CHECK-NEXT: JSR &__muldi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc4, implicit-def $rc5, implicit-def $rc6, implicit-def $rc7
-    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: [[COPY241:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
     ; CHECK-NEXT: [[COPY242:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY243:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
@@ -411,26 +420,16 @@ body: |
     ; CHECK-NEXT: [[COPY254:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY255:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY256:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
-    ; CHECK-NEXT: $x = COPY [[COPY98]](s8)
-    ; CHECK-NEXT: $rc2 = COPY [[COPY99]](s8)
-    ; CHECK-NEXT: $rc3 = COPY [[COPY100]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc8 = COPY [[COPY245]](s8)
-    ; CHECK-NEXT: $rc9 = COPY [[COPY246]](s8)
-    ; CHECK-NEXT: $rc10 = COPY [[COPY247]](s8)
-    ; CHECK-NEXT: $rc11 = COPY [[COPY248]](s8)
-    ; CHECK-NEXT: $rc12 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc13 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc14 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc15 = COPY [[C]](s8)
-    ; CHECK-NEXT: JSR &__muldi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc4, implicit-def $rc5, implicit-def $rc6, implicit-def $rc7
+    ; CHECK-NEXT: $a = COPY [[COPY233]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY234]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[COPY235]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[COPY236]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[COPY]](s8)
+    ; CHECK-NEXT: $rc5 = COPY [[COPY242]](s8)
+    ; CHECK-NEXT: $rc6 = COPY [[COPY243]](s8)
+    ; CHECK-NEXT: $rc7 = COPY [[COPY244]](s8)
+    ; CHECK-NEXT: JSR &__mulsi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: [[COPY257:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
     ; CHECK-NEXT: [[COPY258:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY259:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
@@ -447,6 +446,44 @@ body: |
     ; CHECK-NEXT: [[COPY270:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY271:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY272:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: $a = COPY [[COPY265]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY266]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[COPY267]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[COPY268]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc8 = COPY [[COPY]](s8)
+    ; CHECK-NEXT: $rc9 = COPY [[COPY50]](s8)
+    ; CHECK-NEXT: $rc10 = COPY [[COPY51]](s8)
+    ; CHECK-NEXT: $rc11 = COPY [[COPY52]](s8)
+    ; CHECK-NEXT: $rc12 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc13 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc14 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc15 = COPY [[C]](s8)
+    ; CHECK-NEXT: JSR &__muldi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc4, implicit-def $rc5, implicit-def $rc6, implicit-def $rc7
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: $a = COPY [[COPY133]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY134]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[COPY135]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[COPY136]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc8 = COPY [[COPY149]](s8)
+    ; CHECK-NEXT: $rc9 = COPY [[COPY150]](s8)
+    ; CHECK-NEXT: $rc10 = COPY [[COPY151]](s8)
+    ; CHECK-NEXT: $rc11 = COPY [[COPY152]](s8)
+    ; CHECK-NEXT: $rc12 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc13 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc14 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc15 = COPY [[C]](s8)
+    ; CHECK-NEXT: JSR &__muldi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc4, implicit-def $rc5, implicit-def $rc6, implicit-def $rc7
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: [[COPY273:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
     ; CHECK-NEXT: [[COPY274:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY275:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
@@ -463,15 +500,24 @@ body: |
     ; CHECK-NEXT: [[COPY286:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY287:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY288:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: $a = COPY [[COPY269]](s8)
-    ; CHECK-NEXT: $x = COPY [[COPY270]](s8)
-    ; CHECK-NEXT: $rc2 = COPY [[COPY271]](s8)
-    ; CHECK-NEXT: $rc3 = COPY [[COPY272]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[COPY]](s8)
-    ; CHECK-NEXT: $rc5 = COPY [[COPY274]](s8)
-    ; CHECK-NEXT: $rc6 = COPY [[COPY275]](s8)
-    ; CHECK-NEXT: $rc7 = COPY [[COPY276]](s8)
-    ; CHECK-NEXT: JSR &__mulsi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY34]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[COPY35]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[COPY36]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc8 = COPY [[COPY281]](s8)
+    ; CHECK-NEXT: $rc9 = COPY [[COPY282]](s8)
+    ; CHECK-NEXT: $rc10 = COPY [[COPY283]](s8)
+    ; CHECK-NEXT: $rc11 = COPY [[COPY284]](s8)
+    ; CHECK-NEXT: $rc12 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc13 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc14 = COPY [[C]](s8)
+    ; CHECK-NEXT: $rc15 = COPY [[C]](s8)
+    ; CHECK-NEXT: JSR &__muldi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc4, implicit-def $rc5, implicit-def $rc6, implicit-def $rc7
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: [[COPY289:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
@@ -506,14 +552,14 @@ body: |
     ; CHECK-NEXT: [[COPY318:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY319:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY320:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: $a = COPY [[COPY297]](s8)
-    ; CHECK-NEXT: $x = COPY [[COPY298]](s8)
-    ; CHECK-NEXT: $rc2 = COPY [[COPY299]](s8)
-    ; CHECK-NEXT: $rc3 = COPY [[COPY300]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[COPY309]](s8)
-    ; CHECK-NEXT: $rc5 = COPY [[COPY310]](s8)
-    ; CHECK-NEXT: $rc6 = COPY [[COPY311]](s8)
-    ; CHECK-NEXT: $rc7 = COPY [[COPY312]](s8)
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY290]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[COPY291]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[COPY292]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[COPY317]](s8)
+    ; CHECK-NEXT: $rc5 = COPY [[COPY318]](s8)
+    ; CHECK-NEXT: $rc6 = COPY [[COPY319]](s8)
+    ; CHECK-NEXT: $rc7 = COPY [[COPY320]](s8)
     ; CHECK-NEXT: JSR &__mulsi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
@@ -592,16 +638,17 @@ body: |
     ; CHECK-NEXT: [[COPY382:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY383:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY384:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
-    ; CHECK-NEXT: $x = COPY [[COPY354]](s8)
-    ; CHECK-NEXT: $rc2 = COPY [[COPY355]](s8)
-    ; CHECK-NEXT: $rc3 = COPY [[COPY356]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[COPY381]](s8)
-    ; CHECK-NEXT: $rc5 = COPY [[COPY382]](s8)
-    ; CHECK-NEXT: $rc6 = COPY [[COPY383]](s8)
-    ; CHECK-NEXT: $rc7 = COPY [[COPY384]](s8)
+    ; CHECK-NEXT: $a = COPY [[COPY361]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY362]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[COPY363]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[COPY364]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[COPY373]](s8)
+    ; CHECK-NEXT: $rc5 = COPY [[COPY374]](s8)
+    ; CHECK-NEXT: $rc6 = COPY [[COPY375]](s8)
+    ; CHECK-NEXT: $rc7 = COPY [[COPY376]](s8)
     ; CHECK-NEXT: JSR &__mulsi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: [[COPY385:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
     ; CHECK-NEXT: [[COPY386:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY387:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
@@ -618,44 +665,6 @@ body: |
     ; CHECK-NEXT: [[COPY398:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY399:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY400:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: $a = COPY [[COPY393]](s8)
-    ; CHECK-NEXT: $x = COPY [[COPY394]](s8)
-    ; CHECK-NEXT: $rc2 = COPY [[COPY395]](s8)
-    ; CHECK-NEXT: $rc3 = COPY [[COPY396]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc8 = COPY [[COPY]](s8)
-    ; CHECK-NEXT: $rc9 = COPY [[COPY114]](s8)
-    ; CHECK-NEXT: $rc10 = COPY [[COPY115]](s8)
-    ; CHECK-NEXT: $rc11 = COPY [[COPY116]](s8)
-    ; CHECK-NEXT: $rc12 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc13 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc14 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc15 = COPY [[C]](s8)
-    ; CHECK-NEXT: JSR &__muldi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc4, implicit-def $rc5, implicit-def $rc6, implicit-def $rc7
-    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: $a = COPY [[COPY229]](s8)
-    ; CHECK-NEXT: $x = COPY [[COPY230]](s8)
-    ; CHECK-NEXT: $rc2 = COPY [[COPY231]](s8)
-    ; CHECK-NEXT: $rc3 = COPY [[COPY232]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc8 = COPY [[COPY245]](s8)
-    ; CHECK-NEXT: $rc9 = COPY [[COPY246]](s8)
-    ; CHECK-NEXT: $rc10 = COPY [[COPY247]](s8)
-    ; CHECK-NEXT: $rc11 = COPY [[COPY248]](s8)
-    ; CHECK-NEXT: $rc12 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc13 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc14 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc15 = COPY [[C]](s8)
-    ; CHECK-NEXT: JSR &__muldi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc4, implicit-def $rc5, implicit-def $rc6, implicit-def $rc7
-    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: [[COPY401:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
     ; CHECK-NEXT: [[COPY402:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY403:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
@@ -672,24 +681,15 @@ body: |
     ; CHECK-NEXT: [[COPY414:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY415:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY416:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
-    ; CHECK-NEXT: $x = COPY [[COPY98]](s8)
-    ; CHECK-NEXT: $rc2 = COPY [[COPY99]](s8)
-    ; CHECK-NEXT: $rc3 = COPY [[COPY100]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc8 = COPY [[COPY409]](s8)
-    ; CHECK-NEXT: $rc9 = COPY [[COPY410]](s8)
-    ; CHECK-NEXT: $rc10 = COPY [[COPY411]](s8)
-    ; CHECK-NEXT: $rc11 = COPY [[COPY412]](s8)
-    ; CHECK-NEXT: $rc12 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc13 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc14 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc15 = COPY [[C]](s8)
-    ; CHECK-NEXT: JSR &__muldi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc4, implicit-def $rc5, implicit-def $rc6, implicit-def $rc7
+    ; CHECK-NEXT: $a = COPY [[COPY397]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY398]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[COPY399]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[COPY400]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[COPY]](s8)
+    ; CHECK-NEXT: $rc5 = COPY [[COPY402]](s8)
+    ; CHECK-NEXT: $rc6 = COPY [[COPY403]](s8)
+    ; CHECK-NEXT: $rc7 = COPY [[COPY404]](s8)
+    ; CHECK-NEXT: JSR &__mulsi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: RTS implicit [[COPY32]](s8)
     %0:_(s8) = COPY $a
@@ -3113,6 +3113,19 @@ body: |
     RTS implicit %1
 ...
 ---
+name: fneg
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: fneg
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $rc2
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 -128
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s8) = G_XOR [[COPY]], [[C]]
+    ; CHECK-NEXT: RTS implicit [[XOR]](s8)
+    %0:_(s8) = COPY $rc2
+    %1:_(s8) = G_FNEG %0
+    RTS implicit %1
+...
+---
 name: fptoui_sat
 body: |
   bb.0.entry:
@@ -3370,5 +3383,23 @@ body: |
     %2:_(s64), %3:_(s64) = G_INTRINSIC intrinsic(@llvm.modf), %1(s64)
     G_STORE %2(s64), %0(p0) :: (store (s64))
     G_STORE %3(s64), %0(p0) :: (store (s64), align 8)
+    RTS
+...
+---
+name: load_store_vector
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: load_store_vector
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $rs0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C]] :: (volatile load (s8), align 2)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX1:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C1]] :: (volatile load (s8) from unknown-address + 1)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[LOAD_INDIR_IDX]](s8), [[COPY]](p0), [[C]] :: (volatile store (s8))
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[LOAD_INDIR_IDX1]](s8), [[COPY]](p0), [[C1]] :: (volatile store (s8) into unknown-address + 1)
+    ; CHECK-NEXT: RTS
+    %0:_(p0) = COPY $rs0
+    %1:_(<2 x s8>) = G_LOAD %0 :: (volatile load (<2 x s8>), align 2)
+    G_STORE %1(<2 x s8>), %0(p0) :: (volatile store (<2 x s8>), align 1)
     RTS
 ...

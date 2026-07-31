@@ -15,4 +15,5 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/DataLayout.h"
 
+#define GET_CALLING_CONV_IMPL
 #include "MOSGenCallingConv.inc"

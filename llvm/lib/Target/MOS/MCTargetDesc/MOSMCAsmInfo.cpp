@@ -14,27 +14,30 @@
 #include "MCTargetDesc/MOSMCExpr.h"
 #include "MOSMCTargetDesc.h"
 
+#include "llvm/ADT/Enum.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
-static const MCAsmInfo::AtSpecifier AtSpecifiers[] = {
-    {MOSMCExpr::VK_IMM8, "mosimm8"},
-    {MOSMCExpr::VK_IMM16, "mosimm16"},
-    {MOSMCExpr::VK_ADDR8, "mos8"},
-    {MOSMCExpr::VK_ADDR16, "mos16"},
-    {MOSMCExpr::VK_ADDR16_LO, "mos16lo"},
-    {MOSMCExpr::VK_ADDR16_HI, "mos16hi"},
-    {MOSMCExpr::VK_ADDR24, "mos24"},
-    {MOSMCExpr::VK_ADDR24_BANK, "mos24bank"},
-    {MOSMCExpr::VK_ADDR24_SEGMENT, "mos24segment"},
-    {MOSMCExpr::VK_ADDR24_SEGMENT_LO, "mos24segmentlo"},
-    {MOSMCExpr::VK_ADDR24_SEGMENT_HI, "mos24segmenthi"},
-    {MOSMCExpr::VK_ADDR13, "mos13"},
+static constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
+    {{"mosimm8"}, MOSMCExpr::VK_IMM8},
+    {{"mosimm16"}, MOSMCExpr::VK_IMM16},
+    {{"mos8"}, MOSMCExpr::VK_ADDR8},
+    {{"mos16"}, MOSMCExpr::VK_ADDR16},
+    {{"mos16lo"}, MOSMCExpr::VK_ADDR16_LO},
+    {{"mos16hi"}, MOSMCExpr::VK_ADDR16_HI},
+    {{"mos24"}, MOSMCExpr::VK_ADDR24},
+    {{"mos24bank"}, MOSMCExpr::VK_ADDR24_BANK},
+    {{"mos24segment"}, MOSMCExpr::VK_ADDR24_SEGMENT},
+    {{"mos24segmentlo"}, MOSMCExpr::VK_ADDR24_SEGMENT_LO},
+    {{"mos24segmenthi"}, MOSMCExpr::VK_ADDR24_SEGMENT_HI},
+    {{"mos13"}, MOSMCExpr::VK_ADDR13},
 };
+static constexpr auto AtSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
-MOSMCAsmInfo::MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
+MOSMCAsmInfo::MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   // While the platform uses 2-byte pointers, the ELF files use 4-byte pointers
   // to convey banking information; this field is used, among others, by the
   // DWARF debug structures.

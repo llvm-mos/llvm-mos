@@ -40,7 +40,7 @@ void MOSToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 }
 
 void MOSToolChain::addClangTargetOptions(const ArgList &DriverArgs,
-                                ArgStringList &CC1Args,
+                                ArgStringList &CC1Args, BoundArch,
                                 Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
   // Not yet implemented for GlobalISel.
@@ -141,7 +141,7 @@ void mos::Linker::AddLTOOptions(const toolchains::MOSToolChain &TC, const ArgLis
                                 ArgStringList &CmdArgs) const {
   assert(!Inputs.empty() && "Must have at least one input.");
   addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
-                TC.getDriver().getLTOMode() == LTOK_Thin);
+                TC.getLTOMode(Args) == LTOK_Thin);
   addMOSCodeGenArgs(CmdArgs);
   unsigned ZPBytes = 0;
   StringRef LTOZP = Args.getLastArgValue(options::OPT_mlto_zp_EQ);

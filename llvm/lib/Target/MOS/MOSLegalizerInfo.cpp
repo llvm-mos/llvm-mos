@@ -244,7 +244,7 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
   getActionDefinitionsBuilder(
-      {G_CTLZ, G_CTTZ, G_CTPOP, G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF})
+      {G_CTLZ, G_CTTZ, G_CTPOP, G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON})
       .lower();
 
   // Floating Point Operations
@@ -295,6 +295,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
 
   getActionDefinitionsBuilder(G_FABS).custom();
 
+  getActionDefinitionsBuilder(G_FNEG).lower();
+
   getActionDefinitionsBuilder({G_FCOPYSIGN, G_IS_FPCLASS}).lower();
 
   getActionDefinitionsBuilder(G_FCANONICALIZE).custom();
@@ -324,6 +326,9 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
       // 8 bits. Once 8-bit, select an addressing mode to replace the generic
       // G_LOAD and G_STORE.
       .customForCartesianProduct({S8, PZ, P}, {PZ, P})
+      // There are no vector registers, so break vector accesses apart into one
+      // access per element and let the scalar rules below handle each.
+      .scalarize(0)
       .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8)
       .unsupported();
@@ -340,6 +345,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
       .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8)
       .unsupported();
+
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
 
   getActionDefinitionsBuilder(G_BRCOND).customFor({S1}).unsupported();
 
@@ -368,7 +375,6 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
       .maxScalar(0, S8)
       .unsupported();
 
-  getLegacyLegalizerInfo().computeTables();
   verify(*STI.getInstrInfo());
 }
 
@@ -1984,7 +1990,7 @@ bool MOSLegalizerInfo::legalizeMemOp(LegalizerHelper &Helper,
 
   // Try lowering, keeping in mind the size limit.
   if (IsInline) {
-    Result = Helper.lowerMemcpyInline(MI);
+    Result = Helper.lowerMemCpyFamily(MI);
   } else {
     Result = Helper.lowerMemCpyFamily(MI, SizeLimit);
   }

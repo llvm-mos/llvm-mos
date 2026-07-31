@@ -121,15 +121,15 @@ define i32 @andxorlow16(i32 %x) {
 define void @orarray100(ptr %a) {
 ; CHECK-LABEL: orarray100:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a1, a0, 400
-; CHECK-NEXT:    lui a2, 1048560
+; CHECK-NEXT:    lui a1, 1048560
+; CHECK-NEXT:    addi a2, a0, 400
 ; CHECK-NEXT:  .LBB8_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a3, 0(a0)
-; CHECK-NEXT:    orn a3, a3, a2
+; CHECK-NEXT:    orn a3, a3, a1
 ; CHECK-NEXT:    sw a3, 0(a0)
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bne a0, a1, .LBB8_1
+; CHECK-NEXT:    bne a0, a2, .LBB8_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -152,16 +152,16 @@ for.body:
 define void @orarray3(ptr %a) {
 ; CHECK-LABEL: orarray3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lw a1, 0(a0)
-; CHECK-NEXT:    lw a2, 4(a0)
-; CHECK-NEXT:    lw a3, 8(a0)
-; CHECK-NEXT:    lui a4, 1048560
-; CHECK-NEXT:    orn a1, a1, a4
-; CHECK-NEXT:    orn a2, a2, a4
-; CHECK-NEXT:    orn a3, a3, a4
-; CHECK-NEXT:    sw a1, 0(a0)
-; CHECK-NEXT:    sw a2, 4(a0)
-; CHECK-NEXT:    sw a3, 8(a0)
+; CHECK-NEXT:    lui a1, 1048560
+; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    lw a3, 4(a0)
+; CHECK-NEXT:    lw a4, 8(a0)
+; CHECK-NEXT:    orn a2, a2, a1
+; CHECK-NEXT:    orn a3, a3, a1
+; CHECK-NEXT:    orn a1, a4, a1
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    sw a3, 4(a0)
+; CHECK-NEXT:    sw a1, 8(a0)
 ; CHECK-NEXT:    ret
   %1 = load i32, ptr %a, align 4
   %or = or i32 %1, 65535
@@ -277,9 +277,9 @@ define i64 @orimm64srli(i64 %x) {
 ; RV32-LABEL: orimm64srli:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a2, 1040384
+; RV32-NEXT:    lui a3, 917504
 ; RV32-NEXT:    orn a0, a0, a2
-; RV32-NEXT:    lui a2, 917504
-; RV32-NEXT:    or a1, a1, a2
+; RV32-NEXT:    or a1, a1, a3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: orimm64srli:
@@ -372,13 +372,13 @@ define i64 @and_or_or(i64 %x, i64 %y) {
 ; NOZBS64-LABEL: and_or_or:
 ; NOZBS64:       # %bb.0:
 ; NOZBS64-NEXT:    li a2, -1
+; NOZBS64-NEXT:    li a3, 1
 ; NOZBS64-NEXT:    slli a2, a2, 33
+; NOZBS64-NEXT:    slli a3, a3, 33
 ; NOZBS64-NEXT:    addi a2, a2, 1
+; NOZBS64-NEXT:    addi a3, a3, -2
 ; NOZBS64-NEXT:    or a0, a0, a2
-; NOZBS64-NEXT:    li a2, 1
-; NOZBS64-NEXT:    slli a2, a2, 33
-; NOZBS64-NEXT:    addi a2, a2, -2
-; NOZBS64-NEXT:    or a1, a1, a2
+; NOZBS64-NEXT:    or a1, a1, a3
 ; NOZBS64-NEXT:    and a0, a0, a1
 ; NOZBS64-NEXT:    ret
 ;

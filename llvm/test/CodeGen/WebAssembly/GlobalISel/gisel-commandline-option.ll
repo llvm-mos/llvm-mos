@@ -28,8 +28,9 @@
 ; ENABLED-O1-NEXT:  Dominator Tree Construction
 ; ENABLED-O1-NEXT:  Basic Alias Analysis (stateless AA impl)
 ; ENABLED-O1-NEXT:  Function Alias Analysis Results
-; ENABLED-O1-NEXT:  Natural Loop Information
+; ENABLED-O1-NEXT:  Cycle Info Analysis
 ; ENABLED-O1-NEXT:  Lazy Branch Probability Analysis
+; ENABLED-O1-NEXT:  Natural Loop Information
 ; ENABLED-O1-NEXT:  Lazy Block Frequency Analysis
 ; ENABLED-NEXT:  InstructionSelect
 ; NOFALLBACK-NEXT:  WebAssembly Argument Move

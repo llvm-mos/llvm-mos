@@ -382,8 +382,9 @@ public:
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the
   /// conditions can be understood enough produce a PipelinerLoopInfo object.
-  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
-  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
+  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> analyzeLoopForPipelining(
+      MachineBasicBlock *LoopBB,
+      MachineOptimizationRemarkEmitter *ORE = nullptr) const override;
 
 private:
   /// Returns an unused general-purpose register which can be used for
@@ -415,8 +416,6 @@ private:
   /// and updates it if requested.
   bool checkAndUpdateStackOffset(MachineInstr *MI, int64_t Fixup,
                                  bool Updt) const;
-
-  unsigned getInstBundleLength(const MachineInstr &MI) const;
 
   std::optional<unsigned> getVLDMDefCycle(const InstrItineraryData *ItinData,
                                           const MCInstrDesc &DefMCID,
