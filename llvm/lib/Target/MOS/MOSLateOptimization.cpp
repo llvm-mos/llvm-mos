@@ -299,6 +299,15 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
 
     // Process LD_ #.
     Register Dst = MI.getOperand(0).getReg();
+
+    // LDImm's destination is not always a GPR. MOSInstrInfo::getRegClass
+    // widens it to Anyi8 on SPC700, where `$rcN = LDImm imm` is how
+    // `mov dp, #imm` is modelled. Only A, X and Y take part in the rewrites
+    // below, and an imaginary destination writes none of them, so there is
+    // nothing to rewrite here and no tracked value to invalidate.
+    if (!MOS::GPRRegClass.contains(Dst))
+      continue;
+
     int64_t Val = MI.getOperand(1).getImm();
 
     // Try to replace with T__.
