@@ -279,10 +279,17 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
         Load = &LoadY;
         break;
       }
-      // Copy A value to X or Y.
-      Load->MI = &MI;
-      Load->Val = LoadA.Val;
-      continue;
+      // TA's destination class is XY-only today, so Load is always set here.
+      // The guard is defensive: this function is where an "impossible"
+      // destination already appeared once (LDImm below, widened to Anyi8 on
+      // SPC700), so don't trust the switch to be exhaustive. An unhandled
+      // destination falls through to the generic invalidation.
+      if (Load) {
+        // Copy A value to X or Y.
+        Load->MI = &MI;
+        Load->Val = LoadA.Val;
+        continue;
+      }
     }
 
     if (MI.getOpcode() != MOS::LDImm || !MI.getOperand(1).isImm()) {
