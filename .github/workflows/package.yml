@@ -14,8 +14,6 @@ on:
 jobs:
   package:
     if: github.repository_owner == 'llvm-mos'
-    permissions:
-      contents: write
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -88,6 +86,7 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ secrets.ACTION_TOKEN }}
           prerelease: true
           body: "Internal compiler build for Linux"
           tag_name: llvm-mos-linux-main
@@ -97,6 +96,7 @@ jobs:
         if: startsWith(matrix.os, 'macos')
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ secrets.ACTION_TOKEN }}
           prerelease: true
           body: "Internal compiler build for macOS"
           tag_name: llvm-mos-darwin-main
@@ -106,6 +106,7 @@ jobs:
         if: startsWith(matrix.os, 'windows')
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ secrets.ACTION_TOKEN }}
           prerelease: true
           body: "Internal compiler build for Windows"
           tag_name: llvm-mos-windows-main
