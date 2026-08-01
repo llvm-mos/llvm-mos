@@ -303,10 +303,20 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
     // LDImm's destination is not always a GPR. MOSInstrInfo::getRegClass
     // widens it to Anyi8 on SPC700, where `$rcN = LDImm imm` is how
     // `mov dp, #imm` is modelled. Only A, X and Y take part in the rewrites
-    // below, and an imaginary destination writes none of them, so there is
-    // nothing to rewrite here and no tracked value to invalidate.
-    if (!MOS::GPRRegClass.contains(Dst))
+    // below; an imaginary destination writes none of them, so there is
+    // nothing to rewrite. Invalidate any tracked GPR the instruction does
+    // modify so a future widening of LDImm's destination class cannot turn
+    // this skip into a stale-value rewrite (no such destination exists
+    // today; these checks are expected to do nothing).
+    if (!MOS::GPRRegClass.contains(Dst)) {
+      if (MI.modifiesRegister(MOS::A, TRI))
+        LoadA.MI = nullptr;
+      if (MI.modifiesRegister(MOS::X, TRI))
+        LoadX.MI = nullptr;
+      if (MI.modifiesRegister(MOS::Y, TRI))
+        LoadY.MI = nullptr;
       continue;
+    }
 
     int64_t Val = MI.getOperand(1).getImm();
 
