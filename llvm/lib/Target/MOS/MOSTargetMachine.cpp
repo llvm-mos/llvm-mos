@@ -338,6 +338,7 @@ bool MOSCSEConfigFull::shouldCSEOpc(unsigned Opc) {
     return CSEConfigFull::shouldCSEOpc(Opc);
   case MOS::G_DEC:
   case MOS::G_INC:
+  case MOS::G_ASHRE:
   case MOS::G_LSHRE:
   case MOS::G_SBC:
   case MOS::G_SHLE:

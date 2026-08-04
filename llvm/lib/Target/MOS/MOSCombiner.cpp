@@ -538,6 +538,9 @@ bool MOSCombinerImpl::matchFoldShift(MachineInstr &MI,
   if (MI.getOpcode() == MOS::G_LSHRE) {
     CarryOut = (Val->Value & 1).getBoolValue();
     Result = Val->Value.lshr(1) | CarryIn->Value.zext(8).shl(7);
+  } else if (MI.getOpcode() == MOS::G_ASHRE) {
+    CarryOut = (Val->Value & 1).getBoolValue();
+    Result = Val->Value.ashr(1);
   } else {
     CarryOut = (Val->Value & 0x80).getBoolValue();
     Result = Val->Value.shl(1) | CarryIn->Value.zext(8);
@@ -561,7 +564,7 @@ bool MOSCombinerImpl::matchShiftUnusedCarryIn(MachineInstr &MI,
 
   APInt DemandedBits = getDemandedBits(MI.getOperand(0).getReg());
   assert(DemandedBits.getBitWidth() == 8);
-  if (MI.getOpcode() == MOS::G_LSHRE) {
+  if (MI.getOpcode() != MOS::G_SHLE) {
     if ((DemandedBits & 0x80).getBoolValue())
       return false;
   } else {
