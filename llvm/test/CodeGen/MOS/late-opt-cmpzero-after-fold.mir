@@ -1,0 +1,31 @@
+# RUN: llc -mtriple=mos -run-pass=mos-late-opt -verify-machineinstrs -o - %s | FileCheck %s
+
+# lowerCmpZeros walks the block in reverse and either folds each CmpZero into an
+# earlier NZ producer or lowers it to a real flag-setting instruction. The
+# fold-success flag used to be the function's loop-carried `Changed`
+# accumulator, so once any CmpZero in the block folded, every CmpZero processed
+# afterwards took the "already changed" early-continue and was never lowered.
+# Nothing downstream lowers the pseudo: it reached the asm printer, which emits
+# nothing for it, silently dropping the flag test. -verify-machineinstrs does
+# not catch it, because a surviving CmpZero is legal MIR.
+#
+# Reverse iteration processes the second CmpZero first (it folds into the T_A);
+# the first one cannot fold -- nothing precedes it -- so it must be lowered.
+
+---
+name: cmpzero_after_fold
+body: |
+  bb.0.entry:
+    liveins: $a, $x
+    ; CHECK-LABEL: name: cmpzero_after_fold
+    ; CHECK: liveins: $a, $x
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $a = T_A $x, implicit-def $nz
+    ; CHECK-NEXT: $a = T_A $x, implicit-def $nz
+    ; CHECK-NEXT: RTS implicit $n
+    ; CHECK-NOT: CmpZero
+    CmpZero $x, implicit-def $n, implicit-def $c
+    $a = T_A $x
+    CmpZero $a, implicit-def $n, implicit-def $c
+    RTS implicit $n
+...
