@@ -94,18 +94,25 @@ bool MOSLateOptimization::lowerCmpZeros(MachineBasicBlock &MBB) const {
 
     if (MI.allDefsAreDead()) {
       MI.eraseFromParent();
+      Changed = true;
       continue;
     }
 
     Register Val = MI.getOperand(0).getReg();
 
+    // Per-CmpZero, NOT loop-carried: whether THIS pseudo was folded into an
+    // earlier NZ producer. Sharing `Changed` here made every CmpZero after the
+    // block's first fold skip its lowering too, and nothing downstream lowers
+    // the pseudo -- it reached the asm printer and was emitted as nothing,
+    // silently dropping the flag test.
+    bool Folded = false;
     for (auto &J : mbb_reverse(MBB.begin(), MI)) {
       if (J.isDebugInstr())
         continue;
       if (J.isCall() || J.isInlineAsm())
         break;
       if (definesNZ(J, Val, STI)) {
-        Changed = true;
+        Folded = true;
         J.addOperand(MachineOperand::CreateReg(MOS::NZ, /*isDef=*/true,
                                                /*isImp=*/true));
         MI.eraseFromParent();
@@ -135,8 +142,10 @@ bool MOSLateOptimization::lowerCmpZeros(MachineBasicBlock &MBB) const {
       if (ClobbersNZ)
         break;
     }
-    if (Changed)
+    if (Folded) {
+      Changed = true;
       continue;
+    }
 
     Changed = true;
     lowerCmpZero(MI);
