@@ -30,6 +30,7 @@
 #include "MOS.h"
 #include "MOSInstrBuilder.h"
 #include "MOSInstrInfo.h"
+#include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 #include "MOSTargetMachine.h"
@@ -468,10 +469,15 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
       WordReg = TRI.getMatchingSuperReg(UseReg, MOS::sublo,
                                         &MOS::Imag16RegClass);
       if (WordReg && TRI.getSubReg(WordReg, MOS::subhi) == NextUseReg) {
+        const auto &CSRZPOffsets =
+            MBB->getParent()->getInfo<MOSFunctionInfo>()->CSRZPOffsets;
+        bool SplitCSR = !CSRZPOffsets.count(WordReg) &&
+                        (CSRZPOffsets.count(UseReg) ||
+                         CSRZPOffsets.count(Register(NextUseReg)));
         bool IsLastWord = NextUseIdx >= MI.getNumExplicitOperands() - 1;
         // INW chains via Z+BNE. DEW lacks borrow detection, so only use on
         // the last word.
-        UseWordOp = !IsDec || IsLastWord;
+        UseWordOp = !SplitCSR && (!IsDec || IsLastWord);
       }
     }
   }
