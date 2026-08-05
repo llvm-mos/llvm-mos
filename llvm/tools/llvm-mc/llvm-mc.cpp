@@ -371,7 +371,8 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
   Parser->setTargetParser(*TAP);
   Parser->getLexer().setLexMasmIntegers(LexMasmIntegers);
   Parser->getLexer().setLexMasmHexFloats(LexMasmHexFloats);
-  Parser->getLexer().setLexMotorolaIntegers(LexMotorolaIntegers);
+  if (LexMotorolaIntegers.getNumOccurrences())
+    Parser->getLexer().setLexMotorolaIntegers(LexMotorolaIntegers);
 
   int Res = Parser->Run(NoInitialTextSection);
 
