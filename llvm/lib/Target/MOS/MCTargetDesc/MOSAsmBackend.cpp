@@ -207,10 +207,17 @@ void MOSAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     return;
   }
   case MOS::PCRel8:
-  case MOS::PCRel16:
-    Value += getRelativeMOSPCCorrection(Kind == MOS::PCRel16);
-    ;
+  case MOS::PCRel16: {
+    const bool IsPCRel16 = Kind == MOS::PCRel16;
+    Value += getRelativeMOSPCCorrection(IsPCRel16);
+    if (IsResolved && !fitsIntoFixup(static_cast<int64_t>(Value), IsPCRel16)) {
+      Asm->getContext().reportError(
+          Fixup.getLoc(), IsPCRel16 ? "16-bit branch target out of range"
+                                   : "8-bit branch target out of range");
+      return;
+    }
     break;
+  }
   default:
     break;
   }
