@@ -160,6 +160,13 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
     CFIP.addInstruction(dwarf::DW_CFA_val_offset, Directive.getRegister(),
                         Directive.getOffset());
     break;
+  case MCCFIInstruction::OpDefCfaExpression:
+  case MCCFIInstruction::OpExpression:
+  case MCCFIInstruction::OpValExpression:
+    // DWARF expressions are not supported yet.
+    Context->reportWarning(Directive.getLoc(),
+                           "this directive is not supported, ignoring it");
+    break;
   }
 
   return CFIP;
