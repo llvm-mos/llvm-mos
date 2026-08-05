@@ -24,3 +24,11 @@ rep #$30
 
 ; CHECK: [[#@LINE+1]]:1: error: instruction requires: FeatureW65816Or65EL02
 sep #$30
+
+; CHECK: [[#@LINE+1]]:1: error: instruction requires: FeatureW65816
+cop #90
+
+; cop has no zero-operand form at all outside FeatureW65816, so a bare
+; mnemonic with no matching variant is simply unrecognized here.
+; CHECK: [[#@LINE+1]]:1: error: invalid instruction
+cop

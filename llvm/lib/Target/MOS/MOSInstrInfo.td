@@ -785,6 +785,14 @@ def TDC_Implied : InstLowB<"tdc", 0b0111>;
 def TSC_Implied : InstLowB<"tsc", 0b0011>;
 
 def WDM_Immediate : Inst16<"wdm", Opcode<0x42>, Immediate>;
+
+/// COP invokes the co-processor software interrupt. Like BRK, it advances the
+/// PC by two, so the byte following the opcode is a "signature" the handler
+/// can read via the pushed return address; the hardware makes no direct use
+/// of it. Unlike BRK, WDC's own assembly syntax requires this operand, so it
+/// is mandatory here rather than optional. W65816-only: on the 65EL02,
+/// opcode $02 is NXT (a different instruction), not COP.
+def COP_Immediate : Inst16<"cop", Opcode<0x02>, Immediate>, InstUnconditionalBranch;
 }
 
 } // Predicates = [HasW65816]
