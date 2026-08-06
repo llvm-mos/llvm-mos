@@ -279,10 +279,17 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
         Load = &LoadY;
         break;
       }
-      // Copy A value to X or Y.
-      Load->MI = &MI;
-      Load->Val = LoadA.Val;
-      continue;
+      // TA's destination class is XY-only today, so Load is always set here.
+      // The guard is defensive: this function is where an "impossible"
+      // destination already appeared once (LDImm below, widened to Anyi8 on
+      // SPC700), so don't trust the switch to be exhaustive. An unhandled
+      // destination falls through to the generic invalidation.
+      if (Load) {
+        // Copy A value to X or Y.
+        Load->MI = &MI;
+        Load->Val = LoadA.Val;
+        continue;
+      }
     }
 
     if (MI.getOpcode() != MOS::LDImm || !MI.getOperand(1).isImm()) {
@@ -299,6 +306,25 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
 
     // Process LD_ #.
     Register Dst = MI.getOperand(0).getReg();
+
+    // LDImm's destination is not always a GPR. MOSInstrInfo::getRegClass
+    // widens it to Anyi8 on SPC700, where `$rcN = LDImm imm` is how
+    // `mov dp, #imm` is modelled. Only A, X and Y take part in the rewrites
+    // below; an imaginary destination writes none of them, so there is
+    // nothing to rewrite. Invalidate any tracked GPR the instruction does
+    // modify so a future widening of LDImm's destination class cannot turn
+    // this skip into a stale-value rewrite (no such destination exists
+    // today; these checks are expected to do nothing).
+    if (!MOS::GPRRegClass.contains(Dst)) {
+      if (MI.modifiesRegister(MOS::A, TRI))
+        LoadA.MI = nullptr;
+      if (MI.modifiesRegister(MOS::X, TRI))
+        LoadX.MI = nullptr;
+      if (MI.modifiesRegister(MOS::Y, TRI))
+        LoadY.MI = nullptr;
+      continue;
+    }
+
     int64_t Val = MI.getOperand(1).getImm();
 
     // Try to replace with T__.
