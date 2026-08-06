@@ -21,6 +21,8 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/WithColor.h"
+
+#include <map>
 #include <system_error>
 
 using namespace llvm;
