@@ -556,16 +556,19 @@ void MOSZeroPageAlloc::collectCandidates(
   // Compute the benefit for moving each CSR to a static ZP location.
   BitVector SavedRegs;
   TFL.determineCalleeSaves(MF, SavedRegs, /*RS=*/nullptr);
+  const MOSSubtarget &STI = MF.getSubtarget<MOSSubtarget>();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  auto Eligible = [&](Register Reg) {
+    return SavedRegs.test(Reg) &&
+           !MF.getRegInfo().getUsedPhysRegsMask().test(Reg);
+  };
   unsigned Idx = 0;
   DenseSet<Register> Imag16Regs;
   for (Register Reg : SavedRegs.set_bits()) {
     if (!MOS::Imag8RegClass.contains(Reg))
       continue;
 
-    // If a call occurs with a different calling convention, it may clobber
-    // callee-saved registers in a way that can't be rewritten by this pass.
-    // These need to be saved and restored like normal.
-    if (MF.getRegInfo().getUsedPhysRegsMask().test(Reg))
+    if (!Eligible(Reg))
       continue;
 
     size_t Size = 1;
@@ -578,13 +581,16 @@ void MOSZeroPageAlloc::collectCandidates(
       Benefit += 12 * RestoreFreq; // LDA ABS,STA ZP
     }
 
-    // If the CSR is used as a 16-bit pointer, then the two halves cannot be
-    // assigned independently. Thus, instead of two size-1 candidates, one
-    // size-2 candidate is used.
+    // FinalizeISel can introduce INWImag/DEWImag after this pass runs.
+    // MOSMCInstLower requires an Imag16 mapping to rewrite their operands.
     Register Imag16 =
-        *MF.getSubtarget().getRegisterInfo()->superregs(Reg).begin();
+        *TRI.superregs(Reg).begin();
     assert(MOS::Imag16RegClass.contains(Imag16));
-    if (!MF.getRegInfo().reg_nodbg_empty(Imag16)) {
+    bool PairRequired = !MF.getRegInfo().reg_nodbg_empty(Imag16) ||
+                        (STI.has65CE02() &&
+                         Eligible(TRI.getSubReg(Imag16, MOS::sublo)) &&
+                         Eligible(TRI.getSubReg(Imag16, MOS::subhi)));
+    if (PairRequired) {
       // Don't create the Imag16 candidate twice.
       if (Imag16Regs.contains(Imag16))
         continue;
