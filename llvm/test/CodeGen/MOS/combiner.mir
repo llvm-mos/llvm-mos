@@ -94,6 +94,26 @@
       ret void
   }
 
+  define void @arithmetic_shift_unused_carry_in_chain() {
+    entry:
+      ret void
+  }
+
+  define void @arithmetic_shift_used_carry_in_chain() {
+    entry:
+      ret void
+  }
+
+  define void @ashre_carry_out_demands_source_bit_0() {
+    entry:
+      ret void
+  }
+
+  define void @ashre_carry_in_demand_reaches_producer() {
+    entry:
+      ret void
+  }
+
   define void @mul_to_shift() {
     entry:
       ret void
@@ -579,6 +599,83 @@ body: |
     ; Bit 7 is demanded, so this carry-in must survive.
     %26:_(s8), %27:_(s1) = G_ASHRE %0, %1
     G_STORE_ABS %26, 1234
+...
+---
+name: arithmetic_shift_unused_carry_in_chain
+legalized: true
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: arithmetic_shift_unused_carry_in_chain
+    ; CHECK: [[SRC:%[0-9]+]]:_(s8) = G_LOAD_ABS 1234
+    ; CHECK-NEXT: [[SIGN:%[0-9]+]]:_(s1) = G_LOAD_ABS 1234
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[FIRST:%[0-9]+]]:_(s8), [[FIRST_C:%[0-9]+]]:_(s1) = G_ASHRE [[SRC]], [[C]]
+    ; CHECK-NEXT: [[SECOND:%[0-9]+]]:_(s8), {{%[0-9]+}}:_(s1) = G_ASHRE [[FIRST]], [[C]]
+    ; CHECK-NEXT: [[MASK:%[0-9]+]]:_(s8) = G_CONSTANT i8 63
+    ; CHECK-NEXT: [[RESULT:%[0-9]+]]:_(s8) = G_AND [[SECOND]], [[MASK]]
+    ; CHECK-NEXT: G_STORE_ABS [[RESULT]](s8), 1234
+    %0:_(s8) = G_LOAD_ABS 1234
+    %1:_(s1) = G_LOAD_ABS 1234
+    %2:_(s8), %3:_(s1) = G_ASHRE %0, %1
+    %4:_(s8), %5:_(s1) = G_ASHRE %2, %3
+    %6:_(s8) = G_CONSTANT i8 63
+    %7:_(s8) = G_AND %4, %6
+    G_STORE_ABS %7, 1234
+...
+---
+name: arithmetic_shift_used_carry_in_chain
+legalized: true
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: arithmetic_shift_used_carry_in_chain
+    ; CHECK: [[SRC:%[0-9]+]]:_(s8) = G_LOAD_ABS 1234
+    ; CHECK-NEXT: [[SIGN:%[0-9]+]]:_(s1) = G_LOAD_ABS 1234
+    ; CHECK-NEXT: [[FIRST:%[0-9]+]]:_(s8), [[FIRST_C:%[0-9]+]]:_(s1) = G_ASHRE [[SRC]], [[SIGN]]
+    ; CHECK-NEXT: [[SECOND:%[0-9]+]]:_(s8), {{%[0-9]+}}:_(s1) = G_ASHRE [[FIRST]], [[FIRST_C]]
+    ; CHECK-NEXT: [[MASK:%[0-9]+]]:_(s8) = G_CONSTANT i8 -128
+    ; CHECK-NEXT: [[RESULT:%[0-9]+]]:_(s8) = G_AND [[SECOND]], [[MASK]]
+    ; CHECK-NEXT: G_STORE_ABS [[RESULT]](s8), 1234
+    %0:_(s8) = G_LOAD_ABS 1234
+    %1:_(s1) = G_LOAD_ABS 1234
+    %2:_(s8), %3:_(s1) = G_ASHRE %0, %1
+    %4:_(s8), %5:_(s1) = G_ASHRE %2, %3
+    %6:_(s8) = G_CONSTANT i8 128
+    %7:_(s8) = G_AND %4, %6
+    G_STORE_ABS %7, 1234
+...
+---
+name: ashre_carry_out_demands_source_bit_0
+legalized: true
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ashre_carry_out_demands_source_bit_0
+    ; CHECK: [[SRC:%[0-9]+]]:_(s8) = G_LOAD_ABS 1234
+    ; CHECK-NEXT: [[CIN:%[0-9]+]]:_(s1) = G_LOAD_ABS 1234
+    ; CHECK-NEXT: {{%[0-9]+}}:_(s8), {{%[0-9]+}}:_(s1) = G_SHLE [[SRC]], [[CIN]]
+    %0:_(s8) = G_LOAD_ABS 1234
+    %1:_(s1) = G_LOAD_ABS 1234
+    %2:_(s8), %3:_(s1) = G_SHLE %0, %1
+    %4:_(s1) = G_CONSTANT i1 false
+    %5:_(s8), %6:_(s1) = G_ASHRE %2, %4
+    RTS implicit %6
+...
+---
+name: ashre_carry_in_demand_reaches_producer
+legalized: true
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ashre_carry_in_demand_reaches_producer
+    ; CHECK: [[SRC:%[0-9]+]]:_(s8) = G_LOAD_ABS 1234
+    ; CHECK-NEXT: [[SIGN:%[0-9]+]]:_(s1) = G_LOAD_ABS 1234
+    ; CHECK-NEXT: {{%[0-9]+}}:_(s8), {{%[0-9]+}}:_(s1) = G_ASHRE [[SRC]], [[SIGN]]
+    %0:_(s8) = G_LOAD_ABS 1234
+    %1:_(s1) = G_LOAD_ABS 1234
+    %2:_(s8), %3:_(s1) = G_ASHRE %0, %1
+    %4:_(s1) = G_CONSTANT i1 false
+    %5:_(s8), %6:_(s1) = G_SHLE %2, %4
+    %7:_(s8) = G_LOAD_ABS 5678
+    %8:_(s8), %9:_(s1) = G_ASHRE %7, %6
+    RTS implicit %8
 ...
 ---
 name: mul_to_shift
