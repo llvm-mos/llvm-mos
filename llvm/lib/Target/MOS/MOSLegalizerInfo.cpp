@@ -1021,9 +1021,11 @@ bool MOSLegalizerInfo::legalizeShiftRotate(
       Opcode = MOS::G_SHLE;
       break;
     case G_LSHR:
-    case G_ASHR:
     case G_ROTR:
       Opcode = MOS::G_LSHRE;
+      break;
+    case G_ASHR:
+      Opcode = MOS::G_ASHRE;
       break;
     }
     auto Even = Builder.buildInstr(Opcode, {Ty, S1}, {Src, CarryIn});
@@ -1059,7 +1061,8 @@ bool MOSLegalizerInfo::legalizeLshrEShlE(LegalizerHelper &Helper,
   for (MachineOperand &SrcPart : unmergeDefs(Unmerge))
     Defs.push_back(SrcPart.getReg());
 
-  if (MI.getOpcode() == MOS::G_LSHRE)
+  const bool IsRightShift = MI.getOpcode() != MOS::G_SHLE;
+  if (IsRightShift)
     std::reverse(Defs.begin(), Defs.end());
 
   Register Carry = CarryIn;
@@ -1068,12 +1071,14 @@ bool MOSLegalizerInfo::legalizeLshrEShlE(LegalizerHelper &Helper,
     Register NewCarry = I.index() == Defs.size() - 1
                             ? CarryOut
                             : MRI.createGenericVirtualRegister(S1);
-    Builder.buildInstr(MI.getOpcode(), {Parts.back(), NewCarry},
-                       {I.value(), Carry});
+    unsigned Opcode = MI.getOpcode() == MOS::G_ASHRE && I.index() == 0
+                          ? MOS::G_ASHRE
+                          : (IsRightShift ? MOS::G_LSHRE : MOS::G_SHLE);
+    Builder.buildInstr(Opcode, {Parts.back(), NewCarry}, {I.value(), Carry});
     Carry = NewCarry;
   }
 
-  if (MI.getOpcode() == MOS::G_LSHRE)
+  if (IsRightShift)
     std::reverse(Parts.begin(), Parts.end());
 
   Builder.buildMergeValues(Dst, Parts).getReg(0);
