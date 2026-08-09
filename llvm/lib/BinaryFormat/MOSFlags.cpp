@@ -56,6 +56,12 @@ bool checkEFlagsCompatibility(unsigned EFlags, unsigned ModuleEFlags) {
   if ((Flags & ELF::EF_MOS_ARCH_SPC700) &&
       (Flags & ~ELF::EF_MOS_ARCH_SPC700))
     return false;
+  // Mixing the 65816 with the 65CE02 is prohibited. Their 16-bit branches
+  // measure the displacement from different addresses, and a relocation is
+  // resolved against the merged output flags, which cannot tell which input
+  // an R_MOS_PCREL_16 came from. No CPU implies both.
+  if ((Flags & ELF::EF_MOS_ARCH_W65816) && (Flags & ELF::EF_MOS_ARCH_65CE02))
+    return false;
   return true;
 }
 
