@@ -40,7 +40,14 @@ bool MOSMCInstrAnalysis::evaluateBranch(const MCInst &Inst,
       return true;
     }
     case MCOI::OPERAND_PCREL: {
-      Target = Addr + Size + Inst.getOperand(NumOps - 1).getImm();
+      // Displacements are measured from the end of the instruction: opcode + 2
+      // for the two-byte branches, opcode + 3 for BBR/BBS and for the 65816's
+      // BRL. The 65CE02 long branches are the exception, using opcode + 2
+      // despite being three bytes.
+      const bool IsLongBranch =
+          Info->get(Inst.getOpcode()).TSFlags & MOS::TSFlagLongBranch;
+      Target = Addr + (IsLongBranch ? 2 : Size) +
+               Inst.getOperand(NumOps - 1).getImm();
       return true;
     }
   }

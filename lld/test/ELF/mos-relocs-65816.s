@@ -21,9 +21,11 @@ rel16next:
 # RELOCS-NEXT: OFFSET   TYPE                     VALUE
 # RELOCS-NEXT: 00000001 R_MOS_PCREL_16           .R_MOS_PCREL_16+0x6
 # RELOCS-NEXT: 00000004 R_MOS_PCREL_16           .R_MOS_PCREL_16
+## BRL is relative to the end of its three-byte encoding, so rel16next, at
+## rel16prev + 6, is the target of the first branch.
 # CHECK-LABEL: section .R_MOS_PCREL_16:
-# CHECK: brl $100bd
-# CHECK: brl $100b7
+# CHECK: brl $100be
+# CHECK: brl $100b8 <rel16prev>
 
 .section .R_MOS_ADDR24_BANK,"ax",@progbits
   lda #mos24bank(adr24)

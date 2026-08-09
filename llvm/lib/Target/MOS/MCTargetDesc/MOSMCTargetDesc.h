@@ -88,7 +88,10 @@ enum TSFlag {
   TSFlagMLow = (1 << 0),
   TSFlagMHigh = (1 << 1),
   TSFlagXLow = (1 << 2),
-  TSFlagXHigh = (1 << 3)
+  TSFlagXHigh = (1 << 3),
+  // A 65CE02 16-bit branch. Three bytes, but its displacement is measured from
+  // opcode + 2 like the two-byte branches, unlike every other MOS branch.
+  TSFlagLongBranch = (1 << 4)
 };
 
 bool isZeroPageSectionName(StringRef Name);

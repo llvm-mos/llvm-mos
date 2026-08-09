@@ -96,12 +96,15 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // relative convention.
     *loc = static_cast<unsigned char>(val - 1);
     break;
-  case R_MOS_PCREL_16:
-    checkInt(ctx, loc, val - 2, 16, rel);
-    // MOS's PC relative addressing is off by two from the standard LLVM PC
-    // relative convention.
-    write16le(loc, static_cast<unsigned short>(val - 2));
+  case R_MOS_PCREL_16: {
+    // 65816 BRL is relative to opcode + 3; the 65CE02 16-bit branches are
+    // relative to opcode + 2, like the 8-bit MOS branches. 4510 and 45GS02
+    // objects also carry EF_MOS_ARCH_65CE02.
+    int corr = (ctx.arg.eflags & ELF::EF_MOS_ARCH_65CE02) ? 1 : 2;
+    checkInt(ctx, loc, val - corr, 16, rel);
+    write16le(loc, static_cast<unsigned short>(val - corr));
     break;
+  }
   case R_MOS_ADDR8:
     val = llvm::SignExtend64(val & 0xffff, 16);
     // The HuC6280's zero page is at 0x2000.

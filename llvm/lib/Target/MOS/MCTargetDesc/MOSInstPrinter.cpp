@@ -83,9 +83,15 @@ void MOSInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
   const MCOperand &Op = MI->getOperand(OpNo);
   if (!Op.isImm())
     return printOperand(MI, OpNo, OS);
-  uint64_t Target = Op.getImm();
-  OS << formatImm(PrintBranchImmAsAddress ? (int8_t)Target + Address + 2
-                                          : Target);
+  // Displacements are measured from the end of the instruction, except the
+  // 65CE02 long branches, which use opcode + 2 like the 8-bit branches even
+  // though they are three bytes. The decoder sign-extends to the operand's own
+  // width, 8 or 16 bits, so the value must not be narrowed here.
+  const MCInstrDesc &Desc = MII.get(MI->getOpcode());
+  const bool IsLongBranch = Desc.TSFlags & MOS::TSFlagLongBranch;
+  const uint64_t Base = Address + (IsLongBranch ? 2 : Desc.getSize());
+  int64_t Target = Op.getImm();
+  OS << formatImm(PrintBranchImmAsAddress ? Target + Base : Target);
 }
 
 void MOSInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {

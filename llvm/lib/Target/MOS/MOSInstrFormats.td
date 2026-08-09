@@ -123,10 +123,12 @@ class Inst<string asmstr> : Instruction {
   bit MHigh = 0;
   bit XLow = 0;
   bit XHigh = 0;
+  bit LongBranch = 0;
   let TSFlags{0} = MLow;
   let TSFlags{1} = MHigh;
   let TSFlags{2} = XLow;
   let TSFlags{3} = XHigh;
+  let TSFlags{4} = LongBranch;
 }
 
 class InstConditionalBranch {
@@ -224,7 +226,8 @@ class pcrel8at<int offset> : Operand<i32> {
 def pcrel8 : pcrel8at<1>;
 def pcrel8at2 : pcrel8at<2>;
 
-/// A 16-bit pc-relative reference, for 65816 BRL instruction.
+/// A 16-bit pc-relative reference, for the 65816 BRL instruction and the
+/// 65CE02 long branches.
 class pcrel16at<int offset> : Operand<i32> {
   let ParserMatchClass = PCRelativeOperand<"PCRel16">;
   let EncoderMethod = "encodeImm<MOS::PCRel16, " # offset # ">";
