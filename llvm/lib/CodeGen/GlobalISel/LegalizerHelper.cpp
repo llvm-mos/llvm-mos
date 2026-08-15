@@ -842,10 +842,20 @@ LegalizerHelper::createMemLibcall(MachineRegisterInfo &MRI, MachineInstr &MI,
     RTLibcall = RTLIB::MEMMOVE;
     Args[0].Flags[0].setReturned();
     break;
-  case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET: {
     RTLibcall = RTLIB::MEMSET;
     Args[0].Flags[0].setReturned();
+    // G_MEMSET's fill operand is i8 but C memset() takes int.  Promote the
+    // fill value so the calling convention assigns it to the correct register.
+    unsigned IntSize =
+        std::min(MIRBuilder.getDataLayout().getPointerSizeInBits(0), 32u);
+    if (MRI.getType(Args[1].Regs[0]).getSizeInBits() < IntSize) {
+      auto ZExt = MIRBuilder.buildZExt(LLT::scalar(IntSize), Args[1].Regs[0]);
+      Args[1].Regs[0] = ZExt.getReg(0);
+      Args[1].Ty = IntegerType::get(Ctx, IntSize);
+    }
     break;
+  }
   default:
     llvm_unreachable("unsupported opcode");
   }
