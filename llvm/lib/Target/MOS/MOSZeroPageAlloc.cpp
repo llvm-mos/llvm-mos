@@ -308,7 +308,7 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
 
   // Move the offsets of the interrupts after everything else and after one
   // another.
-  size_t InterruptOffset = SCCGraph.GlobalZPSize + SCCGraph.RegularZPSize;
+  size_t InterruptOffset = SCCGraph.RegularZPSize;
   for (EntryGraph &EG : EntryGraphs) {
     if (!EG.IsINR)
       continue;
