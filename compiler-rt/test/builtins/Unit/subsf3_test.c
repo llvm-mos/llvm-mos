@@ -379,5 +379,54 @@ int main() {
   status |= test__subsf3(0xff800000, 0xff800000, 0x7fc00000);
 #endif // ARM_NAN_HANDLING
 
+  // Regression: opposite-sign near-cancellation whose true result is a
+  // nonzero subnormal.  The normalize bit-loop must stop *at* the
+  // exp==1 -> exp==0 transition without an additional shift-and-
+  // decrement, because IEEE 754 subnormals reuse the same reference
+  // scale as the smallest normal (they just drop the implicit leading
+  // 1).  An implementation that shifts one more time across that
+  // boundary silently returns exactly 2x the correct magnitude for
+  // any such subnormal result.
+  status |= test__subsf3(0x00a00000, 0x00800000, 0x00200000);
+  status |= test__subsf3(0x00810000, 0x00800000, 0x00010000);
+  status |= test__subsf3(0x00800001, 0x00800000, 0x00000001);
+  status |= test__subsf3(0x03000000, 0x02fffffe, 0x00000020);
+  // Additional cases discovered by fuzzing a Python model vs numpy float32.
+  status |= test__subsf3(0x00513f55, 0x008ac0ef, 0x8039819a);
+  status |= test__subsf3(0x007247f1, 0x008ac31e, 0x80187b2d);
+  status |= test__subsf3(0x007775f9, 0x0093b73f, 0x801c4146);
+  status |= test__subsf3(0x00740e32, 0x009786e6, 0x802378b4);
+  status |= test__subsf3(0x00ef502e, 0x00c3a704, 0x002ba92a);
+  status |= test__subsf3(0x0250d539, 0x025322c0, 0x80126c38);
+  status |= test__subsf3(0x00d60017, 0x00b739b2, 0x001ec665);
+  status |= test__subsf3(0x02fcce07, 0x02fd68ff, 0x8009af80);
+
+  // Regression: subtract where b needs an alignment right-shift and
+  // some of b's low bits are truncated (sticky bit set).  Truncating
+  // b downward makes the computed difference slightly too *large* by
+  // a strictly-positive amount less than one ULP, so a nonzero sticky
+  // must bias the round DOWN -- the mirror image of the add-path
+  // convention where a nonzero sticky biases up.  Implementations
+  // that reuse the add-path rounding logic on the subtract path
+  // produce results that are exactly +1 ULP high.
+  status |= test__subsf3(0x216ee743, 0x1a7a602f, 0x216ee359);
+  status |= test__subsf3(0x291f4cbe, 0x22b4701f, 0x291f471a);
+  status |= test__subsf3(0x006ae03e, 0x07a2a103, 0x87a29f57);
+  status |= test__subsf3(0x237f6e73, 0x1b70803c, 0x237f6d82);
+  status |= test__subsf3(0x1843199e, 0x0e380fb8, 0x18431992);
+  status |= test__subsf3(0x222fb009, 0x17d01c62, 0x222fb002);
+
+  // Regression: subtract of (2^N) - epsilon where epsilon is far below the
+  // ULP of the result.  The mantissa rounds up from 0xFFFFFF to 0x1000000,
+  // which is renormalized to 0x800000 with exp incremented cleanly (no
+  // overflow to infinity).  An implementation whose round-up-with-mantissa-
+  // wrap path falls through into a "return b" packer (used by NaN-quiet and
+  // both-zeros paths) will corrupt the result by loading b's fields into
+  // a's slots -- typically returning -b instead of the correct ~2^N.
+  status |= test__subsf3(0x40000000, 0x00000001, 0x40000000);
+  status |= test__subsf3(0x50000000, 0x30000000, 0x50000000);
+  status |= test__subsf3(0x60000000, 0x00000001, 0x60000000);
+  status |= test__subsf3(0x7e000000, 0x00000001, 0x7e000000);
+
   return status;
 }

@@ -92,5 +92,55 @@ int main(void) {
   // Large normal values near overflow
   status |= test__addsf3(0x7f7fffff, 0x7f7fffff, 0x7f800000); // max + max = inf
 
+  // Regression: opposite-sign near-cancellation whose true result is a nonzero
+  // subnormal.  The normalize bit-loop must stop *at* the exp==1 -> exp==0
+  // transition without an additional shift-and-decrement, because IEEE 754
+  // subnormals reuse the same reference scale as the smallest normal (they
+  // just drop the implicit leading 1).  An implementation that shifts one
+  // more time across that boundary silently returns exactly 2x the correct
+  // magnitude for any such subnormal result.
+  status |= test__addsf3(0x00a00000u, 0x80800000u, 0x00200000u);
+  status |= test__addsf3(0x00810000u, 0x80800000u, 0x00010000u);
+  status |= test__addsf3(0x00800001u, 0x80800000u, 0x00000001u);
+  status |= test__addsf3(0x03000000u, 0x82fffffeu, 0x00000020u);
+  // Additional cases discovered by fuzzing a Python model vs numpy float32.
+  status |= test__addsf3(0x00513f55u, 0x808ac0efu, 0x8039819au);
+  status |= test__addsf3(0x007247f1u, 0x808ac31eu, 0x80187b2du);
+  status |= test__addsf3(0x007775f9u, 0x8093b73fu, 0x801c4146u);
+  status |= test__addsf3(0x00740e32u, 0x809786e6u, 0x802378b4u);
+  status |= test__addsf3(0x00ef502eu, 0x80c3a704u, 0x002ba92au);
+  status |= test__addsf3(0x0250d539u, 0x825322c0u, 0x80126c38u);
+  status |= test__addsf3(0x00d60017u, 0x80b739b2u, 0x001ec665u);
+  status |= test__addsf3(0x02fcce07u, 0x82fd68ffu, 0x8009af80u);
+
+  // Regression: opposite-sign add where b needs an alignment right-shift and
+  // some of b's low bits are truncated (sticky bit set).  For the SUBTRACT
+  // path this means the computed difference is slightly too large by a
+  // strictly-positive amount less than one ULP, so a nonzero sticky must
+  // bias the round DOWN -- the mirror image of the add-path convention where
+  // a nonzero sticky biases up.  Implementations that reuse the add-path
+  // rounding logic on the subtract path produce results that are exactly
+  // +1 ULP high.
+  status |= test__addsf3(0x216ee743u, 0x9a7a602fu, 0x216ee359u);
+  status |= test__addsf3(0x291f4cbeu, 0xa2b4701fu, 0x291f471au);
+  status |= test__addsf3(0x006ae03eu, 0x87a2a103u, 0x87a29f57u);
+  status |= test__addsf3(0x237f6e73u, 0x9b70803cu, 0x237f6d82u);
+  status |= test__addsf3(0x1843199eu, 0x8e380fb8u, 0x18431992u);
+  status |= test__addsf3(0x222fb009u, 0x97d01c62u, 0x222fb002u);
+
+  // Regression: subtract of (2^N) - epsilon where epsilon is far below the
+  // ULP of the result.  The mantissa rounds up from 0xFFFFFF to 0x1000000,
+  // which is renormalized to 0x800000 with exp incremented cleanly (no
+  // overflow to infinity).  An implementation whose round-up-with-mantissa-
+  // wrap path falls through into the "return b" packer (used by the
+  // NaN-quiet and both-zeros paths) will corrupt the result by loading b's
+  // fields into a's slots -- typically returning -b instead of the correct
+  // ~2^N.  The path is only reachable when subtract's ripple-decrement +
+  // normalize combines with a round-up that wraps the mantissa.
+  status |= test__addsf3(0x40000000u, 0x80000001u, 0x40000000u);
+  status |= test__addsf3(0x50000000u, 0xb0000000u, 0x50000000u);
+  status |= test__addsf3(0x60000000u, 0x80000001u, 0x60000000u);
+  status |= test__addsf3(0x7e000000u, 0x80000001u, 0x7e000000u);
+
   return status;
 }
