@@ -88,7 +88,7 @@ bool MOSLateOptimization::lowerCmpZeros(MachineBasicBlock &MBB) const {
   const auto &STI = MBB.getParent()->getSubtarget<MOSSubtarget>();
   const auto *TRI = MRI.getTargetRegisterInfo();
   bool Changed = false;
-  for (MachineInstr &MI : make_early_inc_range(mbb_reverse(MBB))) {
+  for (MachineInstr &MI : make_early_inc_range(mbb_reverse(MBB.terminators()))) {
     if (MI.getOpcode() != MOS::CmpZero)
       continue;
 
@@ -100,11 +100,6 @@ bool MOSLateOptimization::lowerCmpZeros(MachineBasicBlock &MBB) const {
 
     Register Val = MI.getOperand(0).getReg();
 
-    // Per-CmpZero, NOT loop-carried: whether THIS pseudo was folded into an
-    // earlier NZ producer. Sharing `Changed` here made every CmpZero after the
-    // block's first fold skip its lowering too, and nothing downstream lowers
-    // the pseudo -- it reached the asm printer and was emitted as nothing,
-    // silently dropping the flag test.
     bool Folded = false;
     for (auto &J : mbb_reverse(MBB.begin(), MI)) {
       if (J.isDebugInstr())
