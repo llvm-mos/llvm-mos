@@ -416,7 +416,8 @@ SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
   LLVM_DEBUG(CG.dump());
 
   std::vector<SCC> SCCs;
-  // Note: iteration order must be deterministic.
+  // Iteration order must be deterministic for SCCCallees, GlobalBenefit, and
+  // CalleeFreqs.
   std::vector<SmallSetVector<const CallGraphNode *, 4>> SCCCallees;
   DenseMap<const CallGraphNode *, size_t> SCCIdx;
   std::vector<std::unique_ptr<Candidate>> Candidates;
@@ -485,7 +486,6 @@ void MOSZeroPageAlloc::collectCandidates(
   auto &BFI =
       getAnalysis<BlockFrequencyInfoWrapperPass>(MF.getFunction()).getBFI();
 
-  // Note: iteration order must be deterministic.
   MapVector<GlobalVariable *, float> GlobalBenefit;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -705,7 +705,6 @@ std::vector<EntryGraph> MOSZeroPageAlloc::buildEntryGraphs(Module &M,
 
       // Find all calls within the SCC and propagate entry frequencies across
       // the edges.
-      // Note: iteration order must be deterministic.
       MapVector<const Function *, float> CalleeFreqs;
       for (Function *F : Component->Funcs) {
         LLVM_DEBUG(dbgs() << "    " << F->getName() << "\n");
