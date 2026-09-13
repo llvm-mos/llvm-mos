@@ -5,16 +5,8 @@
 ; Every one of these globals is stored exactly once from the same basic block,
 ; so MOSZeroPageAlloc computes the identical benefit (2 * 1.0 / 1) for all eight
 ; and only four of them fit in the zero page. The winners are therefore decided
-; entirely by the order in which candidates were collected, which must be the
-; MachineInstr walk order -- i.e. module order, g0 through g3.
-;
-; Before the fix, collectCandidates() accumulated benefits in a
-; DenseMap<GlobalVariable *, float> and iterated it to build the candidate list;
-; that iterates in pointer-hash order, i.e. by heap address, and the subsequent
-; stable_sort on benefit leaves ties in exactly that order. The winning set then
-; differed on every process execution: twenty runs of this file produced six
-; distinct winning sets, none of them the module-order set below (this test's
-; expectations failed all twenty pre-fix runs).
+; entirely by the order in which candidates were collected, which must be
+; deterministic.
 
 target triple = "mos"
 

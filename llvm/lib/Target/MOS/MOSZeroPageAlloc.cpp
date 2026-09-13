@@ -416,10 +416,7 @@ SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
   LLVM_DEBUG(CG.dump());
 
   std::vector<SCC> SCCs;
-  // SmallSetVector, not SmallSet: past its inline capacity SmallSet degrades to
-  // std::set, which orders const CallGraphNode * by pointer VALUE. SCC::Callees
-  // seeds the EntryGraph list, and entry graphs are served ZP round-robin, so an
-  // address-ordered callee list makes the assignment differ between runs.
+  // Note: iteration order must be deterministic.
   std::vector<SmallSetVector<const CallGraphNode *, 4>> SCCCallees;
   DenseMap<const CallGraphNode *, size_t> SCCIdx;
   std::vector<std::unique_ptr<Candidate>> Candidates;
@@ -488,13 +485,7 @@ void MOSZeroPageAlloc::collectCandidates(
   auto &BFI =
       getAnalysis<BlockFrequencyInfoWrapperPass>(MF.getFunction()).getBFI();
 
-  // MapVector, not DenseMap: the iteration below turns this into the candidate
-  // list, and the only ordering applied later is a stable_sort on benefit -- so
-  // equal-benefit candidates keep this order. A DenseMap keyed by
-  // GlobalVariable * iterates in pointer-hash order, i.e. by heap address, so
-  // ties were broken differently on every process execution and the zero page's
-  // last free byte went to a different global each build. MapVector keeps the
-  // deterministic MachineInstr walk order below.
+  // Note: iteration order must be deterministic.
   MapVector<GlobalVariable *, float> GlobalBenefit;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -714,10 +705,7 @@ std::vector<EntryGraph> MOSZeroPageAlloc::buildEntryGraphs(Module &M,
 
       // Find all calls within the SCC and propagate entry frequencies across
       // the edges.
-      // MapVector, not DenseMap: the iteration below accumulates these into
-      // EntryFreqs with float +=, which is not associative, so a pointer-hash
-      // iteration order perturbed every derived benefit in its last ULP and
-      // broke near-ties as well as exact ones.
+      // Note: iteration order must be deterministic.
       MapVector<const Function *, float> CalleeFreqs;
       for (Function *F : Component->Funcs) {
         LLVM_DEBUG(dbgs() << "    " << F->getName() << "\n");
