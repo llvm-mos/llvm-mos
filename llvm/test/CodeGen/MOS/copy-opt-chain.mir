@@ -1,0 +1,28 @@
+# RUN: llc -mtriple=mos -run-pass=mos-copy-opt -verify-machineinstrs -o - %s | FileCheck %s
+
+# A dead copy in a successor can make a copy in its predecessor dead as well.
+# Both must go in one run: the successor is cleaned first (post-order) and its
+# live-ins shrink before the predecessor's dead flags are computed. Forwarding
+# cannot remove the chain on its own because $a is clobbered in between.
+---
+name: dead_copy_chain
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: dead_copy_chain
+  ; CHECK: bb.0.entry:
+  ; CHECK-NOT: COPY
+  ; CHECK: $a = LDImm 5
+  ; CHECK: bb.1:
+  ; CHECK-NOT: COPY
+  ; CHECK: RTS
+  bb.0.entry:
+    liveins: $a
+    $x = COPY $a
+    $a = LDImm 5
+    BRA %bb.1
+
+  bb.1:
+    liveins: $a, $x
+    $y = COPY $x
+    RTS implicit $a
+...
