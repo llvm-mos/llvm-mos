@@ -416,8 +416,9 @@ SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
   LLVM_DEBUG(CG.dump());
 
   std::vector<SCC> SCCs;
-  // Iteration order must be deterministic for SCCCallees, GlobalBenefit, and
-  // CalleeFreqs.
+  // Keep SCCCallees, GlobalBenefit, and CalleeFreqs iteration deterministic:
+  // it affects allocation tie-breaking and floating-point accumulation, which
+  // can otherwise change zero-page placement for identical inputs.
   std::vector<SmallSetVector<const CallGraphNode *, 4>> SCCCallees;
   DenseMap<const CallGraphNode *, size_t> SCCIdx;
   std::vector<std::unique_ptr<Candidate>> Candidates;
