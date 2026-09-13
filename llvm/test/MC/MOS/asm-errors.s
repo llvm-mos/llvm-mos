@@ -28,7 +28,6 @@ sep #$30
 ; CHECK: [[#@LINE+1]]:1: error: instruction requires: FeatureW65816
 cop #90
 
-; cop has no zero-operand form at all outside FeatureW65816, so a bare
-; mnemonic with no matching variant is simply unrecognized here.
+; COP requires a signature operand.
 ; CHECK: [[#@LINE+1]]:1: error: invalid instruction
 cop
