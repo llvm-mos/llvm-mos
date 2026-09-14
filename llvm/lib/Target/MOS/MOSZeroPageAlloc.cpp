@@ -20,8 +20,10 @@
 #include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -414,7 +416,10 @@ SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
   LLVM_DEBUG(CG.dump());
 
   std::vector<SCC> SCCs;
-  std::vector<SmallSet<const CallGraphNode *, 4>> SCCCallees;
+  // Keep SCCCallees, GlobalBenefit, and CalleeFreqs iteration deterministic:
+  // it affects allocation tie-breaking and floating-point accumulation, which
+  // can otherwise change zero-page placement for identical inputs.
+  std::vector<SmallSetVector<const CallGraphNode *, 4>> SCCCallees;
   DenseMap<const CallGraphNode *, size_t> SCCIdx;
   std::vector<std::unique_ptr<Candidate>> Candidates;
   DenseMap<GlobalVariable *, Candidate *> GVCandidates;
@@ -482,7 +487,7 @@ void MOSZeroPageAlloc::collectCandidates(
   auto &BFI =
       getAnalysis<BlockFrequencyInfoWrapperPass>(MF.getFunction()).getBFI();
 
-  DenseMap<GlobalVariable *, float> GlobalBenefit;
+  MapVector<GlobalVariable *, float> GlobalBenefit;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       for (const MachineOperand &MO : MI.operands()) {
@@ -701,7 +706,7 @@ std::vector<EntryGraph> MOSZeroPageAlloc::buildEntryGraphs(Module &M,
 
       // Find all calls within the SCC and propagate entry frequencies across
       // the edges.
-      DenseMap<const Function *, float> CalleeFreqs;
+      MapVector<const Function *, float> CalleeFreqs;
       for (Function *F : Component->Funcs) {
         LLVM_DEBUG(dbgs() << "    " << F->getName() << "\n");
         MachineFunction *MF = MMI->getMachineFunction(*F);
