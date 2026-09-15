@@ -789,6 +789,10 @@ def TDC_Implied : InstLowB<"tdc", 0b0111>;
 def TSC_Implied : InstLowB<"tsc", 0b0011>;
 
 def WDM_Immediate : Inst16<"wdm", Opcode<0x42>, Immediate>;
+
+// Unlike BRK, WDC's own assembly syntax requires this operand, so it is
+// mandatory here rather than optional.
+def COP_Immediate : Inst16<"cop", Opcode<0x02>, Immediate>, InstUnconditionalBranch;
 }
 
 } // Predicates = [HasW65816]

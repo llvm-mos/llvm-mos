@@ -105,3 +105,5 @@
 	xce                             ; CHECK: encoding: [0xfb]
 
 	wdm #$ea                        ; CHECK: encoding: [0x42,0xea]
+
+	cop #$ea                        ; CHECK: encoding: [0x02,0xea]
