@@ -72,13 +72,13 @@ def fold_sbc : GICombineRule<
 
 def fold_shift : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_SHLE, G_LSHRE):$root,
+  (match (wip_match_opcode G_SHLE, G_LSHRE, G_ASHRE):$root,
           [{ return matchFoldShift(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 def shift_unused_carry_in : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_SHLE, G_LSHRE):$root,
+  (match (wip_match_opcode G_SHLE, G_LSHRE, G_ASHRE):$root,
           [{ return matchShiftUnusedCarryIn(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
 
