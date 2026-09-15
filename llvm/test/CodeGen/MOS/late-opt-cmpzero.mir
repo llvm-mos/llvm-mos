@@ -1,0 +1,29 @@
+# RUN: llc -mtriple=mos -run-pass=mos-late-opt -verify-machineinstrs -o - %s | FileCheck %s
+
+# Adjacent CmpZero terminators can be folded and lowered independently.
+---
+name: cmpzero_after_fold
+body: |
+  bb.0.entry:
+    liveins: $a, $x
+    ; CHECK-LABEL: name: cmpzero_after_fold
+    ; CHECK: $a = T_A $x, implicit-def $nz
+    ; CHECK-NEXT: dead $x = TA $a, implicit-def $nz
+    ; CHECK-NEXT: RTS implicit $n
+    $a = T_A $x
+    CmpZero $x, implicit-def $n, implicit-def $c
+    CmpZero $a, implicit-def $n, implicit-def $c
+    RTS implicit $n
+...
+---
+name: cmpzero_dead
+body: |
+  bb.0.entry:
+    liveins: $x
+    ; CHECK-LABEL: name: cmpzero_dead
+    ; CHECK: liveins: $x
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: RTS
+    CmpZero $x, implicit-def dead $n, implicit-def dead $c
+    RTS
+...
