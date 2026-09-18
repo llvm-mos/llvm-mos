@@ -1,5 +1,8 @@
 add_llvm_component_group(MOS)
 
+option(LLVM_MOS_EXPERIMENTAL_REGALLOC_DEFAULT
+  "Enable experimental MOS register allocation by default" OFF)
+
 set(LLVM_TARGET_DEFINITIONS MOS.td)
 
 tablegen(LLVM MOSGenAsmMatcher.inc -gen-asm-matcher)
@@ -25,9 +28,11 @@ add_llvm_target(MOSCodeGen
   MOSCallLowering.cpp
   MOSCallingConv.cpp
   MOSCombiner.cpp
+  MOSConventionalSSA.cpp
   MOSCopyOpt.cpp
   MOSFrameLowering.cpp
   MOSISelLowering.cpp
+  MOSImagRegAlloc.cpp
   MOSIndexIV.cpp
   MOSInlineAsmLowering.cpp
   MOSInsertCopies.cpp
@@ -42,6 +47,7 @@ add_llvm_target(MOSCodeGen
   MOSMachineScheduler.cpp
   MOSNonReentrant.cpp
   MOSPostRAScavenging.cpp
+  MOSRegAlloc.cpp
   MOSRegisterBankInfo.cpp
   MOSRegisterInfo.cpp
   MOSShiftRotateChain.cpp
@@ -79,6 +85,9 @@ add_llvm_target(MOSCodeGen
   ADD_TO_COMPONENT
   MOS
 )
+
+target_compile_definitions(LLVMMOSCodeGen PRIVATE
+  LLVM_MOS_EXPERIMENTAL_REGALLOC_DEFAULT=$<BOOL:${LLVM_MOS_EXPERIMENTAL_REGALLOC_DEFAULT}>)
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
