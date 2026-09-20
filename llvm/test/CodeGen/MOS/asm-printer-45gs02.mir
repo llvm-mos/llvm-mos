@@ -1,0 +1,16 @@
+# RUN: llc -mtriple=mos -mcpu=mos45gs02 -start-after=machine-opt-remark-emitter \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s
+
+# Physical RL operands are currently reachable only from MIR.
+
+---
+name: imag32_memory_operand
+body: |
+  bb.0.entry:
+    INLINEASM &"lda [$0],z", 9 /* sideeffect mayload attdialect */, 196622 /* mem:m */, $rl1
+    INLINEASM &"lda [$0],z", 9 /* sideeffect mayload attdialect */, 196622 /* mem:m */, $rl7
+    ; CHECK-LABEL: imag32_memory_operand
+    ; CHECK: lda [__rc4],z
+    ; CHECK: lda [__rc28],z
+    RTS
+...

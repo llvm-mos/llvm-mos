@@ -387,10 +387,20 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
         DenseMap<Register, size_t> &CSRZPOffsets =
             MF.getInfo<MOSFunctionInfo>()->CSRZPOffsets;
         const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-        if (MOS::Imag16RegClass.contains(Cand->CSR)) {
-          CSRZPOffsets[Cand->CSR] =
-              CSRZPOffsets[TRI.getSubReg(Cand->CSR, MOS::sublo)] = Offset++;
-          CSRZPOffsets[TRI.getSubReg(Cand->CSR, MOS::subhi)] = Offset++;
+        // Later stages may refer to any alias of an assigned composite CSR.
+        auto AssignImag16 = [&](Register Reg) {
+          CSRZPOffsets[Reg] =
+              CSRZPOffsets[TRI.getSubReg(Reg, MOS::sublo)] = Offset++;
+          CSRZPOffsets[TRI.getSubReg(Reg, MOS::subhi)] = Offset++;
+        };
+        if (MOS::Imag32RegClass.contains(Cand->CSR)) {
+          Register Lo = TRI.getSubReg(Cand->CSR, MOS::sublo16);
+          Register Hi = TRI.getSubReg(Cand->CSR, MOS::subhi16);
+          CSRZPOffsets[Cand->CSR] = Offset;
+          AssignImag16(Lo);
+          AssignImag16(Hi);
+        } else if (MOS::Imag16RegClass.contains(Cand->CSR)) {
+          AssignImag16(Cand->CSR);
         } else {
           CSRZPOffsets[Cand->CSR] = Offset++;
         }
@@ -563,6 +573,8 @@ void MOSZeroPageAlloc::collectCandidates(
   TFL.determineCalleeSaves(MF, SavedRegs, /*RS=*/nullptr);
   unsigned Idx = 0;
   DenseSet<Register> Imag16Regs;
+  DenseSet<Register> Imag32Regs;
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   for (Register Reg : SavedRegs.set_bits()) {
     if (!MOS::Imag8RegClass.contains(Reg))
       continue;
@@ -583,13 +595,38 @@ void MOSZeroPageAlloc::collectCandidates(
       Benefit += 12 * RestoreFreq; // LDA ABS,STA ZP
     }
 
-    // If the CSR is used as a 16-bit pointer, then the two halves cannot be
-    // assigned independently. Thus, instead of two size-1 candidates, one
-    // size-2 candidate is used.
+    // Composite imaginary registers must be assigned as one candidate.
+    // RC has both RS and RL super-registers, so select each layer explicitly.
     Register Imag16 =
-        *MF.getSubtarget().getRegisterInfo()->superregs(Reg).begin();
+        TRI.getMatchingSuperReg(Reg, MOS::sublo, &MOS::Imag16RegClass);
+    if (!Imag16)
+      Imag16 =
+          TRI.getMatchingSuperReg(Reg, MOS::subhi, &MOS::Imag16RegClass);
     assert(MOS::Imag16RegClass.contains(Imag16));
-    if (!MF.getRegInfo().reg_nodbg_empty(Imag16)) {
+    Register Imag32 =
+        TRI.getMatchingSuperReg(Imag16, MOS::sublo16, &MOS::Imag32RegClass);
+    if (!Imag32)
+      Imag32 = TRI.getMatchingSuperReg(Imag16, MOS::subhi16,
+                                       &MOS::Imag32RegClass);
+    if (Imag32 && !MF.getRegInfo().reg_nodbg_empty(Imag32)) {
+      if (Imag32Regs.contains(Imag32))
+        continue;
+
+      Reg = Imag32;
+      Imag32Regs.insert(Reg);
+
+      for (unsigned I = 1; I != 4; ++I) {
+        if (Idx++ < 4) {
+          Benefit += 9 * SaveFreq;
+          Benefit += 10 * RestoreFreq;
+        } else {
+          Benefit += 12 * SaveFreq;
+          Benefit += 12 * RestoreFreq;
+        }
+        ++Size;
+      }
+      Benefit /= Size;
+    } else if (!MF.getRegInfo().reg_nodbg_empty(Imag16)) {
       // Don't create the Imag16 candidate twice.
       if (Imag16Regs.contains(Imag16))
         continue;
@@ -599,10 +636,10 @@ void MOSZeroPageAlloc::collectCandidates(
 
       // Account for the second byte.
       if (Idx++ < 4) {
-        Benefit = 9 * SaveFreq;      // LDA ZP,PHA
+        Benefit += 9 * SaveFreq;     // LDA ZP,PHA
         Benefit += 10 * RestoreFreq; // PLA,STA ZP
       } else {
-        Benefit = 12 * SaveFreq;     // LDA ZP,STA ABS
+        Benefit += 12 * SaveFreq;    // LDA ZP,STA ABS
         Benefit += 12 * RestoreFreq; // LDA ABS,STA ZP
       }
       ++Size;

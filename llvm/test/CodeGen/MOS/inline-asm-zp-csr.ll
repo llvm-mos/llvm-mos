@@ -16,9 +16,7 @@ define void @inline_asm_zp_csr(i8 %c) "nonreentrant" {
 ; CHECK-NEXT:    sta mos8(.Linline_asm_zp_csr_zp_stk+1)
 ; CHECK-NEXT:    ;APP
 ; CHECK-NEXT:    lda mos8(.Linline_asm_zp_csr_zp_stk)
-; CHECK-EMPTY:
 ; CHECK-NEXT:    lda mos8(.Linline_asm_zp_csr_zp_stk+1)
-; CHECK-EMPTY:
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    rts
 entry:

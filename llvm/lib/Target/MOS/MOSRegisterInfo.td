@@ -20,6 +20,10 @@ def sublo : MOSSubRegIndex<8>;
 // High byte of a 16-bit imaginary pointer register.
 def subhi : MOSSubRegIndex<8, 8>;
 
+// Low and high words of a 32-bit imaginary register.
+def sublo16 : MOSSubRegIndex<16>;
+def subhi16 : MOSSubRegIndex<16, 16>;
+
 // Carry bit of the 8-bit processor status register.
 def subcarry : MOSSubRegIndex<1>;
 
@@ -125,6 +129,14 @@ class MOSImagReg16<bits<16> num, string name, list<Register> subregs>
   let CoveredBySubRegs = 1;
 }
 
+// 32-bit imaginary registers composed of pairs of 16-bit registers.
+class MOSImagReg32<bits<16> num, string name, list<Register> subregs>
+    : MOSReg<num, name> {
+  let SubRegs = subregs;
+  let SubRegIndices = [sublo16, subhi16];
+  let CoveredBySubRegs = 1;
+}
+
 defvar MaxImag8Regs = 256;
 // The starting DWARF number for the imaginary registers.
 defvar Imag8RegsOffset = 0x10;
@@ -132,19 +144,30 @@ defvar Imag8RegsOffset = 0x10;
 defvar MaxImag16Regs = !sra(MaxImag8Regs, 1);
 defvar Imag16RegsOffset = !add(Imag8RegsOffset, !shl(MaxImag8Regs,1));
 
+defvar MaxImag32Regs = !sra(MaxImag16Regs, 1);
+defvar Imag32RegsOffset = !add(Imag16RegsOffset, MaxImag16Regs);
+
 // Now we enumerate the imaginary registers.
-// Imaginary 8-bit registers, starting with the prefix rc
+// Imaginary 8-bit registers, starting with the prefix rc (c = "char")
 foreach I = 0...!add(MaxImag8Regs, -1) in {
   // There exist MaxImag8Regs rcXX registers...
   defm RC#I: MOSImagReg8<!add(!shl(I,1), Imag8RegsOffset), "rc"#!cast<string>(I)>;
 }
 
-// Imaginary 16-bit registers, starting with the prefix rs
+// Imaginary 16-bit registers, starting with the prefix rs (s = "short")
 foreach I = 0...!add(MaxImag16Regs, -1) in {
   // There exist MaxImag16Regs rsXX registers...
   def RS#I: MOSImagReg16<!add(I, Imag16RegsOffset), "rs"#!cast<string>(I),
       [!cast<Register>("RC"#!shl(I, 1)),
        !cast<Register>("RC"#!add(!shl(I,1),1))]>;
+}
+
+// Imaginary 32-bit registers, starting with the prefix rl (l = "long")
+foreach I = 0...!add(MaxImag32Regs, -1) in {
+  // There exist MaxImag32Regs rlXX registers...
+  def RL#I: MOSImagReg32<!add(I, Imag32RegsOffset), "rl"#!cast<string>(I),
+      [!cast<Register>("RS"#!shl(I, 1)),
+       !cast<Register>("RS"#!add(!shl(I,1),1))]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -160,6 +183,7 @@ class MOSReg1Class<dag RegList>: MOSRegClass<[i1], 8, RegList> {
 }
 class MOSReg8Class<dag RegList>: MOSRegClass<[i8], 8, RegList>;
 class MOSReg16Class<dag RegList>: MOSRegClass<[i16], 8, RegList>;
+class MOSReg32Class<dag RegList>: MOSRegClass<[i32], 8, RegList>;
 
 // Single register classes.
 let isPressureFineGrained = true in {
@@ -179,6 +203,10 @@ let isPressureFineGrained = true in {
 }
 def Imag8 : MOSReg8Class<(sequence "RC%u", 0, !add(MaxImag8Regs, -1))>;
 def Imag16 : MOSReg16Class<(sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;
+// Linker scripts may place adjacent RS registers apart, so RL cannot be
+// allocated safely.
+let isAllocatable = false in
+def Imag32 : MOSReg32Class<(sequence "RL%u", 0, !add(MaxImag32Regs, -1))>;
 
 // Instruction-specific register classes.
 def AImag8 : MOSReg8Class<(add Imag8, A)>;

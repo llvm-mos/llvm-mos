@@ -675,6 +675,12 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                     TRI.getSubReg(SrcReg, MOS::sublo));
     copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::subhi),
                     TRI.getSubReg(SrcReg, MOS::subhi));
+  } else if (AreClasses(MOS::Imag32RegClass, MOS::Imag32RegClass)) {
+    assert(SrcReg.isPhysical() && DestReg.isPhysical());
+    copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::sublo16),
+                    TRI.getSubReg(SrcReg, MOS::sublo16));
+    copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::subhi16),
+                    TRI.getSubReg(SrcReg, MOS::subhi16));
   } else if (AreClasses(MOS::Anyi1RegClass, MOS::Anyi1RegClass)) {
     assert(SrcReg.isPhysical() && DestReg.isPhysical());
     Register SrcReg8 =

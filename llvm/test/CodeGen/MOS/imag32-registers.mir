@@ -1,0 +1,27 @@
+# RUN: llc -mtriple=mos -run-pass=none -verify-machineinstrs -o - %s | FileCheck %s
+
+---
+name: imag32_register
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $rl1
+    ; CHECK-LABEL: name: imag32_register
+    ; CHECK: liveins: $rl1
+    ; CHECK: $rl1 = IMPLICIT_DEF
+    $rl1 = IMPLICIT_DEF
+    RTS
+...
+---
+name: imag32_word_subregisters
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $rl1
+    ; CHECK-LABEL: name: imag32_word_subregisters
+    ; CHECK: $rs4 = EXTRACT_SUBREG $rl1, %subreg.sublo16
+    ; CHECK: $rs5 = EXTRACT_SUBREG $rl1, %subreg.subhi16
+    $rs4 = EXTRACT_SUBREG $rl1, %subreg.sublo16
+    $rs5 = EXTRACT_SUBREG $rl1, %subreg.subhi16
+    RTS
+...

@@ -52,6 +52,8 @@ MOSRegisterInfo::MOSRegisterInfo()
     // Pointers are referred to by their low byte in the addressing modes that
     // use them.
     unsigned R = Reg;
+    if (MOS::Imag32RegClass.contains(R))
+      R = getSubReg(R, MOS::sublo16);
     if (MOS::Imag16RegClass.contains(R))
       R = getSubReg(R, MOS::sublo);
     if (!MOS::Imag8RegClass.contains(R))
@@ -994,6 +996,9 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
   }
   if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
     return copyCost(MOS::RC0, MOS::RC1, STI) * 2;
+  }
+  if (AreClasses(MOS::Imag32RegClass, MOS::Imag32RegClass)) {
+    return copyCost(MOS::RC0, MOS::RC1, STI) * 4;
   }
   if (AreClasses(MOS::Anyi1RegClass, MOS::Anyi1RegClass)) {
     Register SrcReg8 =
