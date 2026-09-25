@@ -1,0 +1,52 @@
+# RUN: llc -mtriple=mos -mcpu=mosw65816 -run-pass=mos-copy-opt -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=COPY
+# RUN: llc -mtriple=mos -mcpu=mosw65816 -run-pass=mos-copy-opt,postrapseudos,mos-late-opt -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=LOWER
+
+# Forwarding the loop header's A = COPY Y makes A live across the latch.
+# The sign test must not clobber A after its new value is copied to Y.
+---
+name: copy_forward_loop
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $a, $x, $rc28
+    $y = COPY $a
+    BRA %bb.1
+
+  bb.1:
+    liveins: $x, $y, $rc28
+    ; COPY-LABEL: bb.1:
+    ; COPY: liveins: {{.*}}$a{{.*}}
+    ; COPY: $rc2 = COPY $a
+    ; COPY: $a, dead $c = ROL
+    ; LOWER-LABEL: bb.1:
+    ; LOWER: $a, dead $c = ROL
+    ; LOWER-NOT: $a = LDImag8 $rc2
+    ; LOWER: BR %bb.3
+    $a = COPY $y
+    $rc2 = COPY $y
+    $rc28, $c = ASL $rc28
+    $a, dead $c = ROL $a, $c
+    $y = COPY $a
+    CmpBrZero %bb.3, undef $n, 0, $rc2, implicit-def $c
+
+  bb.2:
+    liveins: $x, $y, $rc28
+    $a = COPY $rc28
+    $a = EORImm $a, 33
+    $rc28 = COPY $a
+    $a = COPY $y
+    $a = EORImm $a, 16
+    $y = COPY $a
+    BRA %bb.3
+
+  bb.3:
+    liveins: $x, $y, $rc28
+    ; COPY-LABEL: bb.3:
+    ; COPY: liveins: {{.*}}$a{{.*}}
+    $x = DEC $x
+    CmpBrZero %bb.1, undef $z, 0, $x, implicit-def dead $c
+
+  bb.4:
+    liveins: $y, $rc28
+    RTS implicit $y, implicit $rc28
+...

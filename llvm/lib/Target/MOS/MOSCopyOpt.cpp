@@ -254,6 +254,14 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
+  // Copy forwarding can change the register live around a loop. Propagate
+  // live-ins to a fixed point before using them to erase dead copies.
+  SmallVector<MachineBasicBlock *> Blocks;
+  for (MachineBasicBlock *MBB : post_order(&MF))
+    if (!MBB->isEntryBlock())
+      Blocks.push_back(MBB);
+  fullyRecomputeLiveIns(Blocks);
+
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     LivePhysRegs LPR(TRI);
 

@@ -1,0 +1,75 @@
+# RUN: llc -mtriple=mos -run-pass=mos-copy-opt -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=mos -mcpu=mos6502 -start-before=mos-copy-opt -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=ASM
+
+# A dead copy in a successor can make a copy in its predecessor dead as well.
+# Both must go in one run: the successor is cleaned first (post-order) and its
+# live-ins shrink before the predecessor's dead flags are computed. Forwarding
+# cannot remove the chain on its own because $a is clobbered in between.
+---
+name: dead_copy_chain
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: dead_copy_chain
+  ; CHECK: bb.0.entry:
+  ; CHECK-NOT: COPY
+  ; CHECK: $a = LDImm 5
+  ; CHECK: bb.1:
+  ; CHECK-NOT: COPY
+  ; CHECK: RTS
+  bb.0.entry:
+    liveins: $a
+    $x = COPY $a
+    $a = LDImm 5
+    BRA %bb.1
+
+  bb.1:
+    liveins: $a, $x
+    $y = COPY $x
+    RTS implicit $a
+...
+
+# Propagate dead-copy removal through two predecessors. Clobbering each source
+# prevents forwarding from bypassing the chain. Check the final assembly too:
+# dead-copy chains must not leave register transfers behind.
+---
+name: dead_copy_chain_three_blocks
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: dead_copy_chain_three_blocks
+  ; CHECK: bb.0:
+  ; CHECK-NOT: COPY
+  ; CHECK: $a = LDImm 5
+  ; CHECK-NOT: COPY
+  ; CHECK: bb.1:
+  ; CHECK-NOT: COPY
+  ; CHECK: $x = LDImm 6
+  ; CHECK-NOT: COPY
+  ; CHECK: bb.2:
+  ; CHECK-NOT: COPY
+  ; CHECK: RTS
+  ; CHECK-NOT: COPY
+  ; ASM-LABEL: dead_copy_chain_three_blocks:
+  ; ASM-NOT: {{^[ \t]+[a-z]}}
+  ; ASM: lda #5
+  ; ASM-NOT: {{^[ \t]+[a-z]}}
+  ; ASM: ldx #6
+  ; ASM-NOT: {{^[ \t]+[a-z]}}
+  ; ASM: rts
+  ; ASM-NOT: {{^[ \t]+[a-z]}}
+  bb.0:
+    liveins: $a
+    $x = COPY $a
+    $a = LDImm 5
+    BRA %bb.1
+
+  bb.1:
+    liveins: $a, $x
+    $y = COPY $x
+    $x = LDImm 6
+    BRA %bb.2
+
+  bb.2:
+    liveins: $a, $x, $y
+    $rc3 = COPY $y
+    RTS implicit $a, implicit $x
+...
