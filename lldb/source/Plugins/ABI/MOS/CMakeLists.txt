@@ -1,5 +1,6 @@
 add_lldb_library(lldbPluginArchitectureMOS PLUGIN
   ABISysV_mos.cpp
+  MOSCallingConvention.cpp
   MOSImaginaryRegisters.cpp
   MOSRegisterContext.cpp
 

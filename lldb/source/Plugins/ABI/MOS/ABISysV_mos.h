@@ -9,6 +9,8 @@
 #ifndef LLDB_SOURCE_PLUGINS_ABI_MOS_ABISYSV_MOS_H
 #define LLDB_SOURCE_PLUGINS_ABI_MOS_ABISYSV_MOS_H
 
+#include "MOSCallingConvention.h"
+
 #include "lldb/Target/ABI.h"
 #include "lldb/lldb-forward.h"
 
@@ -76,10 +78,15 @@ protected:
 private:
   ABISysV_mos(lldb::ProcessSP process_sp,
               std::unique_ptr<llvm::MCRegisterInfo> info_up)
-      : MCBasedABI(std::move(process_sp), std::move(info_up)) {}
+      : MCBasedABI(std::move(process_sp), std::move(info_up)) {
+    if (m_mc_register_info_up)
+      m_calling_conv.Init(*m_mc_register_info_up);
+  }
 
   // Helper to get the main executable module
   lldb::ModuleSP GetMainModule() const;
+
+  lldb_private::MOSCallingConvention m_calling_conv;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_ABI_MOS_ABISYSV_MOS_H

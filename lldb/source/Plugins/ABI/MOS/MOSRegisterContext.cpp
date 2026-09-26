@@ -64,6 +64,26 @@ bool MOSRegisterContext::WriteRegister(const RegisterInfo *reg_info,
   return GDBRemoteRegisterContext::WriteRegister(reg_info, value);
 }
 
+bool MOSRegisterContext::ReadAllRegisterValues(
+    lldb::WritableDataBufferSP &data_sp) {
+  return false;
+}
+
+bool MOSRegisterContext::WriteAllRegisterValues(
+    const lldb::DataBufferSP &data_sp) {
+  return false;
+}
+
+bool MOSRegisterContext::ReadAllRegisterValues(
+    RegisterCheckpoint &reg_checkpoint) {
+  return false;
+}
+
+bool MOSRegisterContext::WriteAllRegisterValues(
+    const RegisterCheckpoint &reg_checkpoint) {
+  return false;
+}
+
 bool MOSRegisterContext::ReadImaginaryRegister(uint32_t dwarf_num,
                                                uint32_t byte_size,
                                                RegisterValue &value) {

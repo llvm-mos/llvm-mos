@@ -140,8 +140,12 @@ ValueObjectSP ABISysV_mos::GetReturnValueObjectImpl(Thread &thread,
 }
 
 bool ABISysV_mos::RegisterIsVolatile(const RegisterInfo *reg_info) {
-  // Nothing ever happens behind your back on MOS, so no volatile registers
-  return false;
+  // "Volatile" here means "call-clobbered" — used by LLDB to decide whether a
+  // value in the younger frame's register can be inherited by the caller.
+  // Classification lives in MOSCallingConvention, sourced from MOSCallingConv.td.
+  if (!reg_info)
+    return false;
+  return m_calling_conv.IsVolatile(reg_info->kinds[eRegisterKindDWARF]);
 }
 
 //------------------------------------------------------------------
@@ -173,6 +177,43 @@ static void buildNormalizedHardwareStackExpr(std::vector<uint8_t> &expr,
 
   // DW_OP_or - force into hardware stack page
   expr.push_back(llvm::dwarf::DW_OP_or);
+}
+
+/// Build a DWARF expression that yields the *value* of the caller PC.
+///
+/// JSR pushes (return_PC - 1) as two independent bytes: high byte first at
+/// the current S, then low byte at S-1, decrementing S each time. On entry
+/// to the callee the low byte is at S+1 and the high byte is at S+2. When S
+/// wraps within the stack page these two addresses are physically
+/// non-consecutive (e.g. S=0xFE puts the low byte at 0x01FF and the high
+/// byte at 0x0100), so we cannot use a single 2-byte dereference. Instead
+/// we dereference each byte independently, reassemble the 16-bit value, and
+/// add 1 to recover the true return address.
+///
+///   result = deref1(normalized(S+1)) | (deref1(normalized(S+2)) << 8) + 1
+static void buildReturnAddressValueExpr(std::vector<uint8_t> &expr,
+                                        uint8_t dwarf_s) {
+  // Low byte of (return_PC - 1)
+  buildNormalizedHardwareStackExpr(expr, dwarf_s, 1);
+  expr.push_back(llvm::dwarf::DW_OP_deref_size);
+  expr.push_back(1);
+
+  // High byte of (return_PC - 1)
+  buildNormalizedHardwareStackExpr(expr, dwarf_s, 2);
+  expr.push_back(llvm::dwarf::DW_OP_deref_size);
+  expr.push_back(1);
+
+  // (high << 8)
+  expr.push_back(llvm::dwarf::DW_OP_const1u);
+  expr.push_back(8);
+  expr.push_back(llvm::dwarf::DW_OP_shl);
+
+  // low | (high << 8)
+  expr.push_back(llvm::dwarf::DW_OP_or);
+
+  // + 1 — JSR pushes PC-1, so add 1 to recover the true return address.
+  expr.push_back(llvm::dwarf::DW_OP_plus_uconst);
+  expr.push_back(1); // ULEB128 encoding of 1
 }
 
 UnwindPlanSP ABISysV_mos::CreateFunctionEntryUnwindPlan() {
@@ -226,7 +267,7 @@ UnwindPlanSP ABISysV_mos::CreateFunctionEntryUnwindPlan() {
     s_expr.clear();
 
     buildNormalizedHardwareStackExpr(cfa_expr, dwarf_s, 3); // CFA = S + 3
-    buildNormalizedHardwareStackExpr(pc_expr, dwarf_s, 1);  // PC at S + 1
+    buildReturnAddressValueExpr(pc_expr, dwarf_s);          // caller PC value
     buildNormalizedHardwareStackExpr(s_expr, dwarf_s, 2);   // S_prev = S + 2
 
     cached_dwarf_s = dwarf_s;
@@ -241,14 +282,18 @@ UnwindPlanSP ABISysV_mos::CreateFunctionEntryUnwindPlan() {
 
   UnwindPlan::Row row;
 
+  // LLDB asserts in GetFullUnwindPlanForFrame() if the first row does not
+  // explicitly mark unmentioned registers as undefined.
+  row.SetUnspecifiedRegistersAreUndefined(true);
+
   // CFA = normalized(S + 3) = ((S + 3) & 0xFF) | 0x0100
   row.GetCFAValue().SetIsDWARFExpression(cfa_expr.data(), cfa_expr.size());
 
-  // PC = [normalized(S + 1)] - direct expression, NOT [CFA - 2]
-  // atDWARFExpression means: dereference the address computed by the
-  // expression.
+  // PC value comes from reassembling the two return-address bytes and
+  // adding 1 (JSR pushes PC-1). IsDWARFExpression means: the expression
+  // result IS the register value.
   UnwindPlan::Row::AbstractRegisterLocation pc_loc;
-  pc_loc.SetAtDWARFExpression(pc_expr.data(), pc_expr.size());
+  pc_loc.SetIsDWARFExpression(pc_expr.data(), pc_expr.size());
   row.SetRegisterInfo(dwarf_pc, pc_loc);
 
   // S_prev = normalized(S + 2) - direct expression, NOT CFA - 1
@@ -264,8 +309,12 @@ UnwindPlanSP ABISysV_mos::CreateFunctionEntryUnwindPlan() {
 }
 
 UnwindPlanSP ABISysV_mos::CreateDefaultUnwindPlan() {
-  // The default unwind plan is used when we're in the middle of a function.
-  // For 6502, the return address is still on the hardware stack at S+1/S+2.
+  // Heuristic fallback used when CFI is unavailable. The 6502 compiler freely
+  // emits PHA/PLA pairs to spill values to the hardware stack mid-function; in
+  // between such a pair, S no longer points at the return-address slot and the
+  // function-entry plan yields garbage. This is the best available guess when
+  // no CFI is present — accurate at function entry and in blocks with balanced
+  // PHA/PLA usage, unreliable otherwise.
   return CreateFunctionEntryUnwindPlan();
 }
 

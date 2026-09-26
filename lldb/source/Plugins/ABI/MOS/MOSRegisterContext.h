@@ -38,6 +38,18 @@ public:
   bool WriteRegister(const lldb_private::RegisterInfo *reg_info,
                      const lldb_private::RegisterValue &value) override;
 
+  // Imaginary registers live in target memory, not in the GDB-remote register
+  // bank, so the base class's bulk register-bank save/restore cannot capture
+  // them. Refuse to participate in bulk checkpointing; LLDB then falls back
+  // to per-register save/restore, which routes imaginary registers through
+  // Read/WriteRegister above.
+  bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
+  bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
+  bool ReadAllRegisterValues(
+      lldb_private::RegisterCheckpoint &reg_checkpoint) override;
+  bool WriteAllRegisterValues(
+      const lldb_private::RegisterCheckpoint &reg_checkpoint) override;
+
 private:
   /// Reference to the imaginary registers helper.
   /// This provides DWARF-number-based lookup for imaginary register addresses.
