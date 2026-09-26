@@ -65,8 +65,8 @@ public:
 
   // Custom register context for imaginary register handling
   lldb::RegisterContextSP
-  CreateRegisterContextForThread(lldb_private::Thread &thread,
-                                 uint32_t concrete_frame_idx) const override;
+  CreateGDBRemoteRegisterContextForThread(lldb_private::Thread &thread,
+                                          uint32_t concrete_frame_idx) const override;
 
 protected:
   lldb::ValueObjectSP

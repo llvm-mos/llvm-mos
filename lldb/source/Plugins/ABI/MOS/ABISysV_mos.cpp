@@ -274,8 +274,8 @@ UnwindPlanSP ABISysV_mos::CreateDefaultUnwindPlan() {
 //------------------------------------------------------------------
 
 lldb::RegisterContextSP
-ABISysV_mos::CreateRegisterContextForThread(lldb_private::Thread &thread,
-                                            uint32_t concrete_frame_idx) const {
+ABISysV_mos::CreateGDBRemoteRegisterContextForThread(
+    lldb_private::Thread &thread, uint32_t concrete_frame_idx) const {
 
   // Downcast to ThreadGDBRemote - this is safe in the GDB remote context.
   // We use static_cast because ThreadGDBRemote doesn't have LLVM RTTI

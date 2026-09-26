@@ -318,7 +318,7 @@ ThreadGDBRemote::CreateRegisterContextForFrame(StackFrame *frame) {
       bool write_all_registers_at_once = !pSupported;
       ABI *abi = process_sp->GetABI().get();
       if (abi) {
-        auto custom_ctx = abi->CreateRegisterContextForThread(
+        auto custom_ctx = abi->CreateGDBRemoteRegisterContextForThread(
             *this, concrete_frame_idx);
         if (custom_ctx)
           return custom_ctx;
