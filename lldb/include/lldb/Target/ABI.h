@@ -179,6 +179,19 @@ public:
     return std::nullopt;
   }
 
+  /// Provide a target-specific RegisterContext for the GDB-remote path.
+  ///
+  /// Only consulted from ThreadGDBRemote::CreateRegisterContextForFrame, so
+  /// the incoming Thread & is effectively a ThreadGDBRemote &. Returning
+  /// nullptr means "use the default GDBRemoteRegisterContext."
+  virtual lldb::RegisterContextSP
+  CreateGDBRemoteRegisterContextForThread(
+      lldb_private::Thread &thread,
+      uint32_t concrete_frame_idx) const {
+    return nullptr;
+  }
+
+
 protected:
   ABI(lldb::ProcessSP process_sp, std::unique_ptr<llvm::MCRegisterInfo> info_up)
       : m_process_wp(process_sp), m_mc_register_info_up(std::move(info_up)) {

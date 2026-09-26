@@ -5645,9 +5645,6 @@ void ProcessGDBRemote::AddRemoteRegisters(
                     remote_reg_info.invalidate_regs.begin(), proc_to_lldb);
   }
 
-  // Don't use Process::GetABI, this code gets called from DidAttach, and
-  // in that context we haven't set the Target's architecture yet, so the
-  // ABI is also potentially incorrect.
   if (ABISP abi_sp = ABI::FindPlugin(shared_from_this(), arch_to_use))
     abi_sp->AugmentRegisterInfo(registers);
 
