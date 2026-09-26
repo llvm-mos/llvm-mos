@@ -31,11 +31,9 @@ static int GetDwarfRegNumByName(llvm::MCRegisterInfo &mc_info,
   // MCRegisterInfo stores names in uppercase
   std::string mc_name = name.upper();
 
-  for (unsigned reg = 0; reg < mc_info.getNumRegs(); ++reg) {
-    if (mc_info.getName(reg) == mc_name) {
+  for (unsigned reg = 0, e = mc_info.getNumRegs(); reg != e; ++reg)
+    if (mc_info.getName(reg) == mc_name)
       return mc_info.getDwarfRegNum(reg, /*isEH=*/false);
-    }
-  }
   return -1;
 }
 
@@ -44,14 +42,12 @@ MOSImaginaryRegisters::GetOrCreate(Module &module,
                                    llvm::MCRegisterInfo &mc_info) {
   // Use UUID as cache key, fall back to file path
   std::string key = module.GetUUID().GetAsString();
-  if (key.empty()) {
+  if (key.empty())
     key = module.GetFileSpec().GetPath();
-  }
 
   auto it = s_cache_.find(key);
-  if (it != s_cache_.end() && it->second.initialized_) {
+  if (it != s_cache_.end() && it->second.initialized_)
     return it->second;
-  }
 
   auto &regs = s_cache_[key];
   regs.Initialize(module, mc_info);
@@ -113,9 +109,8 @@ void MOSImaginaryRegisters::ScanForSymbols(Module &module) {
     addr_t addr = symbol->GetRawValue();
 
     // Extend the vector if needed
-    if (i >= rc_addresses_.size()) {
+    if (i >= rc_addresses_.size())
       rc_addresses_.resize(i + 1, LLDB_INVALID_ADDRESS);
-    }
     rc_addresses_[i] = addr;
     num_rc_regs_ = std::max(num_rc_regs_, i + 1);
 

@@ -29,27 +29,6 @@ using namespace lldb_private;
 LLDB_PLUGIN_DEFINE_ADV(ABISysV_mos, ArchitectureMOS)
 
 //------------------------------------------------------------------
-// Helper to look up DWARF register number by name via MCRegisterInfo.
-// This is DRY - the actual DWARF numbers come from MOSRegisterInfo.td
-// through the MCRegisterInfo generated at LLVM build time.
-//------------------------------------------------------------------
-static int GetDwarfRegNumByName(llvm::MCRegisterInfo *mc_info,
-                                llvm::StringRef name) {
-  if (!mc_info)
-    return -1;
-
-  // MCRegisterInfo stores names in uppercase
-  std::string mc_name = name.upper();
-
-  for (unsigned reg = 0; reg < mc_info->getNumRegs(); ++reg) {
-    if (mc_info->getName(reg) == mc_name) {
-      return mc_info->getDwarfRegNum(reg, /*isEH=*/false);
-    }
-  }
-  return -1;
-}
-
-//------------------------------------------------------------------
 // Static Functions
 //------------------------------------------------------------------
 
@@ -217,62 +196,53 @@ static void buildReturnAddressValueExpr(std::vector<uint8_t> &expr,
 }
 
 UnwindPlanSP ABISysV_mos::CreateFunctionEntryUnwindPlan() {
-  // Get the DWARF register numbers by name via MCRegisterInfo.
-  // These are looked up at runtime - no hardcoded constants.
-  // The actual DWARF numbers come from MOSRegisterInfo.td.
+  // DWARF register numbers for S and PC come from MOSRegisterInfo.td via the
+  // MCRegisterInfo generated at LLVM build time. MCBasedABI::GetEHAndDWARFNums
+  // performs the lookup for us.
   if (!m_mc_register_info_up)
     return nullptr;
 
-  int dwarf_s = GetDwarfRegNumByName(m_mc_register_info_up.get(), "S");
-  int dwarf_pc = GetDwarfRegNumByName(m_mc_register_info_up.get(), "PC");
-
-  if (dwarf_s < 0 || dwarf_pc < 0) {
+  uint32_t dwarf_s = GetEHAndDWARFNums("S").second;
+  uint32_t dwarf_pc = GetEHAndDWARFNums("PC").second;
+  if (dwarf_s == LLDB_INVALID_REGNUM || dwarf_pc == LLDB_INVALID_REGNUM) {
     LLDB_LOG(GetLog(LLDBLog::Expressions),
              "ABISysV_mos: Could not find DWARF numbers for S or PC");
     return nullptr;
   }
 
   // 6502 calling convention:
-  // - JSR pushes (return_address - 1) onto hardware stack
-  //   - First pushes high byte to [SP], then decrements SP
-  //   - Then pushes low byte to [SP], then decrements SP
-  // - After JSR, SP points to next free slot (two below pushed address)
-  // - RTS increments SP, reads low byte, increments SP, reads high byte, adds 1
+  // - JSR pushes (return_address - 1) onto the hardware stack, high byte
+  //   first, decrementing S each time. On entry:
+  //     [S+1] = low byte of (return_address - 1)
+  //     [S+2] = high byte of (return_address - 1)
   //
-  // Stack layout after JSR (S = current value):
-  //   [S+1] = low byte of (return_address - 1)
-  //   [S+2] = high byte of (return_address - 1)
-  //
-  // We use normalized expressions to handle both 8-bit and 16-bit S values.
-  // Each hardware stack address is computed independently (not CFA-relative)
-  // to avoid subtraction underflow when S wraps within the stack page.
-  //
-  // The expression computes: ((S + offset) & 0xFF) | 0x0100
-  // This ensures the result is always in the hardware stack range
-  // 0x0100-0x01FF.
+  // We use normalized expressions to handle both 8-bit and 16-bit S values,
+  // and to handle the case where S wraps within the stack page (the two
+  // return-address bytes may be at physically non-consecutive addresses).
+  // Each hardware stack byte's address is computed independently as
+  // ((S + offset) & 0xFF) | 0x0100.
 
-  // IMPORTANT: These expression vectors must be static because UnwindPlan
-  // stores raw pointers to the data, not copies. They must persist for the
-  // lifetime of the UnwindPlan.
-  static std::vector<uint8_t> cfa_expr;
-  static std::vector<uint8_t> pc_expr;
-  static std::vector<uint8_t> s_expr;
-  static bool initialized = false;
-  static int cached_dwarf_s = -1;
+  // dwarf_s is a compile-time invariant of the MOS target; the expression
+  // byte-vectors depend only on it, so build them exactly once. C++11
+  // guarantees thread-safe static-local init.
+  struct CachedExprs {
+    std::vector<uint8_t> cfa;
+    std::vector<uint8_t> pc;
+    std::vector<uint8_t> s;
+    uint32_t dwarf_s;
+  };
+  static const CachedExprs E = [this]() {
+    uint32_t ds = GetEHAndDWARFNums("S").second;
+    CachedExprs r;
+    r.dwarf_s = ds;
+    buildNormalizedHardwareStackExpr(r.cfa, ds, 3);
+    buildReturnAddressValueExpr(r.pc, ds);
+    buildNormalizedHardwareStackExpr(r.s, ds, 2);
+    return r;
+  }();
 
-  // Rebuild if not initialized or if DWARF number changed (shouldn't happen)
-  if (!initialized || cached_dwarf_s != dwarf_s) {
-    cfa_expr.clear();
-    pc_expr.clear();
-    s_expr.clear();
-
-    buildNormalizedHardwareStackExpr(cfa_expr, dwarf_s, 3); // CFA = S + 3
-    buildReturnAddressValueExpr(pc_expr, dwarf_s);          // caller PC value
-    buildNormalizedHardwareStackExpr(s_expr, dwarf_s, 2);   // S_prev = S + 2
-
-    cached_dwarf_s = dwarf_s;
-    initialized = true;
-  }
+  assert(E.dwarf_s == dwarf_s &&
+         "S DWARF number changed between calls; MOS MCRegisterInfo unstable?");
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
   plan_sp->SetSourceName("mos function-entry unwind plan");
@@ -287,19 +257,18 @@ UnwindPlanSP ABISysV_mos::CreateFunctionEntryUnwindPlan() {
   row.SetUnspecifiedRegistersAreUndefined(true);
 
   // CFA = normalized(S + 3) = ((S + 3) & 0xFF) | 0x0100
-  row.GetCFAValue().SetIsDWARFExpression(cfa_expr.data(), cfa_expr.size());
+  row.GetCFAValue().SetIsDWARFExpression(E.cfa.data(), E.cfa.size());
 
   // PC value comes from reassembling the two return-address bytes and
   // adding 1 (JSR pushes PC-1). IsDWARFExpression means: the expression
   // result IS the register value.
   UnwindPlan::Row::AbstractRegisterLocation pc_loc;
-  pc_loc.SetIsDWARFExpression(pc_expr.data(), pc_expr.size());
+  pc_loc.SetIsDWARFExpression(E.pc.data(), E.pc.size());
   row.SetRegisterInfo(dwarf_pc, pc_loc);
 
-  // S_prev = normalized(S + 2) - direct expression, NOT CFA - 1
-  // isDWARFExpression means: the expression result IS the register value.
+  // S_prev = normalized(S + 2) - direct expression, NOT CFA - 1.
   UnwindPlan::Row::AbstractRegisterLocation s_loc;
-  s_loc.SetIsDWARFExpression(s_expr.data(), s_expr.size());
+  s_loc.SetIsDWARFExpression(E.s.data(), E.s.size());
   row.SetRegisterInfo(dwarf_s, s_loc);
 
   plan_sp->AppendRow(std::move(row));

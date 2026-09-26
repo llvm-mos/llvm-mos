@@ -44,7 +44,12 @@ public:
                        lldb::ValueObjectSP &new_value) override;
 
   bool CallFrameAddressIsValid(lldb::addr_t cfa) override {
-    // MOS uses 16-bit addresses, soft stack can be anywhere
+    // The MOS CFA depends on the unwind plan in use. The ABI's own
+    // function-entry plan (CreateFunctionEntryUnwindPlan in .cpp) uses the
+    // hardware stack S+3, which always lands in 0x0100-0x01FF. Compiler-
+    // emitted CFI plans instead use the soft stack RS0, which may live
+    // anywhere in the 16-bit address space. Accept any 16-bit address to
+    // cover both.
     return cfa <= 0xFFFF;
   }
 
