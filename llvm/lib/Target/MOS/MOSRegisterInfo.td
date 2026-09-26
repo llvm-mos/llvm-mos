@@ -83,8 +83,10 @@ defm X : MOSReg8<1, "x">;
 // MOS 8-bit Y register
 defm Y : MOSReg8<2, "y">;
 
-// MOS 8-bit stack register.  Some debuggers falsely claim this to be
-// a 16-bit value that always has 0x01 in the high byte.
+// MOS 8-bit stack register. MAME's 6502 debugger displays S as a 16-bit
+// value whose high byte is pinned to 0x01 (the hardware stack page);
+// that is a display convention, not a hardware fact. LLVM models S as
+// its native 8-bit width.
 def S : MOSReg<4, "s">;
 
 // Program counter - not directly accessible but needed for DWARF CFI.
