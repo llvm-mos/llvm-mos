@@ -651,12 +651,14 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::STZpIdx:
   case MOS::STAbsIdx: {
     bool MustZP = MI->getOpcode() == MOS::STZpIdx;
-    bool ZP = MustZP || canUseZeroPageIdx(MI->getOperand(0));
+    bool ZP = MustZP || canUseZeroPageIdx(MI->getOperand(1));
+    bool ImmConfusable = false;
     switch (MI->getOperand(2).getReg()) {
     default:
       llvm_unreachable("Unexpected register.");
     case MOS::X:
       OutMI.setOpcode(ZP ? MOS::STA_ZeroPageX : MOS::STA_AbsoluteX);
+      ImmConfusable = !ZP;
       break;
     case MOS::Y:
       if (MustZP)
@@ -667,6 +669,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     MCOperand Val;
     if (!lowerOperand(MI->getOperand(1), Val))
       llvm_unreachable("Failed to lower operand");
+    if (ImmConfusable)
+      Val = wrapAbsoluteIdxBase(MI, Val, Ctx);
     OutMI.addOperand(Val);
     return;
   }
