@@ -48,7 +48,7 @@ MCInstrInfo *llvm::createMOSMCInstrInfo() {
 
 static MCRegisterInfo *createMOSMCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
-  InitMOSMCRegisterInfo(X, 0);
+  InitMOSMCRegisterInfo(X, MOS::PC);
 
   return X;
 }

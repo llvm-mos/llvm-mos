@@ -737,6 +737,13 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     printCFIRegister(CFI.getRegister(), OS, TRI);
     OS << ", " << CFI.getOffset();
     break;
+  case MCCFIInstruction::OpValOffset:
+    OS << "val_offset ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", " << CFI.getOffset();
+    break;
   case MCCFIInstruction::OpAdjustCfaOffset:
     OS << "adjust_cfa_offset ";
     if (MCSymbol *Label = CFI.getLabel())

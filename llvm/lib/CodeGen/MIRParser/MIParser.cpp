@@ -2643,6 +2643,13 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex = MF.addFrameInst(
         MCCFIInstruction::createRelOffset(nullptr, Reg, Offset));
     break;
+  case MIToken::kw_cfi_val_offset:
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIOffset(Offset))
+      return true;
+    CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::createValOffset(nullptr, Reg, Offset));
+    break;
   case MIToken::kw_cfi_def_cfa_register:
     if (parseCFIRegister(Reg))
       return true;
@@ -3165,6 +3172,7 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::kw_cfi_same_value:
   case MIToken::kw_cfi_offset:
   case MIToken::kw_cfi_rel_offset:
+  case MIToken::kw_cfi_val_offset:
   case MIToken::kw_cfi_def_cfa_register:
   case MIToken::kw_cfi_def_cfa_offset:
   case MIToken::kw_cfi_adjust_cfa_offset:

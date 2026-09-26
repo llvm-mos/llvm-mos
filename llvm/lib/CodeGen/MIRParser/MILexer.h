@@ -85,6 +85,7 @@ struct MIToken {
     kw_cfi_same_value,
     kw_cfi_offset,
     kw_cfi_rel_offset,
+    kw_cfi_val_offset,
     kw_cfi_def_cfa_register,
     kw_cfi_def_cfa_offset,
     kw_cfi_adjust_cfa_offset,
