@@ -1,0 +1,110 @@
+# RUN: llc -mtriple=mos -mcpu=mos6502 -run-pass=machine-scheduler -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=mos -mcpu=mos6502 -run-pass=machine-scheduler -misched-prera-direction=topdown -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=mos -mcpu=mos6502 -run-pass=machine-scheduler -misched-prera-direction=bottomup -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=mos -mcpu=mos65c02 -run-pass=machine-scheduler -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=mos -mcpu=mosw65816 -run-pass=machine-scheduler -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=mos -mcpu=mos65ce02 -run-pass=machine-scheduler -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=mos -mcpu=mos6502 -start-before=machine-scheduler -verify-machineinstrs -o /dev/null %s
+# RUN: llc -mtriple=mos -mcpu=mos65c02 -start-before=machine-scheduler -verify-machineinstrs -o /dev/null %s
+# RUN: llc -mtriple=mos -mcpu=mosw65816 -start-before=machine-scheduler -verify-machineinstrs -o /dev/null %s
+# RUN: llc -mtriple=mos -mcpu=mos65ce02 -start-before=machine-scheduler -verify-machineinstrs -o /dev/null %s
+
+# The input interleaves a scaling shift and an add. Finish the shift before
+# starting the independent add carry: overlapping flags require a byte save.
+---
+name: scale_then_add
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:ac = LDAbs 20480
+    %1:ac = LDAbs 20481
+    %2:ac = LDAbs 20482
+    %3:ac = LDAbs 20483
+    %4:cc = LDImm1 0
+    %0:ac, %5:cc = ASL %0
+    %0:ac, %6:cc, dead %10:vc = ADCImm %0, 23, %4
+    %1:ac, %5:cc = ROL %1, %5
+    %1:ac, %7:cc, dead %11:vc = ADCImm %1, 45, %6
+    %2:ac, %5:cc = ROL %2, %5
+    %2:ac, %8:cc, dead %12:vc = ADCImm %2, 67, %7
+    %3:ac, dead %5:cc = ROL %3, %5
+    %3:ac, dead %9:cc, dead %13:vc = ADCImm %3, 0, %8
+    STAbs %0, 20736
+    STAbs %1, 20737
+    STAbs %2, 20738
+    STAbs %3, 20739
+    RTS
+...
+
+# CHECK-LABEL: name: scale_then_add
+# CHECK: ASL
+# CHECK-NOT: ADC
+# CHECK: dead {{%[0-9]+}}:cc = ROL
+# CHECK: ADCImm
+
+# A single carry chain remains legal with a dead final carry.
+---
+name: single_chain
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:ac = LDAbs 20480
+    %1:ac = LDAbs 20481
+    %2:cc = LDImm1 0
+    %0:ac, %3:cc, dead %4:vc = ADCImm %0, 1, %2
+    %1:ac, dead %5:cc, dead %6:vc = ADCImm %1, 2, %3
+    STAbs %0, 20736
+    STAbs %1, 20737
+    RTS
+...
+
+# CHECK-LABEL: name: single_chain
+# CHECK: ADCImm {{.*}}, 1,
+# CHECK: ADCImm {{.*}}, 2,
+
+# The accumulator dependencies require both independent flags to be live.
+# Pressure is a cost, so it must not forbid this legal schedule.
+---
+name: necessary_overlap
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:ac = LDAbs 20480
+    %1:cc = LDImm1 0
+    %0:ac, %2:cc, dead %3:vc = ADCImm %0, 1, %1
+    %0:ac, %4:cc, dead %5:vc = ADCImm %0, 2, %1
+    %0:ac, dead %6:cc, dead %7:vc = ADCImm %0, 3, %2
+    %0:ac, dead %8:cc, dead %9:vc = ADCImm %0, 4, %4
+    STAbs %0, 20736
+    RTS
+...
+
+# CHECK-LABEL: name: necessary_overlap
+# CHECK: ADCImm {{.*}}, 1,
+# CHECK: ADCImm {{.*}}, 2,
+# CHECK: ADCImm {{.*}}, 3,
+# CHECK: ADCImm {{.*}}, 4,
+
+# A computed carry can feed multiple users. Its live range ends only after
+# the last user, while constant initializers remain rematerializable.
+---
+name: multiple_users
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:ac = LDAbs 20480
+    %1:ac = LDAbs 20481
+    %2:ac = LDAbs 20482
+    %0:ac, %3:cc = ASL %0
+    %1:ac, dead %4:cc, dead %5:vc = ADCImm %1, 1, %3
+    %2:ac, dead %6:cc, dead %7:vc = ADCImm %2, 2, %3
+    STAbs %0, 20736
+    STAbs %1, 20737
+    STAbs %2, 20738
+    RTS
+...
+
+# CHECK-LABEL: name: multiple_users
+# CHECK: ASL
+# CHECK-DAG: ADCImm {{.*}}, 1,
+# CHECK-DAG: ADCImm {{.*}}, 2,

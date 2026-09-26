@@ -32,12 +32,92 @@
 #include "MOSRegisterInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 
 using namespace llvm;
 
 MOSSchedStrategy::MOSSchedStrategy(const MachineSchedContext *C)
     : GenericScheduler(C) {}
+
+void MOSSchedStrategy::initialize(ScheduleDAGMI *DAG) {
+  GenericScheduler::initialize(DAG);
+  Carries.clear();
+  CarryRefs.clear();
+  TopNodes.clear();
+  BottomNodes.clear();
+  TopNodes.insert(&DAG->EntrySU);
+  BottomNodes.insert(&DAG->ExitSU);
+  TopCarries = BottomCarries = 0;
+
+  // A computed carry needs preservation when another carry becomes live.
+  // Constant carry initializers can instead be rematerialized with CLC/SEC.
+  const MachineRegisterInfo &MRI = DAG->MF.getRegInfo();
+  for (SUnit &SU : DAG->SUnits) {
+    if (SU.getInstr()->getOpcode() == MOS::LDImm1)
+      continue;
+    CarryValue Value{&SU, {}};
+    for (const SDep &Dep : SU.Succs) {
+      if (Dep.getKind() != SDep::Data)
+        continue;
+      Register Reg = Dep.getReg();
+      if (!Reg.isVirtual() || MRI.getRegClass(Reg) != &MOS::CcRegClass)
+        continue;
+      if (!llvm::is_contained(Value.Users, Dep.getSUnit()))
+        Value.Users.push_back(Dep.getSUnit());
+    }
+    if (Value.Users.empty())
+      continue;
+    unsigned ID = Carries.size();
+    CarryRefs[&SU].push_back(ID);
+    for (const SUnit *User : Value.Users)
+      CarryRefs[User].push_back(ID);
+    Carries.push_back(std::move(Value));
+  }
+  for (const CarryValue &Value : Carries) {
+    TopCarries += isCarryLive(Value, true);
+    BottomCarries += isCarryLive(Value, false);
+  }
+}
+
+bool MOSSchedStrategy::isCarryLive(const CarryValue &Value, bool AtTop,
+                                   const SUnit *Trial) const {
+  // A value crosses the top frontier after its definition and before its last
+  // user. At the bottom frontier, a scheduled user needs an unscheduled def.
+  const auto &Nodes = AtTop ? TopNodes : BottomNodes;
+  auto Scheduled = [&](const SUnit *SU) {
+    return SU == Trial || Nodes.contains(SU);
+  };
+  if (AtTop)
+    return Scheduled(Value.Def) &&
+           llvm::any_of(Value.Users,
+                        [&](const SUnit *SU) { return !Scheduled(SU); });
+  return !Scheduled(Value.Def) && llvm::any_of(Value.Users, Scheduled);
+}
+
+int MOSSchedStrategy::carryPressureDiff(const SUnit *SU, bool AtTop) const {
+  auto It = CarryRefs.find(SU);
+  if (It == CarryRefs.end())
+    return 0;
+  int Diff = 0;
+  for (unsigned ID : It->second)
+    Diff += int(isCarryLive(Carries[ID], AtTop, SU)) -
+            int(isCarryLive(Carries[ID], AtTop));
+  return Diff;
+}
+
+int MOSSchedStrategy::carryExcessDiff(const SUnit *SU, bool AtTop) const {
+  int Before = AtTop ? TopCarries : BottomCarries;
+  int After = Before + carryPressureDiff(SU, AtTop);
+  return std::max(0, After - 1) - std::max(0, Before - 1);
+}
+
+void MOSSchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
+  int &Pressure = IsTopNode ? TopCarries : BottomCarries;
+  Pressure += carryPressureDiff(SU, IsTopNode);
+  (IsTopNode ? TopNodes : BottomNodes).insert(SU);
+  GenericScheduler::schedNode(SU, IsTopNode);
+}
 
 bool MOSSchedStrategy::tryCandidate(SchedCandidate &Cand,
                                     SchedCandidate &TryCand,
@@ -48,6 +128,10 @@ bool MOSSchedStrategy::tryCandidate(SchedCandidate &Cand,
     TryCand.Reason = NodeOrder;
     return true;
   }
+
+  if (tryLess(carryExcessDiff(TryCand.SU, TryCand.AtTop),
+              carryExcessDiff(Cand.SU, Cand.AtTop), TryCand, Cand, RegExcess))
+    return TryCand.Reason != NoCand;
 
   if (tryLess(
           registerClassPressureDiff(MOS::AcRegClass, TryCand.SU, TryCand.AtTop),
