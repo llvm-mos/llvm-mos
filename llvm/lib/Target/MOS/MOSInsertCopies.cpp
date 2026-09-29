@@ -64,6 +64,7 @@ bool MOSInsertCopies::runOnMachineFunction(MachineFunction &MF) {
         continue;
       case MOS::ASL:
       case MOS::LSR:
+      case MOS::ASR:
       case MOS::ROL:
       case MOS::ROR:
         WideRC = &MOS::AImag8RegClass;

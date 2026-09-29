@@ -157,6 +157,13 @@ def G_LSHRE : MOSGenericInstruction {
   let InOperandList = (ins type0:$src, type1:$carry_in);
 }
 
+// Arithmetically shift an 8-bit value right one bit. $carry_in must be the
+// source sign bit; it permits a logical-shift fallback when $dst is dead.
+def G_ASHRE : MOSGenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$carry_out);
+  let InOperandList = (ins type0:$src, type1:$carry_in);
+}
+
 // These opcodes represent multi-byte increment and decrement operations. Each
 // use operand is one byte; either a register or an absolute address. The def
 // operands correspond to only the register use operands, and they must be tied
