@@ -15,6 +15,8 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/Constants.h"
@@ -275,24 +277,91 @@ static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
   }
 }
 
+namespace {
+/// One DBG_VALUE replacement produced by salvaging a to-be-erased instruction.
+/// For most opcodes salvaging yields a single replacement (modifying an
+/// existing DBG_VALUE in place); for opcodes like G_MERGE_VALUES it yields
+/// one replacement per source piece, materialized as additional DBG_VALUEs
+/// carrying DW_OP_LLVM_fragment sub-expressions.
+struct SalvagedReplacement {
+  Register Reg;
+  unsigned SubReg;
+  const DIExpression *Expr;
+};
+} // end anonymous namespace
+
+/// Compute the set of DBG_VALUE replacements produced by salvaging \p MI with
+/// respect to a DBG_VALUE currently carrying \p OrigExpr.
+///
+/// - Returns empty if the opcode isn't salvageable or if salvage failed
+///   entirely (in which case the caller leaves the DBG_VALUE alone; it will
+///   be orphaned when \p MI is erased, as with any un-salvageable case).
+/// - Returns one element for single-replacement opcodes (G_TRUNC, COPY).
+/// - Returns up to N elements for G_MERGE_VALUES with N sources, each with a
+///   fragment expression describing one piece. Fewer than N is possible when
+///   individual pieces can't be fragmented (e.g., expression carries ops that
+///   don't survive fragmentation) — remaining pieces still salvage.
+static SmallVector<SalvagedReplacement, 4>
+computeSalvageReplacements(const MachineRegisterInfo &MRI, MachineInstr &MI,
+                           const DIExpression *OrigExpr) {
+  SmallVector<SalvagedReplacement, 4> Out;
+
+  if (MI.getOpcode() == TargetOpcode::G_MERGE_VALUES) {
+    const unsigned NumSrcs = MI.getNumOperands() - 1; // -1 for the def
+    if (NumSrcs == 0)
+      return Out;
+
+    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    if (!SrcTy.isScalar())
+      return Out; // Only handle scalar pieces for now.
+
+    unsigned PieceSizeInBits = SrcTy.getSizeInBits();
+
+    // If the original expression already carries a fragment, our sub-
+    // fragments must fit within it. DIExpression::createFragmentExpression
+    // asserts that OffsetInBits + SizeInBits <= existing fragment size; this
+    // can happen during LTO when debug info fragments don't match actual
+    // value sizes.
+    if (auto ExistingFrag = OrigExpr->getFragmentInfo())
+      if (NumSrcs * PieceSizeInBits > ExistingFrag->SizeInBits)
+        return Out;
+
+    for (unsigned I = 0; I < NumSrcs; ++I) {
+      Register SrcReg = MI.getOperand(I + 1).getReg();
+      unsigned OffsetInBits = I * PieceSizeInBits;
+      auto FragExpr = DIExpression::createFragmentExpression(
+          OrigExpr, OffsetInBits, PieceSizeInBits);
+      if (!FragExpr)
+        continue; // This piece is undescribable; other pieces may still salvage.
+      Out.push_back({SrcReg, /*SubReg=*/0, *FragExpr});
+    }
+    return Out;
+  }
+
+  // Single-replacement salvage via salvageDebugInfoImpl (G_TRUNC, COPY, ...).
+  // MaxExpressionSize caps the resulting DIExpression length for performance.
+  const unsigned MaxExpressionSize = 128;
+  SmallVector<uint64_t, 16> Ops;
+  MachineOperand *Op0 = salvageDebugInfoImpl(MRI, MI, Ops);
+  if (!Op0)
+    return Out;
+  const DIExpression *SalvagedExpr =
+      DIExpression::appendOpsToArg(OrigExpr, Ops, 0, /*StackValue=*/true);
+  if (SalvagedExpr->getNumElements() > MaxExpressionSize)
+    return Out;
+  Out.push_back({Op0->getReg(), Op0->getSubReg(), SalvagedExpr});
+  return Out;
+}
+
 void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
                                        MachineInstr &MI,
                                        ArrayRef<MachineOperand *> DbgUsers) {
-  // These are arbitrary chosen limits on the maximum number of values and the
-  // maximum size of a debug expression we can salvage up to, used for
-  // performance reasons.
-  const unsigned MaxExpressionSize = 128;
+  const TargetInstrInfo &TII = *MI.getMF()->getSubtarget().getInstrInfo();
 
   for (auto *DefMO : DbgUsers) {
     MachineInstr *DbgMI = DefMO->getParent();
-    if (DbgMI->isIndirectDebugValue()) {
+    if (DbgMI->isIndirectDebugValue())
       continue;
-    }
-
-    int UseMOIdx =
-        DbgMI->findRegisterUseOperandIdx(DefMO->getReg(), /*TRI=*/nullptr);
-    assert(UseMOIdx != -1 && DbgMI->hasDebugOperandForReg(DefMO->getReg()) &&
-           "Must use salvaged instruction as its location");
 
     // TODO: Support DBG_VALUE_LIST.
     if (DbgMI->getOpcode() != TargetOpcode::DBG_VALUE) {
@@ -301,23 +370,36 @@ void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
       continue;
     }
 
-    const DIExpression *SalvagedExpr = DbgMI->getDebugExpression();
+    int UseMOIdx =
+        DbgMI->findRegisterUseOperandIdx(DefMO->getReg(), /*TRI=*/nullptr);
+    assert(UseMOIdx != -1 && DbgMI->hasDebugOperandForReg(DefMO->getReg()) &&
+           "Must use salvaged instruction as its location");
 
-    SmallVector<uint64_t, 16> Ops;
-    auto Op0 = salvageDebugInfoImpl(MRI, MI, Ops);
-    if (!Op0)
+    auto Reps = computeSalvageReplacements(MRI, MI, DbgMI->getDebugExpression());
+    if (Reps.empty())
       continue;
-    SalvagedExpr = DIExpression::appendOpsToArg(SalvagedExpr, Ops, 0, true);
 
-    bool IsValidSalvageExpr =
-        SalvagedExpr->getNumElements() <= MaxExpressionSize;
-    if (IsValidSalvageExpr) {
-      auto &UseMO = DbgMI->getOperand(UseMOIdx);
-      UseMO.setReg(Op0->getReg());
-      UseMO.setSubReg(Op0->getSubReg());
-      DbgMI->getDebugExpressionOp().setMetadata(SalvagedExpr);
+    // First replacement modifies the existing DBG_VALUE in place.
+    auto &UseMO = DbgMI->getOperand(UseMOIdx);
+    UseMO.setReg(Reps[0].Reg);
+    UseMO.setSubReg(Reps[0].SubReg);
+    DbgMI->getDebugExpressionOp().setMetadata(Reps[0].Expr);
+    LLVM_DEBUG(dbgs() << "SALVAGE: " << *DbgMI << '\n');
 
-      LLVM_DEBUG(dbgs() << "SALVAGE: " << *DbgMI << '\n');
+    // Additional replacements (produced by fragment-emitting opcodes like
+    // G_MERGE_VALUES) materialize as new DBG_VALUEs inserted before the
+    // original.
+    if (Reps.size() > 1) {
+      const DILocalVariable *Var = DbgMI->getDebugVariable();
+      DebugLoc DL = DbgMI->getDebugLoc();
+      MachineBasicBlock *MBB = DbgMI->getParent();
+      for (unsigned I = 1, E = Reps.size(); I != E; ++I) {
+        auto NewDbg = BuildMI(*MBB, DbgMI, DL, TII.get(TargetOpcode::DBG_VALUE),
+                              /*IsIndirect=*/false, Reps[I].Reg, Var,
+                              Reps[I].Expr);
+        LLVM_DEBUG(dbgs() << "SALVAGE (piece " << I << "): " << *NewDbg
+                          << '\n');
+      }
     }
   }
 }
