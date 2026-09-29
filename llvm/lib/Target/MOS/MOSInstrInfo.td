@@ -192,6 +192,10 @@ def BEQ_Relative : ConditionalBranch<"beq", 0b11, 0b1>;
 /// 8A  9A  AA  BA  CA  EA
 
 def BRK_Implied: InstLow0<"brk", 0b0000>, InstUnconditionalBranch;
+def BRK_Immediate: Inst16<"brk", Opcode<0x00>, Immediate>,
+    InstUnconditionalBranch {
+  let isAsmParserOnly = true;
+}
 /// JSR is the only instruction that does not follow the current pattern.
 def JSR_Absolute: Inst24<"jsr", Opcode<0x20>, Absolute>, InstCall;
 def RTI_Implied: InstLow0<"rti", 0b0100>, InstReturn;
