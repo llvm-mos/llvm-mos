@@ -285,9 +285,9 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
       continue;
     }
 
-    if (MI.getOpcode() != MOS::LDImm || !MI.getOperand(1).isImm()) {
-      // If a register is overwritten with an instruction other than
-      // an immediate load, mark register value as unknown.
+    if (MI.getOpcode() != MOS::LDImm || !MI.getOperand(1).isImm() ||
+        !MOS::GPRRegClass.contains(MI.getOperand(0).getReg())) {
+      // Mark overwritten register values as unknown.
       if (MI.modifiesRegister(MOS::A, TRI))
         LoadA.MI = nullptr;
       if (MI.modifiesRegister(MOS::X, TRI))
