@@ -719,13 +719,14 @@ class Inst816MemoryMove<string opcodestr, Opcode op = DefaultOpcode> :
   bits<8> destinationBank;
 
   Opcode opcode = op;
-  let InOperandList = (ins imm8:$sourceBank, imm8at2:$destinationBank);
+  let InOperandList = (ins imm8at2:$sourceBank, imm8:$destinationBank);
   string OperandsStr;
   let OperandsStr = "#$sourceBank , #$destinationBank";
 
   let Inst{7-0} = opcode.op;
-  let Inst{15-8} = sourceBank;
-  let Inst{23-16} = destinationBank;
+  // The instruction stores destination,source; assembly lists source,destination.
+  let Inst{15-8} = destinationBank;
+  let Inst{23-16} = sourceBank;
   let AsmString = opcodestr # " " # OperandsStr;
 }
 
