@@ -1,0 +1,16 @@
+# RUN: not --crash llc -mtriple=mos -run-pass=machineverifier -o /dev/null %s 2>&1 | FileCheck %s
+
+# CmpZero must stay with the terminators that consume its flags.
+# CHECK: Bad machine code: Non-terminator instruction after the first terminator
+# CHECK: $a = T_A $x
+# CHECK: First terminator was: CmpZero
+
+---
+name: cmpzero_before_nonterminator
+body: |
+  bb.0.entry:
+    liveins: $x
+    CmpZero $x, implicit-def $n, implicit-def $c
+    $a = T_A $x
+    RTS implicit $n
+...

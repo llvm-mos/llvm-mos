@@ -88,24 +88,26 @@ bool MOSLateOptimization::lowerCmpZeros(MachineBasicBlock &MBB) const {
   const auto &STI = MBB.getParent()->getSubtarget<MOSSubtarget>();
   const auto *TRI = MRI.getTargetRegisterInfo();
   bool Changed = false;
-  for (MachineInstr &MI : make_early_inc_range(mbb_reverse(MBB))) {
+  for (MachineInstr &MI : make_early_inc_range(mbb_reverse(MBB.terminators()))) {
     if (MI.getOpcode() != MOS::CmpZero)
       continue;
 
     if (MI.allDefsAreDead()) {
       MI.eraseFromParent();
+      Changed = true;
       continue;
     }
 
     Register Val = MI.getOperand(0).getReg();
 
+    bool Folded = false;
     for (auto &J : mbb_reverse(MBB.begin(), MI)) {
       if (J.isDebugInstr())
         continue;
       if (J.isCall() || J.isInlineAsm())
         break;
       if (definesNZ(J, Val, STI)) {
-        Changed = true;
+        Folded = true;
         J.addOperand(MachineOperand::CreateReg(MOS::NZ, /*isDef=*/true,
                                                /*isImp=*/true));
         MI.eraseFromParent();
@@ -135,8 +137,10 @@ bool MOSLateOptimization::lowerCmpZeros(MachineBasicBlock &MBB) const {
       if (ClobbersNZ)
         break;
     }
-    if (Changed)
+    if (Folded) {
+      Changed = true;
       continue;
+    }
 
     Changed = true;
     lowerCmpZero(MI);
