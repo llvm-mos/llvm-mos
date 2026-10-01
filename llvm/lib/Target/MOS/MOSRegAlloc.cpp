@@ -9,7 +9,7 @@
 /// \file
 /// Allocate and assign final physical registers and exit SSA form.
 ///
-/// MOSImagRegAlloc supplies an SSA program with imaginary register assignments
+/// MOSImagRegAssign supplies an SSA program with imaginary register assignments
 /// in VirtRegMap and explicit spills. This pass chooses hardware placements and
 /// emits the transfers needed to satisfy uses, while respecting those imaginary
 /// assignments wherever imaginary storage is required. The resulting MIR has
