@@ -112,6 +112,23 @@ MOSRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   return RC;
 }
 
+const TargetRegisterClass *
+MOSRegisterInfo::getImagRegClass(Register R,
+                                 const MachineRegisterInfo &MRI) const {
+  const TargetRegisterClass *RC =
+      R.isVirtual() ? MRI.getRegClass(R) : getMinimalPhysRegClass(R);
+  if (MOS::Imag16RegClass.hasSubClassEq(RC))
+    return &MOS::Imag16RegClass;
+  if (MOS::Anyi1RegClass.hasSubClassEq(RC) ||
+      MOS::FlagRegClass.hasSubClassEq(RC))
+    return &MOS::ImagLSBRegClass;
+  if (MOS::Anyi8RegClass.hasSubClassEq(RC))
+    return &MOS::Imag8RegClass;
+  report_fatal_error(Twine("no imaginary storage class for ") +
+                         getRegClassName(RC),
+                     /*GenCrashDiag=*/false);
+}
+
 // These values were chosen empirically based on the desired behavior of llc
 // test cases. These values will likely need to be retuned as more examples come
 // up.  Unfortunately, the way the register allocator actually uses this is very
@@ -531,7 +548,8 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
   // Transfer the loaded value out of A (if applicable).
   if (IsLoad && Loc != A) {
     if (Loc == MOS::C || Loc == MOS::V)
-      Builder.buildInstr(MOS::COPY, {Loc}, {}).addUse(A, RegState{}, MOS::sublsb);
+      Builder.buildInstr(MOS::COPY, {Loc}, {})
+          .addUse(A, RegState{}, MOS::sublsb);
     else {
       assert(MOS::Anyi8RegClass.contains(Loc));
       Builder.buildCopy(Loc, A);
@@ -817,8 +835,7 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
         unsigned NumDefs = MI.getNumExplicitDefs();
         for (unsigned I = NumDefs, E = MI.getNumExplicitOperands(); I < E;
              ++I) {
-          if (!MI.getOperand(I).isReg() ||
-              MI.getOperand(I).getReg() != VirtReg)
+          if (!MI.getOperand(I).isReg() || MI.getOperand(I).getReg() != VirtReg)
             continue;
           unsigned ByteIdx = I - NumDefs;
           unsigned PartnerI = NumDefs + (ByteIdx ^ 1);
