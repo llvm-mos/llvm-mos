@@ -1222,6 +1222,7 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   if (!Preheader) return false;
 
   bool MadeAnyChanges = false;
+  SmallVector<Value *, 16> SunkInsts;
   for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
 
     // Skip BB Terminator.
@@ -1279,9 +1280,12 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
 
     // Otherwise, sink it to the exit block.
     I.moveBefore(ExitBlock->getFirstInsertionPt());
-    SE->forgetValue(&I);
+    SunkInsts.push_back(&I);
     MadeAnyChanges = true;
   }
+
+  if (!SunkInsts.empty())
+    SE->forgetValues(SunkInsts);
 
   return MadeAnyChanges;
 }

@@ -40,11 +40,10 @@ static cl::opt<RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode> Mode(
             RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development,
             "development", "for training")));
 
-static cl::opt<bool> EnableLocalReassignment(
+static cl::opt<cl::boolOrDefault> EnableLocalReassignment(
     "enable-local-reassign", cl::Hidden,
     cl::desc("Local reassignment can yield better allocation decisions, but "
-             "may be compile time intensive"),
-    cl::init(false));
+             "may be compile time intensive"));
 
 namespace llvm {
 cl::opt<unsigned> EvictInterferenceCutoff(
@@ -123,17 +122,15 @@ void RegAllocEvictionAdvisorAnalysis::initializeProvider(
         new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/false, Ctx));
     return;
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
-#if defined(LLVM_HAVE_TFLITE)
     Provider.reset(createDevelopmentModeAdvisorProvider(Ctx));
-#else
-    Provider.reset(
-        new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/true, Ctx));
-#endif
-    return;
+    break;
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
     Provider.reset(createReleaseModeAdvisorProvider(Ctx));
-    return;
+    break;
   }
+  if (!Provider)
+    Provider.reset(
+        new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/true, Ctx));
 }
 
 RegAllocEvictionAdvisorAnalysis::Result
@@ -185,9 +182,11 @@ RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(const MachineFunction &MF,
       MRI(&VRM->getRegInfo()), TII(MF.getSubtarget().getInstrInfo()),
       TRI(MF.getSubtarget().getRegisterInfo()),
       RegClassInfo(RA.getRegClassInfo()), RegCosts(TRI->getRegisterCosts(MF)),
-      EnableLocalReassign(EnableLocalReassignment ||
-                          MF.getSubtarget().enableRALocalReassignment(
-                              MF.getTarget().getOptLevel())) {}
+      EnableLocalReassign(
+          EnableLocalReassignment == cl::boolOrDefault::BOU_TRUE ||
+          (EnableLocalReassignment != cl::boolOrDefault::BOU_FALSE &&
+           MF.getSubtarget().enableRALocalReassignment(
+               MF.getTarget().getOptLevel()))) {}
 
 // Forward declaration; the definition appears later in this file but
 // isUrgentEviction() below needs to consult the widening heuristic.

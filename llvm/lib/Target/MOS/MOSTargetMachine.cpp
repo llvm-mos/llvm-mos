@@ -84,9 +84,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSTarget() {
   initializeMOSZeroPageAllocPass(PR);
 }
 
-static const char *MOSDataLayout =
-    "e-m:e-p:16:8-p1:8:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n8";
-
 /// Processes a CPU name.
 static StringRef getCPU(StringRef CPU) {
   return (CPU.empty() || CPU == "generic") ? "mos6502" : CPU;
@@ -102,7 +99,7 @@ MOSTargetMachine::MOSTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, MOSDataLayout, TT, getCPU(CPU), FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, getCPU(CPU), FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       SubTarget(TT, getCPU(CPU).str(), FS.str(), *this) {

@@ -125,8 +125,8 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   }
 
   // The frame pointer will be generated after the last frame setup instruction.
-  for (auto &MI : make_range(MIS.begin(), MIS.getInitial()))
-    MI.setFlag(MachineInstr::FrameSetup);
+  for (auto &InsertedMI : make_range(MIS.begin(), MI))
+    InsertedMI.setFlag(MachineInstr::FrameSetup);
 
   return true;
 }
@@ -194,8 +194,8 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
   });
 
   // Record that the frame pointer is killed by these instructions.
-  for (auto &MI : make_range(MIS.begin(), MIS.getInitial()))
-    MI.setFlag(MachineInstr::FrameDestroy);
+  for (auto &InsertedMI : make_range(MIS.begin(), MI))
+    InsertedMI.setFlag(MachineInstr::FrameDestroy);
 
   return true;
 }

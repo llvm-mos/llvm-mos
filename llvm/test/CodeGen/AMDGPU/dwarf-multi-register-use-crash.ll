@@ -484,101 +484,75 @@ define weak_odr void @test(i32 %0) #1 !dbg !34 {
 ; CHECK-NEXT:    s_mov_b32 s16, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
-; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 2601, 256
+; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 2600, 256
+; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 2601, 512
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
-; CHECK-NEXT:    v_writelane_b32 v41, s16, 16
-; CHECK-NEXT:    .cfi_llvm_vector_registers 65, 2601, 16, 32
+; CHECK-NEXT:    v_writelane_b32 v40, s16, 2
+; CHECK-NEXT:    .cfi_llvm_vector_registers 65, 2600, 2, 32
 ; CHECK-NEXT:    .cfi_def_cfa_register 65
+; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
-; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_llvm_vector_offset 2600, 32, 17, 64, 0
-; CHECK-NEXT:    v_writelane_b32 v41, s34, 0
-; CHECK-NEXT:    .cfi_llvm_vector_registers 66, 2601, 0, 32
-; CHECK-NEXT:    v_writelane_b32 v41, s35, 1
-; CHECK-NEXT:    .cfi_llvm_vector_registers 67, 2601, 1, 32
-; CHECK-NEXT:    v_writelane_b32 v41, s36, 2
-; CHECK-NEXT:    .cfi_llvm_vector_registers 68, 2601, 2, 32
-; CHECK-NEXT:    v_writelane_b32 v41, s37, 3
-; CHECK-NEXT:    .cfi_llvm_vector_registers 69, 2601, 3, 32
-; CHECK-NEXT:    v_writelane_b32 v41, s38, 4
-; CHECK-NEXT:    .cfi_llvm_vector_registers 70, 2601, 4, 32
-; CHECK-NEXT:    v_writelane_b32 v41, s39, 5
-; CHECK-NEXT:    .cfi_llvm_vector_registers 71, 2601, 5, 32
-; CHECK-NEXT:    v_writelane_b32 v41, s48, 6
-; CHECK-NEXT:    .cfi_llvm_vector_registers 80, 2601, 6, 32
-; CHECK-NEXT:    v_writelane_b32 v41, s49, 7
-; CHECK-NEXT:    .cfi_llvm_vector_registers 81, 2601, 7, 32
-; CHECK-NEXT:    v_writelane_b32 v41, s50, 8
-; CHECK-NEXT:    .cfi_llvm_vector_registers 82, 2601, 8, 32
-; CHECK-NEXT:    v_writelane_b32 v41, s51, 9
-; CHECK-NEXT:    .cfi_llvm_vector_registers 83, 2601, 9, 32
-; CHECK-NEXT:    v_writelane_b32 v41, s52, 10
-; CHECK-NEXT:    .cfi_llvm_vector_registers 84, 2601, 10, 32
-; CHECK-NEXT:    v_writelane_b32 v41, s53, 11
-; CHECK-NEXT:    .cfi_llvm_vector_registers 85, 2601, 11, 32
-; CHECK-NEXT:    v_writelane_b32 v41, s54, 12
-; CHECK-NEXT:    .cfi_llvm_vector_registers 86, 2601, 12, 32
-; CHECK-NEXT:    v_writelane_b32 v41, s55, 13
-; CHECK-NEXT:    .cfi_llvm_vector_registers 87, 2601, 13, 32
-; CHECK-NEXT:    v_writelane_b32 v41, s30, 14
-; CHECK-NEXT:    v_writelane_b32 v41, s31, 15
-; CHECK-NEXT:    .cfi_llvm_vector_registers 16, 2601, 14, 32, 2601, 15, 32
-; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
+; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
+; CHECK-NEXT:    .cfi_llvm_vector_registers 16, 2600, 0, 32, 2600, 1, 32
+; CHECK-NEXT:    ; implicit-def: $vgpr41 : SGPR spill to VGPR lane
+; CHECK-NEXT:    s_mov_b64 s[16:17], s[4:5]
 ; CHECK-NEXT:    ;DEBUG_VALUE: dummy:dummy <- undef
+; CHECK-NEXT:    v_writelane_b32 v41, s15, 0
+; CHECK-NEXT:    v_writelane_b32 v41, s14, 1
+; CHECK-NEXT:    v_writelane_b32 v41, s13, 2
+; CHECK-NEXT:    v_writelane_b32 v41, s12, 3
+; CHECK-NEXT:    v_writelane_b32 v41, s10, 4
+; CHECK-NEXT:    v_writelane_b32 v41, s11, 5
+; CHECK-NEXT:    v_writelane_b32 v41, s8, 6
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    .loc 1 49 9 prologue_end ; dummy:49:9
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, __kmpc_alloc_shared@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, __kmpc_alloc_shared@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[54:55], s[4:5], 0x0
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
-; CHECK-NEXT:    v_mov_b32_e32 v40, v31
-; CHECK-NEXT:    s_mov_b32 s50, s15
-; CHECK-NEXT:    s_mov_b32 s51, s14
-; CHECK-NEXT:    s_mov_b32 s52, s13
-; CHECK-NEXT:    s_mov_b32 s53, s12
-; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; CHECK-NEXT:    v_writelane_b32 v41, s9, 7
+; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CHECK-NEXT:    v_writelane_b32 v41, s6, 8
+; CHECK-NEXT:    v_writelane_b32 v41, s7, 9
+; CHECK-NEXT:    v_writelane_b32 v41, s16, 10
+; CHECK-NEXT:    v_writelane_b32 v41, s17, 11
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
-; CHECK-NEXT:    s_mov_b32 s12, s53
-; CHECK-NEXT:    s_mov_b32 s13, s52
-; CHECK-NEXT:    s_mov_b32 s14, s51
-; CHECK-NEXT:    s_mov_b32 s15, s50
-; CHECK-NEXT:    v_mov_b32_e32 v31, v40
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
+; CHECK-NEXT:    v_writelane_b32 v41, s4, 12
+; CHECK-NEXT:    v_writelane_b32 v41, s5, 13
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[16:17]
+; CHECK-NEXT:    v_readlane_b32 s16, v41, 12
+; CHECK-NEXT:    v_readlane_b32 s17, v41, 13
+; CHECK-NEXT:    buffer_store_dword v31, off, s[0:3], s33 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CHECK-NEXT:    buffer_load_dword v31, off, s[0:3], s33 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_readlane_b32 s4, v41, 10
+; CHECK-NEXT:    v_readlane_b32 s6, v41, 8
+; CHECK-NEXT:    v_readlane_b32 s8, v41, 6
+; CHECK-NEXT:    v_readlane_b32 s10, v41, 4
+; CHECK-NEXT:    v_readlane_b32 s16, v41, 12
+; CHECK-NEXT:    v_readlane_b32 s5, v41, 11
+; CHECK-NEXT:    v_readlane_b32 s7, v41, 9
+; CHECK-NEXT:    v_readlane_b32 s9, v41, 7
+; CHECK-NEXT:    v_readlane_b32 s11, v41, 5
+; CHECK-NEXT:    v_readlane_b32 s12, v41, 3
+; CHECK-NEXT:    v_readlane_b32 s13, v41, 2
+; CHECK-NEXT:    v_readlane_b32 s14, v41, 1
+; CHECK-NEXT:    v_readlane_b32 s15, v41, 0
+; CHECK-NEXT:    v_readlane_b32 s17, v41, 13
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    ;DEBUG_VALUE: dummy:dummy <- [$vgpr0_vgpr1+0]
 ; CHECK-NEXT:    .loc 1 0 9 is_stmt 0 ; dummy:0:9
-; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:    v_readlane_b32 s30, v41, 14
+; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
 ; CHECK-NEXT:    flat_store_dword v[0:1], v2
-; CHECK-NEXT:    v_readlane_b32 s31, v41, 15
-; CHECK-NEXT:    v_readlane_b32 s55, v41, 13
-; CHECK-NEXT:    v_readlane_b32 s54, v41, 12
-; CHECK-NEXT:    v_readlane_b32 s53, v41, 11
-; CHECK-NEXT:    v_readlane_b32 s52, v41, 10
-; CHECK-NEXT:    v_readlane_b32 s51, v41, 9
-; CHECK-NEXT:    v_readlane_b32 s50, v41, 8
-; CHECK-NEXT:    v_readlane_b32 s49, v41, 7
-; CHECK-NEXT:    v_readlane_b32 s48, v41, 6
-; CHECK-NEXT:    v_readlane_b32 s39, v41, 5
-; CHECK-NEXT:    v_readlane_b32 s38, v41, 4
-; CHECK-NEXT:    v_readlane_b32 s37, v41, 3
-; CHECK-NEXT:    v_readlane_b32 s36, v41, 2
-; CHECK-NEXT:    v_readlane_b32 s35, v41, 1
-; CHECK-NEXT:    v_readlane_b32 s34, v41, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
-; CHECK-NEXT:    v_readlane_b32 s4, v41, 16
+; CHECK-NEXT:    v_readlane_b32 s4, v40, 2
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
 ; CHECK-NEXT:    .cfi_def_cfa_register 64
 ; CHECK-NEXT:    s_mov_b32 s33, s4

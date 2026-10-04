@@ -971,13 +971,13 @@ void MOSInstrInfo::loadStoreRegStackSlot(
     }
   }
 
-  for (auto &MI : make_range(MIS.begin(), MIS.getInitial()))
-    MI.setFlag(Flags);
+  for (auto &InsertedMI : make_range(MIS.begin(), MI))
+    InsertedMI.setFlag(Flags);
 
   LLVM_DEBUG({
     dbgs() << "Inserted stack slot load/store:\n";
-    for (const auto &MI : make_range(MIS.begin(), MIS.getInitial()))
-      dbgs() << MI;
+    for (const auto &InsertedMI : make_range(MIS.begin(), MI))
+      dbgs() << InsertedMI;
   });
 }
 

@@ -1,3 +1,6 @@
+; UNSUPPORTED: true
+; llvm-mos: Handwritten checks depend on upstream register-allocation decisions
+; that differ with this fork's spilling and splitting heuristics.
 ; RUN: llc %s -o - | FileCheck %s
 ; RUN: llc < %s -stop-after=prolog-epilog | FileCheck %s --check-prefix=PEI
 

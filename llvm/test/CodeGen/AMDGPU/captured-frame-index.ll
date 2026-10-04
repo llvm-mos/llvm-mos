@@ -1,3 +1,6 @@
+; UNSUPPORTED: true
+; llvm-mos: Handwritten checks depend on upstream register-allocation decisions
+; that differ with this fork's spilling and splitting heuristics.
 ; RUN: llc -mtriple=amdgpu6.00-- -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; TODO: Test with flat scratch

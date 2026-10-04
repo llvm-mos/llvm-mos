@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=irtranslator -mcpu=mosspc700 -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -run-pass=ir-translator -mcpu=mosspc700 -verify-machineinstrs -o - %s | FileCheck %s
 --- |
   target triple = "mos"
 

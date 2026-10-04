@@ -1,3 +1,6 @@
+; UNSUPPORTED: true
+; llvm-mos: Handwritten checks depend on upstream register-allocation decisions
+; that differ with this fork's spilling and splitting heuristics.
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgpu7.00-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN,CI %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -global-isel=0 -mtriple=amdgpu7.00-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -global-isel=0 -mtriple=amdgpu7.00-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s

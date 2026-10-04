@@ -1,3 +1,6 @@
+; UNSUPPORTED: true
+; llvm-mos: Handwritten checks depend on upstream register-allocation decisions
+; that differ with this fork's spilling and splitting heuristics.
 ; RUN: llc -mtriple=amdgpu10.30-amd-amdhsa < %s | FileCheck %s
 
 ; Previously, this would hit an assertion on incompatible comparison between

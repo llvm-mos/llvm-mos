@@ -18,13 +18,14 @@ define amdgpu_cs_chain_preserve void @caller() {
 ; CHECK-NEXT:    s_add_u32 s0, s0, G@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, G@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; CHECK-NEXT:    v_accvgpr_write_b32 a63, v31
 ; CHECK-NEXT:    s_mov_b32 s54, s15
 ; CHECK-NEXT:    s_mov_b32 s55, s14
 ; CHECK-NEXT:    s_mov_b32 s64, s13
-; CHECK-NEXT:    s_mov_b32 s65, s12
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
 ; CHECK-NEXT:    flat_load_dword v0, v[0:1]
+; CHECK-NEXT:    s_mov_b32 s65, s12
 ; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
@@ -49,12 +50,13 @@ define amdgpu_cs_chain_preserve void @caller() {
 ; CHECK-NEXT:    s_mov_b32 s13, s64
 ; CHECK-NEXT:    s_mov_b32 s14, s55
 ; CHECK-NEXT:    s_mov_b32 s15, s54
+; CHECK-NEXT:    v_accvgpr_read_b32 v31, a63
 ; CHECK-NEXT:    s_mov_b32 s0, s16
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr31
+; CHECK-NEXT:    ; implicit-def: $agpr63
 ; CHECK-NEXT:    s_xor_b64 exec, exec, s[66:67]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_1
 ; CHECK-NEXT:  ; %bb.2:

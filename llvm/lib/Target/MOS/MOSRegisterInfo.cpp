@@ -682,12 +682,10 @@ bool MOSRegisterInfo::shouldCoalesce(
   return true;
 }
 
-bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
-                                            ArrayRef<MCPhysReg> Order,
-                                            SmallVectorImpl<MCPhysReg> &Hints,
-                                            const MachineFunction &MF,
-                                            const VirtRegMap *VRM,
-                                            const LiveRegMatrix *Matrix) const {
+bool MOSRegisterInfo::getRegAllocationHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MOSSubtarget &STI = MF.getSubtarget<MOSSubtarget>();
   const auto &TRI = *STI.getRegisterInfo();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -701,7 +699,7 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
   if (std::optional<Register> StrongHint =
           getStrongCopyHint(VirtReg, MF, VRM)) {
     if (*StrongHint)
-      Hints.push_back(*StrongHint);
+      Hints.insert(*StrongHint);
     return true;
   }
 
@@ -839,7 +837,7 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
           MCPhysReg HintReg =
               TRI.getSubReg(Super, IsLo ? MOS::sublo : MOS::subhi);
           if (HintReg && is_contained(Order, HintReg))
-            Hints.push_back(HintReg);
+            Hints.insert(HintReg);
           break;
         }
       }
@@ -860,7 +858,7 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
       return false;
     return OriginalIndex[A.first] < OriginalIndex[B.first];
   });
-  append_range(Hints, make_first_range(RegsAndScores));
+  Hints.insert_range(make_first_range(RegsAndScores));
   return false;
 }
 

@@ -86,7 +86,7 @@ public:
 
   bool
   getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                        SmallVectorImpl<MCPhysReg> &Hints,
+                        SmallSetVector<MCPhysReg, 16> &Hints,
                         const MachineFunction &MF,
                         const VirtRegMap *VRM = nullptr,
                         const LiveRegMatrix *Matrix = nullptr) const override;

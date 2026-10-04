@@ -3776,7 +3776,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
         e.e_flags, EnumStrings(ElfHeaderMipsFlags), unsigned(ELF::EF_MIPS_ARCH),
         unsigned(ELF::EF_MIPS_ABI), unsigned(ELF::EF_MIPS_MACH));
   else if (e.e_machine == EM_RISCV)
-    ElfFlags = printFlags(e.e_flags, EnumStrings(ElfHeaderRISCVFlags));
+    ElfFlags = printFlags(e.e_flags, EnumStrings(ElfHeaderRISCVFlags),
+                          unsigned(ELF::EF_RISCV_FLOAT_ABI));
   else if (e.e_machine == EM_MOS)
     ElfFlags = printFlags(e.e_flags, MOS::getElfHeaderMOSFlags());
   else if (e.e_machine == EM_SPARC32PLUS || e.e_machine == EM_SPARCV9)
@@ -7690,7 +7691,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
       }
       }
     } else if (E.e_machine == EM_RISCV)
-      W.printFlags("Flags", E.e_flags, EnumStrings(ElfHeaderRISCVFlags));
+      W.printFlags("Flags", E.e_flags, EnumStrings(ElfHeaderRISCVFlags),
+                   unsigned(ELF::EF_RISCV_FLOAT_ABI));
     else if (E.e_machine == EM_MOS)
       W.printFlags("Flags", E.e_flags, MOS::getElfHeaderMOSFlags());
     else if (E.e_machine == EM_SPARC32PLUS || E.e_machine == EM_SPARCV9)

@@ -128,7 +128,7 @@ bool MOSNonReentrantImpl::run(Module &M) {
       F.addFnAttr("nonreentrant");
 
   // Remove the artificial edge.
-  CG.getCallsExternalNode()->removeAllCalledFunctions();
+  CG.getCallsExternalNode()->removeOneAbstractEdgeTo(CG.getExternalCallingNode());
   return Changed;
 }
 

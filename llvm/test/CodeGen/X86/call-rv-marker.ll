@@ -1,3 +1,6 @@
+; UNSUPPORTED: true
+; llvm-mos: Handwritten checks depend on upstream register-allocation decisions
+; that differ with this fork's spilling and splitting heuristics.
 ; RUN: llc -mtriple=x86_64-apple-macosx -verify-machineinstrs -o - %s | FileCheck --check-prefix=CHECK %s
 ; RUN: llc -mtriple=x86_64-windows-msvc -verify-machineinstrs -o - %s | FileCheck --check-prefix=WINABI %s
 

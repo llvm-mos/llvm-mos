@@ -27,6 +27,8 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $vgpr63 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, killed $vgpr63
+    ; GCN-NEXT: $noreg = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; GCN-NEXT: $exec = S_MOV_B64 killed $noreg
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: $sgpr4 = SI_RESTORE_S32_FROM_VGPR killed $vgpr63, 0
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 20, implicit $exec
@@ -77,6 +79,8 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $vgpr63 = IMPLICIT_DEF
   ; GCN-NEXT:   $vgpr63 = SI_SPILL_S32_TO_VGPR $sgpr6, 0, killed $vgpr63
+  ; GCN-NEXT:   $noreg = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   $exec = S_MOV_B64 killed $noreg
   ; GCN-NEXT:   S_NOP 0
   ; GCN-NEXT:   $sgpr6 = SI_RESTORE_S32_FROM_VGPR killed $vgpr63, 0
   ; GCN-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 20, implicit $exec
@@ -142,6 +146,8 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $vgpr63 = IMPLICIT_DEF
   ; GCN-NEXT:   $vgpr63 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, killed $vgpr63
+  ; GCN-NEXT:   $noreg = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   $exec = S_MOV_B64 killed $noreg
   ; GCN-NEXT:   S_NOP 0
   ; GCN-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR killed $vgpr63, 0
   ; GCN-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 20, implicit $exec
@@ -242,6 +248,8 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $vgpr63 = IMPLICIT_DEF
   ; GCN-NEXT:   $vgpr63 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, killed $vgpr63
+  ; GCN-NEXT:   $noreg = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   $exec = S_MOV_B64 killed $noreg
   ; GCN-NEXT:   S_NOP 0
   ; GCN-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR killed $vgpr63, 0
   ; GCN-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 10, implicit $exec

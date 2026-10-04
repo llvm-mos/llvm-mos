@@ -233,28 +233,28 @@ define { float, float } @aggregate_use(float %z) #0 {
 ; CHECK-NEXT:    s_mov_b32 s16, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
-; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
-; CHECK-NEXT:    v_writelane_b32 v41, s16, 2
+; CHECK-NEXT:    v_writelane_b32 v40, s16, 2
+; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
-; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; CHECK-NEXT:    v_writelane_b32 v41, s30, 0
-; CHECK-NEXT:    v_writelane_b32 v41, s31, 1
+; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, aggregate_f32@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, aggregate_f32@rel32@hi+12
-; CHECK-NEXT:    v_mov_b32_e32 v40, v0
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    v_max_f32_e32 v2, v40, v40
-; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
-; CHECK-NEXT:    v_readlane_b32 s30, v41, 0
+; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s33 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
+; CHECK-NEXT:    s_mov_b32 s32, s33
+; CHECK-NEXT:    v_readlane_b32 s4, v40, 2
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_max_f32_e32 v2, v2, v2
 ; CHECK-NEXT:    v_min_f32_e32 v0, v0, v2
 ; CHECK-NEXT:    v_min_f32_e32 v1, v1, v2
-; CHECK-NEXT:    v_readlane_b32 s31, v41, 1
-; CHECK-NEXT:    s_mov_b32 s32, s33
-; CHECK-NEXT:    v_readlane_b32 s4, v41, 2
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
 ; CHECK-NEXT:    s_mov_b32 s33, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

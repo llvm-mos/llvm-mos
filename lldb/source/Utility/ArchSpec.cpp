@@ -25,7 +25,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
-                        bool try_inverse, bool enforce_exact_match);
+                        bool enforce_exact_match);
 
 namespace lldb_private {
 
@@ -1450,7 +1450,7 @@ static bool IsCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
 
 bool ArchSpec::IsMatch(const ArchSpec &rhs, MatchType match) const {
   if (GetByteOrder() != rhs.GetByteOrder() ||
-      !cores_match(GetCore(), rhs.GetCore(), true, match == ExactMatch))
+      !cores_match(GetCore(), rhs.GetCore(), match == ExactMatch))
     return false;
 
   const llvm::Triple &lhs_triple = GetTriple();
@@ -1574,11 +1574,12 @@ void ArchSpec::CoreUpdated(bool update_triple) {
 //===----------------------------------------------------------------------===//
 // Operators.
 
-static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
-                        bool try_inverse, bool enforce_exact_match) {
-  if (core1 == core2)
-    return true;
-
+// Checks core1's rules only, because they are not symmetric. Must not call
+// cores_match() here, or an unmatched pair would loop between the two
+// directions forever.
+static bool cores_match_one_direction(const ArchSpec::Core core1,
+                                      const ArchSpec::Core core2,
+                                      bool enforce_exact_match) {
   switch (core1) {
   case ArchSpec::kCore_any:
     return true;
@@ -1646,7 +1647,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_armv7)
         return true;
-      try_inverse = true;
     }
     break;
 
@@ -1664,7 +1664,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_armv7em)
         return true;
-      try_inverse = true;
     }
     break;
 
@@ -1682,7 +1681,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_armv6m)
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1696,14 +1694,12 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_armv7)
         return true;
-      try_inverse = false;
     }
     break;
 
   case ArchSpec::eCore_x86_64_x86_64h:
   case ArchSpec::eCore_x86_64_amd64:
     if (!enforce_exact_match) {
-      try_inverse = false;
       if (core2 == ArchSpec::eCore_x86_64_x86_64)
         return true;
     }
@@ -1717,7 +1713,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_arm64e)
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1729,7 +1724,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_armv8)
         return true;
-      try_inverse = false;
     }
     break;
   case ArchSpec::eCore_arm_aarch64:
@@ -1740,7 +1734,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_arm64e)
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1752,7 +1745,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 == ArchSpec::eCore_arm_arm64e)
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1760,7 +1752,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
     if (!enforce_exact_match) {
       if (core2 == ArchSpec::eCore_arm_generic)
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1769,7 +1760,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
       if (core2 >= ArchSpec::kCore_mips32_first &&
           core2 <= ArchSpec::kCore_mips32_last)
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1778,7 +1768,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
       if (core2 >= ArchSpec::kCore_mips32el_first &&
           core2 <= ArchSpec::kCore_mips32el_last)
         return true;
-      try_inverse = true;
     }
     break;
 
@@ -1790,7 +1779,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
       if (core2 >= ArchSpec::kCore_mips64_first &&
           core2 <= ArchSpec::kCore_mips64_last)
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1802,7 +1790,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
       if (core2 >= ArchSpec::kCore_mips64el_first &&
           core2 <= ArchSpec::kCore_mips64el_last)
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1814,7 +1801,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 >= ArchSpec::kCore_mips64_first && core2 <= (core1 - 1))
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1826,7 +1812,6 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
         return true;
       if (core2 >= ArchSpec::kCore_mips64el_first && core2 <= (core1 - 1))
         return true;
-      try_inverse = false;
     }
     break;
 
@@ -1886,9 +1871,16 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
   default:
     break;
   }
-  if (try_inverse)
-    return cores_match(core2, core1, false, enforce_exact_match);
   return false;
+}
+
+// The match rules only work in one direction, so this checks both ways.
+static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
+                        bool enforce_exact_match) {
+  if (core1 == core2)
+    return true;
+  return cores_match_one_direction(core1, core2, enforce_exact_match) ||
+         cores_match_one_direction(core2, core1, enforce_exact_match);
 }
 
 bool lldb_private::operator<(const ArchSpec &lhs, const ArchSpec &rhs) {

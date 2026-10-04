@@ -17,86 +17,83 @@
 define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(ptr noalias sret(%struct.wxString)  %agg.result, ptr %this, ptr %format, ptr %tz, i1 %foo) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: _ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushl %ebp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    pushl %ebx
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    pushl %edi
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 20
-; CHECK-NEXT:    subl $28, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset %esi, -20
-; CHECK-NEXT:    .cfi_offset %edi, -16
-; CHECK-NEXT:    .cfi_offset %ebx, -12
-; CHECK-NEXT:    .cfi_offset %ebp, -8
+; CHECK-NEXT:    .cfi_def_cfa_offset 12
+; CHECK-NEXT:    subl $20, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset %esi, -12
+; CHECK-NEXT:    .cfi_offset %ebx, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    je LBB0_22
-; CHECK-NEXT:  ## %bb.1:
-; CHECK-NEXT:    movl L_.str89$non_lazy_ptr, %edi
-; CHECK-NEXT:    movb $1, %bh
-; CHECK-NEXT:    movl L_.str$non_lazy_ptr, %ebp
-; CHECK-NEXT:    jmp LBB0_2
+; CHECK-NEXT:    jne LBB0_1
+; CHECK-NEXT:  LBB0_21: ## %bb115.critedge.i
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    addl $20, %esp
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    popl %ebx
+; CHECK-NEXT:    retl $4
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_18: ## %bb7806
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:  LBB0_17: ## %bb7806
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:  Ltmp16: ## EH_LABEL
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    calll __ZN12wxStringBase6appendEmw
 ; CHECK-NEXT:  Ltmp17: ## EH_LABEL
-; CHECK-NEXT:  LBB0_2: ## %bb3261
+; CHECK-NEXT:  LBB0_1: ## %bb3261
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmpl $37, 0
-; CHECK-NEXT:    jne LBB0_22
-; CHECK-NEXT:  ## %bb.3: ## %bb3306
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    jne LBB0_21
+; CHECK-NEXT:  ## %bb.2: ## %bb3306
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:  Ltmp0: ## EH_LABEL
-; CHECK-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl L_.str89$non_lazy_ptr, %eax
+; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    calll __ZN12wxStringBaseaSEPKw
 ; CHECK-NEXT:  Ltmp1: ## EH_LABEL
-; CHECK-NEXT:  ## %bb.4: ## %bb3314
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:  ## %bb.3: ## %bb3314
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl 0, %eax
 ; CHECK-NEXT:    cmpl $121, %eax
-; CHECK-NEXT:    ja LBB0_22
-; CHECK-NEXT:  ## %bb.5: ## %bb3314
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    ja LBB0_21
+; CHECK-NEXT:  ## %bb.4: ## %bb3314
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    jmpl *LJTI0_0(,%eax,4)
-; CHECK-NEXT:  LBB0_7: ## %bb5809
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:  LBB0_6: ## %bb5809
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne LBB0_22
-; CHECK-NEXT:  ## %bb.8: ## %bb5809
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    testb %bh, %bh
-; CHECK-NEXT:    je LBB0_22
-; CHECK-NEXT:  ## %bb.9: ## %bb91.i8504
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    jne LBB0_21
+; CHECK-NEXT:  ## %bb.7: ## %bb5809
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    je LBB0_21
+; CHECK-NEXT:  ## %bb.8: ## %bb91.i8504
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    je LBB0_11
-; CHECK-NEXT:  ## %bb.10: ## %bb155.i8541
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    je LBB0_10
+; CHECK-NEXT:  ## %bb.9: ## %bb155.i8541
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:  Ltmp4: ## EH_LABEL
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    calll _gmtime_r
 ; CHECK-NEXT:  Ltmp5: ## EH_LABEL
-; CHECK-NEXT:  LBB0_11: ## %bb182.i8560
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:  LBB0_10: ## %bb182.i8560
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    je LBB0_12
-; CHECK-NEXT:  ## %bb.13: ## %bb278.i8617
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    je LBB0_15
-; CHECK-NEXT:  ## %bb.14: ## %bb440.i8663
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    je LBB0_11
+; CHECK-NEXT:  ## %bb.12: ## %bb278.i8617
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    je LBB0_14
+; CHECK-NEXT:  ## %bb.13: ## %bb440.i8663
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:  Ltmp6: ## EH_LABEL
 ; CHECK-NEXT:    movl L_.str4$non_lazy_ptr, %eax
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
@@ -104,16 +101,17 @@ define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(ptr noalias sret(%struct
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl L__ZZNK10wxDateTime5GetTmERKNS_8TimeZoneEE12__FUNCTION__$non_lazy_ptr, %eax
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %ebp, (%esp)
+; CHECK-NEXT:    movl L_.str$non_lazy_ptr, %eax
+; CHECK-NEXT:    movl %eax, (%esp)
 ; CHECK-NEXT:    movl $1717, {{[0-9]+}}(%esp) ## imm = 0x6B5
 ; CHECK-NEXT:    calll __Z10wxOnAssertPKwiPKcS0_S0_
 ; CHECK-NEXT:  Ltmp7: ## EH_LABEL
-; CHECK-NEXT:    jmp LBB0_15
-; CHECK-NEXT:  LBB0_12: ## %bb187.i8591
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    jne LBB0_22
-; CHECK-NEXT:  LBB0_15: ## %invcont5814
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    jmp LBB0_14
+; CHECK-NEXT:  LBB0_11: ## %bb187.i8591
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    jne LBB0_21
+; CHECK-NEXT:  LBB0_14: ## %invcont5814
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:  Ltmp8: ## EH_LABEL
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
@@ -121,8 +119,8 @@ define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(ptr noalias sret(%struct
 ; CHECK-NEXT:    calll __ZN8wxString6FormatEPKwz
 ; CHECK-NEXT:    subl $4, %esp
 ; CHECK-NEXT:  Ltmp9: ## EH_LABEL
-; CHECK-NEXT:  ## %bb.16: ## %invcont5831
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:  ## %bb.15: ## %invcont5831
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:  Ltmp10: ## EH_LABEL
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
@@ -130,8 +128,8 @@ define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(ptr noalias sret(%struct
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    calll __ZN12wxStringBase10ConcatSelfEmPKwm
 ; CHECK-NEXT:  Ltmp11: ## EH_LABEL
-; CHECK-NEXT:    jmp LBB0_2
-; CHECK-NEXT:  LBB0_6: ## %bb5657
+; CHECK-NEXT:    jmp LBB0_1
+; CHECK-NEXT:  LBB0_5: ## %bb5657
 ; CHECK-NEXT:  Ltmp13: ## EH_LABEL
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
@@ -139,8 +137,8 @@ define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(ptr noalias sret(%struct
 ; CHECK-NEXT:    movl %eax, (%esp)
 ; CHECK-NEXT:    calll __ZNK10wxDateTime12GetDayOfYearERKNS_8TimeZoneE
 ; CHECK-NEXT:  Ltmp14: ## EH_LABEL
-; CHECK-NEXT:    jmp LBB0_22
-; CHECK-NEXT:  LBB0_17: ## %bb5968
+; CHECK-NEXT:    jmp LBB0_21
+; CHECK-NEXT:  LBB0_16: ## %bb5968
 ; CHECK-NEXT:  Ltmp2: ## EH_LABEL
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
@@ -148,23 +146,16 @@ define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(ptr noalias sret(%struct
 ; CHECK-NEXT:    calll __ZN8wxString6FormatEPKwz
 ; CHECK-NEXT:    subl $4, %esp
 ; CHECK-NEXT:  Ltmp3: ## EH_LABEL
-; CHECK-NEXT:  LBB0_22: ## %bb115.critedge.i
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    addl $28, %esp
-; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    popl %edi
-; CHECK-NEXT:    popl %ebx
-; CHECK-NEXT:    popl %ebp
-; CHECK-NEXT:    retl $4
-; CHECK-NEXT:  LBB0_20: ## %lpad.loopexit.split-lp
+; CHECK-NEXT:    jmp LBB0_21
+; CHECK-NEXT:  LBB0_19: ## %lpad.loopexit.split-lp
 ; CHECK-NEXT:  Ltmp15: ## EH_LABEL
-; CHECK-NEXT:    jmp LBB0_22
-; CHECK-NEXT:  LBB0_21: ## %lpad8185
+; CHECK-NEXT:    jmp LBB0_21
+; CHECK-NEXT:  LBB0_20: ## %lpad8185
 ; CHECK-NEXT:  Ltmp12: ## EH_LABEL
-; CHECK-NEXT:    jmp LBB0_22
-; CHECK-NEXT:  LBB0_19: ## %lpad.loopexit
+; CHECK-NEXT:    jmp LBB0_21
+; CHECK-NEXT:  LBB0_18: ## %lpad.loopexit
 ; CHECK-NEXT:  Ltmp18: ## EH_LABEL
-; CHECK-NEXT:    jmp LBB0_22
+; CHECK-NEXT:    jmp LBB0_21
 ; CHECK-NEXT:  Lfunc_end0:
 entry:
 	br i1 %foo, label %bb116.i, label %bb115.critedge.i

@@ -66,7 +66,7 @@ protected:
       GTEST_SKIP();
 
     // ARM is not supported yet.
-    if (Triple.isARM())
+    if (Triple.isARM() || Triple.isArm64e())
       GTEST_SKIP();
 
     auto EPC = SelfExecutorProcessControl::Create();

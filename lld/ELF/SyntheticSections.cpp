@@ -736,7 +736,9 @@ void GotSection::addEntry(const Symbol &sym) {
 
 void GotSection::addAuthEntry(const Symbol &sym) {
   authEntries.push_back(
-      {(numEntries - 1) * ctx.target->gotEntrySize, sym.isFunc()});
+      {/*offset=*/(numEntries - 1) * ctx.target->gotEntrySize,
+       /*isSymbolFunc=*/sym.isFunc(),
+       /*isUndefinedNonPreemptible=*/sym.isUndefined() && !sym.isPreemptible});
 }
 
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
@@ -746,9 +748,12 @@ bool GotSection::addTlsDescEntry(const Symbol &sym) {
   return true;
 }
 
-void GotSection::addTlsDescAuthEntry() {
-  authEntries.push_back({(numEntries - 2) * ctx.target->gotEntrySize, true});
-  authEntries.push_back({(numEntries - 1) * ctx.target->gotEntrySize, false});
+void GotSection::addTlsDescAuthEntry(const Symbol &sym) {
+  authEntries.push_back({/*offset=*/(numEntries - 2) * ctx.target->gotEntrySize,
+                         /*isSymbolFunc=*/true,
+                         /*isUndefinedNonPreemptible=*/false});
+  assert(!sym.isFunc());
+  addAuthEntry(sym);
 }
 
 bool GotSection::addDynTlsEntry(const Symbol &sym) {
@@ -797,7 +802,8 @@ void GotSection::finalizeContents() {
 bool GotSection::isNeeded() const {
   // Needed if the GOT symbol is used or the number of entries is more than just
   // the header. A GOT with just the header may not be needed.
-  return hasGotOffRel || numEntries > ctx.target->gotHeaderEntriesNum;
+  return hasGotOffRel || hasDeferredEntries ||
+         numEntries > ctx.target->gotHeaderEntriesNum;
 }
 
 void GotSection::writeTo(uint8_t *buf) {
@@ -807,6 +813,12 @@ void GotSection::writeTo(uint8_t *buf) {
   ctx.target->writeGotHeader(buf);
   ctx.target->relocateAlloc(*this, buf);
   for (const AuthEntryInfo &authEntry : authEntries) {
+    uint8_t *dest = buf + authEntry.offset;
+
+    if (authEntry.isUndefinedNonPreemptible) {
+      write64(ctx, dest, 0);
+      continue;
+    }
     // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#default-signing-schema
     //   Signed GOT entries use the IA key for symbols of type STT_FUNC and the
     //   DA key for all other symbol types, with the address of the GOT entry as
@@ -816,7 +828,6 @@ void GotSection::writeTo(uint8_t *buf) {
     // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#encoding-the-signing-schema
     //   If address diversity is set and the discriminator
     //   is 0 then modifier = Place
-    uint8_t *dest = buf + authEntry.offset;
     uint64_t key = authEntry.isSymbolFunc ? /*IA=*/0b00 : /*DA=*/0b10;
     uint64_t addrDiversity = 1;
     write64(ctx, dest, (addrDiversity << 63) | (key << 60));
@@ -1543,6 +1554,12 @@ DynamicSection<ELFT>::computeContents() {
       break;
     }
     addInt(DT_PLTREL, ctx.arg.isRela ? DT_RELA : DT_REL);
+  }
+
+  if (ctx.arg.zMarkPlt && ctx.in.plt->isNeeded()) {
+    addInSec(DT_X86_64_PLT, *ctx.in.plt);
+    addInt(DT_X86_64_PLTSZ, ctx.in.plt->getSize());
+    addInt(DT_X86_64_PLTENT, ctx.target->pltEntrySize);
   }
 
   if (ctx.arg.emachine == EM_AARCH64) {
@@ -4672,6 +4689,38 @@ XO65Section::XO65Section(Ctx &ctx, const XO65Segment &segment)
 
 void XO65Section::writeTo(uint8_t *buf) { memcpy(buf, contents.data(), size); }
 
+DynamicDebugSection::DynamicDebugSection(Ctx &ctx)
+    : SyntheticSection(ctx, dynDbgSecName, SHT_LLVM_DYNDBG_ELF, 0, 8) {
+  assert(ctx.dynDbgOutput);
+}
+
+size_t DynamicDebugSection::getSize() const {
+  return ctx.dynDbgOutput->getBufferSize();
+}
+
+void DynamicDebugSection::writeTo(uint8_t *buf) {
+  memcpy(buf, ctx.dynDbgOutput->getBufferStart(),
+         ctx.dynDbgOutput->getBufferSize());
+}
+
+constexpr char dynDbgNoteName[] = "LLVM";
+
+DynamicDebugNote::DynamicDebugNote(Ctx &ctx)
+    : SyntheticSection(ctx, ".note.llvm.dyndbg", SHT_NOTE, 0, 4) {}
+
+size_t DynamicDebugNote::getSize() const {
+  return sizeof(llvm::ELF::Elf64_Nhdr) + alignTo(sizeof(dynDbgNoteName), 4) +
+         /*descsz=*/sizeof(uint32_t);
+}
+
+void DynamicDebugNote::writeTo(uint8_t *buf) {
+  write32(ctx, buf, sizeof(dynDbgNoteName));        // Name size
+  write32(ctx, buf + 4, sizeof(uint32_t));          // Content size
+  write32(ctx, buf + 8, NT_LLVM_DYNAMIC_DEBUGGING); // Type
+  memcpy(buf + 12, dynDbgNoteName, sizeof(dynDbgNoteName));
+  write32(ctx, buf + 12 + alignTo(sizeof(dynDbgNoteName), 4), 0); // Version
+}
+
 static OutputSection *findSection(Ctx &ctx, StringRef name) {
   for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
@@ -4908,6 +4957,15 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
     add(*ctx.in.shStrTab);
   if (ctx.in.strTab)
     add(*ctx.in.strTab);
+
+  if (ctx.dynDbgOutput) {
+    ctx.in.dynDbg = std::make_unique<DynamicDebugSection>(ctx);
+    add(*ctx.in.dynDbg);
+    if (!ctx.arg.relocatable) {
+      ctx.in.dynDbgNote = std::make_unique<DynamicDebugNote>(ctx);
+      add(*ctx.in.dynDbgNote);
+    }
+  }
 }
 
 template void elf::splitSections<ELF32LE>(Ctx &);
