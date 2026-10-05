@@ -213,7 +213,8 @@ void MOSLateOptimization::lowerCmpZero(MachineInstr &MI) const {
       Access = Builder.buildInstr(MOS::DEC, {Val}, {Val});
     }
     Access.addDef(MOS::NZ, RegState::Implicit);
-    Access->getOperand(0).setIsDead();
+    // A scratch register is dead, but INC/DEC restores Val for later uses.
+    Access->getOperand(0).setIsDead(Tmp || PhysRegs.available(MRI, Val));
     break;
   }
   case MOS::A: {

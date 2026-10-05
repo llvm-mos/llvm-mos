@@ -238,6 +238,72 @@ body: |
     RTS implicit $n, implicit $a, implicit $x, implicit $y
 ...
 ---
+name: cmpzero_imag8_no_gpr_free_branch_use
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: cmpzero_imag8_no_gpr_free_branch_use
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $rc2, $a, $x, $y
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $rc2 = INC $rc2
+  ; CHECK-NEXT:   $rc2 = DEC $rc2, implicit-def $nz
+  ; CHECK-NEXT:   BR %bb.2, killed $z, 1, implicit killed $rc2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $a, $x, $y
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   RTS implicit $a, implicit $x, implicit $y
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $a, $x, $y
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   RTS implicit $a, implicit $x, implicit $y
+  bb.0:
+    liveins: $rc2, $a, $x, $y
+    CmpZero $rc2, implicit-def $c, implicit-def $z
+    BR %bb.2, killed $z, 1, implicit killed $rc2
+  bb.1:
+    liveins: $a, $x, $y
+    RTS implicit $a, implicit $x, implicit $y
+  bb.2:
+    liveins: $a, $x, $y
+    RTS implicit $a, implicit $x, implicit $y
+...
+---
+name: cmpzero_imag8_no_gpr_free_liveout
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: cmpzero_imag8_no_gpr_free_liveout
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $rc2, $a, $x, $y
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $rc2 = INC $rc2
+  ; CHECK-NEXT:   $rc2 = DEC $rc2, implicit-def $nz
+  ; CHECK-NEXT:   BR %bb.2, killed $z, 1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $a, $x, $y, $rc2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   RTS implicit $a, implicit $x, implicit $y, implicit $rc2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $a, $x, $y
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   RTS implicit $a, implicit $x, implicit $y
+  bb.0:
+    liveins: $rc2, $a, $x, $y
+    CmpZero $rc2, implicit-def $c, implicit-def $z
+    BR %bb.2, killed $z, 1
+  bb.1:
+    liveins: $a, $x, $y, $rc2
+    RTS implicit $a, implicit $x, implicit $y, implicit $rc2
+  bb.2:
+    liveins: $a, $x, $y
+    RTS implicit $a, implicit $x, implicit $y
+...
+---
 name: cmpzero_imag8_no_gpr_free_lda_avail
 body: |
   bb.0.entry:
