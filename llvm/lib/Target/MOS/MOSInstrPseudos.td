@@ -123,6 +123,7 @@ def LDZ : MOSPseudo {
 }
 
 def CmpZero : MOSPseudo {
+  let isTerminator = true;
   dag InOperandList = (ins Anyi8:$val);
   let Defs = [C];
   let isCompare = true;
