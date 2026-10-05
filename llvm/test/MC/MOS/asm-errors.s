@@ -24,3 +24,10 @@ rep #$30
 
 ; CHECK: [[#@LINE+1]]:1: error: instruction requires: FeatureW65816Or65EL02
 sep #$30
+
+; CHECK: [[#@LINE+1]]:1: error: instruction requires: FeatureW65816
+cop #90
+
+; COP requires a signature operand.
+; CHECK: [[#@LINE+1]]:1: error: invalid instruction
+cop
