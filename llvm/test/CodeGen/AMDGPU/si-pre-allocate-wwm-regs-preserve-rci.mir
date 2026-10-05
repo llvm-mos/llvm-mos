@@ -1,3 +1,5 @@
+# UNSUPPORTED: system-windows
+
 # RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
 # RUN:   -passes="require<machine-register-class-info>,si-pre-allocate-wwm-regs,require<machine-register-class-info>" \
 # RUN:   -debug-pass-manager -filetype=null %s 2>&1 | FileCheck %s
