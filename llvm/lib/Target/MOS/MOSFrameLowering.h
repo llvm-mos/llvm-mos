@@ -57,6 +57,9 @@ public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
+  StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
+                                     Register &FrameReg) const override;
+
   // Computes the size of the static stack.
   uint64_t staticSize(const MachineFrameInfo &MFI) const;
 
@@ -67,6 +70,14 @@ private:
   bool hasFPImpl(const MachineFunction &MF) const override;
 
   void offsetSP(MachineIRBuilder &Builder, int64_t Offset) const;
+
+  void BuildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                const DebugLoc &DL, const MCCFIInstruction &CFIInst,
+                MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
+
+  void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MBBI,
+                                 const DebugLoc &DL, bool IsPrologue) const;
 };
 
 } // namespace llvm
