@@ -37,6 +37,18 @@ class MOSPseudo : Instruction {
 // registers before and after the pseudo.
 //===---------------------------------------------------------------------===//
 
+// Parallel copy: all sources are read before any destination is written.
+// Explicit operands are all defs followed by all sources, paired by index.
+// These copies isolate PHIs in conventional SSA and are lowered by MOSRegAlloc.
+// An optional third group contains one implicit reservation use per def, also
+// paired by index. Each nonzero operand names an IMPLICIT_DEF whose storage the
+// destination must inherit; $noreg denotes an independent destination. These
+// uses keep reservations live but do not read or copy their contents.
+def PCOPY : MOSPseudo {
+  dag OutOperandList = (outs variable_ops);
+  dag InOperandList = (ins variable_ops);
+}
+
 // Abstracts LDAZpIdx and LDYIdx. LDXIdx isn't yet supported, since there's no
 // good way to save and restore $x on a NMOS 6502 when lowering $a = LDZpIdx
 // $y.
