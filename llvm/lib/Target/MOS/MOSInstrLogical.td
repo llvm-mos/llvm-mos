@@ -228,6 +228,10 @@ class MOSRotateRMW : MOSShiftRotateRMW {
 def ASL : MOSShift;
 def LSR : MOSShift;
 
+let Predicates = [Has65CE02] in {
+  def ASR : MOSShift;
+}
+
 def ASLAbs : MOSShiftRMW, PseudoInstExpansion<(ASL_ZeroPage addr8:$addr)> {
   dag InOperandList = (ins addr16:$addr);
 }
