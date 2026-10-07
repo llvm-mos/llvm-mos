@@ -1041,6 +1041,10 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     expandCmpBr(Builder);
     break;
 
+  case TargetOpcode::LOAD_STACK_GUARD:
+    expandLoadStackGuard(Builder);
+    break;
+
   // Control flow
   case MOS::GBR:
     expandGBR(Builder);
@@ -1199,6 +1203,34 @@ void MOSInstrInfo::expandLDImm16Remat(MachineIRBuilder &Builder) const {
   MI.eraseFromParent();
   Builder.setInstrAndDebugLoc(*Ld);
   expandLDImm16(Builder);
+}
+
+void MOSInstrInfo::expandLoadStackGuard(MachineIRBuilder &Builder) const {
+  auto &MI = *Builder.getInsertPt();
+  MachineFunction &MF = Builder.getMF();
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  Register Dst = MI.getOperand(0).getReg();
+
+  assert(Dst.isPhysical() && MOS::Imag16RegClass.contains(Dst) &&
+         "Stack guard must be loaded into a pointer register");
+  assert(MI.memoperands_begin() != MI.memoperands_end() &&
+         "LOAD_STACK_GUARD must have a memory operand");
+  const MachineMemOperand *MMO = *MI.memoperands_begin();
+  const GlobalValue *GV = cast<GlobalValue>(MMO->getValue());
+
+  // MOS has no 16-bit load, so read the guard a byte at a time into the
+  // imaginary register pair used for pointers. The scratch registers are
+  // scavenged after pseudo expansion.
+  for (unsigned I = 0; I < 2; ++I) {
+    Register Byte = createVReg(Builder, MOS::GPRRegClass);
+    Builder.buildInstr(MOS::LDAbs)
+        .addDef(Byte)
+        .addGlobalAddress(GV, MMO->getOffset() + I)
+        .addMemOperand(MF.getMachineMemOperand(MMO, I, LLT::scalar(8)));
+    copyPhysRegImpl(Builder, TRI.getSubReg(Dst, I ? MOS::subhi : MOS::sublo),
+                    Byte, /*Force=*/true);
+  }
+  MI.eraseFromParent();
 }
 
 void MOSInstrInfo::expandLDZ(MachineIRBuilder &Builder) const {

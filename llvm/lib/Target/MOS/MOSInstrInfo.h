@@ -142,6 +142,7 @@ private:
   void expandLDZ(MachineIRBuilder &Builder) const;
   void expandIncDecNMOS(MachineIRBuilder &Builder) const;
   void expandIncDecPtr(MachineIRBuilder &Builder) const;
+  void expandLoadStackGuard(MachineIRBuilder &Builder) const;
 
   // Control flow pseudos
   void expandGBR(MachineIRBuilder &Builder) const;
