@@ -477,6 +477,17 @@ def warn_riscv_repeated_interrupt_attribute : Warning<
   "repeated RISC-V 'interrupt' attribute">, InGroup<IgnoredAttributes>;
 def note_riscv_repeated_interrupt_attribute : Note<
   "repeated RISC-V 'interrupt' attribute is here">;
+def err_mos_interrupt_invalid_suffix : Error<
+  "%0 attribute suffix '%1' is not a valid identifier">;
+def err_mos_interrupt_suffix_requires_norecurse : Error<
+  "%0 attribute does not accept a register suffix; "
+  "use interrupt_norecurse(\"%1\") instead">;
+def err_mos_interrupt_suffix_mismatch : Error<
+  "%0 attribute suffix '%1' conflicts with suffix '%2' on a previous "
+  "declaration">;
+def err_mos_interrupt_safe_definition : Error<
+  "%0 attribute only applies to function declarations, not definitions; "
+  "C function bodies are cloned for interrupt handlers automatically">;
 def warn_unused_parameter : Warning<"unused parameter %0">,
   InGroup<UnusedParameter>, DefaultIgnore;
 def warn_unused_but_set_parameter : Warning<"parameter %0 set but not used">,

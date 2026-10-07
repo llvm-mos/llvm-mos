@@ -76,7 +76,14 @@ bool MOSInternalize::runOnModule(Module &M) {
 
   DenseMap<std::pair<Function *, GlobalValue *>, Instruction *>
       DummyIRLibcalls = insertDummyIRLibcalls(M);
-  if (DummyIRLibcalls.empty())
+  // Speculative call tree libcall clones (and the helper clones only they call)
+  // must always be DCE'd if unused, even when no libcall is referenced.
+  // Otherwise they reach codegen, and any libcalls they need that have no
+  // definition become undefined symbols at link time.
+  bool HasLibcallClones = any_of(M, [](const Function &F) {
+    return F.hasFnAttribute("mos-call-tree-libcall-clone");
+  });
+  if (DummyIRLibcalls.empty() && !HasLibcallClones)
     return false;
 
   for (GlobalValue &GV : M.global_values()) {

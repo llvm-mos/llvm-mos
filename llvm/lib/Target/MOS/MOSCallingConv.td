@@ -103,3 +103,8 @@ def MOS_CSR : CalleeSavedRegs<(sequence "RC%u", 20, 31)>;
 // interrupt).
 def MOS_Interrupt_CSR :
   CalleeSavedRegs<(add A, X, Y, (sequence "RC%u", 2, 31))>;
+
+// Suffixed ISRs use a private imaginary-register set (__rcN<suffix>), so the
+// interrupted code's registers cannot be clobbered by the handler. The handler
+// therefore only needs to save and restore the hard registers A, X, and Y.
+def MOS_SuffixedInterrupt_CSR : CalleeSavedRegs<(add A, X, Y)>;

@@ -219,7 +219,7 @@ void MOSFrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.set(MOS::RC31);
   }
 
-  if (isISR(MF)) {
+  if (isISR(MF) && !isSuffixedISR(MF)) {
     // Accesses to RS8 can occur through the register scavenger, which occurs
     // after PEI. Conservatively assume these are used.
     SavedRegs.set(MOS::RC16);
@@ -237,6 +237,14 @@ void MOSFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // to Y.
     if (SavedRegs.size() > 4)
       SavedRegs.set(MOS::Y);
+  } else if (isSuffixedISR(MF)) {
+    // Suffixed ISRs only save A/X/Y (the MOS_SuffixedInterrupt_CSR set). The
+    // scavenger temps (__rc16/__rc17) are themselves suffixed and thus private
+    // to this register set, so they don't need to be preserved. We still must ensure
+    // A/X/Y are in the saved set since the handler is going to clobber them.
+    SavedRegs.set(MOS::A);
+    SavedRegs.set(MOS::X);
+    SavedRegs.set(MOS::Y);
   }
 }
 
@@ -291,13 +299,50 @@ void MOSFrameLowering::emitPrologue(MachineFunction &MF,
     if (MI.getOpcode() == MOS::CLD_Implied)
       Builder.setInsertPt(MBB, std::next(MI.getIterator()));
 
+  // Suffixed norecurse ISRs must initialize their private soft stack pointer
+  // (__rc0<suffix>/__rc1<suffix>) from __stack<suffix> before any soft stack
+  // accesses. This is safe only because a norecurse handler cannot preempt
+  // itself.
+  if (needsSoftStackInit(MF)) {
+    // Do this after A/X/Y have been saved, so A is free to use. Suffixed ISRs
+    // spill no imaginary registers, so nothing in the frame setup touches the
+    // soft stack.
+    MachineBasicBlock::iterator I = Builder.getInsertPt();
+    while (I != MBB.end() && I->getFlag(MachineInstr::FrameSetup))
+      ++I;
+    Builder.setInsertPt(MBB, I);
+
+    StringRef Sfx = getRCSuffix(MF);
+    const char *StackSym =
+        MF.createExternalSymbolName((Twine("__stack") + Sfx).str());
+
+    // LDA #mos16lo(__stack<sfx>)
+    Register LoA = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
+    auto LoLd = Builder.buildInstr(MOS::LDImm);
+    LoLd.addDef(LoA);
+    LoLd.addExternalSymbol(StackSym, MOS::MO_LO);
+
+    // STA __rc0<sfx> (suffix applied at emission time).
+    Builder.buildCopy(MOS::RC0, LoA);
+
+    // LDA #mos16hi(__stack<sfx>)
+    Register HiA = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
+    auto HiLd = Builder.buildInstr(MOS::LDImm);
+    HiLd.addDef(HiA);
+    HiLd.addExternalSymbol(StackSym, MOS::MO_HI);
+
+    // STA __rc1<sfx>
+    Builder.buildCopy(MOS::RC1, HiA);
+  }
+
   int64_t StackSize = MFI.getStackSize();
   // If the interrupted routine is in the middle of decrementing its stack
   // pointer, this routine may observe a stack pointer up to 255 bytes higher
   // than its atomic value.  Accordingly, summarily decrement the SP by a page.
   // Interrupts are rarer than the the routines they interrupt, so they pay the
-  // cost of dealing with this atomicity problem.
-  if (isISR(MF))
+  // cost of dealing with this atomicity problem. Suffixed ISRs have a private
+  // SP that cannot race with the mainline code, so they skip this guard.
+  if (isISR(MF) && !isSuffixedISR(MF))
     StackSize += 256;
 
   if (StackSize)
@@ -340,7 +385,9 @@ void MOSFrameLowering::emitEpilogue(MachineFunction &MF,
 
   int64_t StackSize = MFI.getStackSize();
 
-  if (isISR(MF))
+  // See emitPrologue: suffixed ISRs skip the +256 guard since their private SP
+  // cannot race with mainline SP updates.
+  if (isISR(MF) && !isSuffixedISR(MF))
     StackSize += 256;
 
   // If soft stack is used, increase the soft stack pointer SP.
@@ -405,4 +452,15 @@ bool MOSFrameLowering::isISR(const MachineFunction &MF) const {
     return false;
   return F.hasFnAttribute("interrupt") ||
          F.hasFnAttribute("interrupt-norecurse");
+}
+
+StringRef MOSFrameLowering::getRCSuffix(const MachineFunction &MF) {
+  Attribute SfxAttr = MF.getFunction().getFnAttribute("rc-suffix");
+  return SfxAttr.isValid() ? SfxAttr.getValueAsString() : StringRef();
+}
+
+bool MOSFrameLowering::needsSoftStackInit(const MachineFunction &MF) {
+  // Set by MOSCallTreeVerify on suffixed roots whose call tree has any function
+  // with a soft stack frame.
+  return MF.getFunction().hasFnAttribute("isr-init-soft-stack");
 }

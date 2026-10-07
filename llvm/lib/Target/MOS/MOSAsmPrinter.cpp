@@ -21,6 +21,7 @@
 #include "MOSSubtarget.h"
 #include "TargetInfo/MOSTargetInfo.h"
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/MOSFlags.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -70,6 +71,8 @@ public:
                              const char *ExtraCode, raw_ostream &OS) override;
 
   void emitStartOfAsmFile(Module &M) override;
+
+  void emitEndOfAsmFile(Module &M) override;
 
   void emitJumpTableInfo() override;
 
@@ -179,7 +182,7 @@ bool MOSAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     }
 
     if (MOS::Imag16RegClass.contains(Reg) || MOS::Imag8RegClass.contains(Reg))
-      OS << TRI.getImag8SymbolName(Reg);
+      OS << (Twine(TRI.getImag8SymbolName(Reg)) + FuncInfo.RCSuffix).str();
     else
       OS << TRI.getRegAsmName(Reg);
     break;
@@ -201,6 +204,25 @@ void MOSAsmPrinter::emitStartOfAsmFile(Module &M) {
       *static_cast<MOSTargetStreamer *>(OutStreamer->getTargetStreamer());
   for (int I = 0; I < 32; I++)
     MTS.emitDirectiveZeroPage(OutContext.getOrCreateSymbol("__rc" + Twine(I)));
+}
+
+void MOSAsmPrinter::emitEndOfAsmFile(Module &M) {
+  // Emit .zeropage directives for each distinct ISR register suffix. This runs in
+  // doFinalization, after the clone pass has stamped "rc-suffix" on all
+  // suffixed functions; emitStartOfAsmFile (in doInitialization) would run too
+  // early. The .zeropage directive is position-independent in the assembler.
+  auto &MTS =
+      *static_cast<MOSTargetStreamer *>(OutStreamer->getTargetStreamer());
+  SmallSet<std::string, 4> Suffixes;
+  for (const Function &F : M.functions()) {
+    if (F.hasFnAttribute("rc-suffix"))
+      Suffixes.insert(F.getFnAttribute("rc-suffix").getValueAsString().str());
+  }
+  for (const std::string &Sfx : Suffixes) {
+    for (int I = 0; I < 32; I++)
+      MTS.emitDirectiveZeroPage(
+          OutContext.getOrCreateSymbol("__rc" + Twine(I) + Sfx));
+  }
 }
 
 void MOSAsmPrinter::emitJumpTableInfo() {

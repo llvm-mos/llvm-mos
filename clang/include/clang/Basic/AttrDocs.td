@@ -3065,6 +3065,78 @@ purpose floating point registers will be saved.
   }];
 }
 
+def MOSInterruptDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "interrupt (MOS)";
+  let Content = [{
+Clang supports the GNU style ``__attribute__((interrupt))`` attribute on MOS
+targets. The attribute may be attached to a function definition and instructs
+the backend to generate entry/exit code suitable for an interrupt service
+routine (ISR): it clears the decimal mode flag on entry and returns with
+``RTI``.
+
+The ISR shares the imaginary registers (``__rc0`` .. ``__rc31``) and soft
+stack with mainline code. The backend saves and restores every imaginary
+register the ISR touches (the full ``MOS_Interrupt_CSR`` set), and the soft
+stack pointer is the shared ``__rc0``/``__rc1``.
+
+``interrupt`` does not accept a register suffix; a private register set is
+only available with ``interrupt_norecurse("suffix")``.
+  }];
+}
+
+def MOSInterruptNorecurseDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "interrupt_norecurse (MOS)";
+  let Content = [{
+Clang supports the GNU style ``__attribute__((interrupt_norecurse))`` and
+``__attribute__((interrupt_norecurse("suffix")))`` attributes on MOS targets.
+Like ``interrupt``, this marks a function as an interrupt service routine, but
+additionally asserts that the handler (and everything it calls) will not
+re-enter itself. This lets the backend give the whole reachable call tree
+static stack frames instead of soft-stack frames, and lets runtime libcalls
+keep static stacks.
+
+An optional suffix selects a *private* imaginary-register set: every emitted
+``__rcN`` symbol in the handler's call tree is suffixed (e.g. ``__rc0`` becomes
+``__rc0__nmi`` for ``interrupt_norecurse("__nmi")``). Because the interrupted
+code's registers are untouched, the ISR need only save and restore ``A``,
+``X`` and ``Y``. The suffix must be a valid identifier
+(``[A-Za-z_][A-Za-z0-9_]*``) since it becomes part of an assembler symbol name.
+
+- Each suffix may be used by only one handler. Distinct preempting sources
+  (e.g. NMI vs IRQ) must use distinct suffixes so each gets its own register set.
+- Every function reachable from the handler, including compiler-rt libcalls,
+  is cloned per suffix. This requires LTO: all callees must be available as
+  bitcode.
+- If any function in the call tree needs a soft stack (e.g. it recurses), the
+  prologue initializes the private stack pointer ``__rc0<suffix>`` /
+  ``__rc1<suffix>`` from ``__stack<suffix>``. This is safe because a norecurse
+  handler cannot preempt itself.
+- Assembly routines cannot be cloned. Declare them with ``interrupt_safe`` if
+  they only use ``A``, ``X`` and ``Y``.
+- The suffixed imaginary registers are reserved in zero page, reducing the space
+  available for zero-page promotion of globals.
+  }];
+}
+
+def MOSInterruptSafeDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "interrupt_safe (MOS)";
+  let Content = [{
+Clang supports the GNU style ``__attribute__((interrupt_safe))`` attribute on
+MOS function declarations. It asserts that the function (typically written in
+assembly) touches only the hardware registers ``A``, ``X`` and ``Y`` and no
+imaginary registers, so it may be called from the call tree of an
+``interrupt_norecurse("suffix")`` handler without being cloned for that
+handler.
+
+The attribute may only be applied to declarations; functions with C bodies are
+cloned automatically. The backend reports an error if a call to such a
+function passes arguments or returns values in imaginary registers.
+  }];
+}
+
 def BPFPreserveAccessIndexDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

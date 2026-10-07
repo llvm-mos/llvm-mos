@@ -40,6 +40,9 @@ add_llvm_target(MOSCodeGen
   MOSInstrInfo.cpp
   MOSInstructionSelector.cpp
   MOSInternalize.cpp
+  MOSCallTreeClone.cpp
+  MOSCallTreeVerify.cpp
+  MOSCallTreeLibcalls.cpp
   MOSLateOptimization.cpp
   MOSLegalizerInfo.cpp
   MOSLowerSelect.cpp

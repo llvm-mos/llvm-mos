@@ -39,6 +39,9 @@
 #include "MOSConventionalSSA.h"
 #include "MOSCopyOpt.h"
 #include "MOSImagRegAlloc.h"
+#include "MOSCallTreeClone.h"
+#include "MOSCallTreeVerify.h"
+#include "MOSCallTreeLibcalls.h"
 #include "MOSIndexIV.h"
 #include "MOSInsertCopies.h"
 #include "MOSInternalize.h"
@@ -74,6 +77,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSTarget() {
   initializeMOSImagRegAllocPass(PR);
   initializeMOSInsertCopiesPass(PR);
   initializeMOSInternalizePass(PR);
+  initializeMOSCallTreeClonePass(PR);
+  initializeMOSCallTreeVerifyPass(PR);
+  initializeMOSCallTreeLibcallsPass(PR);
   initializeMOSLateOptimizationPass(PR);
   initializeMOSLowerSelectPass(PR);
   initializeMOSNonReentrantPass(PR);
@@ -149,6 +155,10 @@ void MOSTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
          ArrayRef<PassBuilder::PipelineElement>) {
         if (Name == "mos-nonreentrant") {
           PM.addPass(MOSNonReentrantPass());
+          return true;
+        }
+        if (Name == "mos-call-tree-clone") {
+          PM.addPass(MOSCallTreeClonePass());
           return true;
         }
         return false;
@@ -237,6 +247,10 @@ TargetPassConfig *MOSTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void MOSPassConfig::addIRPasses() {
+  // Clone suffixed-ISR call trees into private register sets unconditionally
+  // (must run at -O0 too: it is a correctness feature). Runs before
+  // MOSNonReentrant so the clones exist for its reachability analysis.
+  addPass(createMOSCallTreeClonePass());
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createMOSNonReentrantPass());
   TargetPassConfig::addIRPasses();
@@ -261,7 +275,14 @@ void MOSPassConfig::addPreLegalizeMachineIR() {
 
 bool MOSPassConfig::addLegalizeMachineIR() {
   addPass(new LegalizerLegacy());
+  // Redirect libcalls emitted by the legalizer in suffixed-ISR functions to
+  // their per-suffix clones, before MOSInternalize decides which clones to
+  // keep and which to DCE.
+  addPass(createMOSCallTreeLibcallsPass());
   addPass(createMOSInternalizePass());
+  // Check that suffixed-ISR call trees use their private register set, now that the
+  // libcalls actually used are known. Must run at -O0 too.
+  addPass(createMOSCallTreeVerifyPass());
   return false;
 }
 

@@ -63,6 +63,25 @@ public:
   // Return whether or not the function is a direct ISR.
   bool isISR(const MachineFunction &MF) const;
 
+  // Returns the per-function "rc-suffix" attribute value (empty when the
+  // function uses the main register set).
+  static StringRef getRCSuffix(const MachineFunction &MF);
+
+  // True for interrupt_norecurse("suffix") roots, which use a private
+  // imaginary-register set via the "rc-suffix" attribute. Such ISRs need only
+  // save A/X/Y and skip the soft stack pointer guard and the RC16/RC17
+  // scavenger force-save.
+  bool isSuffixedISR(const MachineFunction &MF) const {
+    return MF.getFunction().hasFnAttribute("interrupt-norecurse") &&
+           !getRCSuffix(MF).empty();
+  }
+
+  // True for suffixed norecurse ISRs whose prologue must initialize the
+  // private soft stack pointer (__rc0<suffix>/__rc1<suffix>) from
+  // __stack<suffix>. MOSCallTreeVerify marks the root when any function
+  // reachable from it uses a soft stack frame (always the case at -O0).
+  static bool needsSoftStackInit(const MachineFunction &MF);
+
 private:
   bool hasFPImpl(const MachineFunction &MF) const override;
 

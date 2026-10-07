@@ -43,17 +43,27 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
-    if (GV->isDeclaration())
-      return;
     const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
     if (!FD)
+      return;
+
+    // interrupt_safe only applies to declarations (e.g. assembly routines), so
+    // it must be emitted before the definition-only early return below.
+    if (FD->hasAttr<MOSInterruptSafeAttr>())
+      if (auto *Fn = dyn_cast<llvm::Function>(GV))
+        Fn->addFnAttr("interrupt-safe");
+
+    if (GV->isDeclaration())
       return;
     auto *Fn = cast<llvm::Function>(GV);
 
     if (FD->getAttr<MOSInterruptAttr>())
       Fn->addFnAttr("interrupt");
-    if (FD->getAttr<MOSInterruptNorecurseAttr>())
+    if (const auto *A = FD->getAttr<MOSInterruptNorecurseAttr>()) {
       Fn->addFnAttr("interrupt-norecurse");
+      if (!A->getSuffix().empty())
+        Fn->addFnAttr("interrupt-rc-suffix", A->getSuffix());
+    }
     if (FD->getAttr<MOSNoISRAttr>())
       Fn->addFnAttr("no-isr");
   }

@@ -72,6 +72,20 @@ bool MOSNonReentrantImpl::run(Module &M) {
   CG.getCallsExternalNode()->addCalledFunction(nullptr,
                                                CG.getExternalCallingNode());
 
+  // The SCC walk only visits nodes reachable from the external calling node.
+  // Speculative call tree libcall clones are internal and have no IR callers
+  // (the legalizer calls them later), so they would never be visited, never
+  // proven norecurse, and would needlessly get soft-stack frames. Temporarily
+  // make them externally callable, like the libcalls they were cloned from.
+  SmallVector<CallGraphNode *, 16> LibcallCloneNodes;
+  for (Function &F : M.functions()) {
+    if (!F.hasFnAttribute("mos-call-tree-libcall-clone"))
+      continue;
+    CallGraphNode *CGN = CG[&F];
+    CG.getExternalCallingNode()->addCalledFunction(nullptr, CGN);
+    LibcallCloneNodes.push_back(CGN);
+  }
+
   // Walk the callgraph in bottom-up SCC order.
   scc_iterator<CallGraph *> CGI = scc_begin(&CG);
   CallGraphSCC CurSCC(CG, &CGI);
@@ -82,9 +96,11 @@ bool MOSNonReentrantImpl::run(Module &M) {
   }
 
   // Mark all functions reachable from an interrupt function as non-reentrant.
+  bool HasUnsuffixedInterrupt = false;
   for (Function &F : M.functions()) {
     if (F.hasFnAttribute("interrupt")) {
       HasInterrupts = true;
+      HasUnsuffixedInterrupt = true;
       markReentrant(*CG[&F]);
     }
   }
@@ -93,8 +109,11 @@ bool MOSNonReentrantImpl::run(Module &M) {
   // possibly recursive.
   for (Function &F : M.functions()) {
     if (F.hasFnAttribute("interrupt-norecurse") || F.getName() == "main") {
-      if (F.hasFnAttribute("interrupt-norecurse"))
+      if (F.hasFnAttribute("interrupt-norecurse")) {
         HasInterrupts = true;
+        if (!F.hasFnAttribute("interrupt-rc-suffix"))
+          HasUnsuffixedInterrupt = true;
+      }
       visitNorecurseInterrupt(*CG[&F]);
       for (const auto *CGN : ReachableFromCurrentNorecurseInterrupt)
         ReachableFromOtherNorecurseInterrupt.insert(CGN);
@@ -102,14 +121,19 @@ bool MOSNonReentrantImpl::run(Module &M) {
     }
   }
 
-  if (HasInterrupts) {
+  if (HasInterrupts)
     Changed = true;
 
-    // Mark all libcalls as possibly recursive if we have interrupts, since
-    // there's no way to tell which will actually be called by an interrupt
-    // before the interrupt is compiled. But the compilation of the interrupt
-    // depends on whether or not it's norecurse, so we don't have much choice
-    // other than making the conservative assumption here.
+  // Mark all libcalls as possibly recursive if we have interrupts that may
+  // call them, since there's no way to tell which will actually be called by
+  // an interrupt before the interrupt is compiled. But the compilation of the
+  // interrupt depends on whether or not it's norecurse, so we don't have much
+  // choice other than making the conservative assumption here.
+  //
+  // Suffixed interrupts never call the original libcalls: they call their own
+  // per-suffix clones (MOSCallTreeVerify enforces this). Each suffix has
+  // exactly one norecurse root, so its clones cannot be re-entered.
+  if (HasUnsuffixedInterrupt) {
     for (const char *LibcallName :
          lto::LTO::getRuntimeLibcallSymbols(Triple(M.getTargetTriple()))) {
       Function *Libcall = M.getFunction(LibcallName);
@@ -127,8 +151,10 @@ bool MOSNonReentrantImpl::run(Module &M) {
     if (F.doesNotRecurse() && !Reentrant.contains(CG[&F]))
       F.addFnAttr("nonreentrant");
 
-  // Remove the artificial edge.
+  // Remove the artificial edges.
   CG.getCallsExternalNode()->removeOneAbstractEdgeTo(CG.getExternalCallingNode());
+  for (CallGraphNode *CGN : LibcallCloneNodes)
+    CG.getExternalCallingNode()->removeOneAbstractEdgeTo(CGN);
   return Changed;
 }
 

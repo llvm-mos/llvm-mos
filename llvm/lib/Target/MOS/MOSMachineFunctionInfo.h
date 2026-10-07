@@ -20,7 +20,10 @@ namespace llvm {
 class MOSSubtarget;
 
 struct MOSFunctionInfo : public MachineFunctionInfo {
-  MOSFunctionInfo(const Function &F, const MOSSubtarget *STI) {}
+  MOSFunctionInfo(const Function &F, const MOSSubtarget *STI) {
+    if (Attribute SfxAttr = F.getFnAttribute("rc-suffix"); SfxAttr.isValid())
+      RCSuffix = SfxAttr.getValueAsString().str();
+  }
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
@@ -33,6 +36,11 @@ struct MOSFunctionInfo : public MachineFunctionInfo {
   const GlobalValue *StaticStackValue = nullptr;
   const GlobalValue *ZeroPageStackValue = nullptr;
   DenseMap<Register, size_t> CSRZPOffsets;
+
+  // The ISR register suffix (empty when this function uses the main set). Cached
+  // from the "rc-suffix" fn-attr so the emission paths can append it to every
+  // emitted __rcN symbol without re-reading IR.
+  std::string RCSuffix;
 };
 
 } // namespace llvm

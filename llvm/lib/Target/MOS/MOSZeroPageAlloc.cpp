@@ -20,10 +20,12 @@
 #include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -285,6 +287,57 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
   }
 
   MMI = &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+
+  // Each interrupt_norecurse("suffix") handler has its own copies of the imaginary
+  // registers its functions use, and these also live in zero page. Reserve
+  // them from the budget. Register allocation is done, so the registers used
+  // are known; they are counted in pairs, like the linker script allocates.
+  StringMap<BitVector> SuffixPairs;
+  for (Function &F : M) {
+    Attribute SfxAttr = F.getFnAttribute("rc-suffix");
+    if (!SfxAttr.isValid())
+      continue;
+    MachineFunction *MF = MMI->getMachineFunction(F);
+    if (!MF)
+      continue;
+    BitVector &Pairs = SuffixPairs[SfxAttr.getValueAsString()];
+    if (Pairs.size() < 16)
+      Pairs.resize(16);
+    // The soft stack pointer may be initialized in the prologue, and the
+    // register scavenger may use __rc16/__rc17 after this pass.
+    Pairs.set(0);
+    Pairs.set(8);
+    const auto &TRI = *MF->getSubtarget<MOSSubtarget>().getRegisterInfo();
+    for (const MachineBasicBlock &MBB : *MF) {
+      for (const MachineInstr &MI : MBB) {
+        for (const MachineOperand &MO : MI.operands()) {
+          if (!MO.isReg() || !MO.getReg().isPhysical())
+            continue;
+          Register Reg = MO.getReg();
+          if (!MOS::Imag8RegClass.contains(Reg) &&
+              !MOS::Imag16RegClass.contains(Reg))
+            continue;
+          // The symbol names the low byte, "__rcN".
+          unsigned N;
+          if (StringRef(TRI.getImag8SymbolName(Reg))
+                  .drop_front(4)
+                  .getAsInteger(10, N))
+            continue;
+          if (N / 2 >= Pairs.size())
+            Pairs.resize(N / 2 + 1);
+          Pairs.set(N / 2);
+        }
+      }
+    }
+  }
+  for (const auto &KV : SuffixPairs) {
+    size_t Size = 2 * KV.second.count();
+    LLVM_DEBUG(dbgs() << "Reserving " << Size << " bytes of zero page for suffix "
+                      << KV.getKey() << "\n");
+    if (Size >= ModuleZPAvail)
+      return false;
+    ModuleZPAvail -= Size;
+  }
 
   LLVM_DEBUG(dbgs() << "*******************************************************"
                        "*************************\n");

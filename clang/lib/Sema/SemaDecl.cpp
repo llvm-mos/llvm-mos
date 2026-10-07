@@ -51,6 +51,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaMOS.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -3008,6 +3009,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.mergeReentrantAttr(D, *RA);
   else if (const auto *NRA = dyn_cast<NonReentrantAttr>(Attr))
     NewAttr = S.mergeNonReentrantAttr(D, *NRA);
+  else if (const auto *MIA = dyn_cast<MOSInterruptNorecurseAttr>(Attr))
+    NewAttr = S.MOS().mergeInterruptNorecurseAttr(D, *MIA);
   else if (const auto *InternalLinkageA = dyn_cast<InternalLinkageAttr>(Attr))
     NewAttr = S.mergeInternalLinkageAttr(D, *InternalLinkageA);
   else if (isa<AlignedAttr>(Attr))
@@ -16508,6 +16511,10 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     Diag(Attr->getLocation(), diag::err_alias_is_definition) << FD << 1;
     FD->dropAttr<IFuncAttr>();
     FD->setInvalidDecl();
+  }
+  if (const auto *Attr = FD->getAttr<MOSInterruptSafeAttr>()) {
+    Diag(Attr->getLocation(), diag::err_mos_interrupt_safe_definition) << Attr;
+    FD->dropAttr<MOSInterruptSafeAttr>();
   }
   if (const auto *Attr = FD->getAttr<TargetVersionAttr>()) {
     if (Context.getTargetInfo().getTriple().isAArch64() &&

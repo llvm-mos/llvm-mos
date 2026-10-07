@@ -17,6 +17,7 @@
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
+class MOSInterruptNorecurseAttr;
 class ParsedAttr;
 
 class SemaMOS : public SemaBase {
@@ -26,6 +27,10 @@ public:
   void handleInterruptAttr(Decl *D, const ParsedAttr &AL);
   void handleInterruptNorecurseAttr(Decl *D, const ParsedAttr &AL);
   void handleInterruptNoISRAttr(Decl *D, const ParsedAttr &AL);
+  void handleInterruptSafeAttr(Decl *D, const ParsedAttr &AL);
+
+  MOSInterruptNorecurseAttr *
+  mergeInterruptNorecurseAttr(Decl *D, const MOSInterruptNorecurseAttr &AL);
 };
 
 } // namespace clang

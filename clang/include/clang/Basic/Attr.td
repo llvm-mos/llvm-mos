@@ -2315,20 +2315,28 @@ def M68kInterrupt : InheritableAttr, TargetSpecificAttr<TargetM68k> {
 def MOSInterrupt : InheritableAttr, TargetSpecificAttr<TargetMOS> {
   let Spellings = [GCC<"interrupt">];
   let Subjects = SubjectList<[Function]>;
+  let Args = [StringArgument<"Suffix", /*optional=*/1>];
   let ParseKind = "Interrupt";
-  let Documentation = [Undocumented];
+  let Documentation = [MOSInterruptDocs];
 }
 
 def MOSInterruptNorecurse : InheritableAttr, TargetSpecificAttr<TargetMOS> {
   let Spellings = [GCC<"interrupt_norecurse">];
   let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
+  let Args = [StringArgument<"Suffix", /*optional=*/1>];
+  let Documentation = [MOSInterruptNorecurseDocs];
 }
 
 def MOSNoISR : InheritableAttr, TargetSpecificAttr<TargetMOS> {
   let Spellings = [GCC<"no_isr">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [Undocumented];
+}
+
+def MOSInterruptSafe : InheritableAttr, TargetSpecificAttr<TargetMOS> {
+  let Spellings = [GCC<"interrupt_safe">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [MOSInterruptSafeDocs];
 }
 
 def Reentrant : InheritableAttr {

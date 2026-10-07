@@ -7786,6 +7786,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_MOSNoISR:
     S.MOS().handleInterruptNoISRAttr(D, AL);
     break;
+  case ParsedAttr::AT_MOSInterruptSafe:
+    S.MOS().handleInterruptSafeAttr(D, AL);
+    break;
   case ParsedAttr::AT_WebAssemblyExportName:
     S.Wasm().handleWebAssemblyExportNameAttr(D, AL);
     break;

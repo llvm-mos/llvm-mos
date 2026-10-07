@@ -42,3 +42,26 @@ for.cond:                                         ; preds = %for.cond, %entry
 declare dso_local zeroext i8 @g(i8 noundef zeroext, i8 noundef zeroext) local_unnamed_addr #1
 
 attributes #0 = {noreturn nounwind}
+
+; Suffixed ISR should only save A, X, Y (MOS_SuffixedInterrupt_CSR) — no RC
+; registers are saved since the ISR uses a private imaginary-register set.
+define void @test_suffixed_isr_callee_saved() "interrupt-norecurse" "interrupt-rc-suffix"="__nmi" {
+; CHECK-LABEL: test_suffixed_isr_callee_saved:
+; CHECK-NEXT: ; %bb.0:
+; CHECK-NEXT: cld
+; CHECK-NOT: __rc2
+; CHECK-NOT: __rc3
+; CHECK: pha
+; CHECK-NEXT: txa
+; CHECK-NEXT: pha
+; CHECK-NEXT: tya
+; CHECK-NEXT: pha
+; CHECK: pla
+; CHECK-NEXT: tay
+; CHECK-NEXT: pla
+; CHECK-NEXT: tax
+; CHECK-NEXT: pla
+; CHECK-NEXT: rti
+entry:
+  ret void
+}
