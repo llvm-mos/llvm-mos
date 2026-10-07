@@ -27,11 +27,17 @@
 /// inserts copies and rewrites to ensure that each tied input dies at the
 /// instruction and satisfies the constraints of its tied def.
 ///
+/// Untied undef inputs receive fresh virtual registers local to each
+/// instruction. They can receive assignments independently of their original
+/// definitions and uses in other instructions. Undef operands naming the same
+/// register within an instruction continue to share a name.
+///
 //===----------------------------------------------------------------------===//
 
 #include "MOSConventionalSSA.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -79,6 +85,7 @@ private:
   void isolatePHIs(MachineBasicBlock &MBB);
   void insertExitCopies(MachineBasicBlock &MBB, ArrayRef<Copy> Copies);
   bool normalizeTies(MachineInstr &MI);
+  bool normalizeUndefUses(MachineInstr &MI);
   void insertParallelCopy(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator InsertPt,
                           ArrayRef<Copy> Copies, const DebugLoc &DL);
@@ -128,9 +135,12 @@ bool MOSConventionalSSA::runOnMachineFunction(MachineFunction &MF) {
   }
   for (Register Reg : LivenessDirty)
     LV->recomputeForSingleDefVirtReg(Reg);
-  for (MachineBasicBlock &MBB : MF)
-    for (MachineInstr &MI : MBB)
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
       Changed |= normalizeTies(MI);
+      Changed |= normalizeUndefUses(MI);
+    }
+  }
   return Changed;
 }
 
@@ -272,6 +282,28 @@ bool MOSConventionalSSA::normalizeTies(MachineInstr &MI) {
     Changed = true;
   }
   return Changed;
+}
+
+bool MOSConventionalSSA::normalizeUndefUses(MachineInstr &MI) {
+  if (MI.isDebugInstr())
+    return false;
+
+  // Undef uses do not read their named values, so renaming them neither
+  // requires definitions for the new registers nor changes value liveness.
+  // Share a full-register name within MI: repeated undef operands may rely on
+  // reading the same contents, including overlapping subregister views.
+  SmallDenseMap<Register, Register, 4> UndefRegs;
+  for (MachineOperand &Use : MI.all_uses()) {
+    Register Reg = Use.getReg();
+    if (!Reg.isVirtual() || !Use.isUndef())
+      continue;
+    assert(!Use.isTied() && "tied undef inputs must already be normalized");
+    auto [It, Inserted] = UndefRegs.try_emplace(Reg);
+    if (Inserted)
+      It->second = MRI->cloneVirtualRegister(Reg);
+    Use.setReg(It->second);
+  }
+  return !UndefRegs.empty();
 }
 
 void MOSConventionalSSA::insertParallelCopy(

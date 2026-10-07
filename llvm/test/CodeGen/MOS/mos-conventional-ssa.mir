@@ -167,7 +167,7 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:anyi8 = PHI [[PCOPY]], %bb.0, [[PCOPY1]], %bb.1
-  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:imag16 = PHI undef %4:imag16, %bb.0, [[PCOPY2]], %bb.1
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:imag16 = PHI undef %10:imag16, %bb.0, [[PCOPY2]], %bb.1
   ; CHECK-NEXT:   [[PCOPY3:%[0-9]+]]:imag8, dead [[PCOPY4:%[0-9]+]]:imag16 = PCOPY killed [[PHI]], killed [[PHI1]]
   ; CHECK-NEXT:   $a = COPY killed [[PCOPY3]]
   ; CHECK-NEXT:   RTS implicit killed $a
