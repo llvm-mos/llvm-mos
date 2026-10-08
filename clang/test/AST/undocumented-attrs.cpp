@@ -38,8 +38,6 @@ CHECK-NEXT:	LockReturned
 CHECK-NEXT:	Lockable
 CHECK-NEXT:	LocksExcluded
 CHECK-NEXT:	M68kInterrupt
-CHECK-NEXT:	MOSInterrupt
-CHECK-NEXT:	MOSInterruptNorecurse
 CHECK-NEXT:	MOSNoISR
 CHECK-NEXT:	MSP430Interrupt
 CHECK-NEXT:	MatrixType
@@ -93,4 +91,4 @@ CHECK-NEXT:	Visibility
 CHECK-NEXT:	WeakImport
 CHECK-NEXT:	WeakRef
 CHECK-NEXT:	WorkGroupSizeHint
-CHECK-NEXT: Total: 87
+CHECK-NEXT: Total: 85
