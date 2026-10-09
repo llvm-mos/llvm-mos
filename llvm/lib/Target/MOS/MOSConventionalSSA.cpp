@@ -14,6 +14,7 @@
 /// terminators and after the successor's PHIs. The fresh names allow the
 /// allocator to give each PHI's inputs and result one assignment without
 /// forcing that assignment on the original sources or subsequent users.
+/// Every PHI result has one entry-PCOPY use, even when the copy's result is dead.
 ///
 /// Copies for all successors share one outgoing PCOPY in each predecessor.
 /// This also handles critical edges, including indirect branches, without
@@ -137,8 +138,9 @@ void MOSConventionalSSA::isolatePHIs(MachineBasicBlock &MBB) {
   SmallVector<Copy> EntryCopies;
   for (MachineInstr &PHI : MBB.phis()) {
     MachineOperand &Def = PHI.getOperand(0);
-    if (Def.isDead())
-      continue;
+    // Give every PHI result one entry-PCOPY use, including unused results.
+    // The PCOPY inherits the dead definition, keeping PHI groups uniform for
+    // allocation and spilling.
     Register Result = MRI->createVirtualRegister(TRI->getLargestLegalSuperClass(
         MRI->getRegClass(Def.getReg()), *MBB.getParent()));
     LivenessDirty.insert(Def.getReg());
