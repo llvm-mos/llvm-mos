@@ -32,7 +32,8 @@ add_llvm_target(MOSCodeGen
   MOSCopyOpt.cpp
   MOSFrameLowering.cpp
   MOSISelLowering.cpp
-  MOSImagRegAlloc.cpp
+  MOSImagRegAssign.cpp
+  MOSImagRegSpill.cpp
   MOSIndexIV.cpp
   MOSInlineAsmLowering.cpp
   MOSInsertCopies.cpp
@@ -42,6 +43,7 @@ add_llvm_target(MOSCodeGen
   MOSInternalize.cpp
   MOSLateOptimization.cpp
   MOSLegalizerInfo.cpp
+  MOSInterferenceGraph.cpp
   MOSLowerSelect.cpp
   MOSMCInstLower.cpp
   MOSMachineScheduler.cpp

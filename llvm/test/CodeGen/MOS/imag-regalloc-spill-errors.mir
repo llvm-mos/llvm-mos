@@ -1,0 +1,169 @@
+# RUN: split-file %s %t
+# RUN: not llc -mtriple=mos -mattr=+static-stack -stress-regalloc=3 -run-pass=mos-imag-reg-spill -verify-machineinstrs %t/cfg.mir -o /dev/null 2>&1 | FileCheck %s --check-prefix=CFG
+# RUN: not llc -mtriple=mos -mattr=+static-stack -stress-regalloc=3 -run-pass=mos-imag-reg-spill -verify-machineinstrs %t/livein.mir -o /dev/null 2>&1 | FileCheck %s --check-prefix=LIVEIN
+# RUN: not llc -mtriple=mos -mattr=+static-stack -stress-regalloc=3 -run-pass=mos-imag-reg-spill -verify-machineinstrs %t/pcopy.mir -o /dev/null 2>&1 | FileCheck %s --check-prefix=PCOPY
+# RUN: not llc -mtriple=mos -mattr=+static-stack -stress-regalloc=3 -run-pass=mos-imag-reg-spill -verify-machineinstrs %t/regmask.mir -o /dev/null 2>&1 | FileCheck %s --check-prefix=REGMASK
+# RUN: not llc -mtriple=mos -mattr=+static-stack -stress-regalloc=3 -run-pass=mos-imag-reg-spill -verify-machineinstrs %t/phys.mir -o /dev/null 2>&1 | FileCheck %s --check-prefix=PHYS
+# RUN: not llc -mtriple=mos -mattr=+static-stack -stress-regalloc=3 -run-pass=mos-imag-reg-spill -verify-machineinstrs %t/subreg.mir -o /dev/null 2>&1 | FileCheck %s --check-prefix=SUBREG
+# RUN: not llc -mtriple=mos -mattr=+static-stack -stress-regalloc=3 -run-pass=mos-imag-reg-spill -verify-machineinstrs %t/tie.mir -o /dev/null 2>&1 | FileCheck %s --check-prefix=TIE
+# RUN: not llc -mtriple=mos -mattr=+static-stack -stress-regalloc=3 -run-pass=mos-imag-reg-spill -verify-machineinstrs %t/earlyclobber.mir -o /dev/null 2>&1 | FileCheck %s --check-prefix=EARLYCLOBBER
+# RUN: not llc -mtriple=mos -mattr=+static-stack -stress-regalloc=3 -run-pass=mos-imag-reg-spill -verify-machineinstrs %t/undef.mir -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNDEF
+# RUN: not llc -mtriple=mos -mattr=+static-stack -stress-regalloc=3 -run-pass=mos-imag-reg-spill -verify-machineinstrs %t/unspillable.mir -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNSPILLABLE
+
+# The straight-line implementation rejects unsupported MIR explicitly.
+# These are scope checks, not expectations about the eventual allocator.
+# The final case has no live-through victim: all values are required together.
+
+# CFG: LLVM ERROR: MOSImagRegSpill currently requires a single block
+# LIVEIN: LLVM ERROR: MOSImagRegSpill does not yet support imaginary physical live-ins
+# PCOPY: LLVM ERROR: MOSImagRegSpill does not yet support this instruction
+# REGMASK: LLVM ERROR: MOSImagRegSpill does not yet support regmasks
+# PHYS: LLVM ERROR: MOSImagRegSpill does not yet support physical register constraints
+# SUBREG: LLVM ERROR: MOSImagRegSpill requires whole-register, untied virtual operands
+# TIE: LLVM ERROR: MOSImagRegSpill requires whole-register, untied virtual operands
+# EARLYCLOBBER: LLVM ERROR: MOSImagRegSpill requires whole-register, untied virtual operands
+# UNDEF: LLVM ERROR: MOSImagRegSpill requires whole-register, untied virtual operands
+# UNSPILLABLE: LLVM ERROR: MOS instruction pressure cannot be reduced by spilling live-through registers
+
+#--- cfg.mir
+--- |
+  define void @cfg() "nonreentrant" { ret void }
+...
+---
+name: cfg
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    JMP %bb.1
+  bb.1:
+    RTS
+...
+
+#--- livein.mir
+--- |
+  define void @livein() "nonreentrant" { ret void }
+...
+---
+name: livein
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $rc0lsb
+    RTS
+...
+
+#--- pcopy.mir
+--- |
+  define void @pcopy() "nonreentrant" { ret void }
+...
+---
+name: pcopy
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:gpr = LDAbs 1000
+    %1:gpr = PCOPY %0
+    STAbs %1, 2000
+    RTS
+...
+
+#--- regmask.mir
+--- |
+  define void @regmask() "nonreentrant" { ret void }
+...
+---
+name: regmask
+tracksRegLiveness: true
+body: |
+  bb.0:
+    RTS CustomRegMask()
+...
+
+#--- phys.mir
+--- |
+  define void @phys() "nonreentrant" { ret void }
+...
+---
+name: phys
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:gpr = LDAbs 1000
+    $a = COPY %0
+    RTS implicit $a
+...
+
+#--- subreg.mir
+--- |
+  define void @subreg() "nonreentrant" { ret void }
+...
+---
+name: subreg
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:imag16 = LDImm16Remat 1000
+    %1:gpr = COPY %0.sublo
+    STAbs %1, 2000
+    RTS
+...
+
+#--- tie.mir
+--- |
+  define void @tie() "nonreentrant" { ret void }
+...
+---
+name: tie
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:gpr = LDAbs 1000
+    %1:gpr = IncNMOS %0, implicit-def $c, implicit-def $v
+    STAbs %1, 2000
+    RTS
+...
+
+#--- earlyclobber.mir
+--- |
+  define void @earlyclobber() "nonreentrant" { ret void }
+...
+---
+name: earlyclobber
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:imag16, early-clobber %1:gpr = LDImm16 1000
+    %2:ac = LDIndir %0
+    RTS
+...
+
+#--- undef.mir
+--- |
+  define void @undef() "nonreentrant" { ret void }
+...
+---
+name: undef
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:gpr = IMPLICIT_DEF
+    STAbs undef %0, 2000
+    RTS
+...
+
+#--- unspillable.mir
+--- |
+  define void @unspillable() "nonreentrant" { ret void }
+...
+---
+name: unspillable
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:gpr = LDAbs 1000
+    %1:gpr = LDAbs 1001
+    %2:gpr = LDAbs 1002
+    %3:gpr = LDAbs 1003
+    RTS implicit %0, implicit %1, implicit %2, implicit %3
+...
