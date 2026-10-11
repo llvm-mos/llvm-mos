@@ -17,3 +17,18 @@
 
 #define GET_CALLING_CONV_IMPL
 #include "MOSGenCallingConv.inc"
+
+using namespace llvm;
+
+CCAssignFn *llvm::CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg) {
+  switch (CC) {
+  case CallingConv::PreserveMost:
+    return CC_MOS_PreserveMost;
+  default:
+    return IsVarArg ? CC_MOS_VarArgs : CC_MOS;
+  }
+}
+
+CCAssignFn *llvm::CCAssignFnForReturn(CallingConv::ID CC) {
+  return CC == CallingConv::PreserveMost ? CC_MOS_PreserveMost : CC_MOS;
+}
