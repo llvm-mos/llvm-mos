@@ -1786,6 +1786,13 @@ public:
     }
   }
 
+  /// Determines whether the given calling convention supports variadic
+  /// calls on this target. Unprototyped calls also use the variadic call
+  /// rules.
+  virtual bool supportsVariadicCall(CallingConv CC) const {
+    return clang::supportsVariadicCall(CC);
+  }
+
   enum CallingConvKind {
     CCK_Default,
     CCK_ClangABI4OrPS4,

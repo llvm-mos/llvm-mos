@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
 
@@ -50,8 +51,9 @@ struct MOSValueAssigner : CallLowering::ValueAssigner {
   BitVector Reserved;
 
   MOSValueAssigner(bool IsIncoming, MachineRegisterInfo &MRI,
-                   const MachineFunction &MF)
-      : CallLowering::ValueAssigner(IsIncoming, CC_MOS, CC_MOS_VarArgs) {
+                   const MachineFunction &MF, CCAssignFn *AssignFn,
+                   CCAssignFn *VarArgAssignFn)
+      : CallLowering::ValueAssigner(IsIncoming, AssignFn, VarArgAssignFn) {
     Reserved = MRI.getTargetRegisterInfo()->getReservedRegs(MF);
   }
 
@@ -306,7 +308,8 @@ bool MOSCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     // Invoke TableGen compatibility layer. This will generate copies and stores
     // from the return value virtual register to physical and stack locations.
     MOSOutgoingReturnHandler Handler(MIRBuilder, Return, MRI);
-    MOSValueAssigner Assigner(/*IsIncoming=*/false, MRI, MF);
+    auto RetCCFn = CCAssignFnForReturn(F.getCallingConv());
+    MOSValueAssigner Assigner(/*IsIncoming=*/false, MRI, MF, RetCCFn, RetCCFn);
     if (!determineAndHandleAssignments(Handler, Assigner, Args, MIRBuilder,
                                        F.getCallingConv(), F.isVarArg()))
       return false;
@@ -331,6 +334,13 @@ bool MOSCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (TFI.isISR(MF))
     MIRBuilder.buildInstr(MOS::CLD_Implied);
 
+  // Clang rejects this in Sema; diagnose IR from other frontends without
+  // crashing. Lowering continues so that further errors can be reported.
+  if (F.isVarArg() && F.getCallingConv() == CallingConv::PreserveMost)
+    F.getContext().diagnose(DiagnosticInfoUnsupported(
+        F, "preserve_most calling convention does not support variadic "
+           "functions"));
+
   SmallVector<ArgInfo> SplitArgs;
   unsigned Idx = 0;
   for (auto &Arg : F.args()) {
@@ -340,12 +350,14 @@ bool MOSCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     // Copy flag information over from the function to the argument descriptors.
     ArgInfo OrigArg{VRegs[Idx], Arg.getType(), Idx};
     setArgFlags(OrigArg, Idx + AttributeList::FirstArgIndex, DL, F);
-    splitToValueTypes(OrigArg, SplitArgs, DL);
+    splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv());
     ++Idx;
   }
 
   MOSIncomingArgsHandler Handler(MIRBuilder, MRI);
-  MOSValueAssigner Assigner(/*IsIncoming=*/true, MRI, MF);
+  MOSValueAssigner Assigner(/*IsIncoming=*/true, MRI, MF,
+                            CCAssignFnForCall(F.getCallingConv(), false),
+                            CCAssignFnForCall(F.getCallingConv(), true));
   // Invoke TableGen compatibility layer to create loads and copies from the
   // formal argument physical and stack locations to virtual registers.
   if (!determineAndHandleAssignments(Handler, Assigner, SplitArgs, MIRBuilder,
@@ -370,6 +382,14 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     report_fatal_error("Musttail calls not supported.");
 
   MachineFunction &MF = MIRBuilder.getMF();
+
+  if (Info.IsVarArg && Info.CallConv == CallingConv::PreserveMost)
+    MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported(
+        MF.getFunction(),
+        "preserve_most calling convention does not support variadic "
+        "functions",
+        Info.CB ? Info.CB->getDebugLoc() : DebugLoc()));
+
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const DataLayout &DL = MF.getDataLayout();
   const MOSSubtarget &STI = MF.getSubtarget<MOSSubtarget>();
@@ -420,16 +440,18 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   SmallVector<ArgInfo, 8> OutArgs;
   for (auto &OrigArg : Info.OrigArgs) {
-    splitToValueTypes(OrigArg, OutArgs, DL);
+    splitToValueTypes(OrigArg, OutArgs, DL, Info.CallConv);
   }
 
   SmallVector<ArgInfo, 8> InArgs;
   if (!Info.OrigRet.Ty->isVoidTy())
-    splitToValueTypes(Info.OrigRet, InArgs, DL);
+    splitToValueTypes(Info.OrigRet, InArgs, DL, Info.CallConv);
 
   // Copy arguments from virtual registers to their real physical locations.
   MOSOutgoingArgsHandler ArgsHandler(MIRBuilder, Call, MRI);
-  MOSValueAssigner ArgsAssigner(/*IsIncoming=*/false, MRI, MF);
+  MOSValueAssigner ArgsAssigner(/*IsIncoming=*/false, MRI, MF,
+                                CCAssignFnForCall(Info.CallConv, false),
+                                CCAssignFnForCall(Info.CallConv, true));
   if (!determineAndHandleAssignments(ArgsHandler, ArgsAssigner, OutArgs,
                                      MIRBuilder, Info.CallConv, Info.IsVarArg))
     return false;
@@ -442,7 +464,9 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (!Info.OrigRet.Ty->isVoidTy()) {
     // Copy the return value from its physical location into a virtual register.
     MOSIncomingReturnHandler RetHandler(MIRBuilder, MRI, Call);
-    MOSValueAssigner RetAssigner(/*IsIncoming=*/true, MRI, MF);
+    auto RetCCFn = CCAssignFnForReturn(Info.CallConv);
+    MOSValueAssigner RetAssigner(/*IsIncoming=*/true, MRI, MF, RetCCFn,
+                                 RetCCFn);
     if (!determineAndHandleAssignments(RetHandler, RetAssigner, InArgs,
                                        MIRBuilder, Info.CallConv,
                                        Info.IsVarArg))
@@ -461,9 +485,10 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
 void MOSCallLowering::splitToValueTypes(const ArgInfo &OrigArg,
                                         SmallVectorImpl<ArgInfo> &SplitArgs,
-                                        const DataLayout &DL) const {
+                                        const DataLayout &DL,
+                                        CallingConv::ID CC) const {
   size_t OldSize = SplitArgs.size();
-  CallLowering::splitToValueTypes(OrigArg, SplitArgs, DL, CallingConv::C);
+  CallLowering::splitToValueTypes(OrigArg, SplitArgs, DL, CC);
   auto NewArgs = make_range(SplitArgs.begin() + OldSize, SplitArgs.end());
 
   // Transfer is-pointer information from LLTs to argument flags.
