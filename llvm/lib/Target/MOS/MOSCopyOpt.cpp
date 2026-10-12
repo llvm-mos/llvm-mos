@@ -16,6 +16,7 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "MOSInstrCost.h"
+#include "MOSInstrInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 
@@ -177,7 +178,7 @@ static bool isClobbered(MachineInstr &MI, Register NewSrc,
 bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
   const MOSSubtarget &STI = MF.getSubtarget<MOSSubtarget>();
   const MOSRegisterInfo &TRI = *STI.getRegisterInfo();
-  const TargetInstrInfo &TII = *STI.getInstrInfo();
+  const MOSInstrInfo &TII = *STI.getInstrInfo();
   auto CostMode = MOSInstrCost::getModeFor(MF);
 
   LLVM_DEBUG(dbgs() << MF.getName() << "\n");
@@ -188,7 +189,6 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       Register Dst = MI.getOperand(0).getReg();
-      Register Src = MI.getOperand(1).getReg();
       SmallVector<MachineInstr *> NewSrcMIs;
       Register NewSrc = findForwardedCopy(MI, NewSrcMIs);
       if (!NewSrc)
@@ -198,8 +198,12 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
       LLVM_DEBUG(dbgs() << "Found candidate: " << printReg(NewSrc, &TRI)
                         << '\n');
 
-      if (TRI.copyCost(Dst, NewSrc, STI).value(CostMode) >
-          TRI.copyCost(Dst, Src, STI).value(CostMode)) {
+      if (TII.getInstrCost(
+                 MOS::COPY,
+                 {MI.getOperand(0), MachineOperand::CreateReg(NewSrc, false)})
+              .value(CostMode) >
+          TII.getInstrCost(MOS::COPY, {MI.getOperand(0), MI.getOperand(1)})
+              .value(CostMode)) {
         LLVM_DEBUG(dbgs() << "New copy is more expensive.\n");
         continue;
       }
@@ -227,11 +231,12 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       auto [Dst, Src] = MI.getFirst2Regs();
-      auto LdImmCostVal = MOSInstrCost(2, 2).value(CostMode);
+      auto LdImmCostVal = TII.getInstrCost(MOS::LDImm).value(CostMode);
 
       if (!MOS::Imag16RegClass.contains(Dst) && Dst != MOS::C &&
           Dst != MOS::V &&
-          TRI.copyCost(Dst, Src, STI).value(CostMode) <= LdImmCostVal)
+          TII.getInstrCost(MOS::COPY, {MI.getOperand(0), MI.getOperand(1)})
+                  .value(CostMode) <= LdImmCostVal)
         continue;
 
       SmallVector<MachineInstr *> LdImms;

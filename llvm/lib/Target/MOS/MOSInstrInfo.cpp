@@ -220,6 +220,283 @@ unsigned MOSInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   }
 }
 
+MOSInstrCost
+MOSInstrInfo::getInstrCost(unsigned Opcode,
+                           ArrayRef<MachineOperand> Operands) const {
+  // The scheduling model does not describe instruction cycle counts (yet) due
+  // to interference from generic LLVM codegen, so timing is estimated here. For
+  // logical instructions without a descriptor size, use the size of a
+  // corresponding encoded instruction.
+  unsigned EncodedOpcode;
+  unsigned Cycles;
+  switch (Opcode) {
+  default:
+    report_fatal_error(Twine("No instruction cost for ") + getName(Opcode));
+  case MOS::COPY: {
+    assert(Operands.size() >= 2 && Operands[0].isReg() && Operands[1].isReg() &&
+           Operands[0].getReg().isPhysical() &&
+           Operands[1].getReg().isPhysical() &&
+           "Copy cost requires assigned registers");
+    const MOSRegisterInfo &TRI = *STI->getRegisterInfo();
+    Register Dest = Operands[0].getReg();
+    Register Src = Operands[1].getReg();
+    if (Operands[0].getSubReg())
+      Dest = TRI.getSubReg(Dest, Operands[0].getSubReg());
+    if (Operands[1].getSubReg())
+      Src = TRI.getSubReg(Src, Operands[1].getSubReg());
+    return getCopyCost(Dest, Src);
+  }
+  case MOS::CmpBrZero:
+    assert(Operands.size() >= 4 && "Expected compare-and-branch operands");
+    return getInstrCost(MOS::CmpZero, Operands.slice(3, 1)) +
+           getInstrCost(MOS::BR, Operands.take_front(3));
+  case MOS::CmpZero: {
+    assert(!Operands.empty() && Operands[0].isReg() &&
+           Operands[0].getReg().isPhysical() && !Operands[0].getSubReg() &&
+           "Instruction cost requires an assigned source");
+    Register Src = Operands[0].getReg();
+    // Estimate halfway between reusing flags for free and the most expensive
+    // lowering: compare against zero for a hardware register, or INC/DEC for
+    // an imaginary register. INC and DEC have the same cost.
+    if (MOS::Imag8RegClass.contains(Src))
+      return getInstrCost(MOS::INC, {MachineOperand::CreateReg(Src, true),
+                                     MachineOperand::CreateReg(Src, false)}) *
+             2 / 2;
+    assert(MOS::GPRRegClass.contains(Src) && "Unexpected compare source");
+    return getInstrCost(MOS::CMPImm) / 2;
+  }
+  case MOS::INC:
+  case MOS::ASL: {
+    assert(!Operands.empty() && Operands[0].isReg() &&
+           Operands[0].getReg().isPhysical() && !Operands[0].getSubReg() &&
+           "Instruction cost requires an assigned destination");
+    Register Dest = Operands[0].getReg();
+    if (MOS::Imag8RegClass.contains(Dest)) {
+      EncodedOpcode =
+          Opcode == MOS::INC ? MOS::INC_ZeroPage : MOS::ASL_ZeroPage;
+      Cycles = STI->has65CE02() || STI->hasSPC700() ? 4
+               : STI->hasHUC6280()                  ? 6
+                                                    : 5;
+    } else {
+      assert((Opcode == MOS::INC ? MOS::GPRRegClass.contains(Dest)
+                                 : Dest == MOS::A) &&
+             "Unexpected instruction destination");
+      EncodedOpcode = Opcode == MOS::ASL ? MOS::ASL_Accumulator
+                      : Dest == MOS::X   ? MOS::INX_Implied
+                      : Dest == MOS::Y   ? MOS::INY_Implied
+                                         : MOS::INC_Accumulator;
+      Cycles = STI->has65CE02() ? 1 : 2;
+    }
+    break;
+  }
+  case MOS::TA:
+    EncodedOpcode = MOS::TAX_Implied;
+    Cycles = STI->has65CE02() ? 1 : 2;
+    break;
+  case MOS::T_A:
+    EncodedOpcode = MOS::TXA_Implied;
+    Cycles = STI->has65CE02() ? 1 : 2;
+    break;
+  case MOS::TX:
+    EncodedOpcode = MOS::TXY_Implied;
+    Cycles = STI->has65CE02() ? 1 : 2;
+    break;
+  case MOS::PH:
+    EncodedOpcode = MOS::PHA_Implied;
+    Cycles = STI->hasSPC700() ? 4 : 3;
+    break;
+  case MOS::PL:
+    EncodedOpcode = MOS::PLA_Implied;
+    Cycles = STI->has65CE02() ? 3 : 4;
+    break;
+  case MOS::CLV:
+    EncodedOpcode = MOS::CLV_Implied;
+    Cycles = STI->has65CE02() ? 1 : 2;
+    break;
+  case MOS::JMP:
+    EncodedOpcode = MOS::JMP_Absolute;
+    Cycles = 3;
+    break;
+  case MOS::BR:
+    EncodedOpcode = MOS::BNE_Relative;
+    // With independent, equiprobable branch outcomes and page crossings, the
+    // 6502 takes (2 + 2 + 3 + 4) / 4 = 2.75 cycles on average.
+    Cycles = 3;
+    break;
+  case MOS::LDImm:
+    EncodedOpcode = MOS::LDA_Immediate;
+    Cycles = 2;
+    break;
+  case MOS::ORAImm:
+    EncodedOpcode = MOS::ORA_Immediate;
+    Cycles = 2;
+    break;
+  case MOS::CMPImm:
+    EncodedOpcode = MOS::CMP_Immediate;
+    Cycles = 2;
+    break;
+  case MOS::SWAP:
+    EncodedOpcode = MOS::SXY_Implied;
+    Cycles = 3;
+    break;
+  case MOS::LDImag8:
+  case MOS::STImag8:
+    EncodedOpcode =
+        Opcode == MOS::LDImag8 ? MOS::LDA_ZeroPage : MOS::STA_ZeroPage;
+    Cycles = STI->hasHUC6280() || STI->hasSPC700() ? 4 : 3;
+    break;
+  case MOS::MOVImag8:
+    EncodedOpcode = MOS::SPC700_MOV_ZeroPageZeroPage;
+    Cycles = 5;
+    break;
+  case MOS::BITImmHUC6280:
+    EncodedOpcode = MOS::BIT_Immediate;
+    Cycles = 2;
+    break;
+  case MOS::BITAbs:
+    EncodedOpcode = MOS::BIT_Absolute;
+    Cycles = STI->has65CE02() ? 5 : 4;
+    break;
+  }
+  unsigned Bytes = get(Opcode).getSize();
+  if (!Bytes)
+    Bytes = get(EncodedOpcode).getSize();
+  assert(Bytes && "Expected an encoded instruction size");
+  return MOSInstrCost(Bytes, Cycles);
+}
+
+MOSInstrCost MOSInstrInfo::getCopyCost(Register DestReg,
+                                       Register SrcReg) const {
+  if (DestReg == SrcReg)
+    return MOSInstrCost();
+
+  const auto &AreClasses = [&](const TargetRegisterClass &Dest,
+                               const TargetRegisterClass &Src) {
+    return Dest.contains(DestReg) && Src.contains(SrcReg);
+  };
+
+  if (AreClasses(MOS::GPRRegClass, MOS::GPRRegClass)) {
+    if (MOS::AcRegClass.contains(SrcReg)) {
+      assert(MOS::XYRegClass.contains(DestReg));
+      // TAX
+      return getInstrCost(MOS::TA);
+    }
+    if (MOS::AcRegClass.contains(DestReg)) {
+      // TXA
+      return getInstrCost(MOS::T_A);
+    }
+
+    // X<->Y copies
+    if (STI->hasW65816Or65EL02()) {
+      // TXY, TYX
+      return getInstrCost(MOS::TX);
+    }
+    MOSInstrCost XYCopyCost;
+    if (STI->hasGPRStackRegs()) {
+      // PHX/PLY, PHY/PLX
+      XYCopyCost = getInstrCost(MOS::PH) + getInstrCost(MOS::PL);
+    } else {
+      // Assume A needs saving and restoring half the time.
+      XYCopyCost = (getInstrCost(MOS::PH) + getInstrCost(MOS::PL)) / 2 +
+                   getCopyCost(DestReg, MOS::A) + getCopyCost(MOS::A, SrcReg);
+    }
+    if (STI->hasHUC6280()) {
+      // SXY can be used, but only if the source register is killed. As such,
+      // average the cost.
+      XYCopyCost = (XYCopyCost + getInstrCost(MOS::SWAP)) / 2;
+    }
+    return XYCopyCost;
+  }
+  if (AreClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
+    return getInstrCost(MOS::STImag8);
+  }
+  if (AreClasses(MOS::GPRRegClass, MOS::Imag8RegClass)) {
+    return getInstrCost(MOS::LDImag8);
+  }
+  if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
+    // MOV dp, dp
+    if (STI->hasSPC700())
+      return getInstrCost(MOS::MOVImag8);
+    // Assume A needs saving and restoring half the time.
+    return (getInstrCost(MOS::PH) + getInstrCost(MOS::PL)) / 2 +
+           getCopyCost(DestReg, MOS::A) + getCopyCost(MOS::A, SrcReg);
+  }
+  if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
+    const MOSRegisterInfo &TRI = *STI->getRegisterInfo();
+    return getCopyCost(TRI.getSubReg(DestReg, MOS::sublo),
+                       TRI.getSubReg(SrcReg, MOS::sublo)) +
+           getCopyCost(TRI.getSubReg(DestReg, MOS::subhi),
+                       TRI.getSubReg(SrcReg, MOS::subhi));
+  }
+  if (AreClasses(MOS::Anyi1RegClass, MOS::Anyi1RegClass)) {
+    const MOSRegisterInfo &TRI = *STI->getRegisterInfo();
+    Register SrcReg8 =
+        TRI.getMatchingSuperReg(SrcReg, MOS::sublsb, &MOS::Anyi8RegClass);
+    Register DestReg8 =
+        TRI.getMatchingSuperReg(DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
+    // BIT imm (HUC6280), BIT abs
+    auto BitCost =
+        getInstrCost(STI->hasHUC6280() ? MOS::BITImmHUC6280 : MOS::BITAbs);
+
+    if (SrcReg8) {
+      SrcReg = SrcReg8;
+      if (DestReg8) {
+        DestReg = DestReg8;
+        return getCopyCost(DestReg, SrcReg);
+      }
+      if (DestReg == MOS::C) {
+        // Cmp #1
+        MOSInstrCost Cost = getInstrCost(MOS::CMPImm);
+        if (!MOS::GPRRegClass.contains(SrcReg))
+          Cost += getCopyCost(MOS::A, SrcReg);
+        return Cost;
+      }
+
+      assert(DestReg == MOS::V);
+      if (STI->hasSPC700()) {
+        // PHP, PLA, ORA #imm, PHA, PLP; may PHA/PLA
+        return ((getInstrCost(MOS::PH) + getInstrCost(MOS::PL)) * 5 / 2) +
+               getInstrCost(MOS::ORAImm);
+      }
+
+      const TargetRegisterClass &StackRegClass =
+          STI->hasGPRStackRegs() ? MOS::GPRRegClass : MOS::AcRegClass;
+
+      if (StackRegClass.contains(SrcReg)) {
+        // PHA; PLA; BNE; BIT setv; JMP; CLV
+        return getInstrCost(MOS::PH) + getInstrCost(MOS::PL) +
+               getInstrCost(MOS::BR) + BitCost + getInstrCost(MOS::JMP) +
+               getInstrCost(MOS::CLV);
+      }
+      // [PHA]; COPY; BNE; BIT setv; JMP; CLV; [PLA]
+      return getCopyCost(MOS::A, SrcReg) + getInstrCost(MOS::BR) + BitCost +
+             getInstrCost(MOS::JMP) + getInstrCost(MOS::CLV);
+    }
+    if (DestReg8) {
+      DestReg = DestReg8;
+
+      Register Tmp = DestReg;
+      if (!MOS::GPRRegClass.contains(Tmp))
+        Tmp = MOS::A;
+      // LDImm; BNE; LDImm;
+      MOSInstrCost Cost = getInstrCost(MOS::LDImm) * 2 + getInstrCost(MOS::BR);
+      if (Tmp != DestReg)
+        Cost += getCopyCost(DestReg, Tmp);
+      return Cost;
+    }
+    if (STI->hasSPC700()) {
+      // PHA, PHP, PLA, ORA #imm, PHA, PLP, PLA, BR, CLV
+      return (getInstrCost(MOS::PH) + getInstrCost(MOS::PL)) * 3 +
+             getInstrCost(MOS::ORAImm) + getInstrCost(MOS::BR) +
+             getInstrCost(MOS::CLV);
+    }
+    // BIT setv; BR; CLV;
+    return BitCost + getInstrCost(MOS::BR) + getInstrCost(MOS::CLV);
+  }
+
+  llvm_unreachable("Unexpected physical register copy.");
+}
+
 // 6502 instructions aren't as regular as most commutable instructions, so this
 // routine determines the commutable operands manually.
 bool MOSInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
@@ -821,16 +1098,18 @@ const TargetRegisterClass *MOSInstrInfo::canFoldCopy(const MachineInstr &MI,
 
 void MOSInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-    bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+    bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   loadStoreRegStackSlot(MBB, MI, SrcReg, isKill, FrameIndex, RC, Flags,
                         /*IsLoad=*/false);
 }
 
-void MOSInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-    int FrameIndex, const TargetRegisterClass *RC, Register VReg,
-    unsigned /*SubReg*/, MachineInstr::MIFlag Flags) const {
+void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MI,
+                                        Register DestReg, int FrameIndex,
+                                        const TargetRegisterClass *RC,
+                                        Register VReg, unsigned /*SubReg*/,
+                                        MachineInstr::MIFlag Flags) const {
   loadStoreRegStackSlot(MBB, MI, DestReg, false, FrameIndex, RC, Flags,
                         /*IsLoad=*/true);
 }
@@ -981,8 +1260,8 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   });
 }
 
-const TargetRegisterClass *
-MOSInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum) const {
+const TargetRegisterClass *MOSInstrInfo::getRegClass(const MCInstrDesc &MCID,
+                                                     unsigned OpNum) const {
   auto *RC = TargetInstrInfo::getRegClass(MCID, OpNum);
 
   // On SPC700, LDImm can be used for imaginary registers.

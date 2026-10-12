@@ -13,8 +13,6 @@
 #ifndef LLVM_LIB_TARGET_MOS_MOSREGISTERINFO_H
 #define LLVM_LIB_TARGET_MOS_MOSREGISTERINFO_H
 
-#include "MOSInstrCost.h"
-
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -23,8 +21,6 @@
 #include "MOSGenRegisterInfo.inc"
 
 namespace llvm {
-
-class MOSSubtarget;
 
 class MOSRegisterInfo : public MOSGenRegisterInfo {
   std::unique_ptr<std::string[]> Imag8SymbolNames;
@@ -94,9 +90,6 @@ public:
   const char *getImag8SymbolName(Register Reg) const {
     return Imag8SymbolNames[Reg].c_str();
   }
-
-  MOSInstrCost copyCost(Register DestReg, Register SrcReg,
-                        const MOSSubtarget &STI) const;
 
 private:
   void reserveAllSubregs(BitVector *Reserved, Register Reg) const;
