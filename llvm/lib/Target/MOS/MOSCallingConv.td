@@ -92,6 +92,21 @@ def CC_MOS_VarArgs : CallingConv<[
   // All values are passed directly on the stack.
   CCAssignToStack<0, 1>,
 ]>;
+
+// Calling convention for preserve_most functions. Such functions preserve
+// every imaginary register except RS8 (see MOS_PreserveMost_CSR below).
+//
+// Values are passed and returned only in the hard registers A, X, and Y, and
+// then on the stack and never in imaginary registers.
+def CC_MOS_PreserveMost : CallingConv<[
+  CCIfType<[i1], CCPromoteToType<i8>>,
+
+  // 8-bit values are assigned to A, then X, then Y.
+  CCIfType<[i8], CCAssignToReg<[A, X, Y]>>,
+
+  // All other values are passed directly on the stack.
+  CCAssignToStack<0, 1>,
+]>;
 }
 
 // RS10-RS15 are callee-saved. These are represented implicitly by their
@@ -103,3 +118,12 @@ def MOS_CSR : CalleeSavedRegs<(sequence "RC%u", 20, 31)>;
 // interrupt).
 def MOS_Interrupt_CSR :
   CalleeSavedRegs<(add A, X, Y, (sequence "RC%u", 2, 31))>;
+
+// PreserveMost functions save every allocatable imaginary register they
+// clobber. A, X, Y, and the flags remain caller-saved. RC16 and RC17 (RS8) are
+// also caller-saved: RS8 is reserved for the register scavenger, which may
+// clobber it after prologue and epilogue insertion. RS0 (the soft stack
+// pointer) is reserved and restored as in any other function, and RC32 and up
+// are never allocated, so neither appears here.
+def MOS_PreserveMost_CSR :
+  CalleeSavedRegs<(add (sequence "RC%u", 2, 15), (sequence "RC%u", 18, 31))>;

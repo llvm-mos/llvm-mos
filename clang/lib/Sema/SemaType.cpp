@@ -3800,7 +3800,8 @@ static CallingConv getCCForDeclaratorChunk(
       CallingConv CC;
       if (!S.CheckCallingConvAttr(AL, CC, /*FunctionDecl=*/nullptr,
                                   S.CUDA().IdentifyTarget(D.getAttributes())) &&
-          (!FTI.isVariadic || supportsVariadicCall(CC))) {
+          (!FTI.isVariadic ||
+           S.Context.getTargetInfo().supportsVariadicCall(CC))) {
         return CC;
       }
       break;
@@ -8424,7 +8425,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   // prototype that way.  And apparently we also "delay" warning about
   // unprototyped function types in general, despite not necessarily having
   // much ability to diagnose it later.
-  if (!supportsVariadicCall(CC)) {
+  if (!S.Context.getTargetInfo().supportsVariadicCall(CC)) {
     const FunctionProtoType *FnP = dyn_cast<FunctionProtoType>(fn);
     if (FnP && FnP->isVariadic()) {
       // stdcall and fastcall are ignored with a warning for GCC and MS

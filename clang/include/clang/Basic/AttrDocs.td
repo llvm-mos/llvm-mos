@@ -7004,6 +7004,14 @@ apply for values returned in callee-saved registers.
   (XMMs/YMMs) are not preserved and need to be saved by the caller.
 - On AArch64 the callee preserve all general purpose registers, except X0-X8 and
   X16-X18.
+- On MOS the callee preserves the imaginary registers ``__rc2``-``__rc15`` and
+  ``__rc18``-``__rc31``. The caller must assume that the following are
+  clobbered:
+
+  - the hard registers ``A``, ``X``, and ``Y``;
+  - the processor flags ``C``, ``N``, ``V``, and ``Z``;
+  - ``__rc16`` and ``__rc17`` (``__rs8``), which are reserved as scratch
+    space for the compiler's register scavenger.
 
 The idea behind this convention is to support calls to runtime functions
 that have a hot path and a cold path. The hot path is usually a small piece
