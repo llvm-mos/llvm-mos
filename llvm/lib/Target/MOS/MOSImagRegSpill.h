@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_MOS_MOSIMAGREGALLOC_H
-#define LLVM_LIB_TARGET_MOS_MOSIMAGREGALLOC_H
+#ifndef LLVM_LIB_TARGET_MOS_MOSIMAGREGSPILL_H
+#define LLVM_LIB_TARGET_MOS_MOSIMAGREGSPILL_H
 
 namespace llvm {
 class MachineFunctionPass;
 
-MachineFunctionPass *createMOSImagRegAllocPass();
+MachineFunctionPass *createMOSImagRegSpillPass();
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_MOS_MOSIMAGREGALLOC_H
+#endif // LLVM_LIB_TARGET_MOS_MOSIMAGREGSPILL_H

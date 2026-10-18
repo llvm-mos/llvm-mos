@@ -209,6 +209,7 @@ let isPressureFineGrained = true in {
   def GPR_LSB : MOSReg1Class<(add XLSB, YLSB, ALSB)>;
   def CV_GPR_LSB : MOSReg1Class<(add Cc, GPR_LSB, Vc)>;
 }
+def ImagLSB : MOSReg1Class<(sequence "RC%uLSB", 0, !add(MaxImag8Regs, -1))>;
 def Imag8 : MOSReg8Class<(sequence "RC%u", 0, !add(MaxImag8Regs, -1))>;
 def Imag16 : MOSReg16Class<(sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;
 
@@ -234,7 +235,7 @@ def MOSAsmParamRegClass : MOSReg8Class<(add X, Y, S)>;
 
 // Sum types of all available storage locations for a size.
 
-def Anyi1 : MOSReg1Class<(add (sequence "RC%uLSB", 0, !add(MaxImag8Regs, -1)), CV_GPR_LSB)>;
+def Anyi1 : MOSReg1Class<(add ImagLSB, CV_GPR_LSB)>;
 def Anyi8 : MOSReg8Class<(add Imag8, GPR)>;
 
 def Fake : MOSReg<0x300, "Fake">;

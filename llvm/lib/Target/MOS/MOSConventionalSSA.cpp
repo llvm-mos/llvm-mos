@@ -17,9 +17,9 @@
 ///
 /// Copies for all successors share one outgoing PCOPY in each predecessor.
 /// This also handles critical edges, including indirect branches, without
-/// changing the CFG. MOSImagRegAlloc accounts for the interference of these
-/// ranges across the whole function; MOSRegAlloc later eliminates the PHIs
-/// and lowers the parallel copies.
+/// changing the CFG. MOSImagRegSpill and MOSImagRegAssign account for the
+/// interference of these ranges across the whole function; MOSRegAlloc later
+/// eliminates the PHIs and lowers the parallel copies.
 ///
 /// This pass further normalizes tied uses and defs to allow us to treat a tied
 /// def as a mere continuation of its use's live range. To do so, this pass

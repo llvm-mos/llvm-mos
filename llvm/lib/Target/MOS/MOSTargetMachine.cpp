@@ -38,7 +38,8 @@
 #include "MOSCombiner.h"
 #include "MOSConventionalSSA.h"
 #include "MOSCopyOpt.h"
-#include "MOSImagRegAlloc.h"
+#include "MOSImagRegAssign.h"
+#include "MOSImagRegSpill.h"
 #include "MOSIndexIV.h"
 #include "MOSInsertCopies.h"
 #include "MOSInternalize.h"
@@ -71,7 +72,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSTarget() {
   initializeMOSCombinerPass(PR);
   initializeMOSConventionalSSAPass(PR);
   initializeMOSCopyOptPass(PR);
-  initializeMOSImagRegAllocPass(PR);
+  initializeMOSImagRegAssignPass(PR);
+  initializeMOSImagRegSpillPass(PR);
   initializeMOSInsertCopiesPass(PR);
   initializeMOSInternalizePass(PR);
   initializeMOSLateOptimizationPass(PR);
@@ -348,7 +350,8 @@ void MOSPassConfig::addExperimentalRegAlloc() {
   addPass(&UnreachableMachineBlockElimID);
 
   addPass(createMOSConventionalSSAPass());
-  addPass(createMOSImagRegAllocPass());
+  addPass(createMOSImagRegSpillPass());
+  addPass(createMOSImagRegAssignPass());
   addPass(createMOSRegAllocPass());
 
   addPass(&StackSlotColoringID);
