@@ -572,6 +572,7 @@ bool referencedByShiftRotate(Register Reg, const MachineRegisterInfo &MRI) {
       break;
     case MOS::ASL:
     case MOS::LSR:
+    case MOS::ASR:
     case MOS::ROL:
     case MOS::ROR:
       return true;
@@ -625,6 +626,7 @@ bool isRmwPattern(Register Reg, const MachineRegisterInfo &MRI) {
       break;
     case MOS::ASL:
     case MOS::LSR:
+    case MOS::ASR:
     case MOS::ROL:
     case MOS::ROR:
     case MOS::IncMB:
@@ -781,6 +783,7 @@ bool MOSRegisterInfo::getRegAllocationHints(
     }
     case MOS::ASL:
     case MOS::LSR:
+    case MOS::ASR:
     case MOS::ROR:
     case MOS::ROL:
       if (is_contained(Order, MOS::A))
