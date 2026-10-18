@@ -3709,7 +3709,8 @@ def MOSSystemLibrary
           __udivmodqi4, __udivmodhi4, __udivmodsi4, __udivmoddi4, 
           __divmodqi4, __divmodhi4, __divmodsi4, __divmoddi4, 
           __memset,
-          abort)>;
+          abort,
+          __stack_chk_fail, __stack_chk_guard)>;
 
 //===----------------------------------------------------------------------===//
 // Legacy Default Runtime Libcalls

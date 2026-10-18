@@ -44,6 +44,11 @@ MOSFrameLowering::MOSFrameLowering()
                           /*LocalAreaOffset=*/0) {}
 
 bool MOSFrameLowering::usesStaticStack(const MachineFunction &MF) const {
+  // PEI wants a protector object off the default stack to carry a nonzero
+  // offset, but the first object on the static stack sits at offset 0. Keep
+  // protected functions on the soft stack instead.
+  if (MF.getFrameInfo().hasStackProtectorIndex())
+    return false;
   return MF.getSubtarget<MOSSubtarget>().staticStack() &&
          !MF.getFunction().hasOptNone() &&
          MF.getFunction().hasFnAttribute("nonreentrant");
