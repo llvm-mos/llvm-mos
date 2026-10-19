@@ -75,6 +75,16 @@ private:
                 const DebugLoc &DL, const MCCFIInstruction &CFIInst,
                 MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
 
+  // Emit the hardware-stack CFI directives (CFA, PC, S expressions, plus P
+  // for ISRs) that describe the state after `HardStackCSRCount` CSR pushes
+  // on top of a JSR-entry (`IsISR=false`) or interrupt-entry (`IsISR=true`)
+  // stack layout. Called from spill/restore at each push/pull and from
+  // prologue/epilogue at the hardware/soft-stack transitions.
+  void emitHardwareStackCFI(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MBBI,
+                            const DebugLoc &DL, unsigned HardStackCSRCount,
+                            bool IsISR, MachineInstr::MIFlag Flag) const;
+
   void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MBBI,
                                  const DebugLoc &DL, bool IsPrologue) const;
