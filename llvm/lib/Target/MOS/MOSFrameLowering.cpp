@@ -14,12 +14,13 @@
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
-#include "MOSInstrBuilder.h"
 #include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -32,8 +33,13 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/ErrorHandling.h"
+
+#include "MOSCFIExprHelpers.h"
 
 #define DEBUG_TYPE "mos-framelowering"
 
@@ -108,6 +114,10 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
       STI.hasGPRStackRegs() ? MOS::GPRRegClass : MOS::AcRegClass;
   const auto &FuncInfo = MBB.getParent()->getInfo<MOSFunctionInfo>();
 
+  bool IsISR = isISR(*MBB.getParent());
+  unsigned HardStackCSRCount = 0;
+  DebugLoc DL;
+
   for (const CalleeSavedInfo &CI : CSI) {
     Register Reg = CI.getReg();
     if (FuncInfo->CSRZPOffsets.count(Reg))
@@ -116,6 +126,12 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
       if (!StackRegClass.contains(Reg))
         Reg = Builder.buildCopy(&StackRegClass, Reg).getReg(0);
       Builder.buildInstr(MOS::PH, {}, {Reg});
+      // Each PHA decrements S by one, invalidating the hardware-stack CFI
+      // offsets. Re-emit CFA/PC/S expressions (plus P for ISRs) describing
+      // the new state so mid-prologue unwinding stays correct.
+      ++HardStackCSRCount;
+      emitHardwareStackCFI(MBB, Builder.getInsertPt(), DL, HardStackCSRCount,
+                           IsISR, MachineInstr::FrameSetup);
     } else {
       assert(!CI.isSpilledToReg());
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
@@ -162,6 +178,17 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
 
   MachineInstrSpan MIS(MI, &MBB);
 
+  // Count hardware-stack CSR pulls so we can emit decrementing CFI per PLA.
+  unsigned RemainingHardCSRs = 0;
+  for (const CalleeSavedInfo &CI : CSI) {
+    if (FuncInfo->CSRZPOffsets.count(CI.getReg()))
+      continue;
+    if (CI.isTargetSpilled())
+      ++RemainingHardCSRs;
+  }
+  bool IsISR = isISR(*MBB.getParent());
+  DebugLoc DL;
+
   for (const CalleeSavedInfo &CI : reverse(CSI)) {
     Register Reg = CI.getReg();
     if (FuncInfo->CSRZPOffsets.count(Reg))
@@ -170,6 +197,14 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
       if (!StackRegClass.contains(Reg))
         Reg = Builder.getMRI()->createVirtualRegister(&StackRegClass);
       Builder.buildInstr(MOS::PL, {Reg}, {});
+      // Each PLA increments S, so re-emit hardware-stack CFI describing the
+      // new (reduced) count, immediately after the PLA. After the final PLA,
+      // RemainingHardCSRs == 0 and the directives land on either CIE values
+      // (non-ISR) or ISR-entry values (ISR) — correct for the RTS/RTI that
+      // follows.
+      --RemainingHardCSRs;
+      emitHardwareStackCFI(MBB, Builder.getInsertPt(), DL, RemainingHardCSRs,
+                           IsISR, MachineInstr::FrameDestroy);
       if (Reg != CI.getReg())
         Builder.buildCopy(Register(CI.getReg()), Reg);
     } else {
@@ -260,6 +295,45 @@ void MOSFrameLowering::processFunctionBeforeFrameFinalized(
   }
 }
 
+bool MOSFrameLowering::replaceFrameIndexDebugOperand(MachineFunction &MF,
+                                                     MachineInstr &MI,
+                                                     unsigned OpIdx) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  MachineOperand &Op = MI.getOperand(OpIdx);
+  int FI = Op.getIndex();
+  int64_t Offset = MFI.getObjectOffset(FI);
+  unsigned Flags = Op.getTargetFlags();
+
+  switch (MFI.getStackID(FI)) {
+  default:
+    return false;
+  case TargetStackID::MosZeroPage: {
+    const auto *FuncInfo = MF.getInfo<MOSFunctionInfo>();
+    assert(FuncInfo->ZeroPageStackValue &&
+           "ZeroPageStackValue should be set after MOSZeroPageAlloc");
+    Op.ChangeToGA(FuncInfo->ZeroPageStackValue, Offset, Flags);
+    break;
+  }
+  case TargetStackID::MosStatic:
+    // MOSStaticStackAlloc rewrites TI_STATIC_STACK into a GlobalAddress once
+    // the per-function static-stack alias exists.
+    Op.ChangeToTargetIndex(MOS::TI_STATIC_STACK, Offset, Flags);
+    break;
+  }
+
+  // Clear the indirect marker and absorb it into the DIExpression so that
+  // DwarfExpression emits a Memory location (standalone DW_OP_addr) rather
+  // than an Implicit value expression (DW_OP_addr + DW_OP_stack_value).
+  // (isIndirectDebugValue() would be false here: it requires a register.)
+  if (MI.isDebugOffsetImm()) {
+    MI.getDebugOffset().ChangeToRegister(/*Reg=*/0, /*isDef=*/false);
+    SmallVector<uint64_t, 2> Ops = {dwarf::DW_OP_deref};
+    MI.getDebugExpressionOp().setMetadata(
+        DIExpression::prependOpcodes(MI.getDebugExpression(), Ops));
+  }
+  return true;
+}
+
 MachineBasicBlock::iterator MOSFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MI) const {
@@ -281,9 +355,18 @@ MachineBasicBlock::iterator MOSFrameLowering::eliminateCallFramePseudoInstr(
 
 void MOSFrameLowering::emitPrologue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo &TRI = *MF.getRegInfo().getTargetRegisterInfo();
   MachineIRBuilder Builder(MBB, MBB.begin());
+  DebugLoc DL;
+
+  // ISR entry: the hardware pushed P + PC (3 bytes) instead of JSR's 2.
+  // Describe that layout from the very first instruction, ahead of the CLD.
+  // Per-push CFI in spillCalleeSavedRegisters then updates it as each PHA
+  // fires.
+  if (isISR(MF))
+    emitHardwareStackCFI(MBB, MBB.begin(), DL,
+                         /*HardStackCSRCount=*/0, /*IsISR=*/true,
+                         MachineInstr::FrameSetup);
 
   // Stack pointer adjustments need to occur after the CLD in an interrupt
   // handler or the sum might be incorrect.
@@ -291,42 +374,57 @@ void MOSFrameLowering::emitPrologue(MachineFunction &MF,
     if (MI.getOpcode() == MOS::CLD_Implied)
       Builder.setInsertPt(MBB, std::next(MI.getIterator()));
 
-  int64_t StackSize = MFI.getStackSize();
-  // If the interrupted routine is in the middle of decrementing its stack
-  // pointer, this routine may observe a stack pointer up to 255 bytes higher
-  // than its atomic value.  Accordingly, summarily decrement the SP by a page.
-  // Interrupts are rarer than the the routines they interrupt, so they pay the
-  // cost of dealing with this atomicity problem.
-  if (isISR(MF))
-    StackSize += 256;
-
-  if (StackSize)
+  int64_t StackSize = softStackAdjustment(MF);
+  if (StackSize) {
     offsetSP(Builder, -StackSize);
+    // The caller's RS0 is now RS0 + StackSize. Describe it immediately, ahead
+    // of the callee-saved pushes.
+    emitSoftStackCFI(MBB, Builder.getInsertPt(), DL, MOS::RS0,
+                     /*DescribeRS0=*/true, /*DescribeCSRs=*/false,
+                     MachineInstr::FrameSetup);
+  }
 
-  if (!hasFP(MF))
-    return;
-
-  // Skip the callee-saved push instructions.
+  // Skip the callee-saved push instructions (and the per-push CFI already
+  // emitted by spillCalleeSavedRegisters).
   auto MBBI = std::find_if_not(Builder.getInsertPt(), MBB.end(),
                                [](const MachineInstr &MI) {
                                  return MI.getFlag(MachineInstr::FrameSetup);
                                });
 
-  // Set the frame pointer to the stack pointer.
-  Builder.setInsertPt(MBB, MBBI);
-  Builder.setDebugLoc({});
-  Builder.buildCopy(TRI.getFrameRegister(MF), Register(MOS::RS0));
+  // The CFA stays hardware-stack based for the whole function; S doesn't move
+  // through the body. The soft-stack frame is described relative to RS0, or
+  // to the frame pointer once it is set, since RS0 may then move in the body.
+  Register Base = MOS::RS0;
+  if (hasFP(MF)) {
+    // Set the frame pointer to the stack pointer.
+    Builder.setInsertPt(MBB, MBBI);
+    Builder.setDebugLoc({});
+    Base = TRI.getFrameRegister(MF);
+    Builder.buildCopy(Base, Register(MOS::RS0));
+    MBBI = Builder.getInsertPt();
+  }
+
+  // The callee-saved registers keep the caller's values until the body (or the
+  // frame pointer copy) changes them, so their save slots are described here.
+  // The caller's RS0 needs restating only if the base changed.
+  if (StackSize || hasFP(MF))
+    emitSoftStackCFI(MBB, MBBI, DL, Base, /*DescribeRS0=*/hasFP(MF),
+                     /*DescribeCSRs=*/true, MachineInstr::FrameSetup);
 }
 
 void MOSFrameLowering::emitEpilogue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo &TRI = *MF.getRegInfo().getTargetRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   MachineIRBuilder Builder(MBB, MBB.getFirstTerminator());
+  DebugLoc DL;
+
+  // The hardware-stack CFI needs nothing here: the CFA is hardware-stack based
+  // throughout, and restoreCalleeSavedRegisters re-describes it after each PLA.
 
   // Restore the stack pointer from the frame pointer.
   if (hasFP(MF)) {
-    // Skip the callee-saved push instructions.
+    // Skip the callee-saved pull instructions.
     auto MBBI = find_if_not(mbb_reverse(MBB.begin(), Builder.getInsertPt()),
                             [](const MachineInstr &MI) {
                               return MI.getFlag(MachineInstr::FrameDestroy);
@@ -335,17 +433,31 @@ void MOSFrameLowering::emitEpilogue(MachineFunction &MF,
 
     // Set the stack pointer to the frame pointer.
     Builder.buildCopy(MOS::RS0, TRI.getFrameRegister(MF));
+
+    // The callee-saved restores that follow may restore the frame pointer, so
+    // describe the frame relative to RS0 again.
+    emitSoftStackCFI(MBB, Builder.getInsertPt(), DL, MOS::RS0,
+                     /*DescribeRS0=*/true, /*DescribeCSRs=*/true,
+                     MachineInstr::FrameDestroy);
     Builder.setInsertPt(MBB, MBB.getFirstTerminator());
   }
 
-  int64_t StackSize = MFI.getStackSize();
-
-  if (isISR(MF))
-    StackSize += 256;
+  // The soft-stack callee-saved registers have been restored; their save slot
+  // rules stop being valid once RS0 moves.
+  emitSoftStackCSRRestoreCFI(MBB, Builder.getInsertPt(), DL,
+                             MachineInstr::FrameDestroy);
 
   // If soft stack is used, increase the soft stack pointer SP.
+  int64_t StackSize = softStackAdjustment(MF);
   if (StackSize)
     offsetSP(Builder, StackSize);
+
+  // RS0 holds the caller's value again.
+  if (StackSize || hasFP(MF))
+    buildCFI(MBB, Builder.getInsertPt(), DL,
+             MCCFIInstruction::createRestore(
+                 nullptr, MRI->getDwarfRegNum(MOS::RS0, true)),
+             MachineInstr::FrameDestroy);
 }
 
 uint64_t MOSFrameLowering::staticSize(const MachineFrameInfo &MFI) const {
@@ -399,6 +511,19 @@ void MOSFrameLowering::offsetSP(MachineIRBuilder &Builder,
   Builder.buildCopy(MOS::RC1, A);
 }
 
+int64_t
+MOSFrameLowering::softStackAdjustment(const MachineFunction &MF) const {
+  int64_t StackSize = MF.getFrameInfo().getStackSize();
+  // If the interrupted routine is in the middle of decrementing its stack
+  // pointer, this routine may observe a stack pointer up to 255 bytes higher
+  // than its atomic value.  Accordingly, summarily decrement the SP by a page.
+  // Interrupts are rarer than the the routines they interrupt, so they pay the
+  // cost of dealing with this atomicity problem.
+  if (isISR(MF))
+    StackSize += 256;
+  return StackSize;
+}
+
 bool MOSFrameLowering::isISR(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
   if (F.hasFnAttribute("no-isr"))
@@ -406,3 +531,179 @@ bool MOSFrameLowering::isISR(const MachineFunction &MF) const {
   return F.hasFnAttribute("interrupt") ||
          F.hasFnAttribute("interrupt-norecurse");
 }
+
+StackOffset MOSFrameLowering::getFrameIndexReference(const MachineFunction &MF,
+                                                     int FI,
+                                                     Register &FrameReg) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+
+  int64_t Offset = MFI.getObjectOffset(FI);
+
+  if (MFI.getStackID(FI) == TargetStackID::Default) {
+    // For soft stack variables, offset is relative to the frame pointer.
+    // The frame pointer points to the base of the frame, so we need to add
+    // the stack size to get the correct offset.
+    Offset += MFI.getStackSize();
+    FrameReg = TRI->getFrameRegister(MF);
+  } else {
+    // Static-stack and zero-page locals have absolute addresses, which the
+    // StackOffset+Register return of this API cannot encode. Debug info for
+    // them does not depend on this: PEI hands their DBG_VALUEs to
+    // replaceFrameIndexDebugOperand(), which rewrites them to the
+    // static-stack / zero-page symbols, and frame-index (dbg.declare)
+    // variables are resolved by MOSAsmPrinter::getFunctionFrameSymbol().
+    FrameReg = MOS::NoRegister;
+  }
+
+  return StackOffset::getFixed(Offset);
+}
+
+void MOSFrameLowering::buildCFI(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                const DebugLoc &DL,
+                                const MCCFIInstruction &CFIInst,
+                                MachineInstr::MIFlag Flag) const {
+  MachineFunction &MF = *MBB.getParent();
+  unsigned CFIIndex = MF.addFrameInst(CFIInst);
+  BuildMI(MBB, MBBI, DL,
+          MF.getSubtarget().getInstrInfo()->get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex)
+      .setMIFlag(Flag);
+}
+
+void MOSFrameLowering::emitHardwareStackCFI(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    const DebugLoc &DL, unsigned HardStackCSRCount, bool IsISR,
+    MachineInstr::MIFlag Flag) const {
+  MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
+  unsigned DwarfS = MRI->getDwarfRegNum(MOS::S, true);
+  unsigned DwarfPC = MRI->getDwarfRegNum(MOS::PC, true);
+
+  // Shift from CIE's expected JSR-entry layout to the current layout:
+  // +1 for ISR's extra P byte, +HardStackCSRCount for prologue/epilogue PHAs.
+  int64_t ISRShift = IsISR ? 1 : 0;
+  int64_t Shift = ISRShift + HardStackCSRCount;
+
+  // CFA = normalized(S + 3 + Shift).
+  SmallString<16> CfaExpr;
+  mos::emitNormalizedHardwareStackExpr(CfaExpr, DwarfS, 3 + Shift);
+  buildCFI(MBB, MBBI, DL, mos::createDefCfaExpression(CfaExpr), Flag);
+
+  // PC = the return address at normalized(S + 1 + Shift), reassembled from
+  // its two bytes; plus 1 for JSR frames, which push PC-1. DW_CFA_val_expression:
+  // the expression IS the register value.
+  SmallString<32> PcExpr;
+  mos::emitReturnAddressValueExpr(PcExpr, DwarfS, 1 + Shift, IsISR);
+  buildCFI(MBB, MBBI, DL, mos::createValExpression(DwarfPC, PcExpr.str()),
+           Flag);
+
+  // Caller's S = current S + 2 + Shift. DW_CFA_val_expression's expression
+  // IS the register value (no dereference). The normalized form returns a
+  // 16-bit 0x01xx value: 16-bit debuggers (MAME) use it as-is, 8-bit
+  // debuggers truncate to the low byte.
+  SmallString<16> SExpr;
+  mos::emitNormalizedHardwareStackExpr(SExpr, DwarfS, 2 + Shift);
+  buildCFI(MBB, MBBI, DL, mos::createValExpression(DwarfS, SExpr.str()), Flag);
+
+  // ISR-only: the hardware pushed P below the CSRs, so P lives at
+  // [normalized(S + 1 + HardStackCSRCount)]. Independent of ISRShift
+  // because P isn't on the stack above itself.
+  if (IsISR) {
+    unsigned DwarfP = MRI->getDwarfRegNum(MOS::P, true);
+    SmallString<16> PExpr;
+    mos::emitNormalizedHardwareStackExpr(PExpr, DwarfS,
+                                         1 + HardStackCSRCount);
+    buildCFI(MBB, MBBI, DL, mos::createExpression(DwarfP, PExpr.str()), Flag);
+  }
+}
+
+// Returns whether the callee-saved register is saved to the soft stack.
+// TODO: emit CFI for registers target-spilled to the hardware stack using a
+// normalized DW_CFA_expression (same pattern used for PC/S in the prologue),
+// and for registers saved to the static stack using an absolute-address
+// DW_CFA_expression.
+static bool isSavedToSoftStack(const MachineFunction &MF,
+                               const CalleeSavedInfo &I) {
+  const auto &FuncInfo = MF.getInfo<MOSFunctionInfo>();
+  if (FuncInfo->CSRZPOffsets.count(I.getReg()) || I.isTargetSpilled())
+    return false;
+  return MF.getFrameInfo().getStackID(I.getFrameIdx()) ==
+         TargetStackID::Default;
+}
+
+void MOSFrameLowering::emitSoftStackCFI(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MBBI,
+                                        const DebugLoc &DL, Register Base,
+                                        bool DescribeRS0, bool DescribeCSRs,
+                                        MachineInstr::MIFlag Flag) const {
+  MachineFunction &MF = *MBB.getParent();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
+  unsigned DwarfBase = MRI->getDwarfRegNum(Base, true);
+
+  // Caller's RS0 = Base + the prologue's adjustment. A value expression, so
+  // that it is independent of the (hardware-stack) CFA.
+  if (DescribeRS0) {
+    SmallString<16> RS0Expr;
+    mos::emitRegPlusOffsetExpr(RS0Expr, DwarfBase, softStackAdjustment(MF));
+    buildCFI(MBB, MBBI, DL,
+             mos::createValExpression(MRI->getDwarfRegNum(MOS::RS0, true),
+                                      RS0Expr.str()),
+             Flag);
+  }
+
+  if (!DescribeCSRs)
+    return;
+
+  // Each soft-stack callee-saved register is saved at Base + the frame index
+  // offset, as getFrameIndexReference() computes it. For ISRs, this does not
+  // include the extra page the prologue subtracts.
+  for (const CalleeSavedInfo &I : MFI.getCalleeSavedInfo()) {
+    if (!isSavedToSoftStack(MF, I))
+      continue;
+    SmallString<16> SlotExpr;
+    mos::emitRegPlusOffsetExpr(SlotExpr, DwarfBase,
+                               MFI.getObjectOffset(I.getFrameIdx()) +
+                                   MFI.getStackSize());
+    buildCFI(MBB, MBBI, DL,
+             mos::createExpression(MRI->getDwarfRegNum(I.getReg(), true),
+                                   SlotExpr.str()),
+             Flag);
+  }
+}
+
+void MOSFrameLowering::emitSoftStackCSRRestoreCFI(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    const DebugLoc &DL, MachineInstr::MIFlag Flag) const {
+  MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
+  for (const CalleeSavedInfo &I : MF.getFrameInfo().getCalleeSavedInfo()) {
+    if (!isSavedToSoftStack(MF, I))
+      continue;
+    buildCFI(MBB, MBBI, DL,
+             MCCFIInstruction::createRestore(
+                 nullptr, MRI->getDwarfRegNum(I.getReg(), true)),
+             Flag);
+  }
+}
+
+void MOSFrameLowering::resetCFIToInitialState(MachineBasicBlock &MBB) const {
+  // Used by CFIFixup for blocks laid out after an epilogue that run without a
+  // frame (e.g. shrink-wrapped early exits). Recreate the function entry
+  // state: the hardware stack as JSR/interrupt left it, and every register
+  // back on its CIE rule.
+  MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
+  DebugLoc DL;
+  MachineBasicBlock::iterator InsertPt = MBB.begin();
+  emitHardwareStackCFI(MBB, InsertPt, DL, /*HardStackCSRCount=*/0, isISR(MF),
+                       MachineInstr::NoFlags);
+  emitSoftStackCSRRestoreCFI(MBB, InsertPt, DL, MachineInstr::NoFlags);
+  buildCFI(MBB, InsertPt, DL,
+           MCCFIInstruction::createRestore(
+               nullptr, MRI->getDwarfRegNum(MOS::RS0, true)),
+           MachineInstr::NoFlags);
+}
+

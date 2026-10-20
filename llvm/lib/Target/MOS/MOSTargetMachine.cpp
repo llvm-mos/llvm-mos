@@ -109,6 +109,11 @@ MOSTargetMachine::MOSTargetMachine(const Target &T, const Triple &TT,
 
   initAsmInfo();
 
+  // Shrink wrapping and tail merging can lay out blocks after an epilogue
+  // that still run inside the frame (or before a prologue, outside it). Have
+  // CFIFixup restore the unwind state for them.
+  setCFIFixup(true);
+
   setGlobalISel(true);
   // Prevents fallback to SelectionDAG by allowing direct aborts.
   setGlobalISelAbort(GlobalISelAbortMode::Enable);

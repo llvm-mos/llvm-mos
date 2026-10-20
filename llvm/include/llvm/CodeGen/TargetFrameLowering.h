@@ -341,6 +341,17 @@ public:
   virtual StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                              Register &FrameReg) const;
 
+  /// Replace the frame index debug operand \p OpIdx of the DBG_VALUE or
+  /// DBG_VALUE_LIST \p MI with a target-specific location, for frame objects
+  /// that are not addressed as a register plus an offset. Return true if the
+  /// operand was replaced. Return false to let PEI substitute the register
+  /// and offset given by getFrameIndexReference.
+  virtual bool replaceFrameIndexDebugOperand(MachineFunction &MF,
+                                             MachineInstr &MI,
+                                             unsigned OpIdx) const {
+    return false;
+  }
+
   /// Same as \c getFrameIndexReference, except that the stack pointer (as
   /// opposed to the frame pointer) will be the preferred value for \p
   /// FrameReg. This is generally used for emitting statepoint or EH tables that

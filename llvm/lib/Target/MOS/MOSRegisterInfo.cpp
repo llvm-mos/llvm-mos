@@ -182,6 +182,12 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
                                             MachineBasicBlock::iterator &UseMI,
                                             const TargetRegisterClass *RC,
                                             Register Reg) const {
+  // Restore after any CFI directives that immediately follow the last use
+  // (e.g. those after a prologue PHA or after the epilogue's stack pointer
+  // increment), so that they take effect at the instruction they describe
+  // rather than one instruction late.
+  while (UseMI != MBB.end() && UseMI->isCFIInstruction())
+    ++UseMI;
 
   // Note: NZ cannot be live at this point, since virtual registers are never
   // inserted into CmpBr instructions.
