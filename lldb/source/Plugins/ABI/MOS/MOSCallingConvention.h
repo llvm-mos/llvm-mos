@@ -23,6 +23,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 
 #include <cstdint>
+#include <vector>
 
 namespace lldb_private {
 
@@ -39,6 +40,12 @@ public:
   /// anything unrecognized (conservative).
   bool IsVolatile(uint32_t dwarf_num) const;
 
+  /// DWARF numbers of the imaginary RC and RS registers that IsVolatile
+  /// classifies as preserved across calls.
+  const std::vector<uint32_t> &GetPreservedImaginaryRegisters() const {
+    return preserved_imaginary_;
+  }
+
 private:
   uint32_t rc_base_dwarf_ = LLDB_INVALID_REGNUM;
   uint32_t rs_base_dwarf_ = LLDB_INVALID_REGNUM;
@@ -46,6 +53,7 @@ private:
   uint32_t x_dwarf_ = LLDB_INVALID_REGNUM;
   uint32_t y_dwarf_ = LLDB_INVALID_REGNUM;
   uint32_t p_dwarf_ = LLDB_INVALID_REGNUM;
+  std::vector<uint32_t> preserved_imaginary_;
   bool initialized_ = false;
 };
 

@@ -11,6 +11,7 @@ add_lldb_library(lldbPluginArchitectureMOS PLUGIN
     lldbValueObject
     lldbUtility
   LINK_COMPONENTS
+    MC
     Support
     TargetParser
   )
