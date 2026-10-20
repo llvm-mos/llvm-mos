@@ -72,7 +72,10 @@ static MCAsmInfo *createMOSMCAsmInfo(const MCRegisterInfo &MRI,
   // We use normalized expressions to handle both 8-bit and 16-bit S values.
   // Each hardware stack address is computed independently (not CFA-relative)
   // to avoid subtraction underflow when S wraps within the stack page.
-  // This must match ABISysV_mos::CreateFunctionEntryUnwindPlan().
+  //
+  // This is the single description of the MOS frame at function entry: LLDB's
+  // ABISysV_mos::CreateFunctionEntryUnwindPlan() decodes these instructions
+  // from MCAsmInfo rather than keeping its own copy.
 
   unsigned DwarfS = MRI.getDwarfRegNum(MOS::S, true);
   unsigned DwarfPC = MRI.getDwarfRegNum(MOS::PC, true);
