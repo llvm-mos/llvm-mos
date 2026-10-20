@@ -17,10 +17,13 @@
 #include "MOSMCInstrAnalysis.h"
 #include "MOSTargetStreamer.h"
 #include "TargetInfo/MOSTargetInfo.h"
+#include "MOSCFIExprHelpers.h"
 
-#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -49,8 +52,61 @@ MCInstrInfo *llvm::createMOSMCInstrInfo() {
 static MCRegisterInfo *createMOSMCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
   InitMOSMCRegisterInfo(X, MOS::PC);
-
   return X;
+}
+
+static MCAsmInfo *createMOSMCAsmInfo(const MCRegisterInfo &MRI,
+                                      const Triple &TT,
+                                      const MCTargetOptions &Options) {
+  MCAsmInfo *MAI = new MOSMCAsmInfo(TT, Options);
+
+  // Initialize initial frame state for hardware stack.
+  // 6502 JSR pushes (return_address - 1) onto hardware stack:
+  //   - First pushes high byte to [SP], then decrements SP
+  //   - Then pushes low byte to [SP], then decrements SP
+  // After JSR, SP points to next free slot (two below pushed address).
+  // Stack layout after JSR:
+  //   [SP+1] = low byte of (return_address - 1)
+  //   [SP+2] = high byte of (return_address - 1)
+  //
+  // We use normalized expressions to handle both 8-bit and 16-bit S values.
+  // Each hardware stack address is computed independently (not CFA-relative)
+  // to avoid subtraction underflow when S wraps within the stack page.
+  //
+  // This is the single description of the MOS frame at function entry: LLDB's
+  // ABISysV_mos::CreateFunctionEntryUnwindPlan() decodes these instructions
+  // from MCAsmInfo rather than keeping its own copy.
+
+  unsigned DwarfS = MRI.getDwarfRegNum(MOS::S, true);
+  unsigned DwarfPC = MRI.getDwarfRegNum(MOS::PC, true);
+
+  // CFA = normalized(S + 3) = ((S + 3) & 0xFF) | 0x0100
+  SmallString<16> CfaExpr;
+  mos::emitNormalizedHardwareStackExpr(CfaExpr, DwarfS, 3);
+  MAI->addInitialFrameState(mos::createDefCfaExpression(CfaExpr));
+
+  // PC = (low byte at normalized(S + 1)) | (high byte at normalized(S + 2)) << 8,
+  // plus 1 to undo JSR's PC-1. A value expression, not a load through [S+1],
+  // so that the debugger sees the true return address.
+  SmallString<32> PcExpr;
+  mos::emitReturnAddressValueExpr(PcExpr, DwarfS, 1);
+  MAI->addInitialFrameState(mos::createValExpression(DwarfPC, PcExpr));
+
+  // Caller's S = normalized(S + 2): RTS pops the two return-address bytes.
+  // This must be explicit; CFA is S + 3, so the debugger's default of
+  // "caller's SP = CFA" would be off by one.
+  SmallString<16> SExpr;
+  mos::emitNormalizedHardwareStackExpr(SExpr, DwarfS, 2);
+  MAI->addInitialFrameState(mos::createValExpression(DwarfS, SExpr));
+
+  // RS0, the soft stack pointer, is preserved across calls; nothing has
+  // changed it at entry. Without an explicit rule, DWARF's default for an
+  // unmentioned register is "undefined", and the caller's RS0-relative CFA
+  // could not be computed. Prologues that adjust RS0 override this.
+  MAI->addInitialFrameState(MCCFIInstruction::createSameValue(
+      nullptr, MRI.getDwarfRegNum(MOS::RS0, true)));
+
+  return MAI;
 }
 
 static MCSubtargetInfo *createMOSMCSubtargetInfo(const Triple &TT,
@@ -98,8 +154,8 @@ static MCInstrAnalysis *createMOSMCInstrAnalysis(const MCInstrInfo *Info) {
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSTargetMC() {
-  // Register the MC asm info.
-  RegisterMCAsmInfo<MOSMCAsmInfo> X(getTheMOSTarget());
+  // Register the MC asm info with initial frame state for CFI.
+  TargetRegistry::RegisterMCAsmInfo(getTheMOSTarget(), createMOSMCAsmInfo);
 
   // Register the MC instruction info.
   TargetRegistry::RegisterMCInstrInfo(getTheMOSTarget(), createMOSMCInstrInfo);

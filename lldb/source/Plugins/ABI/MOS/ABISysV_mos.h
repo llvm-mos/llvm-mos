@@ -49,8 +49,10 @@ public:
     // hardware stack S+3, which always lands in 0x0100-0x01FF. Compiler-
     // emitted CFI plans instead use the soft stack RS0, which may live
     // anywhere in the 16-bit address space. Accept any 16-bit address to
-    // cover both.
-    return cfa <= 0xFFFF;
+    // cover both, plus 0x10000: the soft stack starts one past the top of
+    // memory, so the outermost frame's CFA is exactly 0x10000. The CFA itself
+    // is never dereferenced; saved registers live at CFA - N.
+    return cfa <= 0x10000;
   }
 
   bool CodeAddressIsValid(lldb::addr_t pc) override {
@@ -65,6 +67,7 @@ public:
 
   // MCBasedABI interface
   uint32_t GetGenericNum(llvm::StringRef name) override;
+  std::string GetMCName(std::string reg) override;
 
   // Register augmentation - adds imaginary registers
   void AugmentRegisterInfo(
