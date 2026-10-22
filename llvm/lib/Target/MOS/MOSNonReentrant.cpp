@@ -74,7 +74,7 @@ bool MOSNonReentrantImpl::run(Module &M) {
 
   // Walk the callgraph in bottom-up SCC order.
   scc_iterator<CallGraph *> CGI = scc_begin(&CG);
-  CallGraphSCC CurSCC(CG, &CGI);
+  CallGraphSCC CurSCC(CG);
   bool Changed = false;
   for (; !CGI.isAtEnd(); ++CGI) {
     CurSCC.initialize(*CGI);

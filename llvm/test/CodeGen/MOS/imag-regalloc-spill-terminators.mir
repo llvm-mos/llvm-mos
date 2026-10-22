@@ -32,29 +32,29 @@ body: |
     ; STATIC: [[LDAbs:%[0-9]+]]:gpr = LDAbs 1000
     ; STATIC-NEXT: [[LDAbs1:%[0-9]+]]:gpr = LDAbs 1001
     ; STATIC-NEXT: [[LDAbs2:%[0-9]+]]:gpr = LDAbs 1002
-    ; STATIC-NEXT: STAbs killed [[LDAbs]], %stack.0 :: (store (s8) into %stack.0)
+    ; STATIC-NEXT: STAbs [[LDAbs]], %stack.0 :: (store (s8) into %stack.0)
     ; STATIC-NEXT: [[LDAbs3:%[0-9]+]]:gpr = LDAbs 1003
-    ; STATIC-NEXT: STAbs killed [[LDAbs2]], 2000
-    ; STATIC-NEXT: STAbs killed [[LDAbs3]], 2001
+    ; STATIC-NEXT: STAbs [[LDAbs2]], 2000
+    ; STATIC-NEXT: STAbs [[LDAbs3]], 2001
     ; STATIC-NEXT: DBG_VALUE [[LDAbs1]], $noreg, !6, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
     ; STATIC-NEXT: [[LDAbs4:%[0-9]+]]:gpr = LDAbs %stack.0 :: (load (s8) from %stack.0)
-    ; STATIC-NEXT: RTS implicit killed [[LDAbs4]]
-    ; STATIC-NEXT: RTS implicit killed [[LDAbs1]]
+    ; STATIC-NEXT: RTS implicit [[LDAbs4]]
+    ; STATIC-NEXT: RTS implicit [[LDAbs1]]
     ;
     ; SOFT-LABEL: name: later_return_reload
     ; SOFT: [[LDAbs:%[0-9]+]]:gpr = LDAbs 1000
     ; SOFT-NEXT: [[LDAbs1:%[0-9]+]]:gpr = LDAbs 1001
-    ; SOFT-NEXT: dead early-clobber %4:imag16 = STStk killed [[LDAbs]], %stack.0, 0 :: (store (s8) into %stack.0)
+    ; SOFT-NEXT: early-clobber %4:imag16 = STStk [[LDAbs]], %stack.0, 0 :: (store (s8) into %stack.0)
     ; SOFT-NEXT: [[LDAbs2:%[0-9]+]]:gpr = LDAbs 1002
-    ; SOFT-NEXT: dead early-clobber %5:imag16 = STStk killed [[LDAbs1]], %stack.1, 0 :: (store (s8) into %stack.1)
+    ; SOFT-NEXT: early-clobber %5:imag16 = STStk [[LDAbs1]], %stack.1, 0 :: (store (s8) into %stack.1)
     ; SOFT-NEXT: [[LDAbs3:%[0-9]+]]:gpr = LDAbs 1003
-    ; SOFT-NEXT: STAbs killed [[LDAbs2]], 2000
-    ; SOFT-NEXT: STAbs killed [[LDAbs3]], 2001
+    ; SOFT-NEXT: STAbs [[LDAbs2]], 2000
+    ; SOFT-NEXT: STAbs [[LDAbs3]], 2001
     ; SOFT-NEXT: DBG_VALUE $noreg, $noreg, !6, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
-    ; SOFT-NEXT: %6:gpr, dead early-clobber %7:imag16 = LDStk %stack.0, 0 :: (load (s8) from %stack.0)
-    ; SOFT-NEXT: %8:gpr, dead early-clobber %9:imag16 = LDStk %stack.1, 0 :: (load (s8) from %stack.1)
-    ; SOFT-NEXT: RTS implicit killed %6
-    ; SOFT-NEXT: RTS implicit killed %8
+    ; SOFT-NEXT: %6:gpr, early-clobber %7:imag16 = LDStk %stack.0, 0 :: (load (s8) from %stack.0)
+    ; SOFT-NEXT: %8:gpr, early-clobber %9:imag16 = LDStk %stack.1, 0 :: (load (s8) from %stack.1)
+    ; SOFT-NEXT: RTS implicit %6
+    ; SOFT-NEXT: RTS implicit %8
     %0:gpr = LDAbs 1000
     %1:gpr = LDAbs 1001
     %2:gpr = LDAbs 1002

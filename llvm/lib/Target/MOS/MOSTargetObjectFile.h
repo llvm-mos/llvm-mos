@@ -20,7 +20,8 @@ class MOSTargetObjectFile : public TargetLoweringObjectFileELF {
   MCSection *ZpNoinitSection;
 
 public:
-  void Initialize(MCContext &ctx, const TargetMachine &TM) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,

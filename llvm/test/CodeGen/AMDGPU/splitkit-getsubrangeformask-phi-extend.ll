@@ -10,35 +10,25 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; CHECK-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:1140 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:1148 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:824 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:820 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:816 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v43, off, s[0:3], s32 offset:812 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v44, off, s[0:3], s32 offset:808 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:804 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:800 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:796 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:796 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_mov_b32_e32 v32, v29
-; CHECK-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:836 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:808 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:840 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:812 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_mov_b32_e32 v32, v27
-; CHECK-NEXT:    v_and_b32_e32 v14, 1, v14
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s[60:61], 1, v14
-; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:376
 ; CHECK-NEXT:    v_and_b32_e32 v6, 1, v6
 ; CHECK-NEXT:    v_and_b32_e32 v2, 1, v2
+; CHECK-NEXT:    v_and_b32_e32 v14, 1, v14
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[92:93], 1, v6
-; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:344
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[8:9], 1, v2
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[60:61], 1, v14
+; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:376
 ; CHECK-NEXT:    v_and_b32_e32 v9, 1, v9
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[78:79], 1, v9
-; CHECK-NEXT:    ; implicit-def: $vgpr56 : SGPR spill to VGPR lane
+; CHECK-NEXT:    ; implicit-def: $vgpr41 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_and_b32_e32 v17, 1, v17
-; CHECK-NEXT:    v_and_b32_e32 v16, 1, v16
-; CHECK-NEXT:    v_and_b32_e32 v15, 1, v15
 ; CHECK-NEXT:    v_and_b32_e32 v13, 1, v13
 ; CHECK-NEXT:    v_and_b32_e32 v12, 1, v12
 ; CHECK-NEXT:    v_and_b32_e32 v11, 1, v11
@@ -49,8 +39,6 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    v_and_b32_e32 v4, 1, v4
 ; CHECK-NEXT:    v_and_b32_e32 v3, 1, v3
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v17
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s[56:57], 1, v16
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s[58:59], 1, v15
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[62:63], 1, v13
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[72:73], 1, v12
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[74:75], 1, v11
@@ -59,28 +47,30 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[90:91], 1, v7
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[94:95], 1, v5
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[6:7], 1, v3
+; CHECK-NEXT:    v_and_b32_e32 v16, 1, v16
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[56:57], 1, v16
+; CHECK-NEXT:    v_and_b32_e32 v15, 1, v15
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[58:59], 1, v15
 ; CHECK-NEXT:    s_mov_b64 s[12:13], 0
 ; CHECK-NEXT:    s_mov_b64 s[18:19], 0
-; CHECK-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:860 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:832 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:864 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:836 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_mov_b32_e32 v32, v25
-; CHECK-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:868 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:840 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:872 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:844 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_mov_b32_e32 v32, v23
-; CHECK-NEXT:    s_waitcnt vmcnt(5)
-; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:912 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:848 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:852 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_mov_b32_e32 v32, v21
 ; CHECK-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:876 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:880 ; 4-byte Folded Spill
-; CHECK-NEXT:    v_mov_b32_e32 v32, v21
-; CHECK-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:904 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:856 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:908 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:884 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:888 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:860 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_mov_b32_e32 v20, v19
 ; CHECK-NEXT:    buffer_load_ushort v19, off, s[0:3], s32 offset:136
 ; CHECK-NEXT:    buffer_load_ushort v27, off, s[0:3], s32 offset:132
@@ -98,27 +88,27 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    buffer_load_ushort v25, off, s[0:3], s32 offset:84
 ; CHECK-NEXT:    buffer_load_ushort v23, off, s[0:3], s32 offset:80
 ; CHECK-NEXT:    buffer_load_ushort v21, off, s[0:3], s32 offset:76
-; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:372
+; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:344
 ; CHECK-NEXT:    s_waitcnt vmcnt(16)
 ; CHECK-NEXT:    v_and_b32_e32 v19, 1, v19
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v19
 ; CHECK-NEXT:    buffer_load_ubyte v19, off, s[0:3], s32 offset:792
-; CHECK-NEXT:    v_writelane_b32 v56, s4, 0
+; CHECK-NEXT:    v_writelane_b32 v41, s4, 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(15)
 ; CHECK-NEXT:    v_and_b32_e32 v34, 1, v34
-; CHECK-NEXT:    v_writelane_b32 v56, s5, 1
+; CHECK-NEXT:    v_writelane_b32 v41, s5, 1
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v34
 ; CHECK-NEXT:    s_waitcnt vmcnt(14)
 ; CHECK-NEXT:    v_and_b32_e32 v35, 1, v35
-; CHECK-NEXT:    v_writelane_b32 v56, s4, 2
-; CHECK-NEXT:    v_writelane_b32 v56, s5, 3
+; CHECK-NEXT:    v_writelane_b32 v41, s4, 2
+; CHECK-NEXT:    v_writelane_b32 v41, s5, 3
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v35
 ; CHECK-NEXT:    v_and_b32_e32 v27, 1, v27
 ; CHECK-NEXT:    s_waitcnt vmcnt(13)
 ; CHECK-NEXT:    v_and_b32_e32 v37, 1, v37
-; CHECK-NEXT:    v_writelane_b32 v56, s4, 4
+; CHECK-NEXT:    v_writelane_b32 v41, s4, 4
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[16:17], 1, v27
-; CHECK-NEXT:    v_writelane_b32 v56, s5, 5
+; CHECK-NEXT:    v_writelane_b32 v41, s5, 5
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v37
 ; CHECK-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:784
 ; CHECK-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:780
@@ -126,30 +116,30 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:392
 ; CHECK-NEXT:    s_waitcnt vmcnt(16)
 ; CHECK-NEXT:    v_and_b32_e32 v38, 1, v38
-; CHECK-NEXT:    v_writelane_b32 v56, s4, 6
-; CHECK-NEXT:    v_writelane_b32 v56, s5, 7
+; CHECK-NEXT:    v_writelane_b32 v41, s4, 6
+; CHECK-NEXT:    v_writelane_b32 v41, s5, 7
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v38
 ; CHECK-NEXT:    s_waitcnt vmcnt(15)
 ; CHECK-NEXT:    v_and_b32_e32 v39, 1, v39
-; CHECK-NEXT:    v_writelane_b32 v56, s4, 8
-; CHECK-NEXT:    v_writelane_b32 v56, s5, 9
+; CHECK-NEXT:    v_writelane_b32 v41, s4, 8
+; CHECK-NEXT:    v_writelane_b32 v41, s5, 9
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v39
 ; CHECK-NEXT:    s_waitcnt vmcnt(14)
 ; CHECK-NEXT:    v_and_b32_e32 v48, 1, v48
-; CHECK-NEXT:    v_writelane_b32 v56, s4, 10
-; CHECK-NEXT:    v_writelane_b32 v56, s5, 11
+; CHECK-NEXT:    v_writelane_b32 v41, s4, 10
+; CHECK-NEXT:    v_writelane_b32 v41, s5, 11
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v48
-; CHECK-NEXT:    v_writelane_b32 v56, s4, 12
+; CHECK-NEXT:    v_writelane_b32 v41, s4, 12
 ; CHECK-NEXT:    s_waitcnt vmcnt(9)
 ; CHECK-NEXT:    v_and_b32_e32 v29, 1, v29
-; CHECK-NEXT:    v_writelane_b32 v56, s5, 13
+; CHECK-NEXT:    v_writelane_b32 v41, s5, 13
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v29
 ; CHECK-NEXT:    v_and_b32_e32 v31, 1, v31
 ; CHECK-NEXT:    v_and_b32_e32 v33, 1, v33
 ; CHECK-NEXT:    v_and_b32_e32 v36, 1, v36
 ; CHECK-NEXT:    s_waitcnt vmcnt(8)
 ; CHECK-NEXT:    v_and_b32_e32 v25, 1, v25
-; CHECK-NEXT:    v_writelane_b32 v56, s4, 14
+; CHECK-NEXT:    v_writelane_b32 v41, s4, 14
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
 ; CHECK-NEXT:    v_and_b32_e32 v23, 1, v23
 ; CHECK-NEXT:    s_waitcnt vmcnt(6)
@@ -157,7 +147,7 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[40:41], 1, v31
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[22:23], 1, v33
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[42:43], 1, v36
-; CHECK-NEXT:    v_writelane_b32 v56, s5, 15
+; CHECK-NEXT:    v_writelane_b32 v41, s5, 15
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[26:27], 1, v25
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[24:25], 1, v23
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[28:29], 1, v21
@@ -170,81 +160,78 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:312
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
 ; CHECK-NEXT:    v_cmp_lt_i32_e64 s[10:11], 2, v27
-; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:900 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:368
+; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:884 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:372
 ; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:844 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:816 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:388
 ; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:964 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:936 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:308
 ; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:928 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:364
+; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:872 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:368
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:968 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:940 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:304
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:924 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:360
+; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:900 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:364
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:984 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:956 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:300
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
 ; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:896 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:356
+; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:360
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:976 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:948 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:296
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:892 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:352
+; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:868 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:356
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:980 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:952 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:292
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:920 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:348
+; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:864 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:352
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:972 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:944 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:288
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:916 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1008 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:892 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:348
+; CHECK-NEXT:    s_waitcnt vmcnt(2)
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:980 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:284
+; CHECK-NEXT:    s_waitcnt vmcnt(2)
+; CHECK-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:888 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:968 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:280
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:932 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:904 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:340
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:996 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:280
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:936 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:336
-; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1000 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:972 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:276
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:960 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:332
+; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:908 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:336
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1004 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:976 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:272
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:948 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:328
+; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:932 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:332
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:992 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:964 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:268
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:940 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:324
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:848 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:384
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:988 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:920 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:328
+; CHECK-NEXT:    s_waitcnt vmcnt(2)
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:960 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword a25, off, s[0:3], s32 offset:264
 ; CHECK-NEXT:    buffer_load_dword a23, off, s[0:3], s32 offset:260
 ; CHECK-NEXT:    buffer_load_dword v53, off, s[0:3], s32 offset:256
@@ -253,38 +240,46 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    buffer_load_dword a14, off, s[0:3], s32 offset:244
 ; CHECK-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:240
 ; CHECK-NEXT:    buffer_load_dword v52, off, s[0:3], s32 offset:236
-; CHECK-NEXT:    buffer_load_dword a31, off, s[0:3], s32 offset:232
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:228
+; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:232
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1040 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1024 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:228
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:912 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:324
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:820 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:384
+; CHECK-NEXT:    s_waitcnt vmcnt(4)
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1012 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword a3, off, s[0:3], s32 offset:224
-; CHECK-NEXT:    buffer_load_dword a1, off, s[0:3], s32 offset:220
+; CHECK-NEXT:    buffer_load_dword a7, off, s[0:3], s32 offset:220
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:216
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1036 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1008 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:212
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:944 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:916 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:320
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:852 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:824 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:380
 ; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1012 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:984 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword a19, off, s[0:3], s32 offset:208
 ; CHECK-NEXT:    buffer_load_dword a17, off, s[0:3], s32 offset:204
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:200
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1048 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1020 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword a16, off, s[0:3], s32 offset:196
 ; CHECK-NEXT:    buffer_load_dword a20, off, s[0:3], s32 offset:192
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:188
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1024 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:996 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword a15, off, s[0:3], s32 offset:184
 ; CHECK-NEXT:    buffer_load_dword a18, off, s[0:3], s32 offset:180
 ; CHECK-NEXT:    buffer_load_dword a30, off, s[0:3], s32 offset:176
@@ -292,31 +287,31 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:168
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1044 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1016 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:164
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:952 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:924 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:316
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:856 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:828 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1016 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:988 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword a22, off, s[0:3], s32 offset:160
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:156
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1032 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1004 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword a11, off, s[0:3], s32 offset:152
 ; CHECK-NEXT:    buffer_load_dword a13, off, s[0:3], s32 offset:148
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:144
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1028 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1000 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:140
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:956 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:928 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:1020 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:992 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:712
 ; CHECK-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:584
 ; CHECK-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:580
@@ -330,8 +325,8 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:548
 ; CHECK-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:544
 ; CHECK-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:540
-; CHECK-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:536
-; CHECK-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:532
+; CHECK-NEXT:    buffer_load_dword a31, off, s[0:3], s32 offset:536
+; CHECK-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:532
 ; CHECK-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:528
 ; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:524
 ; CHECK-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:456
@@ -339,83 +334,91 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    buffer_load_dword a26, off, s[0:3], s32 offset:4
 ; CHECK-NEXT:    buffer_load_dword a28, off, s[0:3], s32
 ; CHECK-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:708
-; CHECK-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:704
-; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:700
-; CHECK-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:696
+; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:704
+; CHECK-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:700
+; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:696
 ; CHECK-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:692
-; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:688
+; CHECK-NEXT:    buffer_load_dword a0, off, s[0:3], s32 offset:688
 ; CHECK-NEXT:    buffer_load_dword v54, off, s[0:3], s32 offset:684
 ; CHECK-NEXT:    buffer_load_dword a10, off, s[0:3], s32 offset:452
 ; CHECK-NEXT:    buffer_load_dword a8, off, s[0:3], s32 offset:448
-; CHECK-NEXT:    buffer_load_dword a6, off, s[0:3], s32 offset:444
-; CHECK-NEXT:    buffer_load_dword a4, off, s[0:3], s32 offset:440
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:444
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:1036 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:1040 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:440
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:1028 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:1032 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:436
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:1124 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:1128 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:432
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:1116 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:1120 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:432
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:428
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:1108 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:1112 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:428
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:424
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:1100 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:1104 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:424
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:420
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:1092 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:1096 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:420
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:416
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:1084 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:1088 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:416
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:412
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:1076 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:1080 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:412
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:408
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:1068 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:1072 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:408
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:404
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:1060 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:1064 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:404
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:1052 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:1056 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword a12, off, s[0:3], s32 offset:400
 ; CHECK-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:680
 ; CHECK-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:676
 ; CHECK-NEXT:    buffer_load_dword v48, off, s[0:3], s32 offset:672
 ; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:668
 ; CHECK-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:664
-; CHECK-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:660
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:656
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:660
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:828 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:800 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:832 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:804 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_load_dword a4, off, s[0:3], s32 offset:656
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:652
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_dword a0, off, s[0:3], s32 offset:396
+; CHECK-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:396
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_store_dword a0, off, s[0:3], s32 offset:1124 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:1044 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword a1, off, s[0:3], s32 offset:1128 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword a2, off, s[0:3], s32 offset:1132 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword a3, off, s[0:3], s32 offset:1136 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:1048 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:1052 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:1056 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_and_saveexec_b64 s[14:15], s[10:11]
 ; CHECK-NEXT:    s_xor_b64 s[14:15], exec, s[14:15]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_4
@@ -425,102 +428,84 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    s_and_saveexec_b64 s[10:11], s[20:21]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_3
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
-; CHECK-NEXT:    v_xor_b32_e32 v51, v28, v28
+; CHECK-NEXT:    v_xor_b32_e32 v15, v28, v28
 ; CHECK-NEXT:    v_accvgpr_write_b32 a2, v32
 ; CHECK-NEXT:    v_xor_b32_e32 v32, v36, v39
 ; CHECK-NEXT:    v_xor_b32_e32 v27, v3, v33
-; CHECK-NEXT:    v_and_b32_e32 v33, 0x7fffffff, v51
-; CHECK-NEXT:    v_lshlrev_b32_e32 v39, 17, v27
+; CHECK-NEXT:    v_and_b32_e32 v33, 0x7fffffff, v15
+; CHECK-NEXT:    v_lshlrev_b32_e32 v15, 17, v27
+; CHECK-NEXT:    buffer_store_dword a25, off, s[0:3], s32 offset:1132 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword a21, off, s[0:3], s32 offset:1136 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_accvgpr_write_b32 a27, v9
-; CHECK-NEXT:    v_accvgpr_mov_b32 a7, a1
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v8
+; CHECK-NEXT:    v_accvgpr_write_b32 a21, v8
 ; CHECK-NEXT:    v_lshrrev_b64 v[8:9], 14, v[32:33]
-; CHECK-NEXT:    v_or_b32_e32 v9, v9, v39
-; CHECK-NEXT:    v_xor_b32_e32 v39, v26, v26
+; CHECK-NEXT:    v_or_b32_e32 v9, v9, v15
+; CHECK-NEXT:    v_xor_b32_e32 v15, v26, v26
 ; CHECK-NEXT:    v_accvgpr_write_b32 a5, v53
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v52
-; CHECK-NEXT:    v_xor_b32_e32 v52, v16, v7
-; CHECK-NEXT:    v_and_b32_e32 v53, 0x7fffffff, v39
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v52
+; CHECK-NEXT:    v_xor_b32_e32 v52, v14, v7
+; CHECK-NEXT:    v_and_b32_e32 v53, 0x7fffffff, v15
 ; CHECK-NEXT:    v_accvgpr_read_b32 v51, a16
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a16, a19
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a19, a20
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a20, a30
-; CHECK-NEXT:    v_lshlrev_b32_e32 v39, 18, v32
+; CHECK-NEXT:    v_lshlrev_b32_e32 v15, 18, v32
 ; CHECK-NEXT:    v_accvgpr_read_b32 v32, a2
 ; CHECK-NEXT:    v_accvgpr_write_b32 a30, v6
 ; CHECK-NEXT:    v_lshrrev_b64 v[6:7], 13, v[52:53]
 ; CHECK-NEXT:    s_mov_b64 s[18:19], s[10:11]
 ; CHECK-NEXT:    v_accvgpr_write_b32 a2, v38
 ; CHECK-NEXT:    v_add_co_u32_e64 v38, s[10:11], 24, v34
-; CHECK-NEXT:    v_or_b32_e32 v7, v7, v39
+; CHECK-NEXT:    v_or_b32_e32 v7, v7, v15
 ; CHECK-NEXT:    v_addc_co_u32_e64 v39, s[10:11], 0, v35, s[10:11]
 ; CHECK-NEXT:    flat_store_dwordx4 v[38:39], v[6:9] offset:80
-; CHECK-NEXT:    v_accvgpr_write_b32 a29, v40
+; CHECK-NEXT:    v_lshlrev_b32_e32 v15, 19, v52
+; CHECK-NEXT:    v_xor_b32_e32 v6, v12, v49
+; CHECK-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:1140 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:1144 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_xor_b32_e32 v7, v24, v24
-; CHECK-NEXT:    v_xor_b32_e32 v6, v14, v49
 ; CHECK-NEXT:    v_and_b32_e32 v7, 0x7fffffff, v7
 ; CHECK-NEXT:    v_lshrrev_b64 v[8:9], 12, v[6:7]
 ; CHECK-NEXT:    v_xor_b32_e32 v7, v22, v22
-; CHECK-NEXT:    v_lshlrev_b32_e32 v49, 19, v52
-; CHECK-NEXT:    v_xor_b32_e32 v52, v12, v37
+; CHECK-NEXT:    v_xor_b32_e32 v52, v2, v37
 ; CHECK-NEXT:    v_and_b32_e32 v53, 0x7fffffff, v7
-; CHECK-NEXT:    v_lshlrev_b32_e32 v37, 20, v6
+; CHECK-NEXT:    v_or_b32_e32 v9, v9, v15
+; CHECK-NEXT:    v_lshlrev_b32_e32 v15, 20, v6
 ; CHECK-NEXT:    v_lshrrev_b64 v[6:7], 11, v[52:53]
-; CHECK-NEXT:    v_or_b32_e32 v9, v9, v49
-; CHECK-NEXT:    v_or_b32_e32 v7, v7, v37
+; CHECK-NEXT:    v_or_b32_e32 v7, v7, v15
 ; CHECK-NEXT:    flat_store_dwordx4 v[38:39], v[6:9] offset:64
-; CHECK-NEXT:    s_movk_i32 s10, 0x7c
-; CHECK-NEXT:    v_xor_b32_e32 v7, v20, v20
-; CHECK-NEXT:    v_xor_b32_e32 v6, v10, v31
-; CHECK-NEXT:    v_and_b32_e32 v7, 0x7fffffff, v7
-; CHECK-NEXT:    v_lshlrev_b32_e32 v8, 21, v52
-; CHECK-NEXT:    v_lshrrev_b64 v[42:43], 10, v[6:7]
+; CHECK-NEXT:    v_accvgpr_write_b32 a6, v14
+; CHECK-NEXT:    v_xor_b32_e32 v6, v20, v20
+; CHECK-NEXT:    v_xor_b32_e32 v14, v10, v31
+; CHECK-NEXT:    v_and_b32_e32 v15, 0x7fffffff, v6
+; CHECK-NEXT:    v_lshlrev_b32_e32 v7, 21, v52
+; CHECK-NEXT:    v_mov_b32_e32 v6, v54
+; CHECK-NEXT:    v_lshrrev_b64 v[54:55], 10, v[14:15]
+; CHECK-NEXT:    v_or_b32_e32 v55, v55, v7
 ; CHECK-NEXT:    v_xor_b32_e32 v7, v18, v18
-; CHECK-NEXT:    v_or_b32_e32 v43, v43, v8
-; CHECK-NEXT:    v_xor_b32_e32 v8, v2, v29
+; CHECK-NEXT:    v_accvgpr_read_b32 v12, a0
+; CHECK-NEXT:    v_xor_b32_e32 v8, v12, v29
 ; CHECK-NEXT:    v_and_b32_e32 v9, 0x7fffffff, v7
-; CHECK-NEXT:    v_lshlrev_b32_e32 v6, 22, v6
-; CHECK-NEXT:    v_lshrrev_b64 v[40:41], 9, v[8:9]
-; CHECK-NEXT:    v_or_b32_e32 v41, v41, v6
+; CHECK-NEXT:    v_lshlrev_b32_e32 v7, 22, v14
+; CHECK-NEXT:    v_lshrrev_b64 v[52:53], 9, v[8:9]
+; CHECK-NEXT:    v_or_b32_e32 v53, v53, v7
 ; CHECK-NEXT:    v_xor_b32_e32 v7, v12, v12
-; CHECK-NEXT:    flat_store_dwordx4 v[38:39], v[40:43] offset:48
+; CHECK-NEXT:    flat_store_dwordx4 v[38:39], v[52:55] offset:48
+; CHECK-NEXT:    v_xor_b32_e32 v14, v50, v23
+; CHECK-NEXT:    v_mov_b32_e32 v54, v6
 ; CHECK-NEXT:    v_xor_b32_e32 v6, v32, v25
-; CHECK-NEXT:    v_xor_b32_e32 v40, v50, v23
-; CHECK-NEXT:    v_and_b32_e32 v41, 0x7fffffff, v7
+; CHECK-NEXT:    v_and_b32_e32 v15, 0x7fffffff, v7
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v7, 25, v6
-; CHECK-NEXT:    v_lshrrev_b64 v[42:43], 6, v[40:41]
-; CHECK-NEXT:    v_or_b32_e32 v43, v43, v7
-; CHECK-NEXT:    v_xor_b32_e32 v7, v10, v10
 ; CHECK-NEXT:    v_mov_b32_e32 v52, v48
 ; CHECK-NEXT:    v_xor_b32_e32 v48, v52, v21
-; CHECK-NEXT:    v_and_b32_e32 v49, 0x7fffffff, v7
-; CHECK-NEXT:    v_lshlrev_b32_e32 v7, 26, v40
-; CHECK-NEXT:    v_lshrrev_b64 v[40:41], 5, v[48:49]
-; CHECK-NEXT:    v_or_b32_e32 v41, v41, v7
-; CHECK-NEXT:    flat_store_dwordx4 v[38:39], v[40:43] offset:16
-; CHECK-NEXT:    v_xor_b32_e32 v7, v30, v30
-; CHECK-NEXT:    v_add_co_u32_e64 v40, s[10:11], s10, v34
-; CHECK-NEXT:    v_addc_co_u32_e64 v41, s[10:11], 0, v35, s[10:11]
-; CHECK-NEXT:    v_lshrrev_b32_e32 v9, 15, v7
-; CHECK-NEXT:    s_movk_i32 s10, 0x78
-; CHECK-NEXT:    flat_store_short v[40:41], v9
-; CHECK-NEXT:    v_add_co_u32_e64 v40, s[10:11], s10, v34
-; CHECK-NEXT:    v_alignbit_b32 v7, v7, v27, 15
-; CHECK-NEXT:    v_addc_co_u32_e64 v41, s[10:11], 0, v35, s[10:11]
-; CHECK-NEXT:    flat_store_dword v[40:41], v7
-; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:828 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:832 ; 4-byte Folded Reload
-; CHECK-NEXT:    v_xor_b32_e32 v7, v16, v16
-; CHECK-NEXT:    v_accvgpr_read_b32 v55, a25
+; CHECK-NEXT:    v_accvgpr_write_b32 a29, v40
+; CHECK-NEXT:    v_mov_b32_e32 v40, v10
+; CHECK-NEXT:    s_movk_i32 s10, 0x7c
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a25, a14
 ; CHECK-NEXT:    v_accvgpr_write_b32 a14, v50
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_and_b32_e32 v41, 0x7fffffff, v7
-; CHECK-NEXT:    v_lshlrev_b32_e32 v7, 23, v8
-; CHECK-NEXT:    v_xor_b32_e32 v21, v2, v2
-; CHECK-NEXT:    v_writelane_b32 v56, s8, 16
-; CHECK-NEXT:    v_writelane_b32 v56, s9, 17
+; CHECK-NEXT:    v_writelane_b32 v41, s8, 16
+; CHECK-NEXT:    v_writelane_b32 v41, s9, 17
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[4:5]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[94:95]
@@ -557,73 +542,108 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    s_mov_b64 s[78:79], s[88:89]
 ; CHECK-NEXT:    s_mov_b64 s[88:89], s[90:91]
 ; CHECK-NEXT:    s_mov_b64 s[90:91], s[92:93]
+; CHECK-NEXT:    v_mov_b32_e32 v16, v13
+; CHECK-NEXT:    v_lshrrev_b64 v[12:13], 6, v[14:15]
+; CHECK-NEXT:    v_or_b32_e32 v13, v13, v7
+; CHECK-NEXT:    v_xor_b32_e32 v7, v10, v10
+; CHECK-NEXT:    v_and_b32_e32 v49, 0x7fffffff, v7
+; CHECK-NEXT:    v_lshlrev_b32_e32 v7, 26, v14
+; CHECK-NEXT:    v_mov_b32_e32 v15, v11
+; CHECK-NEXT:    v_lshrrev_b64 v[10:11], 5, v[48:49]
+; CHECK-NEXT:    v_or_b32_e32 v11, v11, v7
+; CHECK-NEXT:    flat_store_dwordx4 v[38:39], v[10:13] offset:16
+; CHECK-NEXT:    v_xor_b32_e32 v7, v30, v30
+; CHECK-NEXT:    v_add_co_u32_e64 v12, s[10:11], s10, v34
+; CHECK-NEXT:    v_addc_co_u32_e64 v13, s[10:11], 0, v35, s[10:11]
+; CHECK-NEXT:    v_lshrrev_b32_e32 v9, 15, v7
+; CHECK-NEXT:    s_movk_i32 s10, 0x78
+; CHECK-NEXT:    flat_store_short v[12:13], v9
+; CHECK-NEXT:    v_add_co_u32_e64 v12, s[10:11], s10, v34
+; CHECK-NEXT:    v_alignbit_b32 v7, v7, v27, 15
+; CHECK-NEXT:    v_addc_co_u32_e64 v13, s[10:11], 0, v35, s[10:11]
+; CHECK-NEXT:    flat_store_dword v[12:13], v7
+; CHECK-NEXT:    v_accvgpr_read_b32 v12, a4
+; CHECK-NEXT:    v_xor_b32_e32 v7, v16, v16
+; CHECK-NEXT:    v_xor_b32_e32 v50, v12, v19
+; CHECK-NEXT:    v_xor_b32_e32 v12, v54, v17
+; CHECK-NEXT:    v_and_b32_e32 v13, 0x7fffffff, v7
+; CHECK-NEXT:    v_lshlrev_b32_e32 v7, 23, v8
+; CHECK-NEXT:    v_lshrrev_b64 v[8:9], 8, v[12:13]
+; CHECK-NEXT:    v_or_b32_e32 v9, v9, v7
+; CHECK-NEXT:    flat_store_dwordx2 v[34:35], v[8:9] offset:64
+; CHECK-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:800 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:804 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_accvgpr_read_b32 v14, a31
+; CHECK-NEXT:    v_xor_b32_e32 v7, v14, v14
+; CHECK-NEXT:    v_and_b32_e32 v7, 0x7fffffff, v7
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_xor_b32_e32 v9, v6, v6
+; CHECK-NEXT:    v_mov_b32_e32 v10, v40
+; CHECK-NEXT:    v_accvgpr_read_b32 v40, a2
+; CHECK-NEXT:    v_xor_b32_e32 v19, v4, v4
+; CHECK-NEXT:    v_xor_b32_e32 v14, v40, v14
+; CHECK-NEXT:    v_xor_b32_e32 v11, v2, v2
 ; CHECK-NEXT:    s_mov_b64 s[92:93], s[94:95]
 ; CHECK-NEXT:    s_mov_b64 s[94:95], s[4:5]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[8:9]
-; CHECK-NEXT:    v_readlane_b32 s8, v56, 16
+; CHECK-NEXT:    v_readlane_b32 s8, v41, 16
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[18:19]
-; CHECK-NEXT:    v_readlane_b32 s9, v56, 17
+; CHECK-NEXT:    v_readlane_b32 s9, v41, 17
+; CHECK-NEXT:    v_accvgpr_read_b32 v40, a29
 ; CHECK-NEXT:    s_xor_b64 s[18:19], exec, -1
-; CHECK-NEXT:    v_xor_b32_e32 v50, v40, v19
-; CHECK-NEXT:    v_xor_b32_e32 v40, v54, v17
-; CHECK-NEXT:    v_lshrrev_b64 v[8:9], 8, v[40:41]
-; CHECK-NEXT:    v_or_b32_e32 v9, v9, v7
-; CHECK-NEXT:    v_xor_b32_e32 v7, v14, v14
-; CHECK-NEXT:    flat_store_dwordx2 v[34:35], v[8:9] offset:64
-; CHECK-NEXT:    v_xor_b32_e32 v8, v46, v15
-; CHECK-NEXT:    v_and_b32_e32 v7, 0x7fffffff, v7
-; CHECK-NEXT:    v_lshlrev_b32_e32 v15, 24, v40
-; CHECK-NEXT:    v_accvgpr_read_b32 v40, a2
-; CHECK-NEXT:    v_xor_b32_e32 v9, v6, v6
-; CHECK-NEXT:    v_xor_b32_e32 v40, v40, v13
-; CHECK-NEXT:    v_lshrrev_b64 v[42:43], 7, v[6:7]
+; CHECK-NEXT:    v_xor_b32_e32 v8, v8, v16
+; CHECK-NEXT:    v_lshlrev_b32_e32 v16, 24, v12
+; CHECK-NEXT:    v_lshrrev_b64 v[12:13], 7, v[6:7]
+; CHECK-NEXT:    v_or_b32_e32 v13, v13, v16
 ; CHECK-NEXT:    v_accvgpr_read_b32 v6, a30
-; CHECK-NEXT:    v_xor_b32_e32 v13, v8, v8
-; CHECK-NEXT:    v_xor_b32_e32 v44, v6, v11
-; CHECK-NEXT:    v_and_b32_e32 v45, 0x7fffffff, v13
-; CHECK-NEXT:    v_lshlrev_b32_e32 v11, 27, v48
-; CHECK-NEXT:    v_mov_b32_e32 v48, v52
-; CHECK-NEXT:    v_lshrrev_b64 v[52:53], 4, v[44:45]
-; CHECK-NEXT:    v_or_b32_e32 v43, v43, v15
-; CHECK-NEXT:    v_or_b32_e32 v53, v53, v11
-; CHECK-NEXT:    v_and_b32_e32 v41, 0x7fffffff, v9
-; CHECK-NEXT:    v_xor_b32_e32 v17, v4, v4
-; CHECK-NEXT:    flat_store_dwordx2 v[38:39], v[42:43] offset:32
-; CHECK-NEXT:    flat_store_dwordx2 v[34:35], v[52:53] offset:32
-; CHECK-NEXT:    v_xor_b32_e32 v42, v4, v5
-; CHECK-NEXT:    v_lshrrev_b64 v[52:53], 3, v[40:41]
-; CHECK-NEXT:    v_lshlrev_b32_e32 v5, 28, v44
-; CHECK-NEXT:    v_or_b32_e32 v53, v53, v5
-; CHECK-NEXT:    v_and_b32_e32 v9, 0x7fffffff, v17
+; CHECK-NEXT:    flat_store_dwordx2 v[38:39], v[12:13] offset:32
+; CHECK-NEXT:    v_xor_b32_e32 v12, v8, v8
+; CHECK-NEXT:    v_xor_b32_e32 v16, v6, v15
+; CHECK-NEXT:    v_and_b32_e32 v17, 0x7fffffff, v12
 ; CHECK-NEXT:    v_xor_b32_e32 v7, v0, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v15, 27, v48
+; CHECK-NEXT:    v_lshrrev_b64 v[12:13], 4, v[16:17]
+; CHECK-NEXT:    v_and_b32_e32 v7, 0x7fffffff, v7
+; CHECK-NEXT:    v_or_b32_e32 v13, v13, v15
+; CHECK-NEXT:    v_lshlrev_b32_e32 v15, 31, v50
+; CHECK-NEXT:    flat_store_dwordx2 v[34:35], v[12:13] offset:32
+; CHECK-NEXT:    v_or_b32_e32 v13, v7, v15
+; CHECK-NEXT:    v_and_b32_e32 v15, 0x7fffffff, v9
+; CHECK-NEXT:    v_mov_b32_e32 v48, v52
+; CHECK-NEXT:    v_xor_b32_e32 v12, v4, v5
+; CHECK-NEXT:    v_lshrrev_b64 v[52:53], 3, v[14:15]
+; CHECK-NEXT:    v_lshlrev_b32_e32 v5, 28, v16
+; CHECK-NEXT:    v_and_b32_e32 v9, 0x7fffffff, v19
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a30, a20
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a20, a19
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a19, a16
 ; CHECK-NEXT:    v_accvgpr_write_b32 a16, v51
-; CHECK-NEXT:    flat_store_dwordx2 v[38:39], v[52:53]
-; CHECK-NEXT:    v_lshrrev_b64 v[52:53], 2, v[8:9]
-; CHECK-NEXT:    v_lshlrev_b32_e32 v5, 29, v40
-; CHECK-NEXT:    v_and_b32_e32 v51, 0x7fffffff, v21
-; CHECK-NEXT:    v_and_b32_e32 v7, 0x7fffffff, v7
-; CHECK-NEXT:    v_lshlrev_b32_e32 v11, 31, v50
 ; CHECK-NEXT:    v_or_b32_e32 v53, v53, v5
-; CHECK-NEXT:    v_lshrrev_b64 v[44:45], 1, v[50:51]
+; CHECK-NEXT:    v_lshrrev_b64 v[16:17], 2, v[8:9]
+; CHECK-NEXT:    v_lshlrev_b32_e32 v5, 29, v14
+; CHECK-NEXT:    v_and_b32_e32 v51, 0x7fffffff, v11
+; CHECK-NEXT:    v_or_b32_e32 v17, v17, v5
+; CHECK-NEXT:    v_lshrrev_b64 v[14:15], 1, v[50:51]
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v5, 30, v8
-; CHECK-NEXT:    v_or_b32_e32 v43, v7, v11
-; CHECK-NEXT:    v_or_b32_e32 v45, v45, v5
-; CHECK-NEXT:    v_accvgpr_read_b32 v38, a2
-; CHECK-NEXT:    flat_store_dwordx2 v[34:35], v[52:53] offset:16
+; CHECK-NEXT:    v_or_b32_e32 v15, v15, v5
 ; CHECK-NEXT:    v_accvgpr_read_b32 v50, a14
-; CHECK-NEXT:    v_accvgpr_read_b32 v8, a1
-; CHECK-NEXT:    v_accvgpr_mov_b32 a1, a7
-; CHECK-NEXT:    v_accvgpr_read_b32 v52, a0
-; CHECK-NEXT:    v_accvgpr_read_b32 v40, a29
-; CHECK-NEXT:    v_accvgpr_read_b32 v9, a27
-; CHECK-NEXT:    v_accvgpr_read_b32 v53, a5
+; CHECK-NEXT:    v_accvgpr_read_b32 v8, a21
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a14, a25
-; CHECK-NEXT:    v_accvgpr_write_b32 a25, v55
-; CHECK-NEXT:    flat_store_dwordx4 v[34:35], v[42:45]
+; CHECK-NEXT:    buffer_load_dword a21, off, s[0:3], s32 offset:1136 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword a25, off, s[0:3], s32 offset:1132 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_accvgpr_read_b32 v9, a27
+; CHECK-NEXT:    flat_store_dwordx4 v[34:35], v[12:15]
+; CHECK-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:1140 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:1144 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_accvgpr_read_b32 v14, a6
+; CHECK-NEXT:    flat_store_dwordx2 v[38:39], v[52:53]
+; CHECK-NEXT:    v_accvgpr_read_b32 v38, a2
+; CHECK-NEXT:    flat_store_dwordx2 v[34:35], v[16:17] offset:16
+; CHECK-NEXT:    v_accvgpr_read_b32 v52, a1
+; CHECK-NEXT:    v_accvgpr_read_b32 v53, a5
 ; CHECK-NEXT:  .LBB0_3: ; %Flow52
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; CHECK-NEXT:    s_and_b64 s[18:19], s[18:19], exec
@@ -652,23 +672,24 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:  .LBB0_10: ; %else
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[18:19]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], exec
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:904 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:908 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:876 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:880 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:868 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:872 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:860 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:864 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:836 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:840 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:884 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:888 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:876 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:880 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:848 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:852 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:840 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:844 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:832 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:836 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:808 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:812 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:856 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:860 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_and_b64 s[6:7], s[8:9], s[6:7]
 ; CHECK-NEXT:    v_accvgpr_read_b32 v33, a29
 ; CHECK-NEXT:    v_accvgpr_read_b32 v32, a28
 ; CHECK-NEXT:    v_accvgpr_read_b32 v37, a27
 ; CHECK-NEXT:    v_accvgpr_read_b32 v36, a26
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_accvgpr_read_b32 v39, a25
 ; CHECK-NEXT:    v_accvgpr_read_b32 v38, a24
 ; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
@@ -680,14 +701,12 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_14
 ; CHECK-NEXT:  ; %bb.13: ; %cond.load4
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_load_dwordx2 v[2:3], v[0:1] offset:16
 ; CHECK-NEXT:  .LBB0_14: ; %else5
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], s[94:95]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_16
 ; CHECK-NEXT:  ; %bb.15: ; %cond.load7
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_load_dwordx2 v[4:5], v[0:1] offset:24
 ; CHECK-NEXT:  .LBB0_16: ; %else8
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -700,7 +719,6 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], s[90:91]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_20
 ; CHECK-NEXT:  ; %bb.19: ; %cond.load13
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_load_dwordx2 v[10:11], v[0:1] offset:40
 ; CHECK-NEXT:  .LBB0_20: ; %else14
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -713,7 +731,6 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], s[78:79]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_24
 ; CHECK-NEXT:  ; %bb.23: ; %cond.load19
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_load_dwordx2 v[12:13], v[0:1] offset:56
 ; CHECK-NEXT:  .LBB0_24: ; %else20
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -726,7 +743,6 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], s[74:75]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_28
 ; CHECK-NEXT:  ; %bb.27: ; %cond.load25
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_load_dwordx2 v[14:15], v[0:1] offset:72
 ; CHECK-NEXT:  .LBB0_28: ; %else26
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -739,7 +755,6 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], s[62:63]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_32
 ; CHECK-NEXT:  ; %bb.31: ; %cond.load31
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_load_dwordx2 v[16:17], v[0:1] offset:88
 ; CHECK-NEXT:  .LBB0_32: ; %else32
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -850,28 +865,26 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    flat_store_dwordx4 v[34:35], v[18:21]
 ; CHECK-NEXT:    ; implicit-def: $vgpr3
 ; CHECK-NEXT:    ; implicit-def: $vgpr36
-; CHECK-NEXT:    ; implicit-def: $vgpr16
 ; CHECK-NEXT:    ; implicit-def: $vgpr14
 ; CHECK-NEXT:    ; implicit-def: $vgpr12
-; CHECK-NEXT:    ; implicit-def: $vgpr10
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
+; CHECK-NEXT:    ; implicit-def: $vgpr10
+; CHECK-NEXT:    ; implicit-def: $agpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr54
 ; CHECK-NEXT:    ; implicit-def: $vgpr32
 ; CHECK-NEXT:    ; implicit-def: $vgpr50
 ; CHECK-NEXT:    ; implicit-def: $vgpr48
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
 ; CHECK-NEXT:    ; implicit-def: $vgpr38
-; CHECK-NEXT:    ; implicit-def: $vgpr46
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:828 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:800 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:832 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:804 ; 4-byte Folded Spill
+; CHECK-NEXT:    ; implicit-def: $agpr4
 ; CHECK-NEXT:    ; implicit-def: $vgpr4
 ; CHECK-NEXT:  .LBB0_41: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[16:17]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_43
 ; CHECK-NEXT:  ; %bb.42: ; %bb0a
-; CHECK-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:828 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:832 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7c, v34
 ; CHECK-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v35, vcc
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v5, 15, v30
@@ -879,33 +892,34 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    v_add_co_u32_e32 v0, vcc, 0x78, v34
 ; CHECK-NEXT:    v_alignbit_b32 v5, v30, v3, 15
 ; CHECK-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v35, vcc
+; CHECK-NEXT:    v_accvgpr_read_b32 v22, a4
 ; CHECK-NEXT:    flat_store_dword v[0:1], v5
-; CHECK-NEXT:    v_and_b32_e32 v17, 0x7fffffff, v26
-; CHECK-NEXT:    v_and_b32_e32 v37, 0x7fffffff, v28
-; CHECK-NEXT:    v_lshrrev_b64 v[18:19], 13, v[16:17]
-; CHECK-NEXT:    v_and_b32_e32 v15, 0x7fffffff, v24
-; CHECK-NEXT:    v_lshrrev_b64 v[20:21], 14, v[36:37]
-; CHECK-NEXT:    v_and_b32_e32 v11, 0x7fffffff, v20
-; CHECK-NEXT:    v_lshlrev_b32_e32 v7, 22, v10
-; CHECK-NEXT:    v_and_b32_e32 v47, 0x7fffffff, v4
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 31, v22
 ; CHECK-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v0
+; CHECK-NEXT:    v_and_b32_e32 v15, 0x7fffffff, v26
 ; CHECK-NEXT:    v_or_b32_e32 v5, v1, v0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 17, v3
+; CHECK-NEXT:    v_and_b32_e32 v37, 0x7fffffff, v28
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 18, v36
+; CHECK-NEXT:    v_lshrrev_b64 v[18:19], 13, v[14:15]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_and_b32_e32 v13, 0x7fffffff, v24
+; CHECK-NEXT:    v_lshrrev_b64 v[20:21], 14, v[36:37]
 ; CHECK-NEXT:    v_or_b32_e32 v19, v19, v3
-; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 19, v16
-; CHECK-NEXT:    v_lshrrev_b64 v[16:17], 12, v[14:15]
-; CHECK-NEXT:    v_and_b32_e32 v13, 0x7fffffff, v22
+; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 19, v14
+; CHECK-NEXT:    v_lshrrev_b64 v[16:17], 12, v[12:13]
 ; CHECK-NEXT:    v_or_b32_e32 v17, v17, v3
-; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 20, v14
-; CHECK-NEXT:    v_lshrrev_b64 v[14:15], 11, v[12:13]
-; CHECK-NEXT:    v_or_b32_e32 v15, v15, v3
-; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 21, v12
+; CHECK-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v22
+; CHECK-NEXT:    v_and_b32_e32 v11, 0x7fffffff, v20
+; CHECK-NEXT:    v_lshlrev_b32_e32 v7, 20, v12
+; CHECK-NEXT:    v_lshrrev_b64 v[14:15], 11, v[2:3]
+; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 21, v2
 ; CHECK-NEXT:    v_lshrrev_b64 v[12:13], 10, v[10:11]
+; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
 ; CHECK-NEXT:    v_or_b32_e32 v13, v13, v3
 ; CHECK-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v18
+; CHECK-NEXT:    v_or_b32_e32 v15, v15, v7
+; CHECK-NEXT:    v_lshlrev_b32_e32 v7, 22, v10
 ; CHECK-NEXT:    v_lshrrev_b64 v[10:11], 9, v[2:3]
 ; CHECK-NEXT:    v_and_b32_e32 v55, 0x7fffffff, v16
 ; CHECK-NEXT:    v_or_b32_e32 v11, v11, v7
@@ -943,12 +957,18 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[18:21] offset:80
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[14:17] offset:64
 ; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:800 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:804 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_and_b32_e32 v7, 0x7fffffff, v4
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 29, v38
-; CHECK-NEXT:    v_lshrrev_b64 v[0:1], 2, v[46:47]
-; CHECK-NEXT:    v_or_b32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_and_b32_e32 v23, 0x7fffffff, v2
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v6, v0
+; CHECK-NEXT:    v_lshrrev_b64 v[0:1], 2, v[6:7]
+; CHECK-NEXT:    v_or_b32_e32 v1, v1, v2
 ; CHECK-NEXT:    flat_store_dwordx2 v[34:35], v[0:1] offset:16
-; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 30, v46
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 30, v6
 ; CHECK-NEXT:    v_lshrrev_b64 v[6:7], 1, v[22:23]
 ; CHECK-NEXT:    v_or_b32_e32 v7, v7, v1
 ; CHECK-NEXT:    flat_store_dwordx4 v[34:35], v[4:7]
@@ -975,10 +995,10 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a12
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 31, v2
 ; CHECK-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v0
-; CHECK-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:1124 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:1128 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:1132 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:1136 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:1044 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:1048 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:1052 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:1056 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_accvgpr_read_b32 v4, a10
 ; CHECK-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v28
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -994,24 +1014,13 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v35, vcc
 ; CHECK-NEXT:    v_or_b32_e32 v5, v5, v3
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:80
-; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 19, v8
-; CHECK-NEXT:    v_accvgpr_read_b32 v4, a6
-; CHECK-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v24
-; CHECK-NEXT:    v_lshrrev_b64 v[6:7], 12, v[4:5]
-; CHECK-NEXT:    v_accvgpr_read_b32 v8, a4
-; CHECK-NEXT:    v_and_b32_e32 v9, 0x7fffffff, v22
-; CHECK-NEXT:    v_or_b32_e32 v7, v7, v3
-; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 20, v4
-; CHECK-NEXT:    v_lshrrev_b64 v[4:5], 11, v[8:9]
-; CHECK-NEXT:    v_or_b32_e32 v5, v5, v3
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:64
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1116 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1036 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1120 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1040 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v20
-; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 21, v8
-; CHECK-NEXT:    v_and_b32_e32 v9, 0x7fffffff, v18
+; CHECK-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v24
+; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 19, v8
+; CHECK-NEXT:    v_and_b32_e32 v9, 0x7fffffff, v22
 ; CHECK-NEXT:    ; implicit-def: $agpr25
 ; CHECK-NEXT:    ; implicit-def: $agpr23
 ; CHECK-NEXT:    ; implicit-def: $vgpr53
@@ -1019,9 +1028,8 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    ; implicit-def: $agpr21
 ; CHECK-NEXT:    ; implicit-def: $agpr14
 ; CHECK-NEXT:    ; implicit-def: $vgpr52
-; CHECK-NEXT:    ; implicit-def: $agpr31
 ; CHECK-NEXT:    ; implicit-def: $agpr3
-; CHECK-NEXT:    ; implicit-def: $agpr1
+; CHECK-NEXT:    ; implicit-def: $agpr7
 ; CHECK-NEXT:    ; implicit-def: $agpr19
 ; CHECK-NEXT:    ; implicit-def: $agpr17
 ; CHECK-NEXT:    ; implicit-def: $agpr16
@@ -1033,19 +1041,36 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    ; implicit-def: $agpr22
 ; CHECK-NEXT:    ; implicit-def: $agpr11
 ; CHECK-NEXT:    ; implicit-def: $agpr13
+; CHECK-NEXT:    v_lshrrev_b64 v[6:7], 12, v[4:5]
+; CHECK-NEXT:    v_or_b32_e32 v7, v7, v3
+; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 20, v4
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1028 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1032 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v8, v4
+; CHECK-NEXT:    v_lshrrev_b64 v[4:5], 11, v[8:9]
+; CHECK-NEXT:    v_or_b32_e32 v5, v5, v3
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:64
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1124 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1128 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v20
+; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 21, v8
+; CHECK-NEXT:    v_and_b32_e32 v9, 0x7fffffff, v18
 ; CHECK-NEXT:    v_lshrrev_b64 v[6:7], 10, v[4:5]
 ; CHECK-NEXT:    v_or_b32_e32 v7, v7, v3
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 22, v4
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1108 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1112 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1116 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1120 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v4
 ; CHECK-NEXT:    v_lshrrev_b64 v[4:5], 9, v[8:9]
 ; CHECK-NEXT:    v_or_b32_e32 v5, v5, v3
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:48
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1100 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1108 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1104 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1112 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_and_b32_e32 v7, 0x7fffffff, v16
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 23, v8
 ; CHECK-NEXT:    v_and_b32_e32 v9, 0x7fffffff, v10
@@ -1054,9 +1079,9 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    v_lshrrev_b64 v[4:5], 8, v[6:7]
 ; CHECK-NEXT:    v_or_b32_e32 v5, v5, v3
 ; CHECK-NEXT:    flat_store_dwordx2 v[34:35], v[4:5] offset:64
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1092 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1100 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1096 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1104 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 24, v6
 ; CHECK-NEXT:    v_and_b32_e32 v7, 0x7fffffff, v14
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -1064,25 +1089,25 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    v_lshrrev_b64 v[4:5], 7, v[6:7]
 ; CHECK-NEXT:    v_or_b32_e32 v5, v5, v3
 ; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[4:5] offset:32
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1084 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1092 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1088 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1096 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v12
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 25, v6
 ; CHECK-NEXT:    v_lshrrev_b64 v[6:7], 6, v[4:5]
 ; CHECK-NEXT:    v_or_b32_e32 v7, v7, v3
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 26, v4
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1076 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1080 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1084 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1088 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v4
 ; CHECK-NEXT:    v_lshrrev_b64 v[4:5], 5, v[8:9]
 ; CHECK-NEXT:    v_or_b32_e32 v5, v5, v3
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:16
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1068 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1076 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1072 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1080 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_and_b32_e32 v7, 0x7fffffff, v8
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 27, v8
 ; CHECK-NEXT:    ; implicit-def: $vgpr9
@@ -1091,9 +1116,9 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    v_lshrrev_b64 v[4:5], 4, v[6:7]
 ; CHECK-NEXT:    v_or_b32_e32 v5, v5, v3
 ; CHECK-NEXT:    flat_store_dwordx2 v[34:35], v[4:5] offset:32
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1060 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:1068 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1064 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:1072 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 28, v6
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v6, v4
@@ -1101,9 +1126,9 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    v_lshrrev_b64 v[4:5], 3, v[6:7]
 ; CHECK-NEXT:    v_or_b32_e32 v5, v5, v3
 ; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[4:5]
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1052 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1060 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:1056 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:1064 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 29, v6
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v4, v0
@@ -1196,6 +1221,8 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; kill: killed $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    ; kill: killed $vgpr0
+; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    flat_store_dwordx4 v[34:35], v[10:13]
 ; CHECK-NEXT:    ; kill: killed $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
@@ -1205,141 +1232,141 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[6:7], s[6:7]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_49
 ; CHECK-NEXT:  ; %bb.48: ; %bb1a
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:852 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:912 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:844 ; 4-byte Folded Reload
-; CHECK-NEXT:    v_readlane_b32 s6, v56, 0
-; CHECK-NEXT:    v_readlane_b32 s7, v56, 1
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:824 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:884 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:816 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_readlane_b32 s6, v41, 0
+; CHECK-NEXT:    v_readlane_b32 s7, v41, 1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_accvgpr_read_b32 v3, a25
 ; CHECK-NEXT:    v_accvgpr_read_b32 v4, a23
 ; CHECK-NEXT:    v_accvgpr_read_b32 v7, a21
 ; CHECK-NEXT:    v_accvgpr_read_b32 v8, a14
-; CHECK-NEXT:    v_accvgpr_read_b32 v10, a1
-; CHECK-NEXT:    v_accvgpr_read_b32 v11, a31
+; CHECK-NEXT:    v_accvgpr_read_b32 v10, a7
 ; CHECK-NEXT:    v_accvgpr_read_b32 v13, a19
 ; CHECK-NEXT:    v_accvgpr_read_b32 v14, a17
 ; CHECK-NEXT:    v_accvgpr_read_b32 v17, a20
 ; CHECK-NEXT:    v_accvgpr_read_b32 v20, a16
 ; CHECK-NEXT:    v_accvgpr_read_b32 v21, a30
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v1, v0, v53, s[10:11]
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:856 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:828 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_cndmask_b32_e64 v3, v2, v3, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:848 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:820 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, v0, v40, s[10:11]
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, v2, v4, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:928 ; 4-byte Folded Reload
-; CHECK-NEXT:    v_readlane_b32 s6, v56, 4
-; CHECK-NEXT:    v_readlane_b32 s7, v56, 5
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:900 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_readlane_b32 s6, v41, 4
+; CHECK-NEXT:    v_readlane_b32 s7, v41, 5
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v5, v4, v9, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:924 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:896 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_accvgpr_read_b32 v9, a3
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v4, v4, v52, s[6:7]
-; CHECK-NEXT:    v_readlane_b32 s6, v56, 2
-; CHECK-NEXT:    v_readlane_b32 s7, v56, 3
+; CHECK-NEXT:    v_readlane_b32 s6, v41, 2
+; CHECK-NEXT:    v_readlane_b32 s7, v41, 3
 ; CHECK-NEXT:    v_cndmask_b32_e64 v7, v6, v7, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:900 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:872 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v6, v6, v8, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:920 ; 4-byte Folded Reload
-; CHECK-NEXT:    v_readlane_b32 s6, v56, 8
-; CHECK-NEXT:    v_readlane_b32 s7, v56, 9
+; CHECK-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:892 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_readlane_b32 s6, v41, 8
+; CHECK-NEXT:    v_readlane_b32 s7, v41, 9
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v9, v8, v9, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:916 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:888 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v8, v8, v10, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:896 ; 4-byte Folded Reload
-; CHECK-NEXT:    v_readlane_b32 s6, v56, 6
-; CHECK-NEXT:    v_readlane_b32 s7, v56, 7
+; CHECK-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:868 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v11, off, s[0:3], s32 offset:1024 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_readlane_b32 s6, v41, 6
+; CHECK-NEXT:    v_readlane_b32 s7, v41, 7
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v11, v10, v11, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:892 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:1040 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:864 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:1012 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v10, v10, v12, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:960 ; 4-byte Folded Reload
-; CHECK-NEXT:    v_readlane_b32 s6, v56, 12
-; CHECK-NEXT:    v_readlane_b32 s7, v56, 13
+; CHECK-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:932 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_readlane_b32 s6, v41, 12
+; CHECK-NEXT:    v_readlane_b32 s7, v41, 13
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v13, v12, v13, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:948 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:920 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v12, v12, v14, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:932 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:1036 ; 4-byte Folded Reload
-; CHECK-NEXT:    v_readlane_b32 s6, v56, 10
-; CHECK-NEXT:    v_readlane_b32 s7, v56, 11
+; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:904 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:1008 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_readlane_b32 s6, v41, 10
+; CHECK-NEXT:    v_readlane_b32 s7, v41, 11
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v15, v14, v15, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:936 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:1012 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:908 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:984 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v14, v14, v16, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:952 ; 4-byte Folded Reload
-; CHECK-NEXT:    v_readlane_b32 s6, v56, 14
-; CHECK-NEXT:    v_readlane_b32 s7, v56, 15
+; CHECK-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:924 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_readlane_b32 s6, v41, 14
+; CHECK-NEXT:    v_readlane_b32 s7, v41, 15
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v17, v16, v17, s[44:45]
-; CHECK-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:956 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:1024 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:928 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:996 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v16, v16, v18, s[44:45]
-; CHECK-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:940 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:1048 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:912 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:1020 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v19, v18, v19, s[40:41]
-; CHECK-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:944 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:916 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v18, v18, v20, s[40:41]
-; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:984 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:956 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v23, v20, v21, s[42:43]
-; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:976 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:948 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_accvgpr_read_b32 v21, a9
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v22, v20, v21, s[42:43]
-; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:964 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:936 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_accvgpr_read_b32 v21, a15
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v25, v20, v21, s[22:23]
-; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:968 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:940 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_accvgpr_read_b32 v21, a18
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v24, v20, v21, s[22:23]
-; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:1008 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:980 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_accvgpr_read_b32 v21, a22
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v27, v20, v21, s[26:27]
-; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:996 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:1032 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:968 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:1004 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v26, v20, v21, s[26:27]
-; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:980 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:1044 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_cndmask_b32_e64 v29, v20, v21, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:972 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:952 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:1016 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_cndmask_b32_e64 v29, v20, v21, s[6:7]
+; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:944 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:988 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v28, v20, v21, s[6:7]
-; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:1000 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:972 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_accvgpr_read_b32 v21, a11
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v33, v20, v21, s[24:25]
-; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:1004 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:976 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_accvgpr_read_b32 v21, a13
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v32, v20, v21, s[24:25]
-; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:992 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:1028 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:964 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:1000 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v31, v20, v21, s[28:29]
-; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:988 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:1020 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:960 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:992 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v30, v20, v21, s[28:29]
 ; CHECK-NEXT:    v_add_co_u32_e32 v20, vcc, 48, v34
@@ -1356,16 +1383,9 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; CHECK-NEXT:  .LBB0_49: ; %UnifiedReturnBlock
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:796 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:800 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:804 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:808 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:812 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:816 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:820 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:824 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:796 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; CHECK-NEXT:    buffer_load_dword v56, off, s[0:3], s32 offset:1140 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:1148 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

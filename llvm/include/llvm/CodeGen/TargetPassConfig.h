@@ -25,6 +25,7 @@ namespace llvm {
 
 class TargetMachine;
 class PassConfigImpl;
+struct CodeGenOptions;
 class CSEConfigBase;
 class PassInstrumentationCallbacks;
 
@@ -85,6 +86,7 @@ public:
 class LLVM_ABI TargetPassConfig : public ImmutablePass {
 private:
   PassManagerBase *PM = nullptr;
+  const CodeGenOptions &Opts;
   AnalysisID StartBefore = nullptr;
   AnalysisID StartAfter = nullptr;
   AnalysisID StopBefore = nullptr;
@@ -128,6 +130,8 @@ protected:
   // Targets provide a default setting, user flags override.
   bool DisableVerify = false;
 
+  MachineVerifierMode VerifyMode = MachineVerifierMode::End;
+
   /// Default setting for -enable-tail-merge on this target.
   bool EnableTailMerge = true;
 
@@ -135,6 +139,10 @@ protected:
   /// folded into the addressing mode of a memory load/store instruction or
   /// replace a copy.
   bool EnableSinkAndFold = false;
+
+  /// Enable insertion of SSAMachineScheduler pass, this triggers early
+  /// computation of live intervals.
+  bool EnableSSAMachineScheduler = false;
 
   /// Require processing of functions such that callees are generated before
   /// callers.
@@ -149,8 +157,6 @@ protected:
 
 public:
   TargetPassConfig(TargetMachine &TM, PassManagerBase &PM);
-  // Dummy constructor.
-  TargetPassConfig();
 
   ~TargetPassConfig() override;
 
@@ -168,16 +174,16 @@ public:
 
   /// Returns true if one of the `-start-after`, `-start-before`, `-stop-after`
   /// or `-stop-before` options is set.
-  static bool hasLimitedCodeGenPipeline();
+  bool hasLimitedCodeGenPipeline() const;
 
   /// Returns true if none of the `-stop-before` and `-stop-after` options is
   /// set.
-  static bool willCompleteCodeGenPipeline();
+  bool willCompleteCodeGenPipeline() const;
 
   /// If hasLimitedCodeGenPipeline is true, this method returns
   /// a string with the name of the options that caused this
   /// pipeline to be limited.
-  static std::string getLimitedCodeGenPipelineReason();
+  std::string getLimitedCodeGenPipelineReason() const;
 
   struct StartStopInfo {
     bool StartAfter;
@@ -186,14 +192,23 @@ public:
     unsigned StopInstanceNum;
     StringRef StartPass;
     StringRef StopPass;
+
+    /// Returns true if a start or stop pass is set.
+    bool isLimited() const { return !StartPass.empty() || !StopPass.empty(); }
+
+    /// Returns the names of the options that set the start and stop passes.
+    LLVM_ABI std::string getLimitReason() const;
   };
 
   /// Returns pass name in `-stop-before` or `-stop-after`
   /// NOTE: New pass manager migration only
   static Expected<StartStopInfo>
-  getStartStopInfo(PassInstrumentationCallbacks &PIC);
+  getStartStopInfo(const TargetMachine &TM, PassInstrumentationCallbacks &PIC);
 
   void setDisableVerify(bool Disable) { setOpt(DisableVerify, Disable); }
+
+  /// Return where the machine verifier runs in the pipeline.
+  MachineVerifierMode getMachineVerifierMode() const { return VerifyMode; }
 
   bool getEnableTailMerge() const { return EnableTailMerge; }
   void setEnableTailMerge(bool Enable) { setOpt(EnableTailMerge, Enable); }
@@ -204,6 +219,13 @@ public:
   bool requiresCodeGenSCCOrder() const { return RequireCodeGenSCCOrder; }
   void setRequiresCodeGenSCCOrder(bool Enable = true) {
     setOpt(RequireCodeGenSCCOrder, Enable);
+  }
+
+  bool getEnableSSAMachineScheduler() const {
+    return EnableSSAMachineScheduler;
+  }
+  void setEnableSSAMachineScheduler(bool Enable) {
+    setOpt(EnableSSAMachineScheduler, Enable);
   }
 
   /// Allow the target to override a specific pass without overriding the pass
@@ -249,7 +271,7 @@ public:
   virtual void addIRPasses();
 
   /// Add passes to lower exception handling for the code generator.
-  void addPassesToHandleExceptions();
+  virtual void addPassesToHandleExceptions();
 
   /// Add pass to prepare the LLVM IR for code generation. This should be done
   /// before exception handling preparation passes.
@@ -412,10 +434,6 @@ protected:
     return false;
   }
 
-  /// addPostFastRegAllocRewrite - Add passes to the optimized register
-  /// allocation pipeline after fast register allocation is complete.
-  virtual bool addPostFastRegAllocRewrite() { return false; }
-
   /// Add passes to be run immediately after virtual registers are rewritten
   /// to physical registers.
   virtual void addPostRewrite() { }
@@ -477,6 +495,9 @@ protected:
   virtual bool addRegAssignAndRewriteFast();
   virtual bool addRegAssignAndRewriteOptimized();
 };
+
+/// TargetPassConfig needs a TargetMachine; the pass registry cannot create one.
+template <> LLVM_ABI Pass *callDefaultCtor<TargetPassConfig>();
 
 LLVM_ABI void registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
                                       TargetMachine &);

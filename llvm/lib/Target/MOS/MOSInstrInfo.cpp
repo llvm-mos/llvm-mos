@@ -1345,10 +1345,19 @@ void MOSInstrInfo::expandCmpBr(MachineIRBuilder &Builder) const {
   }
 
   auto CMP = Builder.buildInstr(CMPOpcode);
+  // The comparison takes over the pseudo's def of C, including its dead flag.
+  // CmpZero already defines C implicitly.
+  bool CIsDead = MI.registerDefIsDead(MOS::C, /*TRI=*/nullptr);
   if (CMPOpcode != MOS::CmpZero)
-    CMP.addDef(MOS::C, RegState::Dead);
-  for (unsigned I = 3, E = MI.getNumOperands(); I != E; I++)
-    CMP.add(MI.getOperand(I));
+    CMP.addDef(MOS::C, getDeadRegState(CIsDead));
+  else if (CIsDead)
+    CMP->findRegisterDefOperand(MOS::C, /*TRI=*/nullptr)->setIsDead();
+  for (unsigned I = 3, E = MI.getNumOperands(); I != E; I++) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (MO.isReg() && MO.isDef() && MO.getReg() == MOS::C)
+      continue;
+    CMP.add(MO);
+  }
   CMP.cloneMemRefs(*CMP);
   CMP.addDef(Flag, RegState::Implicit);
 

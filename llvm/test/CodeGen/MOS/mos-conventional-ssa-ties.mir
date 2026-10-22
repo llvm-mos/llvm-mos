@@ -11,17 +11,17 @@ body: |
     ; CHECK-LABEL: name: tied_projections
     ; CHECK: [[LDAbs:%[0-9]+]]:gpr = LDAbs 1000
     ; CHECK-NEXT: [[LDAbs1:%[0-9]+]]:gpr = LDAbs 1001
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:imag16 = REG_SEQUENCE killed [[LDAbs]], %subreg.sublo, killed [[LDAbs1]], %subreg.subhi
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:imag16 = REG_SEQUENCE [[LDAbs]], %subreg.sublo, [[LDAbs1]], %subreg.subhi
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:anyi8 = COPY [[REG_SEQUENCE]].sublo
-    ; CHECK-NEXT: [[IncMB:%[0-9]+]]:anyi8 = IncMB killed [[COPY]](tied-def 0), implicit-def dead $c, implicit-def dead $v
+    ; CHECK-NEXT: [[IncMB:%[0-9]+]]:anyi8 = IncMB [[COPY]](tied-def 0), implicit-def $c, implicit-def $v
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY [[REG_SEQUENCE]].subhi
-    ; CHECK-NEXT: [[IncMB1:%[0-9]+]]:anyi8 = IncMB killed [[COPY1]](tied-def 0), implicit-def dead $c, implicit-def dead $v
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY killed [[REG_SEQUENCE]].sublo
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY killed [[IncMB]]
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr = COPY killed [[IncMB1]]
-    ; CHECK-NEXT: STAbs killed [[COPY3]], 2000
-    ; CHECK-NEXT: STAbs killed [[COPY4]], 2001
-    ; CHECK-NEXT: STAbs killed [[COPY2]], 2002
+    ; CHECK-NEXT: [[IncMB1:%[0-9]+]]:anyi8 = IncMB [[COPY1]](tied-def 0), implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY [[REG_SEQUENCE]].sublo
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY [[IncMB]]
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr = COPY [[IncMB1]]
+    ; CHECK-NEXT: STAbs [[COPY3]], 2000
+    ; CHECK-NEXT: STAbs [[COPY4]], 2001
+    ; CHECK-NEXT: STAbs [[COPY2]], 2002
     ; CHECK-NEXT: RTS
     %0:gpr = LDAbs 1000
     %1:gpr = LDAbs 1001
@@ -47,9 +47,9 @@ body: |
     ; CHECK-LABEL: name: undef_tied_projection
     ; CHECK: dead [[DEF:%[0-9]+]]:imag16 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:anyi8 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[IncMB:%[0-9]+]]:anyi8 = IncMB killed [[DEF1]](tied-def 0), implicit-def dead $c, implicit-def dead $v
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY killed [[IncMB]]
-    ; CHECK-NEXT: STAbs killed [[COPY]], 2000
+    ; CHECK-NEXT: [[IncMB:%[0-9]+]]:anyi8 = IncMB [[DEF1]](tied-def 0), implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY [[IncMB]]
+    ; CHECK-NEXT: STAbs [[COPY]], 2000
     ; CHECK-NEXT: RTS
     %0:imag16 = IMPLICIT_DEF
     %1:anyi8 = IncMB undef %0.subhi(tied-def 0), implicit-def $c, implicit-def $v
@@ -68,12 +68,12 @@ body: |
     ; CHECK-LABEL: name: live_tied_input
     ; CHECK: liveins: $a
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:anyi8 = COPY killed $a
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:anyi8 = COPY $a
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY [[COPY]]
-    ; CHECK-NEXT: [[IncMB:%[0-9]+]]:anyi8 = IncMB killed [[COPY1]](tied-def 0), implicit-def dead $c, implicit-def dead $v
-    ; CHECK-NEXT: $x = COPY killed [[COPY]]
-    ; CHECK-NEXT: $a = COPY killed [[IncMB]]
-    ; CHECK-NEXT: RTS implicit killed $x, implicit killed $a
+    ; CHECK-NEXT: [[IncMB:%[0-9]+]]:anyi8 = IncMB [[COPY1]](tied-def 0), implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $x = COPY [[COPY]]
+    ; CHECK-NEXT: $a = COPY [[IncMB]]
+    ; CHECK-NEXT: RTS implicit $x, implicit $a
     %0:anyi8 = COPY $a
     %1:anyi8 = IncMB %0(tied-def 0), implicit-def $c, implicit-def $v
     $x = COPY %0
@@ -90,11 +90,11 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: sole_tied_inputs
     ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 1
-    ; CHECK-NEXT: [[IncMB:%[0-9]+]]:gpr = IncMB killed [[LDImm]](tied-def 0), implicit-def dead $c, implicit-def dead $v
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:imag8 = COPY killed [[IncMB]]
-    ; CHECK-NEXT: [[IncMB1:%[0-9]+]]:imag8 = IncMB killed [[COPY]](tied-def 0), implicit-def dead $c, implicit-def dead $v
-    ; CHECK-NEXT: $a = COPY killed [[IncMB1]]
-    ; CHECK-NEXT: RTS implicit killed $a
+    ; CHECK-NEXT: [[IncMB:%[0-9]+]]:gpr = IncMB [[LDImm]](tied-def 0), implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:imag8 = COPY [[IncMB]]
+    ; CHECK-NEXT: [[IncMB1:%[0-9]+]]:imag8 = IncMB [[COPY]](tied-def 0), implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $a = COPY [[IncMB1]]
+    ; CHECK-NEXT: RTS implicit $a
     %0:gpr = LDImm 1
     %1:gpr = IncMB %0(tied-def 0), implicit-def $c, implicit-def $v
     %2:imag8 = IncMB %1(tied-def 0), implicit-def $c, implicit-def $v
@@ -112,10 +112,10 @@ body: |
     ; CHECK-LABEL: name: repeated_tied_input
     ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY [[LDImm]]
-    ; CHECK-NEXT: [[IncMB:%[0-9]+]]:gpr, [[IncMB1:%[0-9]+]]:gpr = IncMB killed [[COPY]](tied-def 0), killed [[LDImm]](tied-def 1), implicit-def dead $c, implicit-def dead $v
-    ; CHECK-NEXT: $a = COPY killed [[IncMB]]
-    ; CHECK-NEXT: $x = COPY killed [[IncMB1]]
-    ; CHECK-NEXT: RTS implicit killed $a, implicit killed $x
+    ; CHECK-NEXT: [[IncMB:%[0-9]+]]:gpr, [[IncMB1:%[0-9]+]]:gpr = IncMB [[COPY]](tied-def 0), [[LDImm]](tied-def 1), implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $a = COPY [[IncMB]]
+    ; CHECK-NEXT: $x = COPY [[IncMB1]]
+    ; CHECK-NEXT: RTS implicit $a, implicit $x
     %0:gpr = LDImm 1
     %1:gpr, %2:gpr = IncMB %0(tied-def 0), killed %0(tied-def 1), implicit-def $c, implicit-def $v
     $a = COPY %1
@@ -134,11 +134,11 @@ body: |
     ; CHECK-LABEL: name: early_clobber_tie
     ; CHECK: liveins: $a
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:imag8 = COPY killed $a
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:imag8 = COPY $a
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:imag8 = COPY [[COPY]]
-    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, regdef-ec:Imag8, def early-clobber %1, reguse tiedto:$0, killed [[COPY1]](tied-def 3), reguse:Imag8, killed [[COPY]]
-    ; CHECK-NEXT: $a = COPY killed %1
-    ; CHECK-NEXT: RTS implicit killed $a
+    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, regdef-ec:Imag8, def early-clobber %1, reguse tiedto:$0, [[COPY1]](tied-def 3), reguse:Imag8, [[COPY]]
+    ; CHECK-NEXT: $a = COPY %1
+    ; CHECK-NEXT: RTS implicit $a
     %0:imag8 = COPY $a
     INLINEASM &"", sideeffect attdialect, regdef-ec:Imag8, def early-clobber %1:imag8, reguse tiedto:$0, %0(tied-def 3), reguse:Imag8, killed %0
     $a = COPY %1
@@ -156,10 +156,10 @@ body: |
     ; CHECK-LABEL: name: constrained_tied_result
     ; CHECK: liveins: $a
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:imag8 = COPY killed $a
-    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, regdef:Imag8, def %2, reguse tiedto:$0, killed [[COPY]](tied-def 3)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY killed %2
-    ; CHECK-NEXT: STAbs killed [[COPY1]], 2000
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:imag8 = COPY $a
+    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, regdef:Imag8, def %2, reguse tiedto:$0, [[COPY]](tied-def 3)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY %2
+    ; CHECK-NEXT: STAbs [[COPY1]], 2000
     ; CHECK-NEXT: RTS
     %0:imag8 = COPY $a
     INLINEASM &"", sideeffect attdialect, regdef:Imag8, def %1:gpr, reguse tiedto:$0, %0(tied-def 3)
@@ -177,8 +177,8 @@ body: |
     ; CHECK-LABEL: name: physical_tie
     ; CHECK: liveins: $a
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $a = IncMB $a(tied-def 0), implicit-def dead $c, implicit-def dead $v, implicit killed $alsb
-    ; CHECK-NEXT: RTS implicit killed $a
+    ; CHECK-NEXT: $a = IncMB $a(tied-def 0), implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: RTS implicit $a
     $a = IncMB killed $a(tied-def 0), implicit-def $c, implicit-def $v
     RTS implicit $a
 ...
@@ -200,12 +200,12 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY [[LDAbs]]
-  ; CHECK-NEXT:   [[IncMB:%[0-9]+]]:gpr = IncMB killed [[COPY]](tied-def 0), implicit-def dead $c, implicit-def dead $v
-  ; CHECK-NEXT:   CmpBrZero %bb.1, undef $z, 1, [[IncMB]], implicit-def dead $c
+  ; CHECK-NEXT:   [[IncMB:%[0-9]+]]:gpr = IncMB [[COPY]](tied-def 0), implicit-def $c, implicit-def $v
+  ; CHECK-NEXT:   CmpBrZero %bb.1, undef $z, 1, [[IncMB]], implicit-def $c
   ; CHECK-NEXT:   JMP %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   STAbs killed [[IncMB]], 2000
+  ; CHECK-NEXT:   STAbs [[IncMB]], 2000
   ; CHECK-NEXT:   RTS
   bb.0:
     %0:gpr = LDAbs 1000
@@ -235,8 +235,8 @@ body: |
   ; CHECK-NEXT:   JMP %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[IncMB:%[0-9]+]]:gpr = IncMB killed [[LDAbs]](tied-def 0), implicit-def dead $c, implicit-def dead $v
-  ; CHECK-NEXT:   STAbs killed [[IncMB]], 2001
+  ; CHECK-NEXT:   [[IncMB:%[0-9]+]]:gpr = IncMB [[LDAbs]](tied-def 0), implicit-def $c, implicit-def $v
+  ; CHECK-NEXT:   STAbs [[IncMB]], 2001
   ; CHECK-NEXT:   RTS
   bb.0:
     %0:gpr = LDAbs 1000
@@ -250,8 +250,8 @@ body: |
 
 # An ordinary tied result can reuse a dying input even if the instruction
 # also reads it through an untied operand: both reads precede the definition.
-# Put the untied operand first so LiveVariables marks it as the kill. CSSA
-# should neither introduce a copy nor add a kill to the tied operand.
+# Put the untied operand first. CSSA should recognize whole-register death
+# without introducing a copy or adding a kill to the tied operand.
 ---
 name: ordinary_tie_with_other_use
 tracksRegLiveness: true
@@ -261,10 +261,10 @@ body: |
     ; CHECK-LABEL: name: ordinary_tie_with_other_use
     ; CHECK: liveins: $a
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:imag8 = COPY killed $a
-    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, reguse:Imag8, killed [[COPY]], regdef:Imag8, def %1, reguse tiedto:$1, [[COPY]](tied-def 5)
-    ; CHECK-NEXT: $a = COPY killed %1
-    ; CHECK-NEXT: RTS implicit killed $a
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:imag8 = COPY $a
+    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, reguse:Imag8, [[COPY]], regdef:Imag8, def %1, reguse tiedto:$1, [[COPY]](tied-def 5)
+    ; CHECK-NEXT: $a = COPY %1
+    ; CHECK-NEXT: RTS implicit $a
     %0:imag8 = COPY $a
     INLINEASM &"", sideeffect attdialect, reguse:Imag8, %0, regdef:Imag8, def %1:imag8, reguse tiedto:$1, %0(tied-def 5)
     $a = COPY %1

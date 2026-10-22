@@ -1632,72 +1632,70 @@ define void @global_atomic_xor_expansion_i32_ret_av_av_no_agprs(ptr addrspace(1)
 ; GFX90A-LABEL: global_atomic_xor_expansion_i32_ret_av_av_no_agprs:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v43, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v44, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:48 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:44 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:40 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v59, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v63, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword a32, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword a33, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword a34, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    v_accvgpr_write_b32 a3, v40 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a4, v41 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a5, v42 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a6, v43 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a7, v44 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a8, v45 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a9, v46 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a10, v47 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a11, v56 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a12, v57 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a13, v58 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a14, v59 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a15, v60 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a16, v61 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a17, v62 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a18, v63 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a1, v1
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[0:31]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_accvgpr_write_b32 a2, v32
-; GFX90A-NEXT:    v_accvgpr_write_b32 a3, v33
-; GFX90A-NEXT:    v_accvgpr_write_b32 a4, v34
-; GFX90A-NEXT:    v_accvgpr_write_b32 a5, v35
-; GFX90A-NEXT:    v_accvgpr_write_b32 a6, v36
-; GFX90A-NEXT:    v_accvgpr_write_b32 a7, v37
-; GFX90A-NEXT:    v_accvgpr_write_b32 a8, v38
-; GFX90A-NEXT:    v_accvgpr_write_b32 a9, v39
-; GFX90A-NEXT:    v_accvgpr_write_b32 a10, v40
-; GFX90A-NEXT:    v_accvgpr_write_b32 a11, v41
-; GFX90A-NEXT:    v_accvgpr_write_b32 a12, v42
-; GFX90A-NEXT:    v_accvgpr_write_b32 a13, v43
-; GFX90A-NEXT:    v_accvgpr_write_b32 a14, v44
-; GFX90A-NEXT:    v_accvgpr_write_b32 a15, v45
-; GFX90A-NEXT:    v_accvgpr_write_b32 a16, v46
-; GFX90A-NEXT:    v_accvgpr_write_b32 a17, v47
-; GFX90A-NEXT:    v_accvgpr_write_b32 a18, v48
-; GFX90A-NEXT:    v_accvgpr_write_b32 a19, v49
-; GFX90A-NEXT:    v_accvgpr_write_b32 a20, v50
-; GFX90A-NEXT:    v_accvgpr_write_b32 a21, v51
-; GFX90A-NEXT:    v_accvgpr_write_b32 a22, v52
-; GFX90A-NEXT:    v_accvgpr_write_b32 a23, v53
-; GFX90A-NEXT:    v_accvgpr_write_b32 a24, v54
-; GFX90A-NEXT:    v_accvgpr_write_b32 a25, v55
-; GFX90A-NEXT:    v_accvgpr_write_b32 a26, v56
-; GFX90A-NEXT:    v_accvgpr_write_b32 a27, v57
-; GFX90A-NEXT:    v_accvgpr_write_b32 a28, v58
-; GFX90A-NEXT:    v_accvgpr_write_b32 a29, v59
-; GFX90A-NEXT:    v_accvgpr_write_b32 a30, v60
-; GFX90A-NEXT:    v_accvgpr_write_b32 a31, v61
-; GFX90A-NEXT:    v_accvgpr_write_b32 a32, v62
-; GFX90A-NEXT:    v_accvgpr_write_b32 a33, v63
+; GFX90A-NEXT:    buffer_store_dword v32, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    s_nop 0
+; GFX90A-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v35, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v36, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v38, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:40 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v43, off, s[0:3], s32 offset:44 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v44, off, s[0:3], s32 offset:48 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v48, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v49, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v50, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
+; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
+; GFX90A-NEXT:    ;;#ASMSTART
+; GFX90A-NEXT:    ; def a2
+; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    v_accvgpr_write_b32 a19, v63 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v33, a1
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v32, a0
 ; GFX90A-NEXT:    global_load_dword v35, v[32:33], off
-; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
-; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def a34
-; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    v_accvgpr_write_b32 a31, v51 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a30, v52 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a29, v53 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a28, v54 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a27, v55 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a26, v56 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a25, v57 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a24, v58 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a23, v59 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a22, v60 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a21, v61 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a20, v62 ; Reload Reuse
 ; GFX90A-NEXT:  .LBB29_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX90A-NEXT:    v_accvgpr_read_b32 v34, a34
+; GFX90A-NEXT:    v_accvgpr_read_b32 v34, a2
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_xor_b32_e32 v34, v35, v34
 ; GFX90A-NEXT:    buffer_wbl2
@@ -1713,139 +1711,119 @@ define void @global_atomic_xor_expansion_i32_ret_av_av_no_agprs(ptr addrspace(1)
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB29_1
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX90A-NEXT:    v_accvgpr_read_b32 v63, a33
-; GFX90A-NEXT:    v_accvgpr_read_b32 v62, a32
-; GFX90A-NEXT:    v_accvgpr_read_b32 v61, a31
-; GFX90A-NEXT:    v_accvgpr_read_b32 v60, a30
-; GFX90A-NEXT:    v_accvgpr_read_b32 v59, a29
-; GFX90A-NEXT:    v_accvgpr_read_b32 v58, a28
-; GFX90A-NEXT:    v_accvgpr_read_b32 v57, a27
-; GFX90A-NEXT:    v_accvgpr_read_b32 v56, a26
-; GFX90A-NEXT:    v_accvgpr_read_b32 v47, a17
-; GFX90A-NEXT:    v_accvgpr_read_b32 v46, a16
-; GFX90A-NEXT:    v_accvgpr_read_b32 v45, a15
-; GFX90A-NEXT:    v_accvgpr_read_b32 v44, a14
-; GFX90A-NEXT:    v_accvgpr_read_b32 v43, a13
-; GFX90A-NEXT:    v_accvgpr_read_b32 v42, a12
-; GFX90A-NEXT:    v_accvgpr_read_b32 v41, a11
-; GFX90A-NEXT:    v_accvgpr_read_b32 v40, a10
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a0, v34
-; GFX90A-NEXT:    v_accvgpr_read_b32 v55, a25
-; GFX90A-NEXT:    v_accvgpr_read_b32 v54, a24
-; GFX90A-NEXT:    v_accvgpr_read_b32 v53, a23
-; GFX90A-NEXT:    v_accvgpr_read_b32 v52, a22
-; GFX90A-NEXT:    v_accvgpr_read_b32 v51, a21
-; GFX90A-NEXT:    v_accvgpr_read_b32 v50, a20
-; GFX90A-NEXT:    v_accvgpr_read_b32 v49, a19
-; GFX90A-NEXT:    v_accvgpr_read_b32 v48, a18
-; GFX90A-NEXT:    v_accvgpr_read_b32 v39, a9
-; GFX90A-NEXT:    v_accvgpr_read_b32 v38, a8
-; GFX90A-NEXT:    v_accvgpr_read_b32 v37, a7
-; GFX90A-NEXT:    v_accvgpr_read_b32 v36, a6
-; GFX90A-NEXT:    v_accvgpr_read_b32 v35, a5
-; GFX90A-NEXT:    v_accvgpr_read_b32 v34, a4
-; GFX90A-NEXT:    v_accvgpr_read_b32 v33, a3
-; GFX90A-NEXT:    v_accvgpr_read_b32 v32, a2
-; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; use v[0:31]
-; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    buffer_load_dword a34, off, s[0:3], s32 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword a33, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword a32, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v63, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v62, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v61, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v60, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v59, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v58, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v57, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v56, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:48 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v32, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v37, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v38, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:48 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:52 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v48, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v50, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
+; GFX90A-NEXT:    v_accvgpr_read_b32 v51, a31 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v52, a30 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v53, a29 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v54, a28 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v55, a27 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v56, a26 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v57, a25 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v58, a24 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v59, a23 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v60, a22 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v61, a21 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v62, a20 ; Reload Reuse
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use a0
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    v_accvgpr_read_b32 v63, a19 ; Reload Reuse
+; GFX90A-NEXT:    ;;#ASMSTART
+; GFX90A-NEXT:    ; use v[0:31]
+; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    v_accvgpr_read_b32 v63, a18 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v62, a17 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v61, a16 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v60, a15 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v59, a14 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v58, a13 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v57, a12 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v56, a11 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v47, a10 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v46, a9 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v45, a8 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v44, a7 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v43, a6 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v42, a5 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v41, a4 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_read_b32 v40, a3 ; Reload Reuse
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-LABEL: global_atomic_xor_expansion_i32_ret_av_av_no_agprs:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    scratch_store_dword off, v40, s32 offset:72 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v41, s32 offset:68 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v42, s32 offset:64 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v43, s32 offset:60 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v44, s32 offset:56 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v45, s32 offset:52 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v46, s32 offset:48 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v47, s32 offset:44 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v56, s32 offset:40 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v57, s32 offset:36 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v58, s32 offset:32 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v59, s32 offset:28 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v60, s32 offset:24 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v61, s32 offset:20 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v62, s32 offset:16 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, v63, s32 offset:12 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, a32, s32 offset:8 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, a33, s32 offset:4 ; 4-byte Folded Spill
-; GFX950-NEXT:    scratch_store_dword off, a34, s32 ; 4-byte Folded Spill
+; GFX950-NEXT:    v_accvgpr_write_b32 a3, v40 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a4, v41 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a5, v42 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a6, v43 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a7, v44 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a8, v45 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a9, v46 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a10, v47 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a11, v56 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a12, v57 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a13, v58 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a14, v59 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a15, v60 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a16, v61 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a17, v62 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a18, v63 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a1, v1
 ; GFX950-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[0:31]
 ; GFX950-NEXT:    ;;#ASMEND
+; GFX950-NEXT:    scratch_store_dwordx4 off, v[32:35], s32 ; 16-byte Folded Spill
+; GFX950-NEXT:    s_nop 0
+; GFX950-NEXT:    scratch_store_dwordx4 off, v[36:39], s32 offset:16 ; 16-byte Folded Spill
+; GFX950-NEXT:    scratch_store_dwordx4 off, v[40:43], s32 offset:32 ; 16-byte Folded Spill
+; GFX950-NEXT:    scratch_store_dwordx4 off, v[44:47], s32 offset:48 ; 16-byte Folded Spill
 ; GFX950-NEXT:    s_mov_b64 s[0:1], 0
-; GFX950-NEXT:    v_accvgpr_write_b32 a2, v32
-; GFX950-NEXT:    v_accvgpr_write_b32 a3, v33
-; GFX950-NEXT:    v_accvgpr_write_b32 a4, v34
-; GFX950-NEXT:    v_accvgpr_write_b32 a5, v35
-; GFX950-NEXT:    v_accvgpr_write_b32 a6, v36
-; GFX950-NEXT:    v_accvgpr_write_b32 a7, v37
-; GFX950-NEXT:    v_accvgpr_write_b32 a8, v38
-; GFX950-NEXT:    v_accvgpr_write_b32 a9, v39
-; GFX950-NEXT:    v_accvgpr_write_b32 a10, v40
-; GFX950-NEXT:    v_accvgpr_write_b32 a11, v41
-; GFX950-NEXT:    v_accvgpr_write_b32 a12, v42
-; GFX950-NEXT:    v_accvgpr_write_b32 a13, v43
-; GFX950-NEXT:    v_accvgpr_write_b32 a14, v44
-; GFX950-NEXT:    v_accvgpr_write_b32 a15, v45
-; GFX950-NEXT:    v_accvgpr_write_b32 a16, v46
-; GFX950-NEXT:    v_accvgpr_write_b32 a17, v47
-; GFX950-NEXT:    v_accvgpr_write_b32 a18, v48
-; GFX950-NEXT:    v_accvgpr_write_b32 a19, v49
-; GFX950-NEXT:    v_accvgpr_write_b32 a20, v50
-; GFX950-NEXT:    v_accvgpr_write_b32 a21, v51
-; GFX950-NEXT:    v_accvgpr_write_b32 a22, v52
-; GFX950-NEXT:    v_accvgpr_write_b32 a23, v53
-; GFX950-NEXT:    v_accvgpr_write_b32 a24, v54
-; GFX950-NEXT:    v_accvgpr_write_b32 a25, v55
-; GFX950-NEXT:    v_accvgpr_write_b32 a26, v56
-; GFX950-NEXT:    v_accvgpr_write_b32 a27, v57
-; GFX950-NEXT:    v_accvgpr_write_b32 a28, v58
-; GFX950-NEXT:    v_accvgpr_write_b32 a29, v59
-; GFX950-NEXT:    v_accvgpr_write_b32 a30, v60
-; GFX950-NEXT:    v_accvgpr_write_b32 a31, v61
-; GFX950-NEXT:    v_accvgpr_write_b32 a32, v62
-; GFX950-NEXT:    v_accvgpr_write_b32 a33, v63
+; GFX950-NEXT:    ;;#ASMSTART
+; GFX950-NEXT:    ; def a2
+; GFX950-NEXT:    ;;#ASMEND
+; GFX950-NEXT:    v_accvgpr_write_b32 a19, v63 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a20, v62 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a21, v61 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a22, v60 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_read_b32 v33, a1
 ; GFX950-NEXT:    v_accvgpr_read_b32 v32, a0
 ; GFX950-NEXT:    global_load_dword v35, v[32:33], off
-; GFX950-NEXT:    ;;#ASMSTART
-; GFX950-NEXT:    ; def a34
-; GFX950-NEXT:    ;;#ASMEND
+; GFX950-NEXT:    v_accvgpr_write_b32 a31, v51 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a27, v55 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a28, v54 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a29, v53 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a30, v52 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a23, v59 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a24, v58 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a25, v57 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a26, v56 ; Reload Reuse
+; GFX950-NEXT:    scratch_store_dwordx3 off, v[48:50], s32 offset:64 ; 12-byte Folded Spill
 ; GFX950-NEXT:    .p2align 5, , 4
 ; GFX950-NEXT:  .LBB29_1: ; %atomicrmw.start
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_accvgpr_read_b32 v34, a34
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-NEXT:    v_accvgpr_read_b32 v34, a2
+; GFX950-NEXT:    s_waitcnt vmcnt(1)
 ; GFX950-NEXT:    v_xor_b32_e32 v34, v35, v34
 ; GFX950-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
@@ -1859,65 +1837,48 @@ define void @global_atomic_xor_expansion_i32_ret_av_av_no_agprs(ptr addrspace(1)
 ; GFX950-NEXT:    s_cbranch_execnz .LBB29_1
 ; GFX950-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX950-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX950-NEXT:    v_accvgpr_read_b32 v63, a33
-; GFX950-NEXT:    v_accvgpr_read_b32 v62, a32
-; GFX950-NEXT:    v_accvgpr_read_b32 v61, a31
-; GFX950-NEXT:    v_accvgpr_read_b32 v60, a30
-; GFX950-NEXT:    v_accvgpr_read_b32 v59, a29
-; GFX950-NEXT:    v_accvgpr_read_b32 v58, a28
-; GFX950-NEXT:    v_accvgpr_read_b32 v57, a27
-; GFX950-NEXT:    v_accvgpr_read_b32 v56, a26
-; GFX950-NEXT:    v_accvgpr_read_b32 v47, a17
-; GFX950-NEXT:    v_accvgpr_read_b32 v46, a16
-; GFX950-NEXT:    v_accvgpr_read_b32 v45, a15
-; GFX950-NEXT:    v_accvgpr_read_b32 v44, a14
-; GFX950-NEXT:    v_accvgpr_read_b32 v43, a13
-; GFX950-NEXT:    v_accvgpr_read_b32 v42, a12
-; GFX950-NEXT:    v_accvgpr_read_b32 v41, a11
-; GFX950-NEXT:    v_accvgpr_read_b32 v40, a10
 ; GFX950-NEXT:    v_accvgpr_write_b32 a0, v34
-; GFX950-NEXT:    v_accvgpr_read_b32 v55, a25
-; GFX950-NEXT:    v_accvgpr_read_b32 v54, a24
-; GFX950-NEXT:    v_accvgpr_read_b32 v53, a23
-; GFX950-NEXT:    v_accvgpr_read_b32 v52, a22
-; GFX950-NEXT:    v_accvgpr_read_b32 v51, a21
-; GFX950-NEXT:    v_accvgpr_read_b32 v50, a20
-; GFX950-NEXT:    v_accvgpr_read_b32 v49, a19
-; GFX950-NEXT:    v_accvgpr_read_b32 v48, a18
-; GFX950-NEXT:    v_accvgpr_read_b32 v39, a9
-; GFX950-NEXT:    v_accvgpr_read_b32 v38, a8
-; GFX950-NEXT:    v_accvgpr_read_b32 v37, a7
-; GFX950-NEXT:    v_accvgpr_read_b32 v36, a6
-; GFX950-NEXT:    v_accvgpr_read_b32 v35, a5
-; GFX950-NEXT:    v_accvgpr_read_b32 v34, a4
-; GFX950-NEXT:    v_accvgpr_read_b32 v33, a3
-; GFX950-NEXT:    v_accvgpr_read_b32 v32, a2
-; GFX950-NEXT:    ;;#ASMSTART
-; GFX950-NEXT:    ; use v[0:31]
-; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    scratch_load_dword a34, off, s32 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword a33, off, s32 offset:4 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword a32, off, s32 offset:8 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v63, off, s32 offset:12 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v62, off, s32 offset:16 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v61, off, s32 offset:20 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v60, off, s32 offset:24 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v59, off, s32 offset:28 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v58, off, s32 offset:32 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v57, off, s32 offset:36 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v56, off, s32 offset:40 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v47, off, s32 offset:44 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v46, off, s32 offset:48 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v45, off, s32 offset:52 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v44, off, s32 offset:56 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v43, off, s32 offset:60 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v42, off, s32 offset:64 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v41, off, s32 offset:68 ; 4-byte Folded Reload
-; GFX950-NEXT:    scratch_load_dword v40, off, s32 offset:72 ; 4-byte Folded Reload
+; GFX950-NEXT:    scratch_load_dwordx4 v[32:35], off, s32 ; 16-byte Folded Reload
+; GFX950-NEXT:    scratch_load_dwordx4 v[36:39], off, s32 offset:16 ; 16-byte Folded Reload
+; GFX950-NEXT:    scratch_load_dwordx4 v[40:43], off, s32 offset:32 ; 16-byte Folded Reload
+; GFX950-NEXT:    scratch_load_dwordx4 v[44:47], off, s32 offset:48 ; 16-byte Folded Reload
+; GFX950-NEXT:    v_accvgpr_read_b32 v51, a31 ; Reload Reuse
+; GFX950-NEXT:    scratch_load_dwordx3 v[48:50], off, s32 offset:64 ; 12-byte Folded Reload
+; GFX950-NEXT:    v_accvgpr_read_b32 v55, a27 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v54, a28 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v53, a29 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v52, a30 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v59, a23 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v58, a24 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v57, a25 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v56, a26 ; Reload Reuse
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use a0
 ; GFX950-NEXT:    ;;#ASMEND
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-NEXT:    v_accvgpr_read_b32 v63, a19 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v62, a20 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v61, a21 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v60, a22 ; Reload Reuse
+; GFX950-NEXT:    ;;#ASMSTART
+; GFX950-NEXT:    ; use v[0:31]
+; GFX950-NEXT:    ;;#ASMEND
+; GFX950-NEXT:    v_accvgpr_read_b32 v63, a18 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v62, a17 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v61, a16 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v60, a15 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v59, a14 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v58, a13 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v57, a12 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v56, a11 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v47, a10 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v46, a9 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v45, a8 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v44, a7 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v43, a6 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v42, a5 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v41, a4 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_read_b32 v40, a3 ; Reload Reuse
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(1) %ptr, i64 0, i64 10
   %data = call i32 asm "; def $0", "=^VA"()
@@ -7655,7 +7616,6 @@ define void @global_atomic_fmax_v2f16_ret_a_a(ptr addrspace(1) %ptr) #0 {
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v2, v3, v3
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_max_f16 v2, v2, v4
 ; GFX950-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
@@ -7721,7 +7681,6 @@ define void @global_atomic_fmax_v2f16_ret_av_av(ptr addrspace(1) %ptr) #0 {
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v2, v3, v3
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_max_f16 v2, v2, v4
 ; GFX950-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
@@ -7789,7 +7748,6 @@ define void @global_atomic_fmin_v2f16_ret_a_a(ptr addrspace(1) %ptr) #0 {
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v2, v3, v3
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_min_f16 v2, v2, v4
 ; GFX950-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
@@ -7855,7 +7813,6 @@ define void @global_atomic_fmin_v2f16_ret_av_av(ptr addrspace(1) %ptr) #0 {
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v2, v3, v3
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_min_f16 v2, v2, v4
 ; GFX950-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
@@ -13527,7 +13484,6 @@ define void @global_atomic_fmax_v2f16_saddr_ret_a_a(ptr addrspace(1) inreg %ptr)
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v0, v1, v1
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_max_f16 v0, v0, v3
 ; GFX950-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
@@ -13595,7 +13551,6 @@ define void @global_atomic_fmax_v2f16_saddr_ret_av_av(ptr addrspace(1) inreg %pt
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v0, v1, v1
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_max_f16 v0, v0, v3
 ; GFX950-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
@@ -13665,7 +13620,6 @@ define void @global_atomic_fmin_v2f16_saddr_ret_a_a(ptr addrspace(1) inreg %ptr)
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v0, v1, v1
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_min_f16 v0, v0, v3
 ; GFX950-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
@@ -13733,7 +13687,6 @@ define void @global_atomic_fmin_v2f16_saddr_ret_av_av(ptr addrspace(1) inreg %pt
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v0, v1, v1
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_min_f16 v0, v0, v3
 ; GFX950-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)

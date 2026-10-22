@@ -28,7 +28,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -70,9 +70,8 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveVariablesWrapperPass>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addRequired<MachineRegisterClassInfoWrapperPass>();
-    AU.addPreserved<LiveVariablesWrapperPass>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -131,9 +130,8 @@ private:
   const TargetInstrInfo *TII = nullptr;
   const MOSRegisterInfo *TRI = nullptr;
   const MOSFrameLowering *TFL = nullptr;
-  LiveVariables *LV = nullptr;
   const RegisterClassInfo *RCI = nullptr;
-  MOSInterferenceGraphBuilder Builder;
+  std::optional<MOSInterferenceGraphBuilder> Builder;
   // Active graph while spilling a block.
   std::optional<MOSInterferenceGraph> Graph;
   // Original MIR remains unchanged during planning; keys survive until
@@ -150,20 +148,19 @@ bool MOSImagRegSpill::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget<MOSSubtarget>().getRegisterInfo();
   TFL = MF.getSubtarget<MOSSubtarget>().getFrameLowering();
-  LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
+  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   RCI = &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
-  Builder = MOSInterferenceGraphBuilder();
+  Builder.emplace(LIS);
   PlannedTransfers.clear();
   SpillSlots.clear();
   Changed = false;
 
   checkSupportedMIR(MF);
   spillForMBB(MF.front());
+  Builder.reset();
+  // Emission changes SSA names and inserts instructions. The planning walk
+  // uses the original intervals; later passes must recompute the analysis.
   insertSpillsAndReloads(MF.front());
-  // Spilling can change most ranges in the block. Recompute them together:
-  // per-register updates repeatedly scan the block to find last uses.
-  if (Changed)
-    *LV = LiveVariables(MF);
   return Changed;
 }
 
@@ -218,7 +215,7 @@ void MOSImagRegSpill::checkSupportedMIR(const MachineFunction &MF) const {
 
 void MOSImagRegSpill::spillForMBB(MachineBasicBlock &MBB) {
   Graph.emplace(*MBB.getParent(), *RCI);
-  Builder.beginCapture(*Graph);
+  Builder->beginCapture(*Graph);
   for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
     if (I->isDebugOrPseudoInstr()) {
       ++I;
@@ -229,7 +226,7 @@ void MOSImagRegSpill::spillForMBB(MachineBasicBlock &MBB) {
     spillBeforeMIs(make_range(I, End));
     I = End;
   }
-  Builder.endCapture();
+  Builder->endCapture();
   Graph.reset();
 }
 
@@ -239,7 +236,7 @@ void MOSImagRegSpill::spillBeforeMIs(
 
   for (MachineInstr &MI : Instructions) {
     if (!MI.isDebugOrPseudoInstr())
-      Builder.stepForward(MI);
+      Builder->stepForward(MI);
   }
   SmallVector<Register> RemainingRegs;
   while (!Graph->canSimplify(&RemainingRegs))
@@ -250,7 +247,7 @@ void MOSImagRegSpill::spillBeforeMIs(
   // next range could be too late. Retain the live-outs so scratch must fit for
   // any assignment of the new definitions. Further evictions only remove
   // interference, preserving the successful instruction simplification above.
-  Builder.trimToLive();
+  Builder->trimToLive();
   Graph->retainAll();
   ensureScratch(Instructions);
 }
@@ -271,7 +268,7 @@ void MOSImagRegSpill::reloadForInputs(
     for (const MachineOperand &Use : MI.all_uses()) {
       Register Reg = Use.getReg();
       if (!Reg.isVirtual() || Use.isDebug() || Use.isUndef() ||
-          Builder.spillState().ResidentValues.contains(Reg))
+          Builder->spillState().ResidentValues.contains(Reg))
         continue;
       reloadForInput(Reg, Instructions);
     }
@@ -284,7 +281,7 @@ void MOSImagRegSpill::reloadForInput(
   // The reload is not yet known to be executable: it also needs scratch while
   // producing this result. Any required stores will precede the reload, using
   // the scratch guaranteed on entry.
-  Builder.reload(Reg);
+  Builder->reload(Reg);
   SmallVector<Register> RemainingRegs;
   while (!Graph->canSimplify(&RemainingRegs))
     spillLiveThrough(Instructions, RemainingRegs);
@@ -305,17 +302,17 @@ void MOSImagRegSpill::ensureScratch(
   SmallVector<MOSInterferenceGraph::VertexID, 3> Scratch;
   if (StaticStack) {
     // Byte temporaries used to assemble 16-bit values.
-    Scratch.push_back(Builder.addTemporaryVertex(MOS::Imag8RegClass));
-    Scratch.push_back(Builder.addTemporaryVertex(MOS::Imag8RegClass));
+    Scratch.push_back(Builder->addTemporaryVertex(MOS::Imag8RegClass));
+    Scratch.push_back(Builder->addTemporaryVertex(MOS::Imag8RegClass));
   }
   // Used as a pointer register or a temporary to cover over an internal issue
   // in stack emission (this can probably be tightened).
-  Scratch.push_back(Builder.addTemporaryVertex(MOS::Imag16RegClass));
+  Scratch.push_back(Builder->addTemporaryVertex(MOS::Imag16RegClass));
   SmallVector<Register> RemainingRegs;
   while (!Graph->canSimplify(&RemainingRegs))
     spillLiveThrough(Instructions, RemainingRegs);
   for (auto ID : Scratch) {
-    Builder.killTemporaryVertex(ID);
+    Builder->killTemporaryVertex(ID);
     Graph->removeVertex(ID);
   }
 }
@@ -323,7 +320,7 @@ void MOSImagRegSpill::ensureScratch(
 SmallVector<Register> MOSImagRegSpill::spillCandidates(
     iterator_range<MachineBasicBlock::iterator> Instructions) const {
   SmallVector<Register> Regs;
-  for (Register Reg : Builder.spillState().ResidentValues) {
+  for (Register Reg : Builder->spillState().ResidentValues) {
     // Transfers precede the entire range, so only values unused and undefined
     // throughout it can be evicted here.
     if (llvm::any_of(Instructions, [&](const MachineInstr &MI) {
@@ -354,12 +351,12 @@ void MOSImagRegSpill::spillLiveThrough(
 }
 
 void MOSImagRegSpill::evict(Register Reg, MachineInstr &Before) {
-  if (!Builder.spillState().SavedResidentValues.contains(Reg))
+  if (!Builder->spillState().SavedResidentValues.contains(Reg))
     PlannedTransfers[&Before].Stores.push_back(Reg);
 
   // If the builder has already stepped past Before, the value remains
   // evicted afterwards too.
-  Builder.evict(Reg);
+  Builder->evict(Reg);
 }
 
 void MOSImagRegSpill::insertSpillsAndReloads(MachineBasicBlock &MBB) {
@@ -468,7 +465,7 @@ void MOSImagRegSpill::loadRegFromStackSlot(MachineBasicBlock &MBB,
 char MOSImagRegSpill::ID = 0;
 INITIALIZE_PASS_BEGIN(MOSImagRegSpill, DEBUG_TYPE,
                       "MOS Imaginary Register Spilling", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(MOSImagRegSpill, DEBUG_TYPE,
                     "MOS Imaginary Register Spilling", false, false)

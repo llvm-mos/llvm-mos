@@ -14600,23 +14600,53 @@ define void @s_shuffle_v2i64_v8i64__15_2() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[8:23]
+; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_mov_b32 s8, s30
-; GFX900-NEXT:    s_mov_b32 s9, s31
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    s_mov_b32 s8, s26
+; GFX900-NEXT:    s_mov_b32 s9, s27
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    s_mov_b64 s[12:13], s[16:17]
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX900-NEXT:    s_mov_b32 s10, s12
 ; GFX900-NEXT:    s_mov_b32 s11, s13
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -14629,23 +14659,53 @@ define void @s_shuffle_v2i64_v8i64__15_2() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[8:23]
+; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_mov_b32 s8, s30
-; GFX90A-NEXT:    s_mov_b32 s9, s31
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    s_mov_b32 s8, s26
+; GFX90A-NEXT:    s_mov_b32 s9, s27
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    s_mov_b64 s[12:13], s[16:17]
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX90A-NEXT:    s_mov_b32 s10, s12
 ; GFX90A-NEXT:    s_mov_b32 s11, s13
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -14740,23 +14800,53 @@ define void @s_shuffle_v2i64_v8i64__15_4() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_mov_b32 s8, s30
-; GFX900-NEXT:    s_mov_b32 s9, s31
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    s_mov_b32 s8, s26
+; GFX900-NEXT:    s_mov_b32 s9, s27
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX900-NEXT:    s_mov_b32 s10, s12
 ; GFX900-NEXT:    s_mov_b32 s11, s13
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -14769,23 +14859,53 @@ define void @s_shuffle_v2i64_v8i64__15_4() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_mov_b32 s8, s30
-; GFX90A-NEXT:    s_mov_b32 s9, s31
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    s_mov_b32 s8, s26
+; GFX90A-NEXT:    s_mov_b32 s9, s27
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX90A-NEXT:    s_mov_b32 s10, s12
 ; GFX90A-NEXT:    s_mov_b32 s11, s13
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -14798,24 +14918,55 @@ define void @s_shuffle_v2i64_v8i64__15_4() #0 {
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
+; GFX942-NEXT:    ;;#ASMSTART
+; GFX942-NEXT:    ; def s[0:15]
+; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_writelane_b32 v0, s0, 0
 ; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s1, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s2, 2
+; GFX942-NEXT:    v_writelane_b32 v0, s3, 3
+; GFX942-NEXT:    v_writelane_b32 v0, s4, 4
+; GFX942-NEXT:    v_writelane_b32 v0, s5, 5
+; GFX942-NEXT:    v_writelane_b32 v0, s6, 6
+; GFX942-NEXT:    v_writelane_b32 v0, s7, 7
+; GFX942-NEXT:    v_writelane_b32 v0, s8, 8
+; GFX942-NEXT:    v_writelane_b32 v0, s9, 9
+; GFX942-NEXT:    v_writelane_b32 v0, s10, 10
+; GFX942-NEXT:    v_writelane_b32 v0, s11, 11
+; GFX942-NEXT:    v_writelane_b32 v0, s12, 12
+; GFX942-NEXT:    v_writelane_b32 v0, s13, 13
+; GFX942-NEXT:    v_writelane_b32 v0, s14, 14
+; GFX942-NEXT:    v_writelane_b32 v0, s15, 15
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[4:19]
+; GFX942-NEXT:    ; def s[12:27]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_mov_b32 s8, s26
+; GFX942-NEXT:    s_mov_b32 s9, s27
+; GFX942-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX942-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX942-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX942-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX942-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX942-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX942-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX942-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX942-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX942-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX942-NEXT:    s_mov_b32 s10, s12
-; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[16:31]
-; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_mov_b32 s8, s30
-; GFX942-NEXT:    s_mov_b32 s9, s31
-; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
 ; GFX942-NEXT:    s_mov_b32 s11, s13
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
@@ -14834,6 +14985,7 @@ define void @s_shuffle_v2i64_v8i64__15_5() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
@@ -14843,9 +14995,58 @@ define void @s_shuffle_v2i64_v8i64__15_5() #0 {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[16:31]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s12, s30
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s13, s31
 ; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -14854,6 +15055,7 @@ define void @s_shuffle_v2i64_v8i64__15_5() #0 {
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -14863,6 +15065,7 @@ define void @s_shuffle_v2i64_v8i64__15_5() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
@@ -14872,9 +15075,58 @@ define void @s_shuffle_v2i64_v8i64__15_5() #0 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[16:31]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s12, s30
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s13, s31
 ; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -14883,6 +15135,7 @@ define void @s_shuffle_v2i64_v8i64__15_5() #0 {
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -14917,23 +15170,53 @@ define void @s_shuffle_v2i64_v8i64__15_6() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_mov_b32 s8, s26
 ; GFX900-NEXT:    s_mov_b32 s9, s27
-; GFX900-NEXT:    s_mov_b32 s10, s28
-; GFX900-NEXT:    s_mov_b32 s11, s29
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    s_mov_b64 s[16:17], s[24:25]
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX900-NEXT:    s_mov_b32 s10, s16
+; GFX900-NEXT:    s_mov_b32 s11, s17
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -14946,23 +15229,53 @@ define void @s_shuffle_v2i64_v8i64__15_6() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_mov_b32 s8, s26
 ; GFX90A-NEXT:    s_mov_b32 s9, s27
-; GFX90A-NEXT:    s_mov_b32 s10, s28
-; GFX90A-NEXT:    s_mov_b32 s11, s29
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    s_mov_b64 s[16:17], s[24:25]
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX90A-NEXT:    s_mov_b32 s10, s16
+; GFX90A-NEXT:    s_mov_b32 s11, s17
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -14975,24 +15288,55 @@ define void @s_shuffle_v2i64_v8i64__15_6() #0 {
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[16:31]
+; GFX942-NEXT:    ; def s[0:15]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_mov_b32 s10, s28
-; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX942-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_writelane_b32 v0, s0, 0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_writelane_b32 v0, s1, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s2, 2
+; GFX942-NEXT:    v_writelane_b32 v0, s3, 3
+; GFX942-NEXT:    v_writelane_b32 v0, s4, 4
+; GFX942-NEXT:    v_writelane_b32 v0, s5, 5
+; GFX942-NEXT:    v_writelane_b32 v0, s6, 6
+; GFX942-NEXT:    v_writelane_b32 v0, s7, 7
+; GFX942-NEXT:    v_writelane_b32 v0, s8, 8
+; GFX942-NEXT:    v_writelane_b32 v0, s9, 9
+; GFX942-NEXT:    v_writelane_b32 v0, s10, 10
+; GFX942-NEXT:    v_writelane_b32 v0, s11, 11
+; GFX942-NEXT:    v_writelane_b32 v0, s12, 12
+; GFX942-NEXT:    v_writelane_b32 v0, s13, 13
+; GFX942-NEXT:    v_writelane_b32 v0, s14, 14
+; GFX942-NEXT:    v_writelane_b32 v0, s15, 15
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[12:27]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_mov_b32 s8, s26
 ; GFX942-NEXT:    s_mov_b32 s9, s27
-; GFX942-NEXT:    s_mov_b32 s11, s29
+; GFX942-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX942-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX942-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX942-NEXT:    s_mov_b64 s[12:13], s[24:25]
+; GFX942-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX942-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX942-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX942-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX942-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX942-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX942-NEXT:    s_mov_b32 s10, s12
+; GFX942-NEXT:    s_mov_b32 s11, s13
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
@@ -18053,23 +18397,53 @@ define void @s_shuffle_v2i64_v8i64__9_2() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[8:23]
+; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX900-NEXT:    s_mov_b32 s8, s18
-; GFX900-NEXT:    s_mov_b32 s9, s19
+; GFX900-NEXT:    s_mov_b32 s8, s14
+; GFX900-NEXT:    s_mov_b32 s9, s15
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    s_mov_b64 s[12:13], s[16:17]
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX900-NEXT:    s_mov_b32 s10, s12
 ; GFX900-NEXT:    s_mov_b32 s11, s13
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -18082,23 +18456,53 @@ define void @s_shuffle_v2i64_v8i64__9_2() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[8:23]
+; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX90A-NEXT:    s_mov_b32 s8, s18
-; GFX90A-NEXT:    s_mov_b32 s9, s19
+; GFX90A-NEXT:    s_mov_b32 s8, s14
+; GFX90A-NEXT:    s_mov_b32 s9, s15
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    s_mov_b64 s[12:13], s[16:17]
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX90A-NEXT:    s_mov_b32 s10, s12
 ; GFX90A-NEXT:    s_mov_b32 s11, s13
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -18137,21 +18541,51 @@ define void @s_shuffle_v2i64_v8i64__10_2() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
-; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
-; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX900-NEXT:    s_mov_b32 s10, s20
-; GFX900-NEXT:    s_mov_b32 s11, s21
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[4:19]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    s_mov_b64 s[12:13], s[16:17]
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX900-NEXT:    s_mov_b32 s10, s12
+; GFX900-NEXT:    s_mov_b32 s11, s13
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -18164,21 +18598,51 @@ define void @s_shuffle_v2i64_v8i64__10_2() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
-; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
-; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX90A-NEXT:    s_mov_b32 s10, s20
-; GFX90A-NEXT:    s_mov_b32 s11, s21
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
+; GFX90A-NEXT:    ;;#ASMSTART
+; GFX90A-NEXT:    ; def s[4:19]
+; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    s_mov_b64 s[12:13], s[16:17]
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX90A-NEXT:    s_mov_b32 s10, s12
+; GFX90A-NEXT:    s_mov_b32 s11, s13
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -18191,23 +18655,54 @@ define void @s_shuffle_v2i64_v8i64__10_2() #0 {
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[16:31]
+; GFX942-NEXT:    ; def s[0:15]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_writelane_b32 v0, s0, 0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_writelane_b32 v0, s1, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s2, 2
+; GFX942-NEXT:    v_writelane_b32 v0, s3, 3
+; GFX942-NEXT:    v_writelane_b32 v0, s4, 4
+; GFX942-NEXT:    v_writelane_b32 v0, s5, 5
+; GFX942-NEXT:    v_writelane_b32 v0, s6, 6
+; GFX942-NEXT:    v_writelane_b32 v0, s7, 7
+; GFX942-NEXT:    v_writelane_b32 v0, s8, 8
+; GFX942-NEXT:    v_writelane_b32 v0, s9, 9
+; GFX942-NEXT:    v_writelane_b32 v0, s10, 10
+; GFX942-NEXT:    v_writelane_b32 v0, s11, 11
+; GFX942-NEXT:    v_writelane_b32 v0, s12, 12
+; GFX942-NEXT:    v_writelane_b32 v0, s13, 13
+; GFX942-NEXT:    v_writelane_b32 v0, s14, 14
+; GFX942-NEXT:    v_writelane_b32 v0, s15, 15
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[4:19]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX942-NEXT:    s_mov_b32 s10, s20
-; GFX942-NEXT:    s_mov_b32 s11, s21
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX942-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX942-NEXT:    s_mov_b64 s[4:5], s[16:17]
+; GFX942-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX942-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX942-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX942-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX942-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX942-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX942-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX942-NEXT:    s_mov_b32 s10, s4
+; GFX942-NEXT:    s_mov_b32 s11, s5
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
@@ -18227,23 +18722,53 @@ define void @s_shuffle_v2i64_v8i64__11_2() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[8:23]
+; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX900-NEXT:    s_mov_b32 s8, s22
-; GFX900-NEXT:    s_mov_b32 s9, s23
+; GFX900-NEXT:    s_mov_b32 s8, s18
+; GFX900-NEXT:    s_mov_b32 s9, s19
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    s_mov_b64 s[12:13], s[16:17]
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX900-NEXT:    s_mov_b32 s10, s12
 ; GFX900-NEXT:    s_mov_b32 s11, s13
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -18256,23 +18781,53 @@ define void @s_shuffle_v2i64_v8i64__11_2() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[8:23]
+; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX90A-NEXT:    s_mov_b32 s8, s22
-; GFX90A-NEXT:    s_mov_b32 s9, s23
+; GFX90A-NEXT:    s_mov_b32 s8, s18
+; GFX90A-NEXT:    s_mov_b32 s9, s19
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    s_mov_b64 s[12:13], s[16:17]
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX90A-NEXT:    s_mov_b32 s10, s12
 ; GFX90A-NEXT:    s_mov_b32 s11, s13
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -18371,23 +18926,53 @@ define void @s_shuffle_v2i64_v8i64__13_2() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[8:23]
+; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX900-NEXT:    s_mov_b32 s8, s26
-; GFX900-NEXT:    s_mov_b32 s9, s27
+; GFX900-NEXT:    s_mov_b32 s8, s22
+; GFX900-NEXT:    s_mov_b32 s9, s23
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    s_mov_b64 s[12:13], s[16:17]
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX900-NEXT:    s_mov_b32 s10, s12
 ; GFX900-NEXT:    s_mov_b32 s11, s13
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -18400,23 +18985,53 @@ define void @s_shuffle_v2i64_v8i64__13_2() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[8:23]
+; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX90A-NEXT:    s_mov_b32 s8, s26
-; GFX90A-NEXT:    s_mov_b32 s9, s27
+; GFX90A-NEXT:    s_mov_b32 s8, s22
+; GFX90A-NEXT:    s_mov_b32 s9, s23
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    s_mov_b64 s[12:13], s[16:17]
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX90A-NEXT:    s_mov_b32 s10, s12
 ; GFX90A-NEXT:    s_mov_b32 s11, s13
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -18888,21 +19503,49 @@ define void @s_shuffle_v2i64_v8i64__10_3() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
-; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
-; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX900-NEXT:    s_mov_b32 s10, s22
-; GFX900-NEXT:    s_mov_b32 s11, s23
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[4:19]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX900-NEXT:    s_mov_b64 s[10:11], s[18:19]
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -18915,21 +19558,49 @@ define void @s_shuffle_v2i64_v8i64__10_3() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
-; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
-; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX90A-NEXT:    s_mov_b32 s10, s22
-; GFX90A-NEXT:    s_mov_b32 s11, s23
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
+; GFX90A-NEXT:    ;;#ASMSTART
+; GFX90A-NEXT:    ; def s[4:19]
+; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX90A-NEXT:    s_mov_b64 s[10:11], s[18:19]
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -18942,23 +19613,52 @@ define void @s_shuffle_v2i64_v8i64__10_3() #0 {
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[16:31]
+; GFX942-NEXT:    ; def s[0:15]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_writelane_b32 v0, s0, 0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_writelane_b32 v0, s1, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s2, 2
+; GFX942-NEXT:    v_writelane_b32 v0, s3, 3
+; GFX942-NEXT:    v_writelane_b32 v0, s4, 4
+; GFX942-NEXT:    v_writelane_b32 v0, s5, 5
+; GFX942-NEXT:    v_writelane_b32 v0, s6, 6
+; GFX942-NEXT:    v_writelane_b32 v0, s7, 7
+; GFX942-NEXT:    v_writelane_b32 v0, s8, 8
+; GFX942-NEXT:    v_writelane_b32 v0, s9, 9
+; GFX942-NEXT:    v_writelane_b32 v0, s10, 10
+; GFX942-NEXT:    v_writelane_b32 v0, s11, 11
+; GFX942-NEXT:    v_writelane_b32 v0, s12, 12
+; GFX942-NEXT:    v_writelane_b32 v0, s13, 13
+; GFX942-NEXT:    v_writelane_b32 v0, s14, 14
+; GFX942-NEXT:    v_writelane_b32 v0, s15, 15
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[4:19]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX942-NEXT:    s_mov_b32 s10, s22
-; GFX942-NEXT:    s_mov_b32 s11, s23
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX942-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX942-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX942-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX942-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX942-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX942-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX942-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX942-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX942-NEXT:    s_mov_b64 s[10:11], s[18:19]
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
@@ -19033,18 +19733,53 @@ define void @s_shuffle_v2i64_v8i64__12_3() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_mov_b32 s14, s22
-; GFX900-NEXT:    s_mov_b32 s15, s23
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
+; GFX900-NEXT:    s_mov_b64 s[10:11], s[22:23]
+; GFX900-NEXT:    s_mov_b32 s14, s10
+; GFX900-NEXT:    s_mov_b32 s15, s11
 ; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -19053,6 +19788,7 @@ define void @s_shuffle_v2i64_v8i64__12_3() #0 {
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -19062,18 +19798,53 @@ define void @s_shuffle_v2i64_v8i64__12_3() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_mov_b32 s14, s22
-; GFX90A-NEXT:    s_mov_b32 s15, s23
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
+; GFX90A-NEXT:    s_mov_b64 s[10:11], s[22:23]
+; GFX90A-NEXT:    s_mov_b32 s14, s10
+; GFX90A-NEXT:    s_mov_b32 s15, s11
 ; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -19082,6 +19853,7 @@ define void @s_shuffle_v2i64_v8i64__12_3() #0 {
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -19171,26 +19943,89 @@ define void @s_shuffle_v2i64_v8i64__14_3() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
-; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
-; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    v_writelane_b32 v0, s36, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s37, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s38, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s39, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s48, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s49, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s50, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s51, 7
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_mov_b32 s18, s22
-; GFX900-NEXT:    s_mov_b32 s19, s23
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 15
+; GFX900-NEXT:    v_readlane_b32 s36, v1, 0
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[4:19]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    v_readlane_b32 s37, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s38, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s39, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s40, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s41, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s42, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s43, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s44, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s45, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s46, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s47, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s48, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s49, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s50, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s51, v1, 15
+; GFX900-NEXT:    s_mov_b32 s18, s42
+; GFX900-NEXT:    v_readlane_b32 s36, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s43, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s37, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s38, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s39, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s48, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s49, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s50, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s51, v1, 15
+; GFX900-NEXT:    s_mov_b32 s19, s43
+; GFX900-NEXT:    v_readlane_b32 s40, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s41, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s42, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s44, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s45, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s46, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s47, v1, 11
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[16:17]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[18:19]
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s51, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s50, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s49, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s48, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s39, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s38, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s37, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s36, v0, 0
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -19200,26 +20035,89 @@ define void @s_shuffle_v2i64_v8i64__14_3() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
-; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
-; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    v_writelane_b32 v0, s36, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s37, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s38, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s39, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s48, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s49, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s50, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s51, 7
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_mov_b32 s18, s22
-; GFX90A-NEXT:    s_mov_b32 s19, s23
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 15
+; GFX90A-NEXT:    v_readlane_b32 s36, v1, 0
+; GFX90A-NEXT:    ;;#ASMSTART
+; GFX90A-NEXT:    ; def s[4:19]
+; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    v_readlane_b32 s37, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s38, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s39, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s40, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s41, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s42, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s43, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s44, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s45, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s46, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s47, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s48, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s49, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s50, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s51, v1, 15
+; GFX90A-NEXT:    s_mov_b32 s18, s42
+; GFX90A-NEXT:    v_readlane_b32 s36, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s43, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s37, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s38, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s39, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s48, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s49, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s50, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s51, v1, 15
+; GFX90A-NEXT:    s_mov_b32 s19, s43
+; GFX90A-NEXT:    v_readlane_b32 s40, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s41, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s42, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s44, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s45, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s46, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s47, v1, 11
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[16:17]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[18:19]
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s51, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s50, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s49, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s48, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s39, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s38, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s37, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s36, v0, 0
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -19568,23 +20466,53 @@ define void @s_shuffle_v2i64_v8i64__9_4() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX900-NEXT:    s_mov_b32 s8, s18
-; GFX900-NEXT:    s_mov_b32 s9, s19
+; GFX900-NEXT:    s_mov_b32 s8, s14
+; GFX900-NEXT:    s_mov_b32 s9, s15
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX900-NEXT:    s_mov_b32 s10, s12
 ; GFX900-NEXT:    s_mov_b32 s11, s13
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -19597,23 +20525,53 @@ define void @s_shuffle_v2i64_v8i64__9_4() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX90A-NEXT:    s_mov_b32 s8, s18
-; GFX90A-NEXT:    s_mov_b32 s9, s19
+; GFX90A-NEXT:    s_mov_b32 s8, s14
+; GFX90A-NEXT:    s_mov_b32 s9, s15
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX90A-NEXT:    s_mov_b32 s10, s12
 ; GFX90A-NEXT:    s_mov_b32 s11, s13
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -19626,24 +20584,55 @@ define void @s_shuffle_v2i64_v8i64__9_4() #0 {
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
+; GFX942-NEXT:    ;;#ASMSTART
+; GFX942-NEXT:    ; def s[0:15]
+; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_writelane_b32 v0, s0, 0
 ; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s1, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s2, 2
+; GFX942-NEXT:    v_writelane_b32 v0, s3, 3
+; GFX942-NEXT:    v_writelane_b32 v0, s4, 4
+; GFX942-NEXT:    v_writelane_b32 v0, s5, 5
+; GFX942-NEXT:    v_writelane_b32 v0, s6, 6
+; GFX942-NEXT:    v_writelane_b32 v0, s7, 7
+; GFX942-NEXT:    v_writelane_b32 v0, s8, 8
+; GFX942-NEXT:    v_writelane_b32 v0, s9, 9
+; GFX942-NEXT:    v_writelane_b32 v0, s10, 10
+; GFX942-NEXT:    v_writelane_b32 v0, s11, 11
+; GFX942-NEXT:    v_writelane_b32 v0, s12, 12
+; GFX942-NEXT:    v_writelane_b32 v0, s13, 13
+; GFX942-NEXT:    v_writelane_b32 v0, s14, 14
+; GFX942-NEXT:    v_writelane_b32 v0, s15, 15
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[4:19]
+; GFX942-NEXT:    ; def s[12:27]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_mov_b32 s8, s14
+; GFX942-NEXT:    s_mov_b32 s9, s15
+; GFX942-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX942-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX942-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX942-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX942-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX942-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX942-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX942-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX942-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX942-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX942-NEXT:    s_mov_b32 s10, s12
-; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[16:31]
-; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_mov_b32 s8, s18
-; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX942-NEXT:    s_mov_b32 s9, s19
 ; GFX942-NEXT:    s_mov_b32 s11, s13
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
@@ -19719,23 +20708,53 @@ define void @s_shuffle_v2i64_v8i64__11_4() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX900-NEXT:    s_mov_b32 s8, s22
-; GFX900-NEXT:    s_mov_b32 s9, s23
+; GFX900-NEXT:    s_mov_b32 s8, s18
+; GFX900-NEXT:    s_mov_b32 s9, s19
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX900-NEXT:    s_mov_b32 s10, s12
 ; GFX900-NEXT:    s_mov_b32 s11, s13
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -19748,23 +20767,53 @@ define void @s_shuffle_v2i64_v8i64__11_4() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX90A-NEXT:    s_mov_b32 s8, s22
-; GFX90A-NEXT:    s_mov_b32 s9, s23
+; GFX90A-NEXT:    s_mov_b32 s8, s18
+; GFX90A-NEXT:    s_mov_b32 s9, s19
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX90A-NEXT:    s_mov_b32 s10, s12
 ; GFX90A-NEXT:    s_mov_b32 s11, s13
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -19777,24 +20826,55 @@ define void @s_shuffle_v2i64_v8i64__11_4() #0 {
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
+; GFX942-NEXT:    ;;#ASMSTART
+; GFX942-NEXT:    ; def s[0:15]
+; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_writelane_b32 v0, s0, 0
 ; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s1, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s2, 2
+; GFX942-NEXT:    v_writelane_b32 v0, s3, 3
+; GFX942-NEXT:    v_writelane_b32 v0, s4, 4
+; GFX942-NEXT:    v_writelane_b32 v0, s5, 5
+; GFX942-NEXT:    v_writelane_b32 v0, s6, 6
+; GFX942-NEXT:    v_writelane_b32 v0, s7, 7
+; GFX942-NEXT:    v_writelane_b32 v0, s8, 8
+; GFX942-NEXT:    v_writelane_b32 v0, s9, 9
+; GFX942-NEXT:    v_writelane_b32 v0, s10, 10
+; GFX942-NEXT:    v_writelane_b32 v0, s11, 11
+; GFX942-NEXT:    v_writelane_b32 v0, s12, 12
+; GFX942-NEXT:    v_writelane_b32 v0, s13, 13
+; GFX942-NEXT:    v_writelane_b32 v0, s14, 14
+; GFX942-NEXT:    v_writelane_b32 v0, s15, 15
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[4:19]
+; GFX942-NEXT:    ; def s[12:27]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_mov_b32 s8, s18
+; GFX942-NEXT:    s_mov_b32 s9, s19
+; GFX942-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX942-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX942-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX942-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX942-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX942-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX942-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX942-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX942-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX942-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX942-NEXT:    s_mov_b32 s10, s12
-; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[16:31]
-; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_mov_b32 s8, s22
-; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX942-NEXT:    s_mov_b32 s9, s23
 ; GFX942-NEXT:    s_mov_b32 s11, s13
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
@@ -19896,23 +20976,53 @@ define void @s_shuffle_v2i64_v8i64__13_4() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX900-NEXT:    s_mov_b32 s8, s26
-; GFX900-NEXT:    s_mov_b32 s9, s27
+; GFX900-NEXT:    s_mov_b32 s8, s22
+; GFX900-NEXT:    s_mov_b32 s9, s23
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX900-NEXT:    s_mov_b32 s10, s12
 ; GFX900-NEXT:    s_mov_b32 s11, s13
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -19925,23 +21035,53 @@ define void @s_shuffle_v2i64_v8i64__13_4() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX90A-NEXT:    s_mov_b32 s8, s26
-; GFX90A-NEXT:    s_mov_b32 s9, s27
+; GFX90A-NEXT:    s_mov_b32 s8, s22
+; GFX90A-NEXT:    s_mov_b32 s9, s23
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX90A-NEXT:    s_mov_b32 s10, s12
 ; GFX90A-NEXT:    s_mov_b32 s11, s13
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -19954,24 +21094,55 @@ define void @s_shuffle_v2i64_v8i64__13_4() #0 {
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
+; GFX942-NEXT:    ;;#ASMSTART
+; GFX942-NEXT:    ; def s[0:15]
+; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_writelane_b32 v0, s0, 0
 ; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s1, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s2, 2
+; GFX942-NEXT:    v_writelane_b32 v0, s3, 3
+; GFX942-NEXT:    v_writelane_b32 v0, s4, 4
+; GFX942-NEXT:    v_writelane_b32 v0, s5, 5
+; GFX942-NEXT:    v_writelane_b32 v0, s6, 6
+; GFX942-NEXT:    v_writelane_b32 v0, s7, 7
+; GFX942-NEXT:    v_writelane_b32 v0, s8, 8
+; GFX942-NEXT:    v_writelane_b32 v0, s9, 9
+; GFX942-NEXT:    v_writelane_b32 v0, s10, 10
+; GFX942-NEXT:    v_writelane_b32 v0, s11, 11
+; GFX942-NEXT:    v_writelane_b32 v0, s12, 12
+; GFX942-NEXT:    v_writelane_b32 v0, s13, 13
+; GFX942-NEXT:    v_writelane_b32 v0, s14, 14
+; GFX942-NEXT:    v_writelane_b32 v0, s15, 15
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[4:19]
+; GFX942-NEXT:    ; def s[12:27]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_mov_b32 s8, s22
+; GFX942-NEXT:    s_mov_b32 s9, s23
+; GFX942-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX942-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX942-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX942-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX942-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX942-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX942-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX942-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX942-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX942-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX942-NEXT:    s_mov_b32 s10, s12
-; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[16:31]
-; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_mov_b32 s8, s26
-; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX942-NEXT:    s_mov_b32 s9, s27
 ; GFX942-NEXT:    s_mov_b32 s11, s13
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
@@ -20491,6 +21662,7 @@ define void @s_shuffle_v2i64_v8i64__9_5() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
@@ -20500,9 +21672,58 @@ define void @s_shuffle_v2i64_v8i64__9_5() #0 {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[16:31]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s12, s18
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s13, s19
 ; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -20511,6 +21732,7 @@ define void @s_shuffle_v2i64_v8i64__9_5() #0 {
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -20520,6 +21742,7 @@ define void @s_shuffle_v2i64_v8i64__9_5() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
@@ -20529,9 +21752,58 @@ define void @s_shuffle_v2i64_v8i64__9_5() #0 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[16:31]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s12, s18
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s13, s19
 ; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -20540,6 +21812,7 @@ define void @s_shuffle_v2i64_v8i64__9_5() #0 {
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -20629,6 +21902,7 @@ define void @s_shuffle_v2i64_v8i64__11_5() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
@@ -20638,9 +21912,58 @@ define void @s_shuffle_v2i64_v8i64__11_5() #0 {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[16:31]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s12, s22
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s13, s23
 ; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -20649,6 +21972,7 @@ define void @s_shuffle_v2i64_v8i64__11_5() #0 {
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -20658,6 +21982,7 @@ define void @s_shuffle_v2i64_v8i64__11_5() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
@@ -20667,9 +21992,58 @@ define void @s_shuffle_v2i64_v8i64__11_5() #0 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[16:31]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s12, s22
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s13, s23
 ; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -20678,6 +22052,7 @@ define void @s_shuffle_v2i64_v8i64__11_5() #0 {
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -20771,6 +22146,7 @@ define void @s_shuffle_v2i64_v8i64__13_5() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
@@ -20780,9 +22156,58 @@ define void @s_shuffle_v2i64_v8i64__13_5() #0 {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[16:31]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s12, s26
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s13, s27
 ; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -20791,6 +22216,7 @@ define void @s_shuffle_v2i64_v8i64__13_5() #0 {
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -20800,6 +22226,7 @@ define void @s_shuffle_v2i64_v8i64__13_5() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
@@ -20809,9 +22236,58 @@ define void @s_shuffle_v2i64_v8i64__13_5() #0 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[16:31]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s12, s26
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s13, s27
 ; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -20820,6 +22296,7 @@ define void @s_shuffle_v2i64_v8i64__13_5() #0 {
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -21348,23 +22825,53 @@ define void @s_shuffle_v2i64_v8i64__9_6() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_mov_b32 s8, s14
 ; GFX900-NEXT:    s_mov_b32 s9, s15
-; GFX900-NEXT:    s_mov_b32 s10, s28
-; GFX900-NEXT:    s_mov_b32 s11, s29
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    s_mov_b64 s[16:17], s[24:25]
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX900-NEXT:    s_mov_b32 s10, s16
+; GFX900-NEXT:    s_mov_b32 s11, s17
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -21377,23 +22884,53 @@ define void @s_shuffle_v2i64_v8i64__9_6() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_mov_b32 s8, s14
 ; GFX90A-NEXT:    s_mov_b32 s9, s15
-; GFX90A-NEXT:    s_mov_b32 s10, s28
-; GFX90A-NEXT:    s_mov_b32 s11, s29
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    s_mov_b64 s[16:17], s[24:25]
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX90A-NEXT:    s_mov_b32 s10, s16
+; GFX90A-NEXT:    s_mov_b32 s11, s17
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -21406,24 +22943,55 @@ define void @s_shuffle_v2i64_v8i64__9_6() #0 {
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[16:31]
+; GFX942-NEXT:    ; def s[0:15]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_mov_b32 s10, s28
-; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX942-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_writelane_b32 v0, s0, 0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_writelane_b32 v0, s1, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s2, 2
+; GFX942-NEXT:    v_writelane_b32 v0, s3, 3
+; GFX942-NEXT:    v_writelane_b32 v0, s4, 4
+; GFX942-NEXT:    v_writelane_b32 v0, s5, 5
+; GFX942-NEXT:    v_writelane_b32 v0, s6, 6
+; GFX942-NEXT:    v_writelane_b32 v0, s7, 7
+; GFX942-NEXT:    v_writelane_b32 v0, s8, 8
+; GFX942-NEXT:    v_writelane_b32 v0, s9, 9
+; GFX942-NEXT:    v_writelane_b32 v0, s10, 10
+; GFX942-NEXT:    v_writelane_b32 v0, s11, 11
+; GFX942-NEXT:    v_writelane_b32 v0, s12, 12
+; GFX942-NEXT:    v_writelane_b32 v0, s13, 13
+; GFX942-NEXT:    v_writelane_b32 v0, s14, 14
+; GFX942-NEXT:    v_writelane_b32 v0, s15, 15
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[12:27]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_mov_b32 s8, s14
 ; GFX942-NEXT:    s_mov_b32 s9, s15
-; GFX942-NEXT:    s_mov_b32 s11, s29
+; GFX942-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX942-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX942-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX942-NEXT:    s_mov_b64 s[12:13], s[24:25]
+; GFX942-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX942-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX942-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX942-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX942-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX942-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX942-NEXT:    s_mov_b32 s10, s12
+; GFX942-NEXT:    s_mov_b32 s11, s13
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
@@ -21499,23 +23067,53 @@ define void @s_shuffle_v2i64_v8i64__11_6() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_mov_b32 s8, s18
 ; GFX900-NEXT:    s_mov_b32 s9, s19
-; GFX900-NEXT:    s_mov_b32 s10, s28
-; GFX900-NEXT:    s_mov_b32 s11, s29
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    s_mov_b64 s[16:17], s[24:25]
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX900-NEXT:    s_mov_b32 s10, s16
+; GFX900-NEXT:    s_mov_b32 s11, s17
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -21528,23 +23126,53 @@ define void @s_shuffle_v2i64_v8i64__11_6() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_mov_b32 s8, s18
 ; GFX90A-NEXT:    s_mov_b32 s9, s19
-; GFX90A-NEXT:    s_mov_b32 s10, s28
-; GFX90A-NEXT:    s_mov_b32 s11, s29
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    s_mov_b64 s[16:17], s[24:25]
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX90A-NEXT:    s_mov_b32 s10, s16
+; GFX90A-NEXT:    s_mov_b32 s11, s17
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -21557,24 +23185,55 @@ define void @s_shuffle_v2i64_v8i64__11_6() #0 {
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[16:31]
+; GFX942-NEXT:    ; def s[0:15]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_mov_b32 s10, s28
-; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX942-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_writelane_b32 v0, s0, 0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_writelane_b32 v0, s1, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s2, 2
+; GFX942-NEXT:    v_writelane_b32 v0, s3, 3
+; GFX942-NEXT:    v_writelane_b32 v0, s4, 4
+; GFX942-NEXT:    v_writelane_b32 v0, s5, 5
+; GFX942-NEXT:    v_writelane_b32 v0, s6, 6
+; GFX942-NEXT:    v_writelane_b32 v0, s7, 7
+; GFX942-NEXT:    v_writelane_b32 v0, s8, 8
+; GFX942-NEXT:    v_writelane_b32 v0, s9, 9
+; GFX942-NEXT:    v_writelane_b32 v0, s10, 10
+; GFX942-NEXT:    v_writelane_b32 v0, s11, 11
+; GFX942-NEXT:    v_writelane_b32 v0, s12, 12
+; GFX942-NEXT:    v_writelane_b32 v0, s13, 13
+; GFX942-NEXT:    v_writelane_b32 v0, s14, 14
+; GFX942-NEXT:    v_writelane_b32 v0, s15, 15
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[12:27]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_mov_b32 s8, s18
 ; GFX942-NEXT:    s_mov_b32 s9, s19
-; GFX942-NEXT:    s_mov_b32 s11, s29
+; GFX942-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX942-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX942-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX942-NEXT:    s_mov_b64 s[12:13], s[24:25]
+; GFX942-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX942-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX942-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX942-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX942-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX942-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX942-NEXT:    s_mov_b32 s10, s12
+; GFX942-NEXT:    s_mov_b32 s11, s13
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
@@ -21700,23 +23359,53 @@ define void @s_shuffle_v2i64_v8i64__13_6() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_mov_b32 s8, s22
 ; GFX900-NEXT:    s_mov_b32 s9, s23
-; GFX900-NEXT:    s_mov_b32 s10, s28
-; GFX900-NEXT:    s_mov_b32 s11, s29
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    s_mov_b64 s[16:17], s[24:25]
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX900-NEXT:    s_mov_b32 s10, s16
+; GFX900-NEXT:    s_mov_b32 s11, s17
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -21729,23 +23418,53 @@ define void @s_shuffle_v2i64_v8i64__13_6() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_mov_b32 s8, s22
 ; GFX90A-NEXT:    s_mov_b32 s9, s23
-; GFX90A-NEXT:    s_mov_b32 s10, s28
-; GFX90A-NEXT:    s_mov_b32 s11, s29
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    s_mov_b64 s[16:17], s[24:25]
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX90A-NEXT:    s_mov_b32 s10, s16
+; GFX90A-NEXT:    s_mov_b32 s11, s17
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -21758,24 +23477,55 @@ define void @s_shuffle_v2i64_v8i64__13_6() #0 {
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[16:31]
+; GFX942-NEXT:    ; def s[0:15]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_mov_b32 s10, s28
-; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX942-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_writelane_b32 v0, s0, 0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_writelane_b32 v0, s1, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s2, 2
+; GFX942-NEXT:    v_writelane_b32 v0, s3, 3
+; GFX942-NEXT:    v_writelane_b32 v0, s4, 4
+; GFX942-NEXT:    v_writelane_b32 v0, s5, 5
+; GFX942-NEXT:    v_writelane_b32 v0, s6, 6
+; GFX942-NEXT:    v_writelane_b32 v0, s7, 7
+; GFX942-NEXT:    v_writelane_b32 v0, s8, 8
+; GFX942-NEXT:    v_writelane_b32 v0, s9, 9
+; GFX942-NEXT:    v_writelane_b32 v0, s10, 10
+; GFX942-NEXT:    v_writelane_b32 v0, s11, 11
+; GFX942-NEXT:    v_writelane_b32 v0, s12, 12
+; GFX942-NEXT:    v_writelane_b32 v0, s13, 13
+; GFX942-NEXT:    v_writelane_b32 v0, s14, 14
+; GFX942-NEXT:    v_writelane_b32 v0, s15, 15
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[12:27]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_mov_b32 s8, s22
 ; GFX942-NEXT:    s_mov_b32 s9, s23
-; GFX942-NEXT:    s_mov_b32 s11, s29
+; GFX942-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX942-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX942-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX942-NEXT:    s_mov_b64 s[12:13], s[24:25]
+; GFX942-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX942-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX942-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX942-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX942-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX942-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX942-NEXT:    s_mov_b32 s10, s12
+; GFX942-NEXT:    s_mov_b32 s11, s13
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
@@ -24344,6 +26094,7 @@ define void @s_shuffle_v2i64_v8i64__4_9() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
@@ -24353,9 +26104,58 @@ define void @s_shuffle_v2i64_v8i64__4_9() #0 {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[16:31]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s14, s18
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s15, s19
 ; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -24364,6 +26164,7 @@ define void @s_shuffle_v2i64_v8i64__4_9() #0 {
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -24373,6 +26174,7 @@ define void @s_shuffle_v2i64_v8i64__4_9() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
@@ -24382,9 +26184,58 @@ define void @s_shuffle_v2i64_v8i64__4_9() #0 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[16:31]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s14, s18
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s15, s19
 ; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -24393,6 +26244,7 @@ define void @s_shuffle_v2i64_v8i64__4_9() #0 {
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -24427,21 +26279,51 @@ define void @s_shuffle_v2i64_v8i64__5_9() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[8:23]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX900-NEXT:    s_mov_b32 s8, s26
-; GFX900-NEXT:    s_mov_b32 s9, s27
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    s_mov_b64 s[14:15], s[22:23]
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX900-NEXT:    s_mov_b32 s8, s14
+; GFX900-NEXT:    s_mov_b32 s9, s15
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -24454,21 +26336,51 @@ define void @s_shuffle_v2i64_v8i64__5_9() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[8:23]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX90A-NEXT:    s_mov_b32 s8, s26
-; GFX90A-NEXT:    s_mov_b32 s9, s27
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    s_mov_b64 s[14:15], s[22:23]
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX90A-NEXT:    s_mov_b32 s8, s14
+; GFX90A-NEXT:    s_mov_b32 s9, s15
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -24481,23 +26393,54 @@ define void @s_shuffle_v2i64_v8i64__5_9() #0 {
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[16:31]
+; GFX942-NEXT:    ; def s[0:15]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_writelane_b32 v0, s0, 0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_writelane_b32 v0, s1, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s2, 2
+; GFX942-NEXT:    v_writelane_b32 v0, s3, 3
+; GFX942-NEXT:    v_writelane_b32 v0, s4, 4
+; GFX942-NEXT:    v_writelane_b32 v0, s5, 5
+; GFX942-NEXT:    v_writelane_b32 v0, s6, 6
+; GFX942-NEXT:    v_writelane_b32 v0, s7, 7
+; GFX942-NEXT:    v_writelane_b32 v0, s8, 8
+; GFX942-NEXT:    v_writelane_b32 v0, s9, 9
+; GFX942-NEXT:    v_writelane_b32 v0, s10, 10
+; GFX942-NEXT:    v_writelane_b32 v0, s11, 11
+; GFX942-NEXT:    v_writelane_b32 v0, s12, 12
+; GFX942-NEXT:    v_writelane_b32 v0, s13, 13
+; GFX942-NEXT:    v_writelane_b32 v0, s14, 14
+; GFX942-NEXT:    v_writelane_b32 v0, s15, 15
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[8:23]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX942-NEXT:    s_mov_b32 s8, s26
-; GFX942-NEXT:    s_mov_b32 s9, s27
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX942-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX942-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX942-NEXT:    s_mov_b64 s[14:15], s[22:23]
+; GFX942-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX942-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX942-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX942-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX942-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX942-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX942-NEXT:    s_mov_b32 s8, s14
+; GFX942-NEXT:    s_mov_b32 s9, s15
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
@@ -25206,30 +27149,67 @@ define void @s_shuffle_v2i64_v8i64__1_10() #0 {
 ; GFX942-LABEL: s_shuffle_v2i64_v8i64__1_10:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; GFX942-NEXT:    s_xor_saveexec_b64 s[2:3], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
-; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX942-NEXT:    scratch_store_dword off, v1, s32 offset:4 ; 4-byte Folded Spill
+; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
 ; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[12:27]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GFX942-NEXT:    s_mov_b32 s8, s14
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[16:31]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_mov_b32 s9, s15
+; GFX942-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX942-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX942-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX942-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX942-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX942-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX942-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX942-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX942-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX942-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX942-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX942-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX942-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX942-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX942-NEXT:    v_writelane_b32 v1, s31, 15
 ; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX942-NEXT:    s_mov_b32 s10, s20
-; GFX942-NEXT:    s_mov_b32 s11, s21
+; GFX942-NEXT:    v_readlane_b32 s12, v1, 0
+; GFX942-NEXT:    v_readlane_b32 s16, v1, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v1, 5
+; GFX942-NEXT:    s_mov_b64 s[4:5], s[16:17]
+; GFX942-NEXT:    v_readlane_b32 s13, v1, 1
+; GFX942-NEXT:    v_readlane_b32 s14, v1, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v1, 3
+; GFX942-NEXT:    v_readlane_b32 s18, v1, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v1, 7
+; GFX942-NEXT:    v_readlane_b32 s20, v1, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v1, 9
+; GFX942-NEXT:    v_readlane_b32 s22, v1, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v1, 11
+; GFX942-NEXT:    v_readlane_b32 s24, v1, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v1, 13
+; GFX942-NEXT:    v_readlane_b32 s26, v1, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v1, 15
+; GFX942-NEXT:    s_mov_b32 s10, s4
+; GFX942-NEXT:    s_mov_b32 s11, s5
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
-; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; GFX942-NEXT:    s_xor_saveexec_b64 s[2:3], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
-; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX942-NEXT:    scratch_load_dword v1, off, s32 offset:4 ; 4-byte Folded Reload
+; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <8 x i64> asm "; def $0", "=s"()
@@ -25481,6 +27461,7 @@ define void @s_shuffle_v2i64_v8i64__4_10() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
@@ -25490,9 +27471,58 @@ define void @s_shuffle_v2i64_v8i64__4_10() #0 {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[16:31]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s14, s20
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s15, s21
 ; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -25501,6 +27531,7 @@ define void @s_shuffle_v2i64_v8i64__4_10() #0 {
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -25510,6 +27541,7 @@ define void @s_shuffle_v2i64_v8i64__4_10() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
@@ -25519,9 +27551,58 @@ define void @s_shuffle_v2i64_v8i64__4_10() #0 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[16:31]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s14, s20
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s15, s21
 ; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -25530,6 +27611,7 @@ define void @s_shuffle_v2i64_v8i64__4_10() #0 {
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -25564,23 +27646,53 @@ define void @s_shuffle_v2i64_v8i64__5_10() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[8:23]
+; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX900-NEXT:    s_mov_b32 s8, s26
-; GFX900-NEXT:    s_mov_b32 s9, s27
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
+; GFX900-NEXT:    s_mov_b32 s8, s22
+; GFX900-NEXT:    s_mov_b32 s9, s23
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    s_mov_b64 s[12:13], s[16:17]
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX900-NEXT:    s_mov_b32 s10, s12
 ; GFX900-NEXT:    s_mov_b32 s11, s13
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -25593,23 +27705,53 @@ define void @s_shuffle_v2i64_v8i64__5_10() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[8:23]
+; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX90A-NEXT:    s_mov_b32 s8, s26
-; GFX90A-NEXT:    s_mov_b32 s9, s27
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
+; GFX90A-NEXT:    s_mov_b32 s8, s22
+; GFX90A-NEXT:    s_mov_b32 s9, s23
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    s_mov_b64 s[12:13], s[16:17]
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX90A-NEXT:    s_mov_b32 s10, s12
 ; GFX90A-NEXT:    s_mov_b32 s11, s13
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -26574,21 +28716,51 @@ define void @s_shuffle_v2i64_v8i64__3_11() #0 {
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
-; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
-; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX900-NEXT:    s_mov_b32 s8, s22
-; GFX900-NEXT:    s_mov_b32 s9, s23
+; GFX900-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v0, s19, 15
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[4:19]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX900-NEXT:    s_mov_b64 s[14:15], s[18:19]
+; GFX900-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX900-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX900-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX900-NEXT:    s_mov_b32 s8, s14
+; GFX900-NEXT:    s_mov_b32 s9, s15
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
@@ -26601,21 +28773,51 @@ define void @s_shuffle_v2i64_v8i64__3_11() #0 {
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
-; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
-; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX90A-NEXT:    s_mov_b32 s8, s22
-; GFX90A-NEXT:    s_mov_b32 s9, s23
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v0, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v0, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v0, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v0, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v0, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v0, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v0, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v0, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v0, s19, 15
+; GFX90A-NEXT:    ;;#ASMSTART
+; GFX90A-NEXT:    ; def s[4:19]
+; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX90A-NEXT:    s_mov_b64 s[14:15], s[18:19]
+; GFX90A-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX90A-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX90A-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX90A-NEXT:    s_mov_b32 s8, s14
+; GFX90A-NEXT:    s_mov_b32 s9, s15
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
@@ -26628,23 +28830,54 @@ define void @s_shuffle_v2i64_v8i64__3_11() #0 {
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[16:31]
+; GFX942-NEXT:    ; def s[0:15]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_writelane_b32 v0, s0, 0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_writelane_b32 v0, s1, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s2, 2
+; GFX942-NEXT:    v_writelane_b32 v0, s3, 3
+; GFX942-NEXT:    v_writelane_b32 v0, s4, 4
+; GFX942-NEXT:    v_writelane_b32 v0, s5, 5
+; GFX942-NEXT:    v_writelane_b32 v0, s6, 6
+; GFX942-NEXT:    v_writelane_b32 v0, s7, 7
+; GFX942-NEXT:    v_writelane_b32 v0, s8, 8
+; GFX942-NEXT:    v_writelane_b32 v0, s9, 9
+; GFX942-NEXT:    v_writelane_b32 v0, s10, 10
+; GFX942-NEXT:    v_writelane_b32 v0, s11, 11
+; GFX942-NEXT:    v_writelane_b32 v0, s12, 12
+; GFX942-NEXT:    v_writelane_b32 v0, s13, 13
+; GFX942-NEXT:    v_writelane_b32 v0, s14, 14
+; GFX942-NEXT:    v_writelane_b32 v0, s15, 15
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[4:19]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX942-NEXT:    s_mov_b32 s8, s22
-; GFX942-NEXT:    s_mov_b32 s9, s23
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX942-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX942-NEXT:    s_mov_b64 s[6:7], s[18:19]
+; GFX942-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX942-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX942-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX942-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX942-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX942-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX942-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v0, 15
+; GFX942-NEXT:    s_mov_b32 s8, s6
+; GFX942-NEXT:    s_mov_b32 s9, s7
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
@@ -26663,6 +28896,7 @@ define void @s_shuffle_v2i64_v8i64__4_11() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
@@ -26672,9 +28906,58 @@ define void @s_shuffle_v2i64_v8i64__4_11() #0 {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[16:31]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s14, s22
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s15, s23
 ; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -26683,6 +28966,7 @@ define void @s_shuffle_v2i64_v8i64__4_11() #0 {
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -26692,6 +28976,7 @@ define void @s_shuffle_v2i64_v8i64__4_11() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
@@ -26701,9 +28986,58 @@ define void @s_shuffle_v2i64_v8i64__4_11() #0 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[16:31]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s14, s22
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s15, s23
 ; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -26712,6 +29046,7 @@ define void @s_shuffle_v2i64_v8i64__4_11() #0 {
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -27455,9 +29790,10 @@ define void @s_shuffle_v2i64_v8i64__1_12() #0 {
 ; GFX900-LABEL: s_shuffle_v2i64_v8i64__1_12:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX900-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX900-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -27466,27 +29802,63 @@ define void @s_shuffle_v2i64_v8i64__1_12() #0 {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[16:31]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GFX900-NEXT:    s_mov_b32 s8, s14
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s31, 15
 ; GFX900-NEXT:    s_mov_b32 s9, s15
-; GFX900-NEXT:    s_mov_b32 s10, s24
-; GFX900-NEXT:    s_mov_b32 s11, s25
+; GFX900-NEXT:    v_readlane_b32 s12, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s13, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 9
+; GFX900-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s14, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 15
+; GFX900-NEXT:    s_mov_b32 s10, s12
+; GFX900-NEXT:    s_mov_b32 s11, s13
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
-; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX900-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX900-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: s_shuffle_v2i64_v8i64__1_12:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX90A-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -27495,18 +29867,53 @@ define void @s_shuffle_v2i64_v8i64__1_12() #0 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[16:31]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GFX90A-NEXT:    s_mov_b32 s8, s14
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s31, 15
 ; GFX90A-NEXT:    s_mov_b32 s9, s15
-; GFX90A-NEXT:    s_mov_b32 s10, s24
-; GFX90A-NEXT:    s_mov_b32 s11, s25
+; GFX90A-NEXT:    v_readlane_b32 s12, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s13, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 9
+; GFX90A-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s14, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 15
+; GFX90A-NEXT:    s_mov_b32 s10, s12
+; GFX90A-NEXT:    s_mov_b32 s11, s13
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
-; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX90A-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -27595,58 +30002,154 @@ define void @s_shuffle_v2i64_v8i64__3_12() #0 {
 ; GFX900-LABEL: s_shuffle_v2i64_v8i64__3_12:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX900-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX900-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX900-NEXT:    v_writelane_b32 v0, s36, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s37, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s38, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s39, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s48, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s49, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s50, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s51, 7
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[36:51]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[4:19]
+; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX900-NEXT:    s_mov_b32 s8, s22
-; GFX900-NEXT:    s_mov_b32 s9, s23
+; GFX900-NEXT:    v_writelane_b32 v1, s36, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s37, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s38, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s39, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s40, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s41, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s42, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s43, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s44, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s45, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s46, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s47, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s48, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s49, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s50, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s51, 15
+; GFX900-NEXT:    s_mov_b32 s8, s18
+; GFX900-NEXT:    s_mov_b32 s9, s19
+; GFX900-NEXT:    v_readlane_b32 s12, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s13, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 9
+; GFX900-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX900-NEXT:    v_readlane_b32 s14, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s10, s12
 ; GFX900-NEXT:    s_mov_b32 s11, s13
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
-; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX900-NEXT:    v_readlane_b32 s51, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s50, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s49, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s48, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s39, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s38, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s37, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s36, v0, 0
+; GFX900-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX900-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: s_shuffle_v2i64_v8i64__3_12:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX90A-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX90A-NEXT:    v_writelane_b32 v0, s36, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s37, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s38, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s39, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s48, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s49, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s50, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s51, 7
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[36:51]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[4:19]
+; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX90A-NEXT:    s_mov_b32 s8, s22
-; GFX90A-NEXT:    s_mov_b32 s9, s23
+; GFX90A-NEXT:    v_writelane_b32 v1, s36, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s37, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s38, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s39, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s40, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s41, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s42, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s43, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s44, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s45, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s46, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s47, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s48, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s49, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s50, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s51, 15
+; GFX90A-NEXT:    s_mov_b32 s8, s18
+; GFX90A-NEXT:    s_mov_b32 s9, s19
+; GFX90A-NEXT:    v_readlane_b32 s12, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s13, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 9
+; GFX90A-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX90A-NEXT:    v_readlane_b32 s14, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s10, s12
 ; GFX90A-NEXT:    s_mov_b32 s11, s13
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
-; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX90A-NEXT:    v_readlane_b32 s51, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s50, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s49, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s48, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s39, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s38, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s37, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s36, v0, 0
+; GFX90A-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -27656,25 +30159,56 @@ define void @s_shuffle_v2i64_v8i64__3_12() #0 {
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[16:31]
+; GFX942-NEXT:    ; def s[12:27]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[4:19]
+; GFX942-NEXT:    ; def s[0:15]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX942-NEXT:    s_mov_b32 s8, s22
-; GFX942-NEXT:    s_mov_b32 s9, s23
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_writelane_b32 v0, s0, 0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_writelane_b32 v0, s1, 1
+; GFX942-NEXT:    v_writelane_b32 v0, s2, 2
+; GFX942-NEXT:    v_writelane_b32 v0, s3, 3
+; GFX942-NEXT:    v_writelane_b32 v0, s4, 4
+; GFX942-NEXT:    v_writelane_b32 v0, s5, 5
+; GFX942-NEXT:    v_writelane_b32 v0, s6, 6
+; GFX942-NEXT:    v_writelane_b32 v0, s7, 7
+; GFX942-NEXT:    v_writelane_b32 v0, s8, 8
+; GFX942-NEXT:    v_writelane_b32 v0, s9, 9
+; GFX942-NEXT:    v_writelane_b32 v0, s10, 10
+; GFX942-NEXT:    v_writelane_b32 v0, s11, 11
+; GFX942-NEXT:    v_writelane_b32 v0, s12, 12
+; GFX942-NEXT:    v_writelane_b32 v0, s13, 13
+; GFX942-NEXT:    v_writelane_b32 v0, s14, 14
+; GFX942-NEXT:    v_writelane_b32 v0, s15, 15
+; GFX942-NEXT:    s_mov_b32 s8, s18
+; GFX942-NEXT:    s_mov_b32 s9, s19
+; GFX942-NEXT:    v_readlane_b32 s12, v0, 0
+; GFX942-NEXT:    v_readlane_b32 s13, v0, 1
+; GFX942-NEXT:    v_readlane_b32 s20, v0, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v0, 9
+; GFX942-NEXT:    s_mov_b64 s[12:13], s[20:21]
+; GFX942-NEXT:    v_readlane_b32 s14, v0, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v0, 3
+; GFX942-NEXT:    v_readlane_b32 s16, v0, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v0, 5
+; GFX942-NEXT:    v_readlane_b32 s18, v0, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v0, 7
+; GFX942-NEXT:    v_readlane_b32 s22, v0, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v0, 11
+; GFX942-NEXT:    v_readlane_b32 s24, v0, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v0, 13
+; GFX942-NEXT:    v_readlane_b32 s26, v0, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v0, 15
 ; GFX942-NEXT:    s_mov_b32 s10, s12
 ; GFX942-NEXT:    s_mov_b32 s11, s13
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
@@ -27693,6 +30227,7 @@ define void @s_shuffle_v2i64_v8i64__4_12() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
@@ -27702,9 +30237,58 @@ define void @s_shuffle_v2i64_v8i64__4_12() #0 {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[16:31]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s14, s24
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s15, s25
 ; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -27713,6 +30297,7 @@ define void @s_shuffle_v2i64_v8i64__4_12() #0 {
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -27722,6 +30307,7 @@ define void @s_shuffle_v2i64_v8i64__4_12() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
@@ -27731,9 +30317,58 @@ define void @s_shuffle_v2i64_v8i64__4_12() #0 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[16:31]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s14, s24
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s15, s25
 ; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -27742,6 +30377,7 @@ define void @s_shuffle_v2i64_v8i64__4_12() #0 {
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -28736,18 +31372,53 @@ define void @s_shuffle_v2i64_v8i64__3_13() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 15
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_mov_b32 s12, s22
-; GFX900-NEXT:    s_mov_b32 s13, s23
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
+; GFX900-NEXT:    s_mov_b64 s[10:11], s[22:23]
+; GFX900-NEXT:    s_mov_b32 s12, s10
+; GFX900-NEXT:    s_mov_b32 s13, s11
 ; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -28756,6 +31427,7 @@ define void @s_shuffle_v2i64_v8i64__3_13() #0 {
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -28765,18 +31437,53 @@ define void @s_shuffle_v2i64_v8i64__3_13() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 15
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_mov_b32 s12, s22
-; GFX90A-NEXT:    s_mov_b32 s13, s23
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
+; GFX90A-NEXT:    s_mov_b64 s[10:11], s[22:23]
+; GFX90A-NEXT:    s_mov_b32 s12, s10
+; GFX90A-NEXT:    s_mov_b32 s13, s11
 ; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -28785,6 +31492,7 @@ define void @s_shuffle_v2i64_v8i64__3_13() #0 {
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -28818,6 +31526,7 @@ define void @s_shuffle_v2i64_v8i64__4_13() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
@@ -28827,9 +31536,58 @@ define void @s_shuffle_v2i64_v8i64__4_13() #0 {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[16:31]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s14, s26
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s15, s27
 ; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -28838,6 +31596,7 @@ define void @s_shuffle_v2i64_v8i64__4_13() #0 {
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -28847,6 +31606,7 @@ define void @s_shuffle_v2i64_v8i64__4_13() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
@@ -28856,9 +31616,58 @@ define void @s_shuffle_v2i64_v8i64__4_13() #0 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[16:31]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s14, s26
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s15, s27
 ; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -28867,6 +31676,7 @@ define void @s_shuffle_v2i64_v8i64__4_13() #0 {
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -29682,9 +32492,10 @@ define void @s_shuffle_v2i64_v8i64__1_14() #0 {
 ; GFX900-LABEL: s_shuffle_v2i64_v8i64__1_14:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX900-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX900-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -29693,27 +32504,63 @@ define void @s_shuffle_v2i64_v8i64__1_14() #0 {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[16:31]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GFX900-NEXT:    s_mov_b32 s8, s14
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s31, 15
 ; GFX900-NEXT:    s_mov_b32 s9, s15
-; GFX900-NEXT:    s_mov_b32 s10, s28
-; GFX900-NEXT:    s_mov_b32 s11, s29
+; GFX900-NEXT:    v_readlane_b32 s12, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 13
+; GFX900-NEXT:    s_mov_b64 s[16:17], s[24:25]
+; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s13, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s14, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 15
+; GFX900-NEXT:    s_mov_b32 s10, s16
+; GFX900-NEXT:    s_mov_b32 s11, s17
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
-; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX900-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX900-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: s_shuffle_v2i64_v8i64__1_14:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX90A-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -29722,48 +32569,120 @@ define void @s_shuffle_v2i64_v8i64__1_14() #0 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[16:31]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GFX90A-NEXT:    s_mov_b32 s8, s14
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s31, 15
 ; GFX90A-NEXT:    s_mov_b32 s9, s15
-; GFX90A-NEXT:    s_mov_b32 s10, s28
-; GFX90A-NEXT:    s_mov_b32 s11, s29
+; GFX90A-NEXT:    v_readlane_b32 s12, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 13
+; GFX90A-NEXT:    s_mov_b64 s[16:17], s[24:25]
+; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s13, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s14, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 15
+; GFX90A-NEXT:    s_mov_b32 s10, s16
+; GFX90A-NEXT:    s_mov_b32 s11, s17
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
-; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX90A-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: s_shuffle_v2i64_v8i64__1_14:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; GFX942-NEXT:    s_xor_saveexec_b64 s[2:3], -1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
-; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX942-NEXT:    scratch_store_dword off, v1, s32 offset:4 ; 4-byte Folded Spill
+; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
 ; GFX942-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[12:27]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GFX942-NEXT:    s_mov_b32 s8, s14
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[16:31]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_mov_b32 s9, s15
+; GFX942-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX942-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX942-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX942-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX942-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX942-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX942-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX942-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX942-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX942-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX942-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX942-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX942-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX942-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX942-NEXT:    v_writelane_b32 v1, s31, 15
 ; GFX942-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX942-NEXT:    s_mov_b32 s10, s28
-; GFX942-NEXT:    s_mov_b32 s11, s29
+; GFX942-NEXT:    v_readlane_b32 s12, v1, 0
+; GFX942-NEXT:    v_readlane_b32 s13, v1, 1
+; GFX942-NEXT:    v_readlane_b32 s24, v1, 12
+; GFX942-NEXT:    v_readlane_b32 s25, v1, 13
+; GFX942-NEXT:    s_mov_b64 s[12:13], s[24:25]
+; GFX942-NEXT:    v_readlane_b32 s14, v1, 2
+; GFX942-NEXT:    v_readlane_b32 s15, v1, 3
+; GFX942-NEXT:    v_readlane_b32 s16, v1, 4
+; GFX942-NEXT:    v_readlane_b32 s17, v1, 5
+; GFX942-NEXT:    v_readlane_b32 s18, v1, 6
+; GFX942-NEXT:    v_readlane_b32 s19, v1, 7
+; GFX942-NEXT:    v_readlane_b32 s20, v1, 8
+; GFX942-NEXT:    v_readlane_b32 s21, v1, 9
+; GFX942-NEXT:    v_readlane_b32 s22, v1, 10
+; GFX942-NEXT:    v_readlane_b32 s23, v1, 11
+; GFX942-NEXT:    v_readlane_b32 s26, v1, 14
+; GFX942-NEXT:    v_readlane_b32 s27, v1, 15
+; GFX942-NEXT:    s_mov_b32 s10, s12
+; GFX942-NEXT:    s_mov_b32 s11, s13
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:11]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    v_readlane_b32 s31, v0, 1
-; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; GFX942-NEXT:    s_xor_saveexec_b64 s[2:3], -1
 ; GFX942-NEXT:    scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
-; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX942-NEXT:    scratch_load_dword v1, off, s32 offset:4 ; 4-byte Folded Reload
+; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <8 x i64> asm "; def $0", "=s"()
@@ -29833,58 +32752,154 @@ define void @s_shuffle_v2i64_v8i64__3_14() #0 {
 ; GFX900-LABEL: s_shuffle_v2i64_v8i64__3_14:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX900-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX900-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX900-NEXT:    v_writelane_b32 v0, s36, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s37, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s38, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s39, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s48, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s49, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s50, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s51, 7
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
+; GFX900-NEXT:    ; def s[36:51]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[4:19]
+; GFX900-NEXT:    ; def s[12:27]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX900-NEXT:    s_mov_b32 s8, s22
-; GFX900-NEXT:    s_mov_b32 s9, s23
+; GFX900-NEXT:    v_writelane_b32 v1, s36, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s37, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s38, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s39, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s40, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s41, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s42, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s43, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s44, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s45, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s46, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s47, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s48, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s49, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s50, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s51, 15
+; GFX900-NEXT:    s_mov_b32 s8, s18
+; GFX900-NEXT:    s_mov_b32 s9, s19
+; GFX900-NEXT:    v_readlane_b32 s12, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 13
+; GFX900-NEXT:    s_mov_b64 s[16:17], s[24:25]
+; GFX900-NEXT:    v_readlane_b32 s13, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s14, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s15, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s10, s16
 ; GFX900-NEXT:    s_mov_b32 s11, s17
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
-; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX900-NEXT:    v_readlane_b32 s51, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s50, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s49, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s48, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s39, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s38, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s37, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s36, v0, 0
+; GFX900-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX900-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: s_shuffle_v2i64_v8i64__3_14:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX90A-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX90A-NEXT:    v_writelane_b32 v0, s36, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s37, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s38, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s39, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s48, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s49, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s50, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s51, 7
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
+; GFX90A-NEXT:    ; def s[36:51]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[4:19]
+; GFX90A-NEXT:    ; def s[12:27]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
-; GFX90A-NEXT:    s_mov_b32 s8, s22
-; GFX90A-NEXT:    s_mov_b32 s9, s23
+; GFX90A-NEXT:    v_writelane_b32 v1, s36, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s37, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s38, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s39, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s40, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s41, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s42, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s43, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s44, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s45, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s46, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s47, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s48, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s49, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s50, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s51, 15
+; GFX90A-NEXT:    s_mov_b32 s8, s18
+; GFX90A-NEXT:    s_mov_b32 s9, s19
+; GFX90A-NEXT:    v_readlane_b32 s12, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 13
+; GFX90A-NEXT:    s_mov_b64 s[16:17], s[24:25]
+; GFX90A-NEXT:    v_readlane_b32 s13, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s14, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s15, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s10, s16
 ; GFX90A-NEXT:    s_mov_b32 s11, s17
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
-; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX90A-NEXT:    v_readlane_b32 s51, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s50, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s49, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s48, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s39, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s38, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s37, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s36, v0, 0
+; GFX90A-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -29919,6 +32934,7 @@ define void @s_shuffle_v2i64_v8i64__4_14() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
@@ -29928,9 +32944,58 @@ define void @s_shuffle_v2i64_v8i64__4_14() #0 {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[16:31]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s14, s28
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s15, s29
 ; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -29939,6 +33004,7 @@ define void @s_shuffle_v2i64_v8i64__4_14() #0 {
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -29948,6 +33014,7 @@ define void @s_shuffle_v2i64_v8i64__4_14() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
@@ -29957,9 +33024,58 @@ define void @s_shuffle_v2i64_v8i64__4_14() #0 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[16:31]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s14, s28
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s15, s29
 ; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -29968,6 +33084,7 @@ define void @s_shuffle_v2i64_v8i64__4_14() #0 {
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -31131,26 +34248,89 @@ define void @s_shuffle_v2i64_v8i64__3_15() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
-; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[16:31]
-; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    v_writelane_b32 v0, s36, 0
+; GFX900-NEXT:    v_writelane_b32 v0, s37, 1
+; GFX900-NEXT:    v_writelane_b32 v0, s38, 2
+; GFX900-NEXT:    v_writelane_b32 v0, s39, 3
+; GFX900-NEXT:    v_writelane_b32 v0, s48, 4
+; GFX900-NEXT:    v_writelane_b32 v0, s49, 5
+; GFX900-NEXT:    v_writelane_b32 v0, s50, 6
+; GFX900-NEXT:    v_writelane_b32 v0, s51, 7
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:19]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_mov_b32 s16, s22
-; GFX900-NEXT:    s_mov_b32 s17, s23
-; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s4, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s5, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s6, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s7, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s8, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s9, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s10, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s11, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s12, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s13, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s14, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s15, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 15
+; GFX900-NEXT:    v_readlane_b32 s36, v1, 0
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[4:19]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    v_readlane_b32 s37, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s38, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s39, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s40, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s41, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s42, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s43, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s44, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s45, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s46, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s47, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s48, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s49, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s50, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s51, v1, 15
+; GFX900-NEXT:    s_mov_b32 s16, s42
+; GFX900-NEXT:    v_readlane_b32 s36, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s43, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s37, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s38, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s39, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s48, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s49, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s50, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s51, v1, 15
+; GFX900-NEXT:    s_mov_b32 s17, s43
+; GFX900-NEXT:    v_readlane_b32 s40, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s41, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s42, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s44, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s45, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s46, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s47, v1, 11
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[16:17]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[18:19]
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:11]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s51, v0, 7
+; GFX900-NEXT:    v_readlane_b32 s50, v0, 6
+; GFX900-NEXT:    v_readlane_b32 s49, v0, 5
+; GFX900-NEXT:    v_readlane_b32 s48, v0, 4
+; GFX900-NEXT:    v_readlane_b32 s39, v0, 3
+; GFX900-NEXT:    v_readlane_b32 s38, v0, 2
+; GFX900-NEXT:    v_readlane_b32 s37, v0, 1
+; GFX900-NEXT:    v_readlane_b32 s36, v0, 0
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -31160,26 +34340,89 @@ define void @s_shuffle_v2i64_v8i64__3_15() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
-; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[16:31]
-; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    v_writelane_b32 v0, s36, 0
+; GFX90A-NEXT:    v_writelane_b32 v0, s37, 1
+; GFX90A-NEXT:    v_writelane_b32 v0, s38, 2
+; GFX90A-NEXT:    v_writelane_b32 v0, s39, 3
+; GFX90A-NEXT:    v_writelane_b32 v0, s48, 4
+; GFX90A-NEXT:    v_writelane_b32 v0, s49, 5
+; GFX90A-NEXT:    v_writelane_b32 v0, s50, 6
+; GFX90A-NEXT:    v_writelane_b32 v0, s51, 7
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:19]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_mov_b32 s16, s22
-; GFX90A-NEXT:    s_mov_b32 s17, s23
-; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s4, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s5, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s6, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s7, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s8, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s9, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s10, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s11, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s12, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s13, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s14, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s15, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 15
+; GFX90A-NEXT:    v_readlane_b32 s36, v1, 0
+; GFX90A-NEXT:    ;;#ASMSTART
+; GFX90A-NEXT:    ; def s[4:19]
+; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    v_readlane_b32 s37, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s38, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s39, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s40, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s41, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s42, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s43, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s44, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s45, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s46, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s47, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s48, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s49, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s50, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s51, v1, 15
+; GFX90A-NEXT:    s_mov_b32 s16, s42
+; GFX90A-NEXT:    v_readlane_b32 s36, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s43, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s37, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s38, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s39, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s48, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s49, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s50, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s51, v1, 15
+; GFX90A-NEXT:    s_mov_b32 s17, s43
+; GFX90A-NEXT:    v_readlane_b32 s40, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s41, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s42, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s44, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s45, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s46, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s47, v1, 11
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[16:17]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[18:19]
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:11]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s51, v0, 7
+; GFX90A-NEXT:    v_readlane_b32 s50, v0, 6
+; GFX90A-NEXT:    v_readlane_b32 s49, v0, 5
+; GFX90A-NEXT:    v_readlane_b32 s48, v0, 4
+; GFX90A-NEXT:    v_readlane_b32 s39, v0, 3
+; GFX90A-NEXT:    v_readlane_b32 s38, v0, 2
+; GFX90A-NEXT:    v_readlane_b32 s37, v0, 1
+; GFX90A-NEXT:    v_readlane_b32 s36, v0, 0
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -31215,6 +34458,7 @@ define void @s_shuffle_v2i64_v8i64__4_15() #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX900-NEXT:    v_writelane_b32 v0, s31, 1
@@ -31224,9 +34468,58 @@ define void @s_shuffle_v2i64_v8i64__4_15() #0 {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[16:31]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX900-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX900-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX900-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX900-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX900-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX900-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX900-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX900-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX900-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX900-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX900-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX900-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX900-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX900-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX900-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX900-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s14, s30
+; GFX900-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX900-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX900-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX900-NEXT:    s_mov_b32 s15, s31
 ; GFX900-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX900-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX900-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX900-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX900-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX900-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX900-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX900-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX900-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX900-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX900-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX900-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX900-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX900-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -31235,6 +34528,7 @@ define void @s_shuffle_v2i64_v8i64__4_15() #0 {
 ; GFX900-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX900-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -31244,6 +34538,7 @@ define void @s_shuffle_v2i64_v8i64__4_15() #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v0, s31, 1
@@ -31253,9 +34548,58 @@ define void @s_shuffle_v2i64_v8i64__4_15() #0 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[16:31]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
+; GFX90A-NEXT:    v_writelane_b32 v1, s16, 0
+; GFX90A-NEXT:    v_writelane_b32 v1, s17, 1
+; GFX90A-NEXT:    v_writelane_b32 v1, s18, 2
+; GFX90A-NEXT:    v_writelane_b32 v1, s19, 3
+; GFX90A-NEXT:    v_writelane_b32 v1, s20, 4
+; GFX90A-NEXT:    v_writelane_b32 v1, s21, 5
+; GFX90A-NEXT:    v_writelane_b32 v1, s22, 6
+; GFX90A-NEXT:    v_writelane_b32 v1, s23, 7
+; GFX90A-NEXT:    v_writelane_b32 v1, s24, 8
+; GFX90A-NEXT:    v_writelane_b32 v1, s25, 9
+; GFX90A-NEXT:    v_writelane_b32 v1, s26, 10
+; GFX90A-NEXT:    v_writelane_b32 v1, s27, 11
+; GFX90A-NEXT:    v_writelane_b32 v1, s28, 12
+; GFX90A-NEXT:    v_writelane_b32 v1, s29, 13
+; GFX90A-NEXT:    v_writelane_b32 v1, s30, 14
+; GFX90A-NEXT:    v_writelane_b32 v1, s31, 15
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s14, s30
+; GFX90A-NEXT:    v_readlane_b32 s16, v1, 0
+; GFX90A-NEXT:    v_readlane_b32 s30, v1, 14
+; GFX90A-NEXT:    v_readlane_b32 s31, v1, 15
 ; GFX90A-NEXT:    s_mov_b32 s15, s31
 ; GFX90A-NEXT:    v_readlane_b32 s30, v0, 0
+; GFX90A-NEXT:    v_readlane_b32 s17, v1, 1
+; GFX90A-NEXT:    v_readlane_b32 s18, v1, 2
+; GFX90A-NEXT:    v_readlane_b32 s19, v1, 3
+; GFX90A-NEXT:    v_readlane_b32 s20, v1, 4
+; GFX90A-NEXT:    v_readlane_b32 s21, v1, 5
+; GFX90A-NEXT:    v_readlane_b32 s22, v1, 6
+; GFX90A-NEXT:    v_readlane_b32 s23, v1, 7
+; GFX90A-NEXT:    v_readlane_b32 s24, v1, 8
+; GFX90A-NEXT:    v_readlane_b32 s25, v1, 9
+; GFX90A-NEXT:    v_readlane_b32 s26, v1, 10
+; GFX90A-NEXT:    v_readlane_b32 s27, v1, 11
+; GFX90A-NEXT:    v_readlane_b32 s28, v1, 12
+; GFX90A-NEXT:    v_readlane_b32 s29, v1, 13
 ; GFX90A-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; GFX90A-NEXT:    s_mov_b64 s[10:11], s[14:15]
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -31264,6 +34608,7 @@ define void @s_shuffle_v2i64_v8i64__4_15() #0 {
 ; GFX90A-NEXT:    v_readlane_b32 s31, v0, 1
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX90A-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]

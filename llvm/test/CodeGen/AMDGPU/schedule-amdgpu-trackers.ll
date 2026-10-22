@@ -3,8 +3,8 @@
 ; that differ with this fork's spilling and splitting heuristics.
 ; RUN: llc -mtriple=amdgpu11.00--amdpal -verify-misched < %s | FileCheck --check-prefixes=GFX11-PAL %s
 ; RUN: llc -mtriple=amdgpu11.00--amdpal -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=GFX11-PAL-GCNTRACKERS %s
-; RUN: llc -mtriple=amdgpu8.02 -amdgpu-scalarize-global-loads=false -verify-misched < %s | FileCheck --check-prefixes=TONGA %s
-; RUN: llc -mtriple=amdgpu8.02 -amdgpu-scalarize-global-loads=false -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=TONGA-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgpu8.02 -verify-misched < %s | FileCheck --check-prefixes=TONGA %s
+; RUN: llc -mtriple=amdgpu8.02 -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=TONGA-GCNTRACKERS %s
 ; RUN: llc -mtriple=amdgpu9.08 -verify-misched < %s | FileCheck --check-prefixes=GFX908 %s
 ; RUN: llc -mtriple=amdgpu9.08 -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=GFX908-GCNTRACKERS %s
 ; RUN: llc -mtriple=amdgpu6.00 -verify-misched < %s | FileCheck --check-prefixes=GENERIC %s
@@ -54,7 +54,9 @@ entry:
 
 
 define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out, ptr addrspace(1) %in)  {
-  %val = load <16 x half>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <16 x half>, ptr addrspace(1) %in, i32 %tid
+  %val = load <16 x half>, ptr addrspace(1) %in.tid
   %cvt = fpext <16 x half> %val to <16 x double>
   store <16 x double> %cvt, ptr addrspace(1) %out
   ret void

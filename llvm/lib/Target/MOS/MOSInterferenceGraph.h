@@ -37,6 +37,7 @@
 
 namespace llvm {
 
+class LiveIntervals;
 class MachineFunction;
 class MachineInstr;
 class MachineRegisterInfo;
@@ -114,7 +115,7 @@ private:
 };
 
 /// Track register residency while walking instructions, optionally recording
-/// interference in a graph. MIR and kill flags describe the original SSA names;
+/// interference in a graph. Live intervals describe the original SSA names;
 /// evict/reload model transfers that the spiller will emit after the walk.
 class MOSInterferenceGraphBuilder {
 public:
@@ -125,6 +126,8 @@ public:
     // in this set.
     SmallDenseSet<Register, 8> SavedResidentValues;
   };
+
+  explicit MOSInterferenceGraphBuilder(LiveIntervals &LIS) : LIS(LIS) {}
 
   const SpillState &spillState() const { return State; }
   void evict(Register Reg);
@@ -161,6 +164,7 @@ private:
   void makeLive(Register Reg);
   void releaseReg(Register Reg);
 
+  LiveIntervals &LIS;
   SpillState State;
   // Graph-local IDs. Killed temporaries may remain in the captured graph.
   SmallVector<VertexID, 2> LiveTemporaries;

@@ -13,7 +13,7 @@ body: |
     ; CHECK: dead [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
     ; CHECK-NEXT: [[LDAbs:%[0-9]+]]:gpr = LDAbs 1000
     ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, reguse:GPR, undef %2:gpr, reguse:GPR, undef %2:gpr, reguse:GPR, [[LDAbs]], reguse:GPR, undef $a
-    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, reguse:GPR, undef %3:gpr, reguse:GPR, killed [[LDAbs]]
+    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, reguse:GPR, undef %3:gpr, reguse:GPR, [[LDAbs]]
     ; CHECK-NEXT: RTS
     dead %0:gpr = IMPLICIT_DEF
     %1:gpr = LDAbs 1000
@@ -32,7 +32,7 @@ body: |
     ; CHECK-LABEL: name: live_definition
     ; CHECK: [[LDAbs:%[0-9]+]]:gpr = LDAbs 1000
     ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, reguse:GPR, undef %1:gpr, reguse:GPR, [[LDAbs]]
-    ; CHECK-NEXT: STAbs killed [[LDAbs]], 2000
+    ; CHECK-NEXT: STAbs [[LDAbs]], 2000
     ; CHECK-NEXT: RTS
     %0:gpr = LDAbs 1000
     INLINEASM &"", sideeffect attdialect, reguse:GPR, undef %0, reguse:GPR, %0

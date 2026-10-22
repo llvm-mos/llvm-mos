@@ -18,8 +18,9 @@
 
 using namespace llvm;
 
-void MOSTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void MOSTargetObjectFile::initialize(MCContext &Ctx, const TargetMachine &TM,
+                                     const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
   ZpDataSection = Ctx.getELFSection(".zp.data", ELF::SHT_PROGBITS,
                                     ELF::SHF_ALLOC | ELF::SHF_WRITE);
   ZpBssSection = Ctx.getELFSection(".zp.bss", ELF::SHT_NOBITS,

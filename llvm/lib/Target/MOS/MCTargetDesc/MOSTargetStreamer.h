@@ -94,6 +94,23 @@ private:
   void stronglyReference(MCSymbol *Sym) override;
 };
 
+/// A target streamer for the null streamer, which discards all output.
+class MOSTargetNullStreamer final : public MOSTargetStreamer {
+public:
+  explicit MOSTargetNullStreamer(MCStreamer &S) : MOSTargetStreamer(S) {}
+
+private:
+  bool emitDirectiveZeroPage(MCSymbol *Symbol) override { return true; }
+  bool hasBSS() override { return false; }
+  bool hasZPBSS() override { return false; }
+  bool hasData() override { return false; }
+  bool hasZPData() override { return false; }
+  bool hasInitArray() override { return false; }
+  bool hasFiniArray() override { return false; }
+
+  void stronglyReference(MCSymbol *Sym) override {}
+};
+
 } // end namespace llvm
 
 #endif // LLVM_MOS_TARGET_STREAMER_H

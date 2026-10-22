@@ -93,6 +93,10 @@ static MCTargetStreamer *createMCAsmTargetStreamer(MCStreamer &S,
   return new MOSTargetAsmStreamer(S, OS);
 }
 
+static MCTargetStreamer *createMOSNullTargetStreamer(MCStreamer &S) {
+  return new MOSTargetNullStreamer(S);
+}
+
 static MCInstrAnalysis *createMOSMCInstrAnalysis(const MCInstrInfo *Info) {
   return new MOSMCInstrAnalysis(Info);
 }
@@ -134,6 +138,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSTargetMC() {
   // Register the asm target streamer.
   TargetRegistry::RegisterAsmTargetStreamer(getTheMOSTarget(),
                                             createMCAsmTargetStreamer);
+
+  // Register the null target streamer.
+  TargetRegistry::RegisterNullTargetStreamer(getTheMOSTarget(),
+                                             createMOSNullTargetStreamer);
 
   // Register the asm backend (as little endian).
   TargetRegistry::RegisterMCAsmBackend(getTheMOSTarget(), createMOSAsmBackend);

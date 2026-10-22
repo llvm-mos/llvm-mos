@@ -82,6 +82,7 @@ add_clang_library(clangSema
   SemaOpenMP.cpp
   SemaOverload.cpp
   SemaPPC.cpp
+  SemaProxy.cpp
   SemaPseudoObject.cpp
   SemaRISCV.cpp
   SemaStmt.cpp

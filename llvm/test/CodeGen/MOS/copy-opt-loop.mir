@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=mos -mcpu=mosw65816 -run-pass=mos-copy-opt -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=COPY
-# RUN: llc -mtriple=mos -mcpu=mosw65816 -run-pass=mos-copy-opt,postrapseudos,mos-late-opt -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=LOWER
+# RUN: llc -mtriple=mos -mcpu=mosw65816 -run-pass=mos-copy-opt,post-ra-pseudos,mos-late-opt -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=LOWER
 
 # Forwarding the loop header's A = COPY Y makes A live across the latch.
 # The sign test must not clobber A after its new value is copied to Y.

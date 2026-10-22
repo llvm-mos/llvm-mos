@@ -41,10 +41,11 @@
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/InitializePasses.h"
@@ -70,8 +71,9 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveVariablesWrapperPass>();
-    AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -86,6 +88,7 @@ private:
   void insertExitCopies(MachineBasicBlock &MBB, ArrayRef<Copy> Copies);
   bool normalizeTies(MachineInstr &MI);
   bool normalizeUndefUses(MachineInstr &MI);
+  void recomputeInterval(Register Reg);
   void insertParallelCopy(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator InsertPt,
                           ArrayRef<Copy> Copies, const DebugLoc &DL);
@@ -93,18 +96,20 @@ private:
   MachineRegisterInfo *MRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
-  LiveVariables *LV = nullptr;
+  LiveIntervals *LIS = nullptr;
   // One exit PCOPY per predecessor, shared by all its successors.
   IndexedMap<SmallVector<Copy, 0>, MBB2NumberFunctor> ExitCopies;
   SmallSetVector<Register, 16> LivenessDirty;
+  bool PhysicalUsesChanged = false;
 };
 
 bool MOSConventionalSSA::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
-  LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   LivenessDirty.clear();
+  PhysicalUsesChanged = false;
 
   bool Changed = false;
 
@@ -134,14 +139,24 @@ bool MOSConventionalSSA::runOnMachineFunction(MachineFunction &MF) {
       insertExitCopies(MBB, Copies);
   }
   for (Register Reg : LivenessDirty)
-    LV->recomputeForSingleDefVirtReg(Reg);
+    recomputeInterval(Reg);
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       Changed |= normalizeTies(MI);
       Changed |= normalizeUndefUses(MI);
     }
   }
+  // Isolating a physical input moves its use to the preceding copy. Rebuild
+  // the analysis to refresh cached unit ranges, including ABI live-in values.
+  if (PhysicalUsesChanged)
+    LIS->reanalyze(MF);
   return Changed;
+}
+
+void MOSConventionalSSA::recomputeInterval(Register Reg) {
+  if (LIS->hasInterval(Reg))
+    LIS->removeInterval(Reg);
+  LIS->createAndComputeVirtRegInterval(Reg);
 }
 
 void MOSConventionalSSA::isolatePHIs(MachineBasicBlock &MBB) {
@@ -149,8 +164,8 @@ void MOSConventionalSSA::isolatePHIs(MachineBasicBlock &MBB) {
   for (MachineInstr &PHI : MBB.phis()) {
     MachineOperand &Def = PHI.getOperand(0);
     // Give every PHI result one entry-PCOPY use, including unused results.
-    // The PCOPY inherits the dead definition, keeping PHI groups uniform for
-    // allocation and spilling.
+    // The PCOPY inherits the original definition and its dead flag. The fresh
+    // PHI result is live because the PCOPY reads it.
     Register Result = MRI->createVirtualRegister(TRI->getLargestLegalSuperClass(
         MRI->getRegClass(Def.getReg()), *MBB.getParent()));
     LivenessDirty.insert(Def.getReg());
@@ -158,6 +173,7 @@ void MOSConventionalSSA::isolatePHIs(MachineBasicBlock &MBB) {
     EntryCopies.push_back(
         {Def, MachineOperand::CreateReg(Result, /*isDef=*/false)});
     Def.setReg(Result);
+    Def.setIsDead(false);
   }
   if (!EntryCopies.empty())
     insertParallelCopy(MBB, MBB.getFirstNonPHI(), EntryCopies,
@@ -233,15 +249,20 @@ bool MOSConventionalSSA::normalizeTies(MachineInstr &MI) {
       assert(RC && "incompatible tied operand constraints");
       Register Result = MRI->createVirtualRegister(RC);
       Def.setReg(Result);
-      BuildMI(*MI.getParent(), std::next(MI.getIterator()), MI.getDebugLoc(),
-              TII->get(TargetOpcode::COPY), Original)
-          .addReg(Result);
-      LV->recomputeForSingleDefVirtReg(Original);
-      LV->recomputeForSingleDefVirtReg(Result);
+      // The copy reads Result even when Original is dead.
+      Def.setIsDead(false);
+      MachineInstr *Copy =
+          BuildMI(*MI.getParent(), std::next(MI.getIterator()),
+                  MI.getDebugLoc(), TII->get(TargetOpcode::COPY), Original)
+              .addReg(Result);
+      LIS->InsertMachineInstrInMaps(*Copy);
+      recomputeInterval(Original);
+      recomputeInterval(Result);
       Changed = true;
     }
     if (MRI->getRegClass(Def.getReg()) != RC) {
       MRI->setRegClass(Def.getReg(), RC);
+      recomputeInterval(Def.getReg());
       Changed = true;
     }
 
@@ -249,11 +270,13 @@ bool MOSConventionalSSA::normalizeTies(MachineInstr &MI) {
     // their own storage, and an early-clobber result cannot overwrite an input
     // that another operand still needs to read. Require identical classes to
     // avoid narrowing the combined live range and increasing pressure.
-    // Otherwise, leave coalescing to allocation. A kill on any use of the
-    // register suffices; it need not be on the tied operand itself.
+    // Otherwise, leave coalescing to allocation. Query the whole register's
+    // lifetime, independently of which operand carries its last read.
     if (Use.getReg().isVirtual() && !Use.getSubReg() && !Use.isUndef() &&
         MRI->getRegClass(Use.getReg()) == RC &&
-        MI.killsRegister(Use.getReg(), TRI) &&
+        LIS->getInterval(Use.getReg())
+            .Query(LIS->getInstructionIndex(MI))
+            .isKill() &&
         llvm::none_of(MI.all_uses(), [&](const MachineOperand &Other) {
           return &Other != &Use && Other.isReg() && Other.readsReg() &&
                  Other.getReg() == Use.getReg() &&
@@ -266,19 +289,23 @@ bool MOSConventionalSSA::normalizeTies(MachineInstr &MI) {
     Register Source = Use.getReg();
     bool IsUndef = Use.isUndef();
     Register Input = MRI->createVirtualRegister(RC);
+    MachineInstr *Copy;
     if (Use.isUndef())
-      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-              TII->get(TargetOpcode::IMPLICIT_DEF), Input);
+      Copy = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                     TII->get(TargetOpcode::IMPLICIT_DEF), Input);
     else
-      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-              TII->get(TargetOpcode::COPY), Input)
-          .addReg(Use.getReg(), {}, Use.getSubReg());
+      Copy = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                     TII->get(TargetOpcode::COPY), Input)
+                 .addReg(Use.getReg(), {}, Use.getSubReg());
+    LIS->InsertMachineInstrInMaps(*Copy);
     Use.setReg(Input);
     Use.setSubReg(0);
     Use.setIsUndef(false);
     if (Source.isVirtual() && !IsUndef)
-      LV->recomputeForSingleDefVirtReg(Source);
-    LV->recomputeForSingleDefVirtReg(Input);
+      recomputeInterval(Source);
+    if (Source.isPhysical() && !IsUndef)
+      PhysicalUsesChanged = true;
+    recomputeInterval(Input);
     Changed = true;
   }
   return Changed;
@@ -299,8 +326,10 @@ bool MOSConventionalSSA::normalizeUndefUses(MachineInstr &MI) {
       continue;
     assert(!Use.isTied() && "tied undef inputs must already be normalized");
     auto [It, Inserted] = UndefRegs.try_emplace(Reg);
-    if (Inserted)
+    if (Inserted) {
       It->second = MRI->cloneVirtualRegister(Reg);
+      LIS->createEmptyInterval(It->second);
+    }
     Use.setReg(It->second);
   }
   return !UndefRegs.empty();
@@ -314,6 +343,7 @@ void MOSConventionalSSA::insertParallelCopy(
     MIB.add(C.Def);
   for (const Copy &C : Copies)
     MIB.add(C.Use);
+  LIS->InsertMachineInstrInMaps(*MIB);
 }
 
 } // namespace
@@ -321,7 +351,7 @@ void MOSConventionalSSA::insertParallelCopy(
 char MOSConventionalSSA::ID = 0;
 INITIALIZE_PASS_BEGIN(MOSConventionalSSA, DEBUG_TYPE, "MOS Conventional SSA",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(MOSConventionalSSA, DEBUG_TYPE, "MOS Conventional SSA",
                     false, false)
 

@@ -27,6 +27,7 @@
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
@@ -210,18 +211,21 @@ void MOSInterferenceGraphBuilder::killTemporaryVertex(VertexID ID) {
 }
 
 void MOSInterferenceGraphBuilder::stepForward(const MachineInstr &MI) {
+  SlotIndex Idx = LIS.getInstructionIndex(MI);
   for (const MachineOperand &Use : MI.all_uses())
     assert((!Use.getReg().isVirtual() ||
             State.ResidentValues.contains(Use.getReg())) &&
            "virtual inputs must already be resident");
   for (const MachineOperand &Use : MI.all_uses())
-    if (Use.getReg().isVirtual() && Use.isKill())
+    if (Use.getReg().isVirtual() &&
+        LIS.getInterval(Use.getReg()).Query(Idx).isKill())
       releaseReg(Use.getReg());
   for (const MachineOperand &Def : MI.all_defs())
     if (Def.getReg().isVirtual())
       makeLive(Def.getReg());
   for (const MachineOperand &Def : MI.all_defs())
-    if (Def.getReg().isVirtual() && Def.isDead())
+    if (Def.getReg().isVirtual() &&
+        LIS.getInterval(Def.getReg()).Query(Idx).isDeadDef())
       releaseReg(Def.getReg());
 }
 
