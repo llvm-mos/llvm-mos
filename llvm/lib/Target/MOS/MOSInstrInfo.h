@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_MOS_MOSINSTRINFO_H
 #define LLVM_LIB_TARGET_MOS_MOSINSTRINFO_H
 
+#include "MOSInstrCost.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
@@ -36,13 +37,24 @@ public:
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      Register DestReg, unsigned SubIdx,
                      const MachineInstr &Orig,
-                     LaneBitmask UsedLanes) const override;
+                     LaneBitmask UsedLanes = LaneBitmask::getAll()) const override;
 
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
+
+  /// Estimate the emitted bytes and execution cycles of an instruction.
+  ///
+  /// Operands are in MIR order, with physical registers assigned; they may be
+  /// omitted when the cost does not depend on them. Currently models only the
+  /// opcodes used by the register-allocation and copy-optimization heuristics;
+  /// unsupported opcodes are an error. Timing estimates assume equal
+  /// probability of all runtime outcomes, i.e., whether or not a branch is
+  /// taken or a page is crossed.
+  MOSInstrCost getInstrCost(unsigned Opcode,
+                            ArrayRef<MachineOperand> Operands = {}) const;
 
   bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;
@@ -126,6 +138,8 @@ public:
 
 private:
   const MOSSubtarget *STI;
+
+  MOSInstrCost getCopyCost(Register DestReg, Register SrcReg) const;
 
   void copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                        Register SrcReg, bool Force = false,
