@@ -195,6 +195,7 @@ void RegAllocBase::cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
   // usual. This avoids trying to manage illegal overlapping assignments in
   // LiveRegMatrix.
   MRI->replaceRegWith(FailedReg, PhysReg);
+  aboutToRemoveInterval(LIS->getInterval(FailedReg));
   LIS->removeInterval(FailedReg);
 }
 
