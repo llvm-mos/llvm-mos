@@ -9,7 +9,7 @@
 %asm.output = type { <16 x i32>, <8 x i32>, <5 x i32>, <4 x i32>, <16 x i32> }
 
 ; CHECK-LABEL: {{^}}illegal_eviction_assert:
-; CHECK: ; def v[5:20] v[21:28] v[0:4] v[0:3] a[0:15]
+; CHECK: ; def v[5:20] v[0:7] v[0:4] v[21:24] a[0:15]
 ; CHECK: ; clobber
 ; CHECK: ; use v[5:20] v[21:28] v[0:4] v[0:3] a[1:16]
 define void @illegal_eviction_assert(ptr addrspace(1) %arg) #0 {
