@@ -40,6 +40,16 @@ void MOSCallingConvention::Init(llvm::MCRegisterInfo &mc_info) {
   y_dwarf_ = LookupDwarfByName(mc_info, "Y");
   p_dwarf_ = LookupDwarfByName(mc_info, "P");
   initialized_ = true;
+
+  auto add_preserved = [&](uint32_t base, uint32_t count) {
+    if (base == LLDB_INVALID_REGNUM)
+      return;
+    for (uint32_t i = 0; i < count; ++i)
+      if (!IsVolatile(base + i))
+        preserved_imaginary_.push_back(base + i);
+  };
+  add_preserved(rc_base_dwarf_, 256);
+  add_preserved(rs_base_dwarf_, 128);
 }
 
 bool MOSCallingConvention::IsVolatile(uint32_t dwarf_num) const {

@@ -44,12 +44,9 @@ public:
                        lldb::ValueObjectSP &new_value) override;
 
   bool CallFrameAddressIsValid(lldb::addr_t cfa) override {
-    // The MOS CFA depends on the unwind plan in use. The ABI's own
-    // function-entry plan (CreateFunctionEntryUnwindPlan in .cpp) uses the
-    // hardware stack S+3, which always lands in 0x0100-0x01FF. Compiler-
-    // emitted CFI plans instead use the soft stack RS0, which may live
-    // anywhere in the 16-bit address space. Accept any 16-bit address to
-    // cover both.
+    // The compiler's CFI and this ABI's own plans both compute the CFA on the
+    // hardware stack, normalized into 0x0100-0x01FF. Accept any 16-bit
+    // address so that hand-written CFI with another base still unwinds.
     return cfa <= 0xFFFF;
   }
 
@@ -65,6 +62,7 @@ public:
 
   // MCBasedABI interface
   uint32_t GetGenericNum(llvm::StringRef name) override;
+  std::string GetMCName(std::string reg) override;
 
   // Register augmentation - adds imaginary registers
   void AugmentRegisterInfo(
@@ -87,6 +85,11 @@ private:
     if (m_mc_register_info_up)
       m_calling_conv.Init(*m_mc_register_info_up);
   }
+
+  // Build an unwind plan from the CIE initial instructions. At function entry
+  // RS0 and the callee-saved registers still hold the caller's values; past
+  // entry nothing about them is known.
+  lldb::UnwindPlanSP CreateCIEUnwindPlan(bool at_function_entry);
 
   // Helper to get the main executable module
   lldb::ModuleSP GetMainModule() const;
