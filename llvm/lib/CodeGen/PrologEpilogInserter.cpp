@@ -1399,6 +1399,9 @@ bool PEIImpl::replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
     assert(MI.isDebugOperand(&Op) &&
            "Frame indices can only appear as a debug operand in a DBG_VALUE*"
            " machine instruction");
+    if (TFI->replaceFrameIndexDebugOperand(MF, MI, OpIdx))
+      return true;
+
     Register Reg;
     unsigned FrameIdx = Op.getIndex();
     unsigned Size = MF.getFrameInfo().getObjectSize(FrameIdx);
