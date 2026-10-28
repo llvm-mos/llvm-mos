@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Interference graph management for imaginary register spilling.
+/// Interference graph management for imaginary register allocation.
 ///
 /// MOSInterferenceGraph records the conflict relationship graph between
 /// imaginary storage for virtual registers. This provides the
-/// means to check whether registers can be assigned without spilling.
+/// means to check whether registers can be assigned without spilling, and an
+/// order in which to assign them.
 ///
 /// MOSInterferenceGraphBuilder tracks register residency while walking MIR. It
 /// uses this to capture interferences between registers in a
@@ -37,11 +38,13 @@
 namespace llvm {
 
 class LiveIntervals;
+class LiveRegUnits;
 class MachineFunction;
 class MachineInstr;
 class MachineRegisterInfo;
 class RegisterClassInfo;
 class MOSRegisterInfo;
+class VirtRegMap;
 
 /// Interference graph for the imaginary storage needed by registers within some
 /// contiguous region of MIR instructions.
@@ -61,6 +64,10 @@ class MOSRegisterInfo;
 /// retained, which means that the graph should not consider the vertex within
 /// its purview to assign.
 ///
+/// A vertex is also retained if the graph is given a VirtRegMap that assigns
+/// its register. Its location is then known, and simplification needs to
+/// accommodate only that location.
+///
 /// The main operation done on the graph is simplification. This means to
 /// logically remove one vertex and its edges at a time from the graph. To
 /// safely remove a vertex, we first guarantee that given any assignment of the
@@ -73,34 +80,48 @@ public:
   // Stable until removal. IDs of removed vertices are reused by new ones.
   using VertexID = unsigned;
 
-  MOSInterferenceGraph(MachineFunction &MF, const RegisterClassInfo &RCI);
+  MOSInterferenceGraph(MachineFunction &MF, const RegisterClassInfo &RCI,
+                       const VirtRegMap *VRM = nullptr);
 
   // Vertices point to their graph, so it cannot be copied or moved.
   MOSInterferenceGraph(const MOSInterferenceGraph &) = delete;
   MOSInterferenceGraph &operator=(const MOSInterferenceGraph &) = delete;
 
-  /// Test whether simplification succeeds.
+  /// Try to simplify the graph, returning whether it succeeds.
   ///
   /// Failure means that no vertex remaining in the graph can be safely removed.
   /// The algorithm is conservative: success guarantees assignability, but
   /// failure does not prove the graph un-assignable.
   ///
   /// RemainingRegs is set to the virtual registers left in the graph when
-  /// simplification ends.
-  bool canSimplify(SmallVectorImpl<Register> *RemainingRegs = nullptr) const;
+  /// simplification ends. AssignmentOrder is set to the removed non-retained
+  /// vertices in the reverse of their removal order. Given any assignment of
+  /// the other vertices, they can be assigned in this order.
+  bool simplify(SmallVectorImpl<Register> *RemainingRegs = nullptr,
+                SmallVectorImpl<VertexID> *AssignmentOrder = nullptr) const;
 
-private:
   struct Vertex {
     explicit Vertex(const MOSInterferenceGraph &Graph) : Graph(&Graph) {}
 
-    // Zero denotes anonymous temporary storage.
+    /// Zero denotes anonymous temporary storage.
     Register Reg;
 
-    // RC specifies the imaginary storage class for both named and anonymous
-    // vertices.
+    /// RC specifies the imaginary storage class for both named and anonymous
+    /// vertices.
     const TargetRegisterClass *RC = nullptr;
 
     SparseBitVector<> Edges;
+
+    /// The locations the vertex may be assigned, in allocation order.
+    ArrayRef<MCPhysReg> candidates() const;
+
+    /// The register units that the graph's VirtRegMap currently assigns to
+    /// this vertex's neighbors.
+    LiveRegUnits neighborAssignedUnits() const;
+
+  private:
+    friend class MOSInterferenceGraph;
+    friend class MOSInterferenceGraphBuilder;
 
     VertexID id() const;
 
@@ -108,14 +129,24 @@ private:
     // Other blocks.
     unsigned maxBlockedLocations(const Vertex &Other) const;
 
+    // The location the graph's VirtRegMap assigns this vertex's register, if
+    // any.
+    MCRegister assignment() const;
+
+    // Whether this vertex is retained: marked so, or assigned by the graph's
+    // VirtRegMap.
+    bool isRetained() const;
+
     // Adds an edge between this vertex and Other. Other must not be this
     // vertex.
     void addEdge(Vertex &Other);
 
-  private:
     const MOSInterferenceGraph *Graph;
   };
 
+  const Vertex &vertex(VertexID ID) const { return Vertices[ID]; }
+
+private:
   friend class MOSInterferenceGraphBuilder;
 
   /// Retain all current vertices: subsequent simplification must accommodate
@@ -133,11 +164,13 @@ private:
   const MOSRegisterInfo &TRI;
   MachineRegisterInfo &MRI;
   const RegisterClassInfo &RCI;
+  const VirtRegMap *VRM;
   SmallVector<Vertex> Vertices;
   SmallBitVector OccupiedVertices;
 
   // Definitions preceding the current instruction region. Their assignments
   // must be preserved; simplification may only remove the new vertices.
+  // Vertices with VirtRegMap assignments are retained even if not marked here.
   SmallBitVector RetainedVertices;
 
   SmallVector<VertexID> FreeVertices;
@@ -163,8 +196,8 @@ public:
   /// Advance from immediately before MI to immediately after it.
   ///
   /// When capturing, records any additional interference required by MI. All
-  /// virtual inputs must already be live. Ties, subregister operands, early
-  /// clobbers, and physical imaginary constraints are not yet supported.
+  /// virtual inputs must already be live. Ties and physical imaginary
+  /// constraints are not yet supported.
   ///
   void stepForward(const MachineInstr &MI);
 
