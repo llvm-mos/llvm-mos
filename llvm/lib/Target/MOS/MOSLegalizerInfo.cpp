@@ -302,6 +302,7 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
                                G_FDIV,
                                G_FMA,
                                G_FREM,
+                               G_FMODF,
                                G_FPOW,
                                G_FEXP,
                                G_FEXP2,
@@ -475,45 +476,6 @@ bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
             Ty, Builder.buildFMinNum(
                     Ty, Builder.buildFMaxNum(Ty, MI.getOperand(2), MinConst),
                     MaxConst)));
-    MI.eraseFromParent();
-    return true;
-  }
-  case Intrinsic::modf: {
-    // modf(x) returns (fractional_part, integer_part)
-    // The C library modf takes (x, &iptr) and returns fractional part
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    unsigned Size = Ty.getSizeInBits();
-    auto &Ctx = MI.getMF()->getFunction().getContext();
-
-    RTLIB::Libcall Libcall = Size == 32 ? RTLIB::MODF_F32 : RTLIB::MODF_F64;
-    Type *HLTy = Size == 32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
-    Type *PtrTy = PointerType::get(Ctx, 0);
-
-    // Create stack temporary for the integer part output
-    MachinePointerInfo PtrInfo;
-    auto FI =
-        Helper.createStackTemporary(Ty.getSizeInBytes(), Align(), PtrInfo);
-
-    SmallVector<CallLowering::ArgInfo, 2> Args;
-    // For G_INTRINSIC with 2 results: op0=result0, op1=result1,
-    // op2=intrinsic_id, op3=input
-    Args.push_back({MI.getOperand(3).getReg(), HLTy, 0});   // input value
-    Args.push_back({FI->getOperand(0).getReg(), PtrTy, 1}); // output pointer
-
-    LostDebugLocObserver LocObserver("");
-    if (Helper.createLibcall(Libcall, {MI.getOperand(0).getReg(), HLTy, 0},
-                             Args, LocObserver) !=
-        LegalizerHelper::LegalizeResult::Legalized)
-      return false;
-
-    // Load the integer part from the stack temporary
-    Builder.buildLoad(
-        MI.getOperand(1), FI,
-        *MI.getMF()->getMachineMemOperand(
-            PtrInfo,
-            MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable,
-            Ty.getSizeInBytes(), Align()));
-
     MI.eraseFromParent();
     return true;
   }
