@@ -35,6 +35,51 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      # LLDB needs libxml2 to read a gdbstub's target.xml (see MOS.cmake).
+      # Linux links the system's shared libxml2, as upstream's Linux release
+      # does, and macOS has one in its SDK.
+      - name: Install libxml2 (Linux)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: sudo apt-get update && sudo apt-get install -y libxml2-dev
+
+      # Windows has no system libxml2. Build a minimal static one the way
+      # upstream's Windows release does (llvm/utils/release/build_llvm_release.bat),
+      # but with the DLL C runtime (/MD) that this build uses.
+      - name: Build libxml2 (Windows)
+        if: startsWith(matrix.os, 'windows')
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $version = "2.15.3"
+          $src = "libxml2-v$version"
+          $prefix = "${{ runner.temp }}/libxml2" -replace '\\', '/'
+          Set-Location "${{ runner.temp }}"
+          curl.exe -fsSLO "https://gitlab.gnome.org/GNOME/libxml2/-/archive/v$version/$src.tar.gz"
+          $hash = (Get-FileHash "$src.tar.gz" -Algorithm SHA256).Hash
+          if ($hash -ne "0da50c1415f4ec0364569d2119b1436ba837b31df44af28569d234272c23cf1f") {
+            throw "libxml2 checksum mismatch: $hash"
+          }
+          # 'test' directory excluded because of symlinks.
+          tar zxf "$src.tar.gz" --exclude "test/*"
+          cmake -GNinja -S $src -B libxmlbuild `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_INSTALL_PREFIX="$prefix" `
+            -DCMAKE_C_COMPILER=cl `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL `
+            -DBUILD_SHARED_LIBS=OFF -DLIBXML2_WITH_C14N=OFF -DLIBXML2_WITH_CATALOG=OFF `
+            -DLIBXML2_WITH_DEBUG=OFF -DLIBXML2_WITH_DOCB=OFF -DLIBXML2_WITH_FTP=OFF `
+            -DLIBXML2_WITH_HTML=OFF -DLIBXML2_WITH_HTTP=OFF -DLIBXML2_WITH_ICONV=OFF `
+            -DLIBXML2_WITH_ICU=OFF -DLIBXML2_WITH_ISO8859X=OFF -DLIBXML2_WITH_LEGACY=OFF `
+            -DLIBXML2_WITH_LZMA=OFF -DLIBXML2_WITH_MEM_DEBUG=OFF -DLIBXML2_WITH_MODULES=OFF `
+            -DLIBXML2_WITH_OUTPUT=ON -DLIBXML2_WITH_PATTERN=OFF -DLIBXML2_WITH_PROGRAMS=OFF `
+            -DLIBXML2_WITH_PUSH=OFF -DLIBXML2_WITH_PYTHON=OFF -DLIBXML2_WITH_READER=OFF `
+            -DLIBXML2_WITH_REGEXPS=OFF -DLIBXML2_WITH_RUN_DEBUG=OFF -DLIBXML2_WITH_SAX1=ON `
+            -DLIBXML2_WITH_SCHEMAS=OFF -DLIBXML2_WITH_SCHEMATRON=OFF -DLIBXML2_WITH_TESTS=OFF `
+            -DLIBXML2_WITH_THREADS=ON -DLIBXML2_WITH_THREAD_ALLOC=OFF -DLIBXML2_WITH_TREE=ON `
+            -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF `
+            -DLIBXML2_WITH_XPATH=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF
+          ninja -C libxmlbuild install
+          "LIBXML2_PREFIX=$prefix" >> $env:GITHUB_ENV
+
       - name: Configure POSIX
         if: ${{!startsWith(matrix.os, 'windows')}}
         run: |
@@ -56,6 +101,12 @@ jobs:
             -GNinja `
             -DCMAKE_C_COMPILER=cl `
             -DCMAKE_CXX_COMPILER=cl `
+            -DLIBXML2_INCLUDE_DIR="$env:LIBXML2_PREFIX/include/libxml2" `
+            -DLIBXML2_LIBRARIES="$env:LIBXML2_PREFIX/lib/libxml2s.lib" `
+            -DCMAKE_C_FLAGS=-DLIBXML_STATIC `
+            -DCMAKE_CXX_FLAGS=-DLIBXML_STATIC `
+            -DCMAKE_EXE_LINKER_FLAGS=bcrypt.lib `
+            -DCMAKE_SHARED_LINKER_FLAGS=bcrypt.lib `
             -DLLVM_ENABLE_ASSERTIONS=ON `
             -C../clang/cmake/caches/MOS.cmake `
             ../llvm
