@@ -36,7 +36,7 @@ public:
 private:
   void splitToValueTypes(const ArgInfo &OrigArg,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
-                         const DataLayout &DL) const;
+                         const DataLayout &DL, CallingConv::ID CC) const;
 };
 
 } // namespace llvm

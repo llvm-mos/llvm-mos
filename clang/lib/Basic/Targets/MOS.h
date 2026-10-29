@@ -64,6 +64,9 @@ public:
   bool setCPU(StringRef Name) override;
 
   bool hasBitIntType() const override { return true; }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+  bool supportsVariadicCall(CallingConv CC) const override;
 };
 
 } // namespace targets
