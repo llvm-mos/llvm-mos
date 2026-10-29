@@ -227,6 +227,7 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_STORE_ABS_IDX:
     return selectStore(MI);
   case MOS::G_LSHRE:
+  case MOS::G_ASHRE:
   case MOS::G_SHLE:
     return selectLshrShlE(MI);
   case MOS::G_MERGE_VALUES:
@@ -1346,6 +1347,8 @@ template <typename ADDR_P, typename CARRYIN_P> struct GLshrE_match {
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     const MachineInstr *GLshrE = getOpcodeDef(MOS::G_LSHRE, Reg, MRI);
     if (!GLshrE)
+      GLshrE = getOpcodeDef(MOS::G_ASHRE, Reg, MRI);
+    if (!GLshrE)
       return false;
     CarryOut = GLshrE->getOperand(1).getReg();
     return Addr.match(MRI, GLshrE->getOperand(2).getReg()) &&
@@ -1687,6 +1690,8 @@ bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
 
 bool MOSInstructionSelector::selectLshrShlE(MachineInstr &MI) {
   auto [Dst, CarryOut, Src, CarryIn] = MI.getFirst4Regs();
+  MachineIRBuilder Builder(MI);
+  const auto &MRI = *Builder.getMRI();
 
   unsigned ShiftOpcode, RotateOpcode;
   switch (MI.getOpcode()) {
@@ -1700,10 +1705,21 @@ bool MOSInstructionSelector::selectLshrShlE(MachineInstr &MI) {
     ShiftOpcode = MOS::LSR;
     RotateOpcode = MOS::ROR;
     break;
+  case MOS::G_ASHRE:
+    // Store folding can consume Dst with ROR RMW, in which case CarryIn
+    // provides the sign bit without introducing register pressure.
+    if (STI.has65CE02() && !MRI.use_nodbg_empty(Dst)) {
+      auto Asr = Builder.buildInstr(MOS::ASR, {Dst, CarryOut}, {Src});
+      constrainSelectedInstRegOperands(*Asr, TII, TRI, RBI);
+      MI.eraseFromParent();
+      return true;
+    }
+    ShiftOpcode = MOS::LSR;
+    RotateOpcode = MOS::ROR;
+    break;
   }
 
-  MachineIRBuilder Builder(MI);
-  if (mi_match(CarryIn, *Builder.getMRI(), m_SpecificICst(0))) {
+  if (mi_match(CarryIn, MRI, m_SpecificICst(0))) {
     auto Asl = Builder.buildInstr(ShiftOpcode, {Dst, CarryOut}, {Src});
     constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI);
   } else {

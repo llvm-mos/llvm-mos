@@ -189,6 +189,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   }
   case MOS::ASL:
   case MOS::LSR:
+  case MOS::ASR:
   case MOS::ROL:
   case MOS::ROR:
     switch (MI->getOperand(0).getReg()) {
@@ -200,6 +201,9 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         break;
       case MOS::LSR:
         OutMI.setOpcode(MOS::LSR_ZeroPage);
+        break;
+      case MOS::ASR:
+        OutMI.setOpcode(MOS::ASR_ZeroPage);
         break;
       case MOS::ROL:
         OutMI.setOpcode(MOS::ROL_ZeroPage);
@@ -223,6 +227,9 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         return;
       case MOS::LSR:
         OutMI.setOpcode(MOS::LSR_Accumulator);
+        return;
+      case MOS::ASR:
+        OutMI.setOpcode(MOS::ASR_Implied);
         return;
       case MOS::ROL:
         OutMI.setOpcode(MOS::ROL_Accumulator);
