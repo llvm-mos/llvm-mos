@@ -26,6 +26,7 @@
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -139,6 +140,9 @@ private:
   DenseMap<MachineInstr *, SpillTransfers> PlannedTransfers;
   // Each original SSA value has its own slot, shared by all of its reloads.
   DenseMap<Register, int> SpillSlots;
+  // Values whose spill slots hold their contents at the current position. Each
+  // original value has its own slot, so once stored, a value stays saved.
+  DenseSet<Register> SavedValues;
   bool Changed = false;
 };
 
@@ -153,6 +157,7 @@ bool MOSImagRegSpill::runOnMachineFunction(MachineFunction &MF) {
   Builder.emplace(LIS);
   PlannedTransfers.clear();
   SpillSlots.clear();
+  SavedValues.clear();
   Changed = false;
 
   checkSupportedMIR(MF);
@@ -248,7 +253,7 @@ void MOSImagRegSpill::spillBeforeMIs(
   // any assignment of the new definitions. Further evictions only remove
   // interference, preserving the successful instruction simplification above.
   Builder->trimToLive();
-  Graph->retainAll();
+  Builder->retainAll();
   ensureScratch(Instructions);
 }
 
@@ -268,7 +273,7 @@ void MOSImagRegSpill::reloadForInputs(
     for (const MachineOperand &Use : MI.all_uses()) {
       Register Reg = Use.getReg();
       if (!Reg.isVirtual() || Use.isDebug() || Use.isUndef() ||
-          Builder->spillState().ResidentValues.contains(Reg))
+          Builder->liveRegs().contains(Reg))
         continue;
       reloadForInput(Reg, Instructions);
     }
@@ -281,7 +286,7 @@ void MOSImagRegSpill::reloadForInput(
   // The reload is not yet known to be executable: it also needs scratch while
   // producing this result. Any required stores will precede the reload, using
   // the scratch guaranteed on entry.
-  Builder->reload(Reg);
+  Builder->addLiveReg(Reg);
   SmallVector<Register> RemainingRegs;
   while (!Graph->canSimplify(&RemainingRegs))
     spillLiveThrough(Instructions, RemainingRegs);
@@ -289,7 +294,7 @@ void MOSImagRegSpill::reloadForInput(
   // Retain the destination so scratch must fit alongside any assignment of it.
   // This provides scratch for executing this reload and any following transfers.
   // Retention also prevents later reload checks from rearranging this result.
-  Graph->retainAll();
+  Builder->retainAll();
   ensureScratch(Instructions);
   PlannedTransfers[&*Instructions.begin()].Reloads.push_back(Reg);
 }
@@ -311,16 +316,14 @@ void MOSImagRegSpill::ensureScratch(
   SmallVector<Register> RemainingRegs;
   while (!Graph->canSimplify(&RemainingRegs))
     spillLiveThrough(Instructions, RemainingRegs);
-  for (auto ID : Scratch) {
+  for (auto ID : Scratch)
     Builder->killTemporaryVertex(ID);
-    Graph->removeVertex(ID);
-  }
 }
 
 SmallVector<Register> MOSImagRegSpill::spillCandidates(
     iterator_range<MachineBasicBlock::iterator> Instructions) const {
   SmallVector<Register> Regs;
-  for (Register Reg : Builder->spillState().ResidentValues) {
+  for (Register Reg : Builder->liveRegs()) {
     // Transfers precede the entire range, so only values unused and undefined
     // throughout it can be evicted here.
     if (llvm::any_of(Instructions, [&](const MachineInstr &MI) {
@@ -347,16 +350,16 @@ void MOSImagRegSpill::spillLiveThrough(
                        false);
   Register Reg = *Victim;
   evict(Reg, *Instructions.begin());
-  Graph->remove(Reg);
 }
 
 void MOSImagRegSpill::evict(Register Reg, MachineInstr &Before) {
-  if (!Builder->spillState().SavedResidentValues.contains(Reg))
+  if (SavedValues.insert(Reg).second)
     PlannedTransfers[&Before].Stores.push_back(Reg);
 
-  // If the builder has already stepped past Before, the value remains
-  // evicted afterwards too.
-  Builder->evict(Reg);
+  // The store precedes every instruction the graph covers, so none of them
+  // needs Reg in imaginary storage. If the builder has already stepped past
+  // Before, the value remains evicted afterwards too.
+  Builder->removeLiveReg(Reg);
 }
 
 void MOSImagRegSpill::insertSpillsAndReloads(MachineBasicBlock &MBB) {
