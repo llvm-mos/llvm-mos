@@ -244,7 +244,7 @@ void MOSImagRegSpill::spillBeforeMIs(
       Builder->stepForward(MI);
   }
   SmallVector<Register> RemainingRegs;
-  while (!Graph->canSimplify(&RemainingRegs))
+  while (!Graph->simplify(&RemainingRegs))
     spillLiveThrough(Instructions, RemainingRegs);
 
   // The next range must have scratch available to start its transfers. Making
@@ -288,7 +288,7 @@ void MOSImagRegSpill::reloadForInput(
   // the scratch guaranteed on entry.
   Builder->addLiveReg(Reg);
   SmallVector<Register> RemainingRegs;
-  while (!Graph->canSimplify(&RemainingRegs))
+  while (!Graph->simplify(&RemainingRegs))
     spillLiveThrough(Instructions, RemainingRegs);
 
   // Retain the destination so scratch must fit alongside any assignment of it.
@@ -314,7 +314,7 @@ void MOSImagRegSpill::ensureScratch(
   // in stack emission (this can probably be tightened).
   Scratch.push_back(Builder->addTemporaryVertex(MOS::Imag16RegClass));
   SmallVector<Register> RemainingRegs;
-  while (!Graph->canSimplify(&RemainingRegs))
+  while (!Graph->simplify(&RemainingRegs))
     spillLiveThrough(Instructions, RemainingRegs);
   for (auto ID : Scratch)
     Builder->killTemporaryVertex(ID);

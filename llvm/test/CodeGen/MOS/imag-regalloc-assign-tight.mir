@@ -1,0 +1,74 @@
+# RUN: llc -mtriple=mos -mattr=-static-stack -stress-regalloc=2 -run-pass=mos-imag-reg-assign -verify-machineinstrs %s -o - | FileCheck %s
+
+# Imaginary assignment with two byte candidates ($rc2, $rc3) and two pair
+# candidates ($rs1 = $rc2:$rc3, $rs2). Each case succeeds only if the graph
+# models its constraint exactly. Check VRM metadata, which
+# update_mir_test_checks.py does not generate.
+--- |
+  define void @assigned_neighbors() "nonreentrant" { ret void }
+  define void @early_clobber() "nonreentrant" { ret void }
+  define void @assignment_order() "nonreentrant" { ret void }
+...
+
+# Both bytes block only $rs1. Bounding each assigned byte's effect separately
+# would count two blocked pairs and leave no room for the pair.
+# CHECK-LABEL: name: assigned_neighbors
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr, {{.*}}assigned-phys: '$rc2' }
+# CHECK-NEXT:   - { id: 1, class: gpr, {{.*}}assigned-phys: '$rc3' }
+# CHECK-NEXT:   - { id: 2, class: imag16, {{.*}}assigned-phys: '$rs2' }
+# CHECK-NEXT:   - { id: 3, class: ac, {{.*}}assigned-phys: '$rc2' }
+# CHECK-NEXT: liveins:
+---
+name: assigned_neighbors
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:gpr = LDAbs 1000
+    %1:gpr = LDAbs 1001
+    %2:imag16 = REG_SEQUENCE %0, %subreg.sublo, %1, %subreg.subhi
+    STAbs %0, 2000
+    STAbs %1, 2001
+    %3:ac = LDIndir %2
+    STAbs %3, 2002
+    RTS
+...
+
+# An early-clobber result is written before the inputs are read, so it cannot
+# reuse the location of an input killed by the same instruction.
+# CHECK-LABEL: name: early_clobber
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr, {{.*}}assigned-phys: '$rc2' }
+# CHECK-NEXT:   - { id: 1, class: imag16, {{.*}}assigned-phys: '$rs2' }
+# CHECK-NEXT: liveins:
+---
+name: early_clobber
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 1, alignment: 1 }
+body: |
+  bb.0:
+    %0:gpr = LDAbs 1000
+    dead early-clobber %1:imag16 = STStk %0, %stack.0, 0 :: (store (s8) into %stack.0)
+    RTS
+...
+
+# The load's byte result can only be removed after its pair scratch, since a
+# pair may block both byte candidates. Assigning in reverse removal order places
+# the byte first; the reverse would leave the byte no room.
+# CHECK-LABEL: name: assignment_order
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr, {{.*}}assigned-phys: '$rc2' }
+# CHECK-NEXT:   - { id: 1, class: imag16, {{.*}}assigned-phys: '$rs2' }
+# CHECK-NEXT: liveins:
+---
+name: assignment_order
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 1, alignment: 1 }
+body: |
+  bb.0:
+    %0:gpr, dead early-clobber %1:imag16 = LDStk %stack.0, 0 :: (load (s8) from %stack.0)
+    STAbs %0, 2000
+    RTS
+...

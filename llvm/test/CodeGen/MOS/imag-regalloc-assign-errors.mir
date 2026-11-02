@@ -1,0 +1,21 @@
+# RUN: not llc -mtriple=mos -mattr=+static-stack -stress-regalloc=2 -run-pass=mos-imag-reg-assign -verify-machineinstrs %s -o /dev/null 2>&1 | FileCheck %s
+
+# Imaginary assignment does not spill. Three bytes live at once cannot fit in
+# two byte locations; MOSImagRegSpill would have spilled one of them.
+# CHECK: LLVM ERROR: MOS guaranteed imaginary assignment failed
+--- |
+  define void @overcommitted() "nonreentrant" { ret void }
+...
+---
+name: overcommitted
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:gpr = LDAbs 1000
+    %1:gpr = LDAbs 1001
+    %2:gpr = LDAbs 1002
+    STAbs %0, 2000
+    STAbs %1, 2001
+    STAbs %2, 2002
+    RTS
+...
