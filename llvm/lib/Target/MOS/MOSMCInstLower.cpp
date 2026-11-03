@@ -30,21 +30,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mos-mcinstlower"
 
-static bool canUseZeroPageIdx(const MachineOperand &MO) {
-  if (MO.getTargetFlags() == MOS::MO_ZEROPAGE)
-    return true;
-
-  // Constants may extend past the zero page when added to the index, so they
-  // cannot generally use zero page indexed addressing.
-  if (!MO.isGlobal())
-    return false;
-
-  // Global values in the zero page must end before the zero page, which means
-  // that pointers based on them can never overflow it.
-  return MO.getGlobal()->getAliaseeObject()->getAddressSpace() ==
-         MOS::AS_ZeroPage;
-}
-
 // Instructions with indexed addressing must have zero page-matching bases
 // wrapped in mos16. Otherwise, if the assembly were later parsed, the zero
 // page indexed addressing mode might be selected, which has different
@@ -75,7 +60,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::SBCAbsIdx: {
     bool MustZP =
         MI->getOpcode() == MOS::ADCZpIdx || MI->getOpcode() == MOS::SBCZpIdx;
-    bool ZP = MustZP || canUseZeroPageIdx(MI->getOperand(4));
+    bool ZP = MustZP || MOS::canUseZeroPageIdx(MI->getOperand(4));
     bool ImmConfusable = false;
     switch (MI->getOpcode()) {
     case MOS::ADCZpIdx:
@@ -128,7 +113,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     bool MustZP = MI->getOpcode() == MOS::ANDZpIdx ||
                   MI->getOpcode() == MOS::EORZpIdx ||
                   MI->getOpcode() == MOS::ORAZpIdx;
-    bool ZP = MustZP || canUseZeroPageIdx(MI->getOperand(2));
+    bool ZP = MustZP || MOS::canUseZeroPageIdx(MI->getOperand(2));
     bool ImmConfusable = false;
     switch (MI->getOpcode()) {
     case MOS::ANDZpIdx:
@@ -236,7 +221,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::LSRIdx:
   case MOS::ROLIdx:
   case MOS::RORIdx: {
-    bool ZP = canUseZeroPageIdx(MI->getOperand(1));
+    bool ZP = MOS::canUseZeroPageIdx(MI->getOperand(1));
     switch (MI->getOpcode()) {
     case MOS::ASLIdx:
       OutMI.setOpcode(ZP ? MOS::ASL_ZeroPageX : MOS::ASL_AbsoluteX);
@@ -339,7 +324,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     case MOS::CMPZpIdx:
     case MOS::CMPAbsIdx: {
       bool MustZP = MI->getOpcode() == MOS::CMPZpIdx;
-      bool ZP = MustZP || canUseZeroPageIdx(MI->getOperand(2));
+      bool ZP = MustZP || MOS::canUseZeroPageIdx(MI->getOperand(2));
       switch (MI->getOperand(3).getReg()) {
       default:
         llvm_unreachable("Unexpected register.");
@@ -366,7 +351,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   }
   case MOS::INCIdx:
   case MOS::DECIdx: {
-    bool ZP = canUseZeroPageIdx(MI->getOperand(0));
+    bool ZP = MOS::canUseZeroPageIdx(MI->getOperand(0));
     switch (MI->getOpcode()) {
     case MOS::INCIdx:
       OutMI.setOpcode(ZP ? MOS::INC_ZeroPageX : MOS::INC_AbsoluteX);
@@ -452,7 +437,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::LDAZpIdx:
   case MOS::LDAAbsIdx: {
     bool MustZP = MI->getOpcode() == MOS::LDAZpIdx;
-    bool ZP = MustZP || canUseZeroPageIdx(MI->getOperand(1));
+    bool ZP = MustZP || MOS::canUseZeroPageIdx(MI->getOperand(1));
     bool ImmConfusable = false;
     switch (MI->getOperand(2).getReg()) {
     default:
@@ -477,7 +462,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   }
   case MOS::LDXIdx:
   case MOS::LDYIdx: {
-    bool ZP = canUseZeroPageIdx(MI->getOperand(1));
+    bool ZP = MOS::canUseZeroPageIdx(MI->getOperand(1));
     switch (MI->getOpcode()) {
     default:
       llvm_unreachable("Unexpected LDAbsIdx register.");
@@ -651,7 +636,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::STZpIdx:
   case MOS::STAbsIdx: {
     bool MustZP = MI->getOpcode() == MOS::STZpIdx;
-    bool ZP = MustZP || canUseZeroPageIdx(MI->getOperand(1));
+    bool ZP = MustZP || MOS::canUseZeroPageIdx(MI->getOperand(1));
     bool ImmConfusable = false;
     switch (MI->getOperand(2).getReg()) {
     default:
@@ -695,7 +680,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     return;
   }
   case MOS::STZIdx: {
-    bool ZP = canUseZeroPageIdx(MI->getOperand(0));
+    bool ZP = MOS::canUseZeroPageIdx(MI->getOperand(0));
     OutMI.setOpcode(ZP ? MOS::STZ_ZeroPageX : MOS::STZ_AbsoluteX);
     MCOperand Tgt;
     if (!lowerOperand(MI->getOperand(0), Tgt))

@@ -63,6 +63,12 @@ public:
     return MOSInstrCost(Left.Bytes / Right, Left.Cycles / Right, 1);
   }
 
+  /// Returns the cost of this code if it runs Num / Denom times on average. The
+  /// code is emitted once regardless, so only its cycles are scaled.
+  MOSInstrCost scaleCycles(int Num, int Denom) const {
+    return MOSInstrCost(Bytes, Cycles * Num / Denom, 1);
+  }
+
   int64_t value(Mode Mode = Mode::Average) const;
 
   static Mode getModeFor(const MachineFunction &MF);

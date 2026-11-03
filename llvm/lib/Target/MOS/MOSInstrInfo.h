@@ -48,11 +48,11 @@ public:
   /// Estimate the emitted bytes and execution cycles of an instruction.
   ///
   /// Operands are in MIR order, with physical registers assigned; they may be
-  /// omitted when the cost does not depend on them. Currently models only the
-  /// opcodes used by the register-allocation and copy-optimization heuristics;
-  /// unsupported opcodes are an error. Timing estimates assume equal
-  /// probability of all runtime outcomes, i.e., whether or not a branch is
-  /// taken or a page is crossed.
+  /// omitted when the cost does not depend on them. The function is
+  /// implemented partially, sensitive to the needs of its callers; opcodes it
+  /// does not model cost nothing. Timing estimates assume equal probability of
+  /// all runtime outcomes, i.e., whether or not a branch is taken or a page is
+  /// crossed.
   MOSInstrCost getInstrCost(unsigned Opcode,
                             ArrayRef<MachineOperand> Operands = {}) const;
 
@@ -179,6 +179,10 @@ enum TOF {
   MO_HI_JT,
   MO_ZEROPAGE,
 };
+
+/// Returns whether indexed addressing from a base address can use the
+/// zero-page form, which wraps within the zero page.
+bool canUseZeroPageIdx(const MachineOperand &MO);
 
 } // namespace MOS
 
