@@ -1,0 +1,122 @@
+# RUN: llc -mtriple=mos -mattr=+static-stack -run-pass=mos-imag-reg-assign -verify-machineinstrs %s -o - | FileCheck %s
+
+# Straight-line imaginary assignment. Each location is the first candidate in
+# allocation order that no live neighbor occupies. Check VRM metadata, which
+# update_mir_test_checks.py does not generate.
+--- |
+  define void @reuse() "nonreentrant" { ret void }
+  define void @killed_inputs() "nonreentrant" { ret void }
+  define void @live_input() "nonreentrant" { ret void }
+  define void @preassigned() "nonreentrant" { ret void }
+  define void @flags() "nonreentrant" { ret void }
+...
+
+# A killed value's location is free for later definitions.
+# CHECK-LABEL: name: reuse
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr, {{.*}}assigned-phys: '$rc2' }
+# CHECK-NEXT:   - { id: 1, class: gpr, {{.*}}assigned-phys: '$rc3' }
+# CHECK-NEXT:   - { id: 2, class: gpr, {{.*}}assigned-phys: '$rc2' }
+# CHECK-NEXT: liveins:
+---
+name: reuse
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:gpr = LDAbs 1000
+    %1:gpr = LDAbs 1001
+    STAbs %0, 2000
+    %2:gpr = LDAbs 1002
+    STAbs %1, 2001
+    STAbs %2, 2002
+    RTS
+...
+
+# Inputs killed by an instruction release their locations to its results: the
+# pair reuses both bytes, and the load reuses the pair's low byte.
+# CHECK-LABEL: name: killed_inputs
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr, {{.*}}assigned-phys: '$rc2' }
+# CHECK-NEXT:   - { id: 1, class: gpr, {{.*}}assigned-phys: '$rc3' }
+# CHECK-NEXT:   - { id: 2, class: imag16, {{.*}}assigned-phys: '$rs1' }
+# CHECK-NEXT:   - { id: 3, class: ac, {{.*}}assigned-phys: '$rc2' }
+# CHECK-NEXT: liveins:
+---
+name: killed_inputs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:gpr = LDAbs 1000
+    %1:gpr = LDAbs 1001
+    %2:imag16 = REG_SEQUENCE %0, %subreg.sublo, %1, %subreg.subhi
+    %3:ac = LDIndir %2
+    STAbs %3, 2000
+    RTS
+...
+
+# An input that remains live blocks every pair that overlaps it.
+# CHECK-LABEL: name: live_input
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr, {{.*}}assigned-phys: '$rc2' }
+# CHECK-NEXT:   - { id: 1, class: gpr, {{.*}}assigned-phys: '$rc3' }
+# CHECK-NEXT:   - { id: 2, class: imag16, {{.*}}assigned-phys: '$rs2' }
+# CHECK-NEXT:   - { id: 3, class: ac, {{.*}}assigned-phys: '$rc3' }
+# CHECK-NEXT: liveins:
+---
+name: live_input
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:gpr = LDAbs 1000
+    %1:gpr = LDAbs 1001
+    %2:imag16 = REG_SEQUENCE %0, %subreg.sublo, %1, %subreg.subhi
+    %3:ac = LDIndir %2
+    STAbs %3, 2000
+    STAbs %0, 2001
+    RTS
+...
+
+# A register already assigned in VRM keeps its location, and its neighbors
+# avoid it.
+# CHECK-LABEL: name: preassigned
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr, {{.*}}assigned-phys: '$rc3' }
+# CHECK-NEXT:   - { id: 1, class: gpr, {{.*}}assigned-phys: '$rc2' }
+# CHECK-NEXT:   - { id: 2, class: gpr, {{.*}}assigned-phys: '$rc4' }
+# CHECK-NEXT: liveins:
+---
+name: preassigned
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr, assigned-phys: '$rc3' }
+body: |
+  bb.0:
+    %0:gpr = LDAbs 1000
+    %1:gpr = LDAbs 1001
+    %2:gpr = LDAbs 1002
+    STAbs %0, 2000
+    STAbs %1, 2001
+    STAbs %2, 2002
+    RTS
+...
+
+# Flags use the least significant bit of a byte location. A byte cannot
+# overlap a live flag.
+# CHECK-LABEL: name: flags
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: cc, {{.*}}assigned-phys: '$rc2lsb' }
+# CHECK-NEXT:   - { id: 1, class: gpr, {{.*}}assigned-phys: '$rc3' }
+# CHECK-NEXT:   - { id: 2, class: gpr, {{.*}}assigned-phys: '$rc2' }
+# CHECK-NEXT: liveins:
+---
+name: flags
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:cc = LDImm1 1
+    %1:gpr = LDAbs 1000
+    %2:gpr = REG_SEQUENCE %0, %subreg.sublsb
+    STAbs %2, 2000
+    STAbs %1, 2001
+    RTS
+...

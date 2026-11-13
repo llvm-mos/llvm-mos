@@ -12,11 +12,13 @@
 /// Simplification uses the notion of "squeeze". A vertex's candidates are the
 /// allocation order of its register class, and its squeeze is the sum, over its
 /// neighbors remaining in the graph, of the most of its candidates that one
-/// candidate of the neighbor can overlap. Each removal lowers its neighbors'
-/// squeeze, and a non-retained vertex can only be removed once its squeeze is
-/// less than its number of candidates, since its neighbors then cannot block
-/// all of them. Retained vertices are removed at the very end, since they are
-/// assumed to be allocated by other means.
+/// candidate of the neighbor can overlap. A neighbor with a VirtRegMap
+/// assignment instead makes the candidates it overlaps unavailable, and adds no
+/// squeeze. Each removal lowers its neighbors' squeeze, and a non-retained
+/// vertex can only be removed once its squeeze is less than its number of
+/// available candidates, since its neighbors then cannot block all of them.
+/// Retained vertices are removed at the very end, since they are assumed to be
+/// allocated by other means.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -25,31 +27,49 @@
 #include "MOSSubtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include <functional>
 
 using namespace llvm;
 
 MOSInterferenceGraph::MOSInterferenceGraph(MachineFunction &MF,
-                                           const RegisterClassInfo &RCI)
+                                           const RegisterClassInfo &RCI,
+                                           const VirtRegMap *VRM)
     : TRI(*MF.getSubtarget<MOSSubtarget>().getRegisterInfo()),
-      MRI(MF.getRegInfo()), RCI(RCI) {}
+      MRI(MF.getRegInfo()), RCI(RCI), VRM(VRM) {}
 
-bool MOSInterferenceGraph::canSimplify(
-    SmallVectorImpl<Register> *RemainingRegs) const {
+bool MOSInterferenceGraph::simplify(
+    SmallVectorImpl<Register> *RemainingRegs,
+    SmallVectorImpl<VertexID> *AssignmentOrder) const {
+  if (AssignmentOrder)
+    AssignmentOrder->clear();
+
   // Squeeze bounds how many candidate locations the remaining neighbors can
   // block. Removing a vertex with more candidates than this bound guarantees
   // that it can be assigned after all of those neighbors have been assigned.
   SmallBitVector Remaining = OccupiedVertices;
-  SmallVector<unsigned> Squeezes(Vertices.size(), 0);
+  SmallVector<unsigned> VertexSqueeze(Vertices.size(), 0);
+  SmallVector<unsigned> VertexNumAvailable(Vertices.size(), 0);
+  auto IsRemovable = [&](VertexID ID) {
+    return VertexSqueeze[ID] < VertexNumAvailable[ID];
+  };
   SmallVector<VertexID> Worklist;
   for (VertexID ID : OccupiedVertices.set_bits()) {
-    if (RetainedVertices.test(ID))
+    const Vertex &V = Vertices[ID];
+    if (V.isRetained())
       continue;
-    for (VertexID Other : Vertices[ID].Edges)
-      Squeezes[ID] += Vertices[ID].maxBlockedLocations(Vertices[Other]);
-    if (Squeezes[ID] < RCI.getOrder(Vertices[ID].RC).size())
+    for (VertexID Other : V.Edges)
+      if (!Vertices[Other].assignment())
+        VertexSqueeze[ID] += V.maxBlockedLocations(Vertices[Other]);
+    LiveRegUnits BlockedUnits = V.neighborAssignedUnits();
+    VertexNumAvailable[ID] =
+        llvm::count_if(V.candidates(), [&](MCPhysReg Phys) {
+          return BlockedUnits.available(Phys);
+        });
+    if (IsRemovable(ID))
       Worklist.push_back(ID);
   }
 
@@ -58,28 +78,43 @@ bool MOSInterferenceGraph::canSimplify(
   while (!Worklist.empty()) {
     VertexID ID = Worklist.pop_back_val();
     Remaining.reset(ID);
+    if (AssignmentOrder)
+      AssignmentOrder->push_back(ID);
     for (VertexID Other : Vertices[ID].Edges) {
-      if (!Remaining.test(Other) || RetainedVertices.test(Other))
+      if (!Remaining.test(Other) || Vertices[Other].isRetained())
         continue;
-      unsigned &Squeeze = Squeezes[Other];
-      unsigned OldSqueeze = Squeeze;
-      Squeeze -= Vertices[Other].maxBlockedLocations(Vertices[ID]);
-      unsigned Candidates = RCI.getOrder(Vertices[Other].RC).size();
-      if (OldSqueeze >= Candidates && Squeeze < Candidates)
+      bool WasNotRemovable = !IsRemovable(Other);
+      VertexSqueeze[Other] -= Vertices[Other].maxBlockedLocations(Vertices[ID]);
+      if (WasNotRemovable && IsRemovable(Other))
         Worklist.push_back(Other);
     }
   }
-  bool Simplified = Remaining == RetainedVertices;
+  bool Simplified = llvm::all_of(Remaining.set_bits(), [&](VertexID ID) {
+    return Vertices[ID].isRetained();
+  });
+  if (Simplified)
+    Remaining.reset();
   if (RemainingRegs) {
     RemainingRegs->clear();
-    if (!Simplified) {
-      for (VertexID ID : Remaining.set_bits()) {
-        if (Register Reg = Vertices[ID].Reg)
-          RemainingRegs->push_back(Reg);
-      }
-    }
+    for (VertexID ID : Remaining.set_bits())
+      if (Register Reg = Vertices[ID].Reg)
+        RemainingRegs->push_back(Reg);
   }
+  if (AssignmentOrder)
+    std::reverse(AssignmentOrder->begin(), AssignmentOrder->end());
   return Simplified;
+}
+
+ArrayRef<MCPhysReg> MOSInterferenceGraph::Vertex::candidates() const {
+  return Graph->RCI.getOrder(RC);
+}
+
+LiveRegUnits MOSInterferenceGraph::Vertex::neighborAssignedUnits() const {
+  LiveRegUnits Units(Graph->TRI);
+  for (VertexID Other : Edges)
+    if (MCRegister Assignment = Graph->Vertices[Other].assignment())
+      Units.addReg(Assignment);
+  return Units;
 }
 
 MOSInterferenceGraph::VertexID MOSInterferenceGraph::Vertex::id() const {
@@ -98,15 +133,24 @@ MOSInterferenceGraph::Vertex::maxBlockedLocations(const Vertex &Other) const {
     return It->second;
 
   unsigned Max = 0;
-  for (MCPhysReg OtherPhys : Graph->RCI.getOrder(Key.second)) {
-    unsigned Blocked =
-        llvm::count_if(Graph->RCI.getOrder(Key.first), [&](MCPhysReg Phys) {
-          return Graph->TRI.regsOverlap(Phys, OtherPhys);
-        });
+  for (MCPhysReg OtherPhys : Other.candidates()) {
+    unsigned Blocked = llvm::count_if(candidates(), [&](MCPhysReg Phys) {
+      return Graph->TRI.regsOverlap(Phys, OtherPhys);
+    });
     Max = std::max(Max, Blocked);
   }
   Graph->MaxBlockedLocations.try_emplace(Key, Max);
   return Max;
+}
+
+MCRegister MOSInterferenceGraph::Vertex::assignment() const {
+  if (!Graph->VRM || !Reg)
+    return MCRegister();
+  return Graph->VRM->getPhys(Reg);
+}
+
+bool MOSInterferenceGraph::Vertex::isRetained() const {
+  return Graph->RetainedVertices.test(id()) || assignment();
 }
 
 void MOSInterferenceGraph::Vertex::addEdge(Vertex &Other) {
@@ -168,12 +212,17 @@ void MOSInterferenceGraphBuilder::stepForward(const MachineInstr &MI) {
   for (const MachineOperand &Use : MI.all_uses())
     assert((!Use.getReg().isVirtual() || LiveRegs.contains(Use.getReg())) &&
            "virtual inputs must already be live");
+  // Early-clobber results are written before the inputs are read, so they
+  // interfere even with inputs killed here.
+  for (const MachineOperand &Def : MI.all_defs())
+    if (Def.getReg().isVirtual() && Def.isEarlyClobber())
+      defineReg(Def.getReg());
   for (const MachineOperand &Use : MI.all_uses())
     if (Use.getReg().isVirtual() &&
         LIS.getInterval(Use.getReg()).Query(Idx).isKill())
       LiveRegs.erase(Use.getReg());
   for (const MachineOperand &Def : MI.all_defs())
-    if (Def.getReg().isVirtual())
+    if (Def.getReg().isVirtual() && !Def.isEarlyClobber())
       defineReg(Def.getReg());
   for (const MachineOperand &Def : MI.all_defs())
     if (Def.getReg().isVirtual() &&
