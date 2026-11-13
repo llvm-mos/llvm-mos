@@ -223,38 +223,52 @@ unsigned MOSInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 MOSInstrCost
 MOSInstrInfo::getInstrCost(unsigned Opcode,
                            ArrayRef<MachineOperand> Operands) const {
+  const MOSRegisterInfo &TRI = *STI->getRegisterInfo();
+  const auto RegOf = [&](unsigned Idx) {
+    assert(Idx < Operands.size() && Operands[Idx].isReg() &&
+           Operands[Idx].getReg().isPhysical() &&
+           "Instruction cost requires assigned registers");
+    Register Reg = Operands[Idx].getReg();
+    if (Operands[Idx].getSubReg())
+      Reg = TRI.getSubReg(Reg, Operands[Idx].getSubReg());
+    return Reg;
+  };
+  // A cycle spent only on some runtime outcomes, such as a crossed page.
+  const MOSInstrCost ExtraCycle(0, 1);
+  // Indexed addressing has a shorter, faster form when the base address lies
+  // in the zero page, but not every register has it. Otherwise, reads take
+  // another cycle when indexing crosses a page, as do all writes and all
+  // HuC6280 and SPC700 accesses.
+  const auto IndexedCost = [&](const MachineOperand &Base, bool HasZeroPageForm,
+                               bool IsWrite) {
+    if (HasZeroPageForm && MOS::canUseZeroPageIdx(Base))
+      return MOSInstrCost(get(MOS::LDA_ZeroPageX).getSize(), 4);
+    MOSInstrCost Cost(get(MOS::LDA_AbsoluteX).getSize(), 4);
+    if (IsWrite || STI->hasHUC6280() || STI->hasSPC700())
+      return Cost + ExtraCycle;
+    return Cost + ExtraCycle.scaleCycles(1, 2);
+  };
+
   // The scheduling model does not describe instruction cycle counts (yet) due
   // to interference from generic LLVM codegen, so timing is estimated here. For
   // logical instructions without a descriptor size, use the size of a
   // corresponding encoded instruction.
   unsigned EncodedOpcode;
   unsigned Cycles;
+  // Cycles spent only on some runtime outcomes, weighted by their probability.
+  MOSInstrCost ExtraCycles;
   switch (Opcode) {
   default:
-    report_fatal_error(Twine("No instruction cost for ") + getName(Opcode));
-  case MOS::COPY: {
-    assert(Operands.size() >= 2 && Operands[0].isReg() && Operands[1].isReg() &&
-           Operands[0].getReg().isPhysical() &&
-           Operands[1].getReg().isPhysical() &&
-           "Copy cost requires assigned registers");
-    const MOSRegisterInfo &TRI = *STI->getRegisterInfo();
-    Register Dest = Operands[0].getReg();
-    Register Src = Operands[1].getReg();
-    if (Operands[0].getSubReg())
-      Dest = TRI.getSubReg(Dest, Operands[0].getSubReg());
-    if (Operands[1].getSubReg())
-      Src = TRI.getSubReg(Src, Operands[1].getSubReg());
-    return getCopyCost(Dest, Src);
-  }
+    // Add a case once a caller needs one.
+    return {};
+  case MOS::COPY:
+    return getCopyCost(RegOf(0), RegOf(1));
   case MOS::CmpBrZero:
     assert(Operands.size() >= 4 && "Expected compare-and-branch operands");
     return getInstrCost(MOS::CmpZero, Operands.slice(3, 1)) +
            getInstrCost(MOS::BR, Operands.take_front(3));
   case MOS::CmpZero: {
-    assert(!Operands.empty() && Operands[0].isReg() &&
-           Operands[0].getReg().isPhysical() && !Operands[0].getSubReg() &&
-           "Instruction cost requires an assigned source");
-    Register Src = Operands[0].getReg();
+    Register Src = RegOf(0);
     // Estimate halfway between reusing flags for free and the most expensive
     // lowering: compare against zero for a hardware register, or INC/DEC for
     // an imaginary register. INC and DEC have the same cost.
@@ -265,29 +279,107 @@ MOSInstrInfo::getInstrCost(unsigned Opcode,
     assert(MOS::GPRRegClass.contains(Src) && "Unexpected compare source");
     return getInstrCost(MOS::CMPImm) / 2;
   }
+  case MOS::CmpBrZeroMultiByte: {
+    // emitCmpBrZeroMultiByte compares bytes against zero from the most
+    // significant down, branching out at the first nonzero one. Each byte is
+    // thus reached half as often as the one before.
+    MOSInstrCost Cost;
+    unsigned NumReached = 0;
+    for (unsigned I = Operands.size(); I != 0; --I) {
+      const MachineOperand &MO = Operands[I - 1];
+      if (!MO.isReg() || MO.isImplicit())
+        continue;
+      Cost += (getInstrCost(MOS::CmpZero, Operands.slice(I - 1, 1)) +
+               getInstrCost(MOS::BR))
+                  .scaleCycles(1, 1 << NumReached++);
+    }
+    return Cost;
+  }
+  case MOS::GBR: {
+    // expandGBR branches directly on C and V, and on any other bit by
+    // comparing its byte against zero.
+    Register Tst = RegOf(1);
+    MOSInstrCost Cost = getInstrCost(MOS::BR);
+    if (Tst != MOS::C && Tst != MOS::V)
+      Cost += getInstrCost(
+          MOS::CmpZero,
+          {MachineOperand::CreateReg(
+              TRI.getMatchingSuperReg(Tst, MOS::sublsb, &MOS::Anyi8RegClass),
+              false)});
+    return Cost;
+  }
   case MOS::INC:
-  case MOS::ASL: {
-    assert(!Operands.empty() && Operands[0].isReg() &&
-           Operands[0].getReg().isPhysical() && !Operands[0].getSubReg() &&
-           "Instruction cost requires an assigned destination");
-    Register Dest = Operands[0].getReg();
+  case MOS::DEC:
+  case MOS::ASL:
+  case MOS::LSR:
+  case MOS::ROL:
+  case MOS::ROR: {
+    // Each register form has the size and timing of INX, and each zero-page
+    // form that of INC.
+    Register Dest = RegOf(0);
     if (MOS::Imag8RegClass.contains(Dest)) {
-      EncodedOpcode =
-          Opcode == MOS::INC ? MOS::INC_ZeroPage : MOS::ASL_ZeroPage;
+      EncodedOpcode = MOS::INC_ZeroPage;
       Cycles = STI->has65CE02() || STI->hasSPC700() ? 4
                : STI->hasHUC6280()                  ? 6
                                                     : 5;
     } else {
-      assert((Opcode == MOS::INC ? MOS::GPRRegClass.contains(Dest)
-                                 : Dest == MOS::A) &&
+      assert((Opcode == MOS::INC || Opcode == MOS::DEC
+                  ? MOS::GPRRegClass.contains(Dest)
+                  : Dest == MOS::A) &&
              "Unexpected instruction destination");
-      EncodedOpcode = Opcode == MOS::ASL ? MOS::ASL_Accumulator
-                      : Dest == MOS::X   ? MOS::INX_Implied
-                      : Dest == MOS::Y   ? MOS::INY_Implied
-                                         : MOS::INC_Accumulator;
+      EncodedOpcode = MOS::INX_Implied;
       Cycles = STI->has65CE02() ? 1 : 2;
     }
     break;
+  }
+  case MOS::IncNMOS:
+  case MOS::DecNMOS:
+    // expandIncDecNMOS adds to A with CLC and ADC, and otherwise emits INC or
+    // DEC.
+    if (RegOf(0) == MOS::A)
+      return getInstrCost(MOS::LDCImm) + getInstrCost(MOS::ADCImm);
+    return getInstrCost(Opcode == MOS::IncNMOS ? MOS::INC : MOS::DEC, Operands);
+  case MOS::IncMB:
+  case MOS::DecMB:
+  case MOS::DecDcpMB: {
+    // emitIncDecMB steps through bytes from the least significant up. Each byte
+    // but the last branches out of the chain unless it carried, which a
+    // decrement detects by comparing against 0xFF. Each byte is thus reached
+    // half as often as the one before. Absolute bytes are costed as zero page,
+    // the form their addresses usually take. 65CE02 word increments and
+    // decrements of imaginary pointers are not modeled.
+    bool IsDec = Opcode != MOS::IncMB;
+    unsigned StepOpcode = STI->hasGPRIncDec()
+                              ? (IsDec ? MOS::DEC : MOS::INC)
+                              : (IsDec ? MOS::DecNMOS : MOS::IncNMOS);
+    SmallVector<Register> Bytes;
+    for (auto [I, MO] : llvm::enumerate(Operands)) {
+      if (!MO.isReg())
+        Bytes.push_back(MOS::RC0);
+      else if (!MO.isDef() && !MO.isImplicit())
+        Bytes.push_back(RegOf(I));
+    }
+    MOSInstrCost Cost;
+    for (auto [I, Byte] : llvm::enumerate(Bytes)) {
+      MachineOperand Step = MachineOperand::CreateReg(Byte, true);
+      bool IsChained = I + 1 != Bytes.size();
+      MOSInstrCost ByteCost;
+      if (IsDec && IsChained && MOS::Imag8RegClass.contains(Byte)) {
+        // Load 0xFF into the scratch register to compare with memory.
+        ByteCost += getInstrCost(MOS::LDImm);
+        ByteCost += Opcode == MOS::DecDcpMB ? getInstrCost(MOS::DCPImag8)
+                                            : getInstrCost(StepOpcode, Step) +
+                                                  getInstrCost(MOS::CMPImag8);
+      } else {
+        ByteCost += getInstrCost(StepOpcode, Step);
+        if (IsDec && IsChained)
+          ByteCost += getInstrCost(MOS::CMPImm);
+      }
+      if (IsChained)
+        ByteCost += getInstrCost(MOS::BR);
+      Cost += ByteCost.scaleCycles(1, 1 << I);
+    }
+    return Cost;
   }
   case MOS::TA:
     EncodedOpcode = MOS::TAX_Implied;
@@ -319,15 +411,56 @@ MOSInstrInfo::getInstrCost(unsigned Opcode,
     break;
   case MOS::BR:
     EncodedOpcode = MOS::BNE_Relative;
-    // With independent, equiprobable branch outcomes and page crossings, the
-    // 6502 takes (2 + 2 + 3 + 4) / 4 = 2.75 cycles on average.
-    Cycles = 3;
+    // A 6502 branch takes another cycle if taken, and another if that crosses
+    // a page. Branch outcomes and page crossings are independent.
+    Cycles = 2;
+    ExtraCycles = ExtraCycle.scaleCycles(1, 2) + ExtraCycle.scaleCycles(1, 4);
     break;
   case MOS::LDImm:
+    // SPC700 can load imaginary registers directly; see getRegClass.
+    if (!Operands.empty() && MOS::Imag8RegClass.contains(RegOf(0))) {
+      EncodedOpcode = MOS::SPC700_MOV_ZeroPageImmediate;
+      Cycles = 5;
+      break;
+    }
     EncodedOpcode = MOS::LDA_Immediate;
     Cycles = 2;
     break;
+  case MOS::LDImm1: {
+    assert(Operands.size() >= 2 && Operands[1].isImm() &&
+           "Boolean immediate cost requires its value");
+    Register Dest = RegOf(0);
+    if (Dest == MOS::C)
+      return getInstrCost(MOS::LDCImm);
+    if (Dest != MOS::V)
+      return getInstrCost(MOS::LDImm);
+    if (!Operands[1].getImm())
+      return getInstrCost(MOS::CLV);
+    if (!STI->hasSPC700())
+      return getInstrCost(STI->hasHUC6280() ? MOS::BITImmHUC6280 : MOS::BITAbs);
+    // expandLDImm1 sets V through the status register on SPC700. Allow for
+    // saving/restoring the accumulator half the time, as in flag copy costs.
+    return (getInstrCost(MOS::PH) + getInstrCost(MOS::PL)) * 5 / 2 +
+           getInstrCost(MOS::ORAImm);
+  }
+  case MOS::LDZ:
+    // expandLDZ stores zero to imaginary registers with STZ, which has the
+    // size and timing of STA.
+    if (MOS::Imag8RegClass.contains(RegOf(0)))
+      return getInstrCost(MOS::STImag8);
+    if (!STI->hasHUC6280())
+      return getInstrCost(MOS::LDImm);
+    EncodedOpcode = MOS::CLA_Implied;
+    Cycles = 2;
+    break;
+  case MOS::LDCImm:
+    // CLC and SEC have the same size and timing.
+    EncodedOpcode = MOS::CLC_Implied;
+    Cycles = STI->has65CE02() ? 1 : 2;
+    break;
+  case MOS::ADCImm:
   case MOS::ORAImm:
+    // ALU immediate forms have the same size and timing.
     EncodedOpcode = MOS::ORA_Immediate;
     Cycles = 2;
     break;
@@ -341,12 +474,17 @@ MOSInstrInfo::getInstrCost(unsigned Opcode,
     break;
   case MOS::LDImag8:
   case MOS::STImag8:
-    EncodedOpcode =
-        Opcode == MOS::LDImag8 ? MOS::LDA_ZeroPage : MOS::STA_ZeroPage;
+  case MOS::CMPImag8:
+    // Zero-page loads, stores, and compares have the same size and timing.
+    EncodedOpcode = MOS::LDA_ZeroPage;
     Cycles = STI->hasHUC6280() || STI->hasSPC700() ? 4 : 3;
     break;
   case MOS::MOVImag8:
     EncodedOpcode = MOS::SPC700_MOV_ZeroPageZeroPage;
+    Cycles = 5;
+    break;
+  case MOS::DCPImag8:
+    EncodedOpcode = MOS::DCP_ZeroPage;
     Cycles = 5;
     break;
   case MOS::BITImmHUC6280:
@@ -357,12 +495,85 @@ MOSInstrInfo::getInstrCost(unsigned Opcode,
     EncodedOpcode = MOS::BIT_Absolute;
     Cycles = STI->has65CE02() ? 5 : 4;
     break;
+  case MOS::ADCAbsIdx:
+  case MOS::SBCAbsIdx:
+    return IndexedCost(Operands[4], RegOf(5) == MOS::X, /*IsWrite=*/false);
+  case MOS::ANDAbsIdx:
+  case MOS::EORAbsIdx:
+  case MOS::ORAAbsIdx:
+  case MOS::CMPAbsIdx:
+    return IndexedCost(Operands[2], RegOf(3) == MOS::X, /*IsWrite=*/false);
+  case MOS::STAbsIdx:
+    return IndexedCost(Operands[1], RegOf(2) == MOS::X, /*IsWrite=*/true);
+  case MOS::CmpBrAbsIdx:
+    return IndexedCost(Operands[4], RegOf(5) == MOS::X, /*IsWrite=*/false) +
+           getInstrCost(MOS::BR);
+  case MOS::LDAbsIdx: {
+    // expandLDIdx loads through A when no direct form exists: X or Y indexed
+    // by itself, or either on SPC700. LDX and LDY have zero-page forms for
+    // either index, but LDA only for X.
+    Register Dest = RegOf(0);
+    Register Idx = RegOf(2);
+    if (Dest == Idx || (STI->hasSPC700() && Dest != MOS::A))
+      return IndexedCost(Operands[1], Idx == MOS::X, /*IsWrite=*/false) +
+             getCopyCost(Dest, MOS::A);
+    return IndexedCost(Operands[1], Dest != MOS::A || Idx == MOS::X,
+                       /*IsWrite=*/false);
+  }
+  case MOS::AddrLostk:
+  case MOS::AddrHistk: {
+    // Assume a nonzero offset, which is not known until frame lowering. Each
+    // byte is then added through A, with the low byte clearing carry first.
+    MOSInstrCost Cost = getInstrCost(MOS::LDImag8) + getInstrCost(MOS::ADCImm) +
+                        getCopyCost(RegOf(0), MOS::A);
+    if (Opcode == MOS::AddrLostk)
+      Cost += getInstrCost(MOS::LDCImm);
+    return Cost;
+  }
+  case MOS::LDStk:
+  case MOS::STStk: {
+    // Assume a near access, since the offset is not known until frame
+    // lowering. expandLDSTStk then moves each byte through A, using a pointer
+    // indexed by Y. Flags move through the low bit of A.
+    bool IsLoad = Opcode == MOS::LDStk;
+    Register Loc = RegOf(IsLoad ? 0 : 1);
+    unsigned NumBytes = 1;
+    if (MOS::Imag16RegClass.contains(Loc)) {
+      Loc = TRI.getSubReg(Loc, MOS::sublo);
+      NumBytes = 2;
+    }
+    Register A = MOS::A;
+    if (Loc == MOS::C || Loc == MOS::V)
+      A = MOS::ALSB;
+    else if (Register Loc8 =
+                 TRI.getMatchingSuperReg(Loc, MOS::sublsb, &MOS::Anyi8RegClass))
+      Loc = Loc8;
+    MOSInstrCost Cost =
+        getInstrCost(MOS::LDImm) +
+        getInstrCost(IsLoad ? MOS::LDIndirIdx : MOS::STIndirIdx) +
+        (IsLoad ? getCopyCost(Loc, A) : getCopyCost(A, Loc));
+    return Cost * NumBytes;
+  }
+  case MOS::LDIndirIdx:
+    EncodedOpcode = MOS::LDA_IndirectIndexed;
+    if (STI->hasHUC6280() || STI->hasSPC700()) {
+      Cycles = STI->hasHUC6280() ? 7 : 6;
+      break;
+    }
+    // Reads take another cycle when indexing crosses a page.
+    Cycles = 5;
+    ExtraCycles = ExtraCycle.scaleCycles(1, 2);
+    break;
+  case MOS::STIndirIdx:
+    EncodedOpcode = MOS::STA_IndirectIndexed;
+    Cycles = STI->hasHUC6280() || STI->hasSPC700() ? 7 : 6;
+    break;
   }
   unsigned Bytes = get(Opcode).getSize();
   if (!Bytes)
     Bytes = get(EncodedOpcode).getSize();
   assert(Bytes && "Expected an encoded instruction size");
-  return MOSInstrCost(Bytes, Cycles);
+  return MOSInstrCost(Bytes, Cycles) + ExtraCycles;
 }
 
 MOSInstrCost MOSInstrInfo::getCopyCost(Register DestReg,
@@ -1678,4 +1889,19 @@ MOSInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MOS::MO_HI_JT, "hi-jt"},
       {MOS::MO_ZEROPAGE, "zeropage"}};
   return Flags;
+}
+
+bool MOS::canUseZeroPageIdx(const MachineOperand &MO) {
+  if (MO.getTargetFlags() == MOS::MO_ZEROPAGE)
+    return true;
+
+  // Constants may extend past the zero page when added to the index, so they
+  // cannot generally use zero page indexed addressing.
+  if (!MO.isGlobal())
+    return false;
+
+  // Global values in the zero page must end before the zero page, which means
+  // that pointers based on them can never overflow it.
+  return MO.getGlobal()->getAliaseeObject()->getAddressSpace() ==
+         MOS::AS_ZeroPage;
 }
