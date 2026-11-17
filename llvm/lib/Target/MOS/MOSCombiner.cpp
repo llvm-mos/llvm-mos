@@ -538,6 +538,9 @@ bool MOSCombinerImpl::matchFoldShift(MachineInstr &MI,
   if (MI.getOpcode() == MOS::G_LSHRE) {
     CarryOut = (Val->Value & 1).getBoolValue();
     Result = Val->Value.lshr(1) | CarryIn->Value.zext(8).shl(7);
+  } else if (MI.getOpcode() == MOS::G_ASHRE) {
+    CarryOut = (Val->Value & 1).getBoolValue();
+    Result = Val->Value.ashr(1);
   } else {
     CarryOut = (Val->Value & 0x80).getBoolValue();
     Result = Val->Value.shl(1) | CarryIn->Value.zext(8);
@@ -561,7 +564,7 @@ bool MOSCombinerImpl::matchShiftUnusedCarryIn(MachineInstr &MI,
 
   APInt DemandedBits = getDemandedBits(MI.getOperand(0).getReg());
   assert(DemandedBits.getBitWidth() == 8);
-  if (MI.getOpcode() == MOS::G_LSHRE) {
+  if (MI.getOpcode() != MOS::G_SHLE) {
     if ((DemandedBits & 0x80).getBoolValue())
       return false;
   } else {
@@ -682,14 +685,20 @@ APInt MOSCombinerImpl::getDemandedBits(Register R,
       DemandedBits |= ~Ones;
       break;
     }
-    case MOS::G_LSHRE: {
+    case MOS::G_LSHRE:
+    case MOS::G_ASHRE: {
       APInt DstDemandedBits = getDemandedBits(MI.getOperand(0).getReg(), Cache);
       if (Use.getOperandNo() == 2) {
         APInt CarryOutDemanded =
             getDemandedBits(MI.getOperand(1).getReg(), Cache);
-        DemandedBits |= DstDemandedBits << 1 | CarryOutDemanded.zext(8);
+        DemandedBits |= DstDemandedBits << 1 |
+                        CarryOutDemanded.zext(DstDemandedBits.getBitWidth());
+        if (MI.getOpcode() == MOS::G_ASHRE)
+          DemandedBits |= DstDemandedBits &
+                          APInt::getSignMask(DstDemandedBits.getBitWidth());
       } else {
         assert(Use.getOperandNo() == 3);
+        // The G_ASHRE LSR/ROR fallback uses carry-in for bit 7.
         DemandedBits |= DstDemandedBits.lshr(7).trunc(1);
       }
       break;
