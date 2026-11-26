@@ -1,0 +1,10 @@
+add_lldb_unittest(ABIMOSTests
+  ABIMOSTest.cpp
+  LINK_COMPONENTS
+    Support
+    MOS
+  LINK_LIBS
+    lldbTarget
+    lldbPluginArchitectureMOS
+    lldbPluginProcessGDBRemote
+  )

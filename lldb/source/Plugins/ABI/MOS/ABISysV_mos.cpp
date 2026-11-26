@@ -14,6 +14,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -21,7 +22,15 @@
 #include "Plugins/Process/gdb-remote/ThreadGDBRemote.h"
 
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/TargetParser/Triple.h"
+
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -68,6 +77,15 @@ uint32_t ABISysV_mos::GetGenericNum(llvm::StringRef name) {
     return LLDB_REGNUM_GENERIC_FP;
 
   return LLDB_INVALID_REGNUM;
+}
+
+std::string ABISysV_mos::GetMCName(std::string reg) {
+  // Remote stubs such as MAME's gdbstub call the hardware stack pointer "sp",
+  // but LLVM names it S. Without this mapping, sp gets no DWARF number and
+  // every CFI rule that reads the hardware stack (DW_OP_breg4) fails.
+  if (llvm::StringRef(reg).equals_insensitive("sp"))
+    return "s";
+  return reg;
 }
 
 void ABISysV_mos::AugmentRegisterInfo(
@@ -131,121 +149,118 @@ bool ABISysV_mos::RegisterIsVolatile(const RegisterInfo *reg_info) {
 // Unwind Plans
 //------------------------------------------------------------------
 
-/// Build a DWARF expression that computes a normalized hardware stack address.
-/// The 6502 hardware stack is at 0x0100-0x01FF. The S register is physically
-/// 8-bit, but some debuggers report it as 16-bit (e.g., MAME reports 0x01FE).
-/// This expression normalizes to always produce addresses in 0x0100-0x01FF:
-///   result = ((S + Offset) & 0xFF) | 0x0100
-static void buildNormalizedHardwareStackExpr(std::vector<uint8_t> &expr,
-                                             uint8_t dwarf_s, int8_t offset) {
-  // DW_OP_breg<S> <offset> - S + offset
-  expr.push_back(llvm::dwarf::DW_OP_breg0 + dwarf_s);
-  expr.push_back(static_cast<uint8_t>(offset));
+namespace {
+/// One register rule from the compiler's CIE initial instructions.
+struct InitialFrameRule {
+  enum Kind { CFAIsExpr, RegIsExpr, RegAtExpr, RegIsSame } kind;
+  uint32_t dwarf_reg = LLDB_INVALID_REGNUM;
+  std::vector<uint8_t> expr;
+};
+} // namespace
 
-  // DW_OP_const1u 0xFF
-  expr.push_back(llvm::dwarf::DW_OP_const1u);
-  expr.push_back(0xFF);
+/// Decode the CIE initial instructions that the MOS backend registers on its
+/// MCAsmInfo (see createMOSMCAsmInfo in MOSMCTargetDesc.cpp). The 6502 stack
+/// rules are written down once, in the compiler; this only understands the
+/// DWARF framing around them. Returns std::nullopt on anything unexpected.
+static std::optional<std::vector<InitialFrameRule>>
+DecodeInitialFrameState(const llvm::MCAsmInfo &mai) {
+  std::vector<InitialFrameRule> rules;
+  for (const llvm::MCCFIInstruction &inst : mai.getInitialFrameState()) {
+    if (inst.getOperation() == llvm::MCCFIInstruction::OpSameValue) {
+      rules.push_back({InitialFrameRule::RegIsSame, inst.getRegister(), {}});
+      continue;
+    }
+    if (inst.getOperation() != llvm::MCCFIInstruction::OpEscape)
+      return std::nullopt;
 
-  // DW_OP_and - keep low byte only
-  expr.push_back(llvm::dwarf::DW_OP_and);
+    // MOSCFIExprHelpers.h encodes each expression-form rule as one escape:
+    //   opcode [ULEB128 reg] ULEB128 len <len expression bytes>
+    llvm::StringRef bytes = inst.getValues();
+    const uint8_t *p = bytes.bytes_begin();
+    const uint8_t *end = bytes.bytes_end();
+    auto read_uleb = [&](uint64_t &value) {
+      unsigned n = 0;
+      const char *error = nullptr;
+      value = llvm::decodeULEB128(p, &n, end, &error);
+      p += n;
+      return error == nullptr;
+    };
 
-  // DW_OP_const2u 0x0100 (little-endian: 0x00, 0x01)
-  expr.push_back(llvm::dwarf::DW_OP_const2u);
-  expr.push_back(0x00);
-  expr.push_back(0x01);
+    if (p == end)
+      return std::nullopt;
+    uint8_t opcode = *p++;
+    InitialFrameRule rule;
+    uint64_t reg = LLDB_INVALID_REGNUM;
+    switch (opcode) {
+    case llvm::dwarf::DW_CFA_def_cfa_expression:
+      rule.kind = InitialFrameRule::CFAIsExpr;
+      break;
+    case llvm::dwarf::DW_CFA_val_expression:
+      rule.kind = InitialFrameRule::RegIsExpr;
+      if (!read_uleb(reg))
+        return std::nullopt;
+      break;
+    case llvm::dwarf::DW_CFA_expression:
+      rule.kind = InitialFrameRule::RegAtExpr;
+      if (!read_uleb(reg))
+        return std::nullopt;
+      break;
+    default:
+      return std::nullopt;
+    }
 
-  // DW_OP_or - force into hardware stack page
-  expr.push_back(llvm::dwarf::DW_OP_or);
+    uint64_t len = 0;
+    if (!read_uleb(len) || len != static_cast<uint64_t>(end - p))
+      return std::nullopt;
+    rule.dwarf_reg = static_cast<uint32_t>(reg);
+    rule.expr.assign(p, end);
+    rules.push_back(std::move(rule));
+  }
+  return rules;
 }
 
-/// Build a DWARF expression that yields the *value* of the caller PC.
-///
-/// JSR pushes (return_PC - 1) as two independent bytes: high byte first at
-/// the current S, then low byte at S-1, decrementing S each time. On entry
-/// to the callee the low byte is at S+1 and the high byte is at S+2. When S
-/// wraps within the stack page these two addresses are physically
-/// non-consecutive (e.g. S=0xFE puts the low byte at 0x01FF and the high
-/// byte at 0x0100), so we cannot use a single 2-byte dereference. Instead
-/// we dereference each byte independently, reassemble the 16-bit value, and
-/// add 1 to recover the true return address.
-///
-///   result = deref1(normalized(S+1)) | (deref1(normalized(S+2)) << 8) + 1
-static void buildReturnAddressValueExpr(std::vector<uint8_t> &expr,
-                                        uint8_t dwarf_s) {
-  // Low byte of (return_PC - 1)
-  buildNormalizedHardwareStackExpr(expr, dwarf_s, 1);
-  expr.push_back(llvm::dwarf::DW_OP_deref_size);
-  expr.push_back(1);
-
-  // High byte of (return_PC - 1)
-  buildNormalizedHardwareStackExpr(expr, dwarf_s, 2);
-  expr.push_back(llvm::dwarf::DW_OP_deref_size);
-  expr.push_back(1);
-
-  // (high << 8)
-  expr.push_back(llvm::dwarf::DW_OP_const1u);
-  expr.push_back(8);
-  expr.push_back(llvm::dwarf::DW_OP_shl);
-
-  // low | (high << 8)
-  expr.push_back(llvm::dwarf::DW_OP_or);
-
-  // + 1 — JSR pushes PC-1, so add 1 to recover the true return address.
-  expr.push_back(llvm::dwarf::DW_OP_plus_uconst);
-  expr.push_back(1); // ULEB128 encoding of 1
-}
-
-UnwindPlanSP ABISysV_mos::CreateFunctionEntryUnwindPlan() {
-  // DWARF register numbers for S and PC come from MOSRegisterInfo.td via the
-  // MCRegisterInfo generated at LLVM build time. MCBasedABI::GetEHAndDWARFNums
-  // performs the lookup for us.
+UnwindPlanSP ABISysV_mos::CreateCIEUnwindPlan(bool at_function_entry) {
   if (!m_mc_register_info_up)
     return nullptr;
+  const llvm::MCRegisterInfo &mri = *m_mc_register_info_up;
+  Log *log = GetLog(LLDBLog::Unwind);
 
-  uint32_t dwarf_s = GetEHAndDWARFNums("S").second;
-  uint32_t dwarf_pc = GetEHAndDWARFNums("PC").second;
-  if (dwarf_s == LLDB_INVALID_REGNUM || dwarf_pc == LLDB_INVALID_REGNUM) {
-    LLDB_LOG(GetLog(LLDBLog::Expressions),
-             "ABISysV_mos: Could not find DWARF numbers for S or PC");
-    return nullptr;
-  }
-
-  // 6502 calling convention:
-  // - JSR pushes (return_address - 1) onto the hardware stack, high byte
-  //   first, decrementing S each time. On entry:
-  //     [S+1] = low byte of (return_address - 1)
-  //     [S+2] = high byte of (return_address - 1)
-  //
-  // We use normalized expressions to handle both 8-bit and 16-bit S values,
-  // and to handle the case where S wraps within the stack page (the two
-  // return-address bytes may be at physically non-consecutive addresses).
-  // Each hardware stack byte's address is computed independently as
-  // ((S + offset) & 0xFF) | 0x0100.
-
-  // dwarf_s is a compile-time invariant of the MOS target; the expression
-  // byte-vectors depend only on it, so build them exactly once. C++11
+  // The rules are a property of the MOS target, not of any one process, so
+  // decode them once. They are copied into static storage because UnwindPlan
+  // rows hold raw pointers to expression bytes, and cached plans can outlive
+  // both this ABI object and the MCAsmInfo used to produce them. C++11
   // guarantees thread-safe static-local init.
-  struct CachedExprs {
-    std::vector<uint8_t> cfa;
-    std::vector<uint8_t> pc;
-    std::vector<uint8_t> s;
-    uint32_t dwarf_s;
-  };
-  static const CachedExprs E = [this]() {
-    uint32_t ds = GetEHAndDWARFNums("S").second;
-    CachedExprs r;
-    r.dwarf_s = ds;
-    buildNormalizedHardwareStackExpr(r.cfa, ds, 3);
-    buildReturnAddressValueExpr(r.pc, ds);
-    buildNormalizedHardwareStackExpr(r.s, ds, 2);
-    return r;
+  static const std::optional<std::vector<InitialFrameRule>> rules =
+      [&]() -> std::optional<std::vector<InitialFrameRule>> {
+    llvm::Triple triple("mos");
+    if (ProcessSP process_sp = GetProcessSP())
+      triple = process_sp->GetTarget().GetArchitecture().GetTriple();
+    std::string error;
+    const llvm::Target *target =
+        llvm::TargetRegistry::lookupTarget(triple, error);
+    if (!target) {
+      LLDB_LOG(log, "ABISysV_mos: no LLVM target for {0}: {1}", triple.str(),
+               error);
+      return std::nullopt;
+    }
+    std::unique_ptr<llvm::MCAsmInfo> mai(
+        target->createMCAsmInfo(mri, triple, llvm::MCTargetOptions()));
+    if (!mai)
+      return std::nullopt;
+    auto decoded = DecodeInitialFrameState(*mai);
+    if (!decoded)
+      LLDB_LOG(log, "ABISysV_mos: could not decode the MOS CIE initial "
+                    "instructions; no function-entry unwind plan");
+    return decoded;
   }();
+  if (!rules)
+    return nullptr;
 
-  assert(E.dwarf_s == dwarf_s &&
-         "S DWARF number changed between calls; MOS MCRegisterInfo unstable?");
+  uint32_t dwarf_pc = mri.getDwarfRegNum(mri.getRARegister(), false);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->SetSourceName("mos function-entry unwind plan");
+  plan_sp->SetSourceName(at_function_entry ? "mos function-entry unwind plan"
+                                           : "mos default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
   plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
@@ -256,25 +271,53 @@ UnwindPlanSP ABISysV_mos::CreateFunctionEntryUnwindPlan() {
   // explicitly mark unmentioned registers as undefined.
   row.SetUnspecifiedRegistersAreUndefined(true);
 
-  // CFA = normalized(S + 3) = ((S + 3) & 0xFF) | 0x0100
-  row.GetCFAValue().SetIsDWARFExpression(E.cfa.data(), E.cfa.size());
+  bool have_cfa = false;
+  bool have_pc = false;
+  for (const InitialFrameRule &rule : *rules) {
+    UnwindPlan::Row::AbstractRegisterLocation loc;
+    switch (rule.kind) {
+    case InitialFrameRule::CFAIsExpr:
+      row.GetCFAValue().SetIsDWARFExpression(rule.expr.data(),
+                                             rule.expr.size());
+      have_cfa = true;
+      continue;
+    case InitialFrameRule::RegIsSame:
+      // Only true before the function has run; see below.
+      if (at_function_entry)
+        row.SetRegisterLocationToSame(rule.dwarf_reg, /*must_replace=*/false);
+      continue;
+    case InitialFrameRule::RegIsExpr:
+      loc.SetIsDWARFExpression(rule.expr.data(), rule.expr.size());
+      break;
+    case InitialFrameRule::RegAtExpr:
+      loc.SetAtDWARFExpression(rule.expr.data(), rule.expr.size());
+      break;
+    }
+    row.SetRegisterInfo(rule.dwarf_reg, loc);
+    have_pc |= rule.dwarf_reg == dwarf_pc;
+  }
+  if (!have_cfa || !have_pc) {
+    LLDB_LOG(log, "ABISysV_mos: the MOS CIE has no CFA or PC rule");
+    return nullptr;
+  }
 
-  // PC value comes from reassembling the two return-address bytes and
-  // adding 1 (JSR pushes PC-1). IsDWARFExpression means: the expression
-  // result IS the register value.
-  UnwindPlan::Row::AbstractRegisterLocation pc_loc;
-  pc_loc.SetIsDWARFExpression(E.pc.data(), E.pc.size());
-  row.SetRegisterInfo(dwarf_pc, pc_loc);
-
-  // S_prev = normalized(S + 2) - direct expression, NOT CFA - 1.
-  UnwindPlan::Row::AbstractRegisterLocation s_loc;
-  s_loc.SetIsDWARFExpression(E.s.data(), E.s.size());
-  row.SetRegisterInfo(dwarf_s, s_loc);
+  // At entry the callee has not run, so the registers it must preserve still
+  // hold the caller's values. Past entry, a function without CFI may already
+  // have moved RS0 or saved and reused a callee-saved register, so the
+  // default plan leaves them undefined rather than claim values it cannot
+  // know.
+  if (at_function_entry)
+    for (uint32_t dwarf : m_calling_conv.GetPreservedImaginaryRegisters())
+      row.SetRegisterLocationToSame(dwarf, /*must_replace=*/false);
 
   plan_sp->AppendRow(std::move(row));
   plan_sp->SetReturnAddressRegister(dwarf_pc);
 
   return plan_sp;
+}
+
+UnwindPlanSP ABISysV_mos::CreateFunctionEntryUnwindPlan() {
+  return CreateCIEUnwindPlan(/*at_function_entry=*/true);
 }
 
 UnwindPlanSP ABISysV_mos::CreateDefaultUnwindPlan() {
@@ -284,7 +327,7 @@ UnwindPlanSP ABISysV_mos::CreateDefaultUnwindPlan() {
   // function-entry plan yields garbage. This is the best available guess when
   // no CFI is present — accurate at function entry and in blocks with balanced
   // PHA/PLA usage, unreliable otherwise.
-  return CreateFunctionEntryUnwindPlan();
+  return CreateCIEUnwindPlan(/*at_function_entry=*/false);
 }
 
 //------------------------------------------------------------------
